@@ -1,0 +1,248 @@
+.profile-header-block {
+  display: flex;
+  flex-direction: column;    /* Menjaga urutan elemen tetap tegak lurus ke bawah */
+  align-items: left;       /* Menjaga semua elemen presisi di tengah-tengah */
+  text-align: left;        
+  margin-top: 24px;          /* DIUBAH: Hapus -60px agar foto turun seutuhnya di bawah banner hijau */
+  margin-bottom: 30px;
+  position: relative;        
+  width: 100%;
+}
+
+.profile-main-name {
+  margin: 0 0 6px 0;
+  font-size: 26px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.profile-main-nik {
+  margin: 0 0 20px 0;        /* Jarak antara teks NIK dengan tombol di bawahnya */
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* Tombol Edit Data Profil */
+.btn-edit-data {
+  background-color: #2d6a4f;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;        
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+  display: inline-block;     
+}
+/* profile-page.css */
+
+.profile-page-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+
+.profile-banner-top {
+  height: 120px;
+  background-color: #1e6244;
+}
+
+.profile-card-content {
+  padding: 0 40px 40px 40px;
+}
+
+.profile-header-block {
+  display: flex;
+  /* Menggunakan wrap agar jika ada elemen yang didorong penuh, dia otomatis turun */
+  flex-wrap: wrap;           
+  flex-direction: row;       
+  align-items: flex-end;     
+  margin-top: -60px;         /* Tetap mempertahankan posisi memotong setengah banner hijau */
+  margin-bottom: 20px;
+  position: relative;        /* Kunci utama agar tombol absolute tetap presisi di kanan */
+  width: 100%;
+}
+
+.profile-avatar-large {
+  width: 120px;
+  height: 120px;
+  background-color: #b8bfc6;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: bold;
+  color: #1e6244;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;            /* Mencegah lingkaran foto menyusut */
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer; 
+}
+
+/* Tambahan: Mengatur Gambar Preview dari Lokal/Web */
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;         /* Menjaga foto proporsional tanpa gepeng */
+  border-radius: 50%;
+}
+
+/* Tambahan: Lapisan Transparan Ikon Kamera (Default: Tersembunyi) */
+.profile-avatar-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4); /* Efek gelap transparan halus */
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease, visibility 200ms ease;
+}
+
+/* Tambahan: Munculkan Lapisan Kamera Saat Avatar Di-hover */
+.profile-avatar-large:hover .profile-avatar-hover-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
+.profile-title-wrapper {
+  margin-left: 0px;
+  padding-bottom: 10px;
+  width: 100%;
+  flex: none; 
+}
+
+.profile-main-name {
+  margin: 0 0 4px 0;
+  font-size: 26px;
+  color: #0f172a;
+  font-weight: 700;
+  text-align: left;
+}
+
+.profile-main-nik {
+  margin: 0;
+  font-size: 14px;
+  color: #94a3b8;
+  text-align: left;
+}
+
+.btn-edit-data {
+  position: absolute;        /* Dicabut dari alur flex normal */
+  right: 0;                  /* Dikunci tepat di ujung kanan kontainer */
+  bottom: 10px;              /* Disejajarkan tingginya dengan teks nama/NIK */
+  background-color: #2d6a4f;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.btn-edit-data:hover {
+  background-color: #1e4c38;
+}
+
+/* Form Grid */
+.profile-info-grid {
+  display: flex;
+  gap: 60px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 30px;
+}
+
+.info-column {
+  flex: 1;
+}
+
+.section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #2d6a4f;
+  margin-bottom: 24px;
+}
+
+.info-group {
+  margin-bottom: 20px;
+}
+
+.info-group label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.info-group p {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.info-group .text-readonly {
+  color: #64748b;
+  font-weight: normal;
+}
+
+/* Desain Komponen Input Baru Saat Mode Edit */
+.form-input-profile {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #334155;
+  outline: none;
+}
+
+.form-input-profile:focus {
+  border-color: #2d6a4f;
+}
+
+/* Tombol Aksi Simpan & Batal */
+.profile-action-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 20px;
+}
+
+.btn-profile-save {
+  background-color: #2d6a4f;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-profile-cancel {
+  background-color: #ffffff;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+}

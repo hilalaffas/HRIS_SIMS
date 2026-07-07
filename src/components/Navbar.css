@@ -1,0 +1,143 @@
+/* Container Utama Header */
+.navbar-header {
+  height: 5rem; /* h-20 (80px) */
+  background-color: #ffffff; /* bg-white */
+  display: flex; /* flex */
+  align-items: center; /* items-center */
+  justify-content: space-between; /* justify-between */
+  padding-left: 2rem; /* px-8 */
+  padding-right: 2rem; /* px-8 */
+  flex-shrink: 0; /* shrink-0 */
+  z-index: 10; /* z-10 */
+  border-bottom: 1px solid #f3f4f6; /* border-b border-gray-100 */
+}
+
+/* --- BAGIAN KIRI (BRAND & JUDUL) --- */
+
+/* Wrapper Utama Judul & Subtitle */
+.navbar-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Wrapper Baris Judul + Badge SIMS */
+.navbar-title-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Badge Hijau Muda SIMS */
+.badge-sims {
+  background-color: #DEF7EC;
+  color: #03543F;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  letter-spacing: 0.05em;
+}
+
+/* Judul Utama */
+.navbar-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #2A6B4F;
+  letter-spacing: 0.025em;
+  margin: 0;
+}
+
+/* Responsivitas Judul */
+@media (min-width: 768px) {
+  .navbar-title {
+    font-size: 1.25rem;
+  }
+}
+
+/* Teks Sub-Header Dinamis (Uppercase) */
+.navbar-subtitle {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (min-width: 768px) {
+  .navbar-subtitle {
+    font-size: 0.75rem;
+  }
+}
+
+/* --- BAGIAN KANAN (ACTIONS) --- */
+
+/* Wrapper Sisi Kanan (Disembunyikan di HP, muncul di Desktop) */
+.navbar-actions {
+  display: none;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .navbar-actions {
+    display: flex;
+  }
+}
+
+/* Teks Tanggal Real-time */
+.navbar-date {
+  font-size: 0.875rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+/* Tombol Lonceng Notifikasi */
+.btn-notification {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 1.25rem;
+  color: #4b5563;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 200ms ease;
+}
+
+.btn-notification:hover {
+  color: #2A6B4F;
+}
+
+/* Badge Lingkaran Merah Menyala di Atas Lonceng */
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: #ef4444;
+  border-radius: 9999px;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+}
+
+/* Secara default sembunyikan tombol hamburger di mode desktop */
+.btn-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #333; /* Sesuaikan warna */
+  cursor: pointer;
+  margin-right: 15px;
+}
+
+/* Munculkan hanya saat di layar HP */
+@media (max-width: 768px) {
+  .btn-hamburger {
+    display: block;
+  }
+}

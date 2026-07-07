@@ -1,0 +1,110 @@
+/* src/components/LogoutModal.css */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.modal-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 360px;
+  overflow: hidden;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.modal-icon-container {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background-color: #fef2f2; /* tailwind red-50 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #ef4444; /* tailwind red-500 */
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+  color: #111827; /* tailwind gray-900 */
+}
+
+.modal-text {
+  color: #6b7280; /* tailwind gray-500 */
+  font-size: 13.5px;
+  margin-bottom: 1.5rem;
+  margin-left: 52px;
+  line-height: 1.625;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btn-cancel {
+  padding: 0.625rem 1rem;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db; /* tailwind gray-300 */
+  color: #374151; /* tailwind gray-700 */
+  font-weight: 600;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-cancel:hover {
+  background-color: #f9fafb; /* tailwind hover:bg-gray-50 */
+}
+
+.btn-confirm {
+  padding: 0.625rem 1rem;
+  background-color: #009A66;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border: none;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-confirm:hover {
+  background-color: #008256;
+}

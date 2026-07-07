@@ -1,0 +1,58 @@
+/* src/pages/Dashboard/components/CutiSummaryCards.css */
+
+.cuti-card {
+  position: relative;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  height: 30%;
+}
+
+/* Card gelap (hijau tua) - Sisa Cuti Tahunan */
+.cuti-card--dark {
+  background-color: #14532d; /* hijau tua */
+  color: #ffffff;
+}
+
+.cuti-card__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.cuti-card__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cuti-card__number {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.cuti-card__unit {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.cuti-card__note {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.cuti-card__icon {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  font-size: 3.5rem;
+  color: rgba(255, 255, 255, 0.08);
+}

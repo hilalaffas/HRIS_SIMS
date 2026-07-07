@@ -1,0 +1,130 @@
+/* src/layouts/MainLayout.css */
+
+.layout-container {
+  background-color: #ffffff;
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+.sidebar-wrapper {
+  border-right: 1px solid #e5e7eb; /* border-gray-200 */
+  display: none; /* hidden secara default di mobile */
+  flex-shrink: 0;
+  width: 16rem; /* 64 (256px) */
+  background-color: #2A6B4F;
+}
+
+/* Mengaktifkan sidebar di layar medium ke atas (Desktop) */
+@media (min-width: 768px) {
+  .sidebar-wrapper {
+    display: flex;
+  }
+}
+
+.main-area-wrapper {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.navbar-wrapper {
+  border-bottom: 1px solid #e5e7eb; /* border-gray-200 */
+  height: 5rem; /* 20 (80px) */
+  background-color: #ffffff;
+}
+
+.content-outlet {
+  flex: 1 1 0%;
+  overflow-y: auto;
+  padding: 1rem; /* 4 (16px) */
+  background-color: #F4F7F6;
+}
+
+/* Responsif padding untuk content-outlet */
+@media (min-width: 768px) {
+  .content-outlet { padding: 1.5rem; } /* 6 (24px) */
+}
+@media (min-width: 1024px) {
+  .content-outlet { padding: 2rem; } /* 8 (32px) */
+}
+
+.footer-wrapper {
+  height: 2.5rem; /* 10 (40px) */
+  background-color: #ffffff;
+  border-top: 1px solid #e5e7eb; /* border-gray-200 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem; /* text-xs */
+  color: #9ca3af; /* text-gray-400 */
+  flex-shrink: 0;
+}
+
+/* ====================================================
+   LOGIKA MOBILE UNTUK SIDEBAR (TAMPILAN HP) 
+   ==================================================== */
+@media (max-width: 768px) {
+  /* --- 1. SIDEBAR WRAPPER (BUNGKUS LUAR) --- */
+  .sidebar-wrapper {
+    display: block !important; /* Paksa muncul karena di atas di-set display: none */
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px; 
+    background-color: #2A6B4F !important; /* Disamakan dengan warna hijau desktop */
+    z-index: 9999 !important; /* Di atas overlay hitam */
+    
+    /* Animasi Slide dari kiri */
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.1); 
+  }
+
+  /* Saat state React mengubah class menjadi mobile-open, geser ke dalam layar */
+  .sidebar-wrapper.mobile-open {
+    transform: translateX(0) !important; 
+  }
+
+  /* --- 2. OVERLAY HITAM TRANSPARAN --- */
+  .mobile-overlay {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    z-index: 9998 !important; /* Di bawah sidebar, di atas konten */
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* --- 3. PAKSA ISI MENU MUNCUL DI DALAM KOTAK HIJAU --- */
+  .sidebar-wrapper .sidebar-container {
+    display: flex !important; 
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important; 
+    margin: 0 !important;
+  }
+
+  .sidebar-wrapper .sidebar-content {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1; /* Biar area menu mengisi ruang kosong ke bawah */
+  }
+  
+  .sidebar-wrapper .sidebar-footer {
+    display: flex !important; /* Pastikan tombol logout muncul */
+    padding-bottom: 20px; /* Jarak aman untuk tombol di HP */
+  }
+}
