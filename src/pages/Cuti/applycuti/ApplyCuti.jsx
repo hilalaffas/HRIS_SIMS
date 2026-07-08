@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { submitCuti, getRiwayatByUser } from '../../../services/CutiService';
+import { submitCuti, getRiwayatByUser } from '../../../services/cutiService';
 import LeaveSummaryCard from '../applycuti/components/LeaveSummaryCard';
 import LeaveForm from '../applycuti/components/LeaveForm';
 import LeaveHistory from '../applycuti/components/LeaveHistory';
@@ -59,6 +59,7 @@ const ApplyCuti = ({ user }) => {
   const [pekerjaanTertunda, setPekerjaanTertunda] = useState('');
   const [coverOleh, setCoverOleh] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null); // TAMBAHAN: State penampung ID data yang sedang diedit agar tidak membuat data baru
 
   // UI/History States
   const [riwayatCuti, setRiwayatCuti] = useState([]);
@@ -89,6 +90,8 @@ const ApplyCuti = ({ user }) => {
     : hitungBatasMinTanggal(jedaHariKerja, hariLiburNasional);
 
   useEffect(() => {
+    if (isEditing) return;
+
     const isMendesak = jenisCuti === 'Cuti Urgent' || jenisCuti === 'Cuti Berduka';
     if (isMendesak) {
       setDariTanggal(todayStr);
@@ -97,7 +100,7 @@ const ApplyCuti = ({ user }) => {
       setDariTanggal(dinamisBatasMinStr);
       setSampaiTanggal(dinamisBatasMinStr);
     }
-  }, [jenisCuti, dinamisBatasMinStr, todayStr]);
+  }, [jenisCuti, dinamisBatasMinStr, todayStr, isEditing]);
 
 
   // ==========================================
@@ -240,6 +243,7 @@ const ApplyCuti = ({ user }) => {
     if (itemTarget) {
       const dataSumber = itemTarget.rawDetail || itemTarget; // Proteksi destructuring data berstatus proses
       
+      setEditingId(id);
       setJenisCuti(dataSumber.jenisCuti || 'Cuti tahunan');
       setDariTanggal(dataSumber.dariTanggal || todayStr);
       setSampaiTanggal(dataSumber.sampaiTanggal || todayStr);
@@ -274,7 +278,8 @@ const ApplyCuti = ({ user }) => {
         userId, userName, jenisCuti,
         durasiSesi: jenisCuti === 'Cuti setengah hari' || jenisCuti === 'Cuti Urgent' ? durasiSesi : 'Seharian Penuh',
         dariTanggal, sampaiTanggal, leaderApproval, spvApproval, managerApproval, alasan, pekerjaanTertunda,
-        coverOleh // Pastikan field ini ikut dikirim ke DB jika dibutuhkan backend
+        coverOleh, // Pastikan field ini ikut dikirim ke DB jika dibutuhkan backend
+        id: editingId
       };
 
       // MENGEKSEKUSI API INSERT DATABASE
@@ -285,32 +290,60 @@ const ApplyCuti = ({ user }) => {
       const formatSampai = new Date(sampaiTanggal.replace(/-/g, '/')).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
       const formatTahun = new Date(sampaiTanggal.replace(/-/g, '/')).getFullYear();
 
-      // Memasukkan data ke baris riwayat lokal UI (Real-time update)
-      // Catatan DB: Sebaiknya ID didapatkan dari return value database (`response.data.id`) bukan `Date.now()`
-      const pengajuanBaru = {
-        userId: userId,
-        userName: userName,
-        id: Date.now(), 
-        jenisCuti: jenisCuti.toUpperCase(),
-        stringTanggal: `${formatDari} - ${formatSampai} ${formatTahun}`,
-        totalHari: selisihHari,
-        status: 'Proses', 
-        isUnread: true,
-        rawDetail: {
-          jenisCuti: jenisCuti,
-          dariTanggal: dariTanggal,
-          sampaiTanggal: sampaiTanggal,
+      if (isEditing && editingId) {
+        // UBAH DI SINI: Logika Update Data Lokal UI jika dalam mode edit (mencegah data baru bertambah)
+        setRiwayatCuti(prev => prev.map(item => {
+          if (item.id === editingId) {
+            return {
+              ...item,
+              jenisCuti: jenisCuti.toUpperCase(),
+              stringTanggal: `${formatDari} - ${formatSampai} ${formatTahun}`,
+              totalHari: selisihHari,
+              status: 'Proses', // Reset kembali ke proses setelah diperbaiki karyawan
+              isUnread: true,
+              rawDetail: {
+                ...item.rawDetail,
+                jenisCuti: jenisCuti,
+                dariTanggal: dariTanggal,
+                sampaiTanggal: sampaiTanggal,
+                totalHari: selisihHari,
+                alasan: alasan,
+                pekerjaanTertunda: pekerjaanTertunda,
+                coverOleh: coverOleh,
+                leader: { nama: leaderApproval, status: 'Pending' },
+                spv: { nama: spvApproval, status: 'Pending' },
+                manager: { nama: managerApproval, status: 'Pending' }
+              }
+            };
+          }
+          return item;
+        }));
+      } else {
+        // Logika Pengajuan Baru (Bawaan)
+        const pengajuanBaru = {
+          userId: userId,
+          userName: userName,
+          id: Date.now(), 
+          jenisCuti: jenisCuti.toUpperCase(),
+          stringTanggal: `${formatDari} - ${formatSampai} ${formatTahun}`,
           totalHari: selisihHari,
-          alasan: alasan,
-          pekerjaanTertunda: pekerjaanTertunda,
-          coverOleh: coverOleh,
-          leader: { nama: leaderApproval, status: 'Pending' },
-          spv: { nama: spvApproval, status: 'Pending' },
-          manager: { nama: managerApproval, status: 'Pending' }
-        }
-      };
-
-      setRiwayatCuti(prev => [pengajuanBaru, ...prev]);
+          status: 'Proses', 
+          isUnread: true,
+          rawDetail: {
+            jenisCuti: jenisCuti,
+            dariTanggal: dariTanggal,
+            sampaiTanggal: sampaiTanggal,
+            totalHari: selisihHari,
+            alasan: alasan,
+            pekerjaanTertunda: pekerjaanTertunda,
+            coverOleh: coverOleh,
+            leader: { nama: leaderApproval, status: 'Pending' },
+            spv: { nama: spvApproval, status: 'Pending' },
+            manager: { nama: managerApproval, status: 'Pending' }
+          }
+        };
+        setRiwayatCuti(prev => [pengajuanBaru, ...prev]);
+      }
 
       // Mereset isi Form Input setelah sukses tersimpan di DB
       setAlasan('');
@@ -320,8 +353,9 @@ const ApplyCuti = ({ user }) => {
       setManagerApproval('');
       setCoverOleh('');
       setIsEditing(false);
+      setEditingId(null);
 
-      alert('Pengajuan Cuti Berhasil Dikirim!');
+      alert(isEditing ? 'Perubahan Berkas Cuti Berhasil Diperbarui!' : 'Pengajuan Cuti Berhasil Dikirim!');
     } catch (err) {
       alert('Terjadi kesalahan, silakan coba lagi.');
     } finally {
@@ -355,6 +389,7 @@ const ApplyCuti = ({ user }) => {
         isEditing={isEditing}
         onCancelEdit={() => {
           setIsEditing(false);
+          setEditingId(null)
           setAlasan('');
           setPekerjaanTertunda('');
           setCoverOleh('');

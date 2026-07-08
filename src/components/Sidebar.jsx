@@ -6,11 +6,11 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
   const location = useLocation();
 
   // Mengambil role dari database (memastikan lowercase untuk konsistensi pengecekan)
-  const userRole = (user?.jabatan || user?.role || 'karyawan').toLowerCase();
+  const userRole = (user?.jabatan || user?.role || 'member').toLowerCase();
 
   // Definisi kondisi role-role khusus
-  const isSuperAdmin = userRole.includes('super admin') || userRole === 'superadmin';
-  const isHRAdmin = userRole.includes('hr') || userRole.includes('admin') && !isSuperAdmin;
+  const isSuperAdmin = userRole.includes('super_admin');
+  const isHRAdmin = userRole.includes('hrd_karyawan') || userRole.includes('hrd_admin') || userRole.includes('admin') && !isSuperAdmin;
   const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader');
 
   // 1. DAFTAR MENU BERDASARKAN HAK AKSES (MENYESUAIKAN GAMBAR)
@@ -49,7 +49,7 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
 
   // Menu Khusus Super Admin (Gambar 4)
   const superAdminMenuItems = [
-    { path: '/pengaturan-akun', name: 'Pengaturan Akun', icon: 'fa-solid fa-gear' },
+    { path: '/karyawan', name: 'Pengaturan Akun', icon: 'fa-solid fa-gear' },
   ];
 
   // LOGIKA HELPER INDIVIDU
