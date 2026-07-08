@@ -78,7 +78,6 @@
   box-sizing: border-box;
 }
 
-
 /* Aksesibilitas: fokus keyboard yang terlihat jelas di seluruh modul */
 .karyawan-page button:focus-visible,
 .karyawan-page input:focus-visible,
