@@ -6,7 +6,24 @@ import LeaveHistory from '../applycuti/components/LeaveHistory';
 import LeaveDetailModal from '../applycuti/components/LeaveDetailModal';
 import '../applycuti/ApplyCuti.css';
 
-const hariLiburNasional = [];
+// ==========================================
+// 1. KONEKSI API: DATA HARI LIBUR NASIONAL
+// ==========================================
+// Keterangan Fungsi: Mengambil daftar tanggal merah dari database / external API Publik.
+// Dampak: Validasi hitungBatasMinTanggal otomatis mengikuti kalender libur dinamis dari DB.
+const hariLiburNasional = []; 
+/* 
+Contoh implementasi koneksi di dalam useEffect (jika ingin mengambil dari DB):
+useEffect(() => {
+  const fetchHariLibur = async () => {
+    try {
+      const response = await axios.get('/api/hari-libur');
+      hariLiburNasional = response.data; // Misal formatnya ['2026-05-25', '2026-06-01']
+    } catch (error) { console.error(error); }
+  };
+  fetchHariLibur();
+}, []);
+*/
 
 const hitungBatasMinTanggal = (jumlahHariKerja, daftarHariLibur = []) => {
   let date = new Date();
@@ -41,6 +58,7 @@ const ApplyCuti = ({ user }) => {
   const [managerApproval, setManagerApproval] = useState('');
   const [pekerjaanTertunda, setPekerjaanTertunda] = useState('');
   const [coverOleh, setCoverOleh] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   // UI/History States
   const [riwayatCuti, setRiwayatCuti] = useState([]);
@@ -56,7 +74,9 @@ const ApplyCuti = ({ user }) => {
   const canApplyCuti = !userRole.includes('super admin') && userRole !== 'superadmin';
   const userId = user?.id ?? 'guest';
   const userName = user?.nama || user?.name || 'Karyawan';
-  const sisaCutiTahunan = user?.sisa_cuti_tahunan ?? 12;
+  
+  // Sisa cuti tahunan sebaiknya ditarik langsung dari objek 'user' hasil query database login
+  const sisaCutiTahunan = user?.sisa_cuti_tahunan ?? 12; 
 
   // Jeda Hari Kerja Aturan Validasi
   let jedaHariKerja = 5;
@@ -79,10 +99,18 @@ const ApplyCuti = ({ user }) => {
     }
   }, [jenisCuti, dinamisBatasMinStr, todayStr]);
 
-  // Fetch Data Riwayat Cuti
+
+  // ==========================================
+  // 2. KONEKSI API: GET DATA RIWAYAT CUTI USER
+  // ==========================================
+  // Nama Fungsi: loadRiwayat
+  // Keterangan: Fungsi ini memanggil endpoint API database melalui `getRiwayatByUser(userId)`.
+  // Catatan: Jika API database Anda aktif, blok kode isi array bohong-bohongan (Andi Wijaya, dll) di bawah wajib dihapus.
   const loadRiwayat = async () => {
+    // Memanggil API database sungguhan
     let data = await getRiwayatByUser(userId);
 
+    // JIKA MAU KONEK DATABASE: Hapus/Komentari blok kondisi "if (!data || data.length === 0)" ini!
     if (!data || data.length === 0) {
       data = [
         {
@@ -150,21 +178,36 @@ const ApplyCuti = ({ user }) => {
     return `${d}/${m}/${y}`;
   };
 
+  // ========================================================
+  // KONEKSI API SEBELUMNYA (UPDATE STATUS UNREAD DI DB - OPSIONAL)
+  // ========================================================
+  // Keterangan: Jika item diklik, mengubah status "isUnread: false" di level UI.
+  // Jika database membutuhkan sinkronisasi notifikasi, Anda bisa menembak API update status read di fungsi ini.
   const handleOpenDetail = (item) => {
-    // FORMAT CLEANING: Membuat penanggalan dinamis yang aman
     const dari = item.rawDetail?.dariTanggal || item.dariTanggal;
     const sampai = item.rawDetail?.sampaiTanggal || item.sampaiTanggal;
     let tanggalFinal = item.stringTanggal;
 
+    // UBAH DI SINI: Proteksi parsing tanggal agar tidak memicu crash Invalid Date pada browser tertentu
     if (dari && sampai) {
-      const formatDari = new Date(dari).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
-      const formatSampai = new Date(sampai).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
-      const formatTahun = new Date(sampai).getFullYear();
-      tanggalFinal = `${formatDari} - ${formatSampai} ${formatTahun}`;
+      try {
+        const dObj = new Date(dari.replace(/-/g, '/'));
+        const sObj = new Date(sampai.replace(/-/g, '/'));
+        
+        if (!isNaN(dObj) && !isNaN(sObj)) {
+          const formatDari = dObj.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+          const formatSampai = sObj.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+          const formatTahun = sObj.getFullYear();
+          tanggalFinal = `${formatDari} - ${formatSampai} ${formatTahun}`;
+        }
+      } catch (e) {
+        tanggalFinal = item.stringTanggal;
+      }
     }
 
     setSelectedDetail({
       ...(item.rawDetail || {}),
+      id: item.id, // Tambahkan ID agar tombol aksi/edit di dalam modal mengenali berkas
       pemohon: item.userName || 'Karyawan', 
       jenisCuti: item.rawDetail?.jenisCuti || item.jenisCuti,
       globalStatus: (item.status || 'PROSES').toUpperCase(), 
@@ -185,17 +228,28 @@ const ApplyCuti = ({ user }) => {
           riwayat.id === item.id ? { ...riwayat, isUnread: false } : riwayat
         )
       );
+      /* 
+      Contoh koneksi API update status baca di DB:
+      axios.put(`/api/cuti/read/${item.id}`);
+      */
     }      
   };    
 
   const handleEditKembali = (id) => {
     const itemTarget = riwayatCuti.find(item => item.id === id);
-    if (itemTarget && itemTarget.rawDetail) {
-      setJenisCuti(itemTarget.rawDetail.jenisCuti || 'Cuti tahunan');
-      setDariTanggal(itemTarget.rawDetail.dariTanggal || todayStr);
-      setSampaiTanggal(itemTarget.rawDetail.sampaiTanggal || todayStr);
-      setAlasan(itemTarget.rawDetail.alasan || '');
-      setPekerjaanTertunda(itemTarget.rawDetail.pekerjaanTertunda || '');
+    if (itemTarget) {
+      const dataSumber = itemTarget.rawDetail || itemTarget; // Proteksi destructuring data berstatus proses
+      
+      setJenisCuti(dataSumber.jenisCuti || 'Cuti tahunan');
+      setDariTanggal(dataSumber.dariTanggal || todayStr);
+      setSampaiTanggal(dataSumber.sampaiTanggal || todayStr);
+      setAlasan(dataSumber.alasan || '');
+      setPekerjaanTertunda(dataSumber.pekerjaanTertunda || '');
+      setCoverOleh(dataSumber.coverOleh || '');
+      setIsEditing(true);
+      setLeaderApproval(dataSumber.leader?.nama || dataSumber.leaderApproval || '');
+      setSpvApproval(dataSumber.spv?.nama || dataSumber.spvApproval || '');
+      setManagerApproval(dataSumber.manager?.nama || dataSumber.managerApproval || '')
 
       if (formTopRef.current) {
         formTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -205,6 +259,12 @@ const ApplyCuti = ({ user }) => {
     }
   };
 
+
+  // ==========================================
+  // 3. KONEKSI API: SUBMIT FORM CUTI BARU (POST)
+  // ==========================================
+  // Nama Fungsi: handleSubmit
+  // Keterangan: Fungsi ini mengumpulkan semua isi state input menjadi objek `payloadCuti`, lalu mengirimkannya ke database melalui service `submitCuti(payloadCuti)`.
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canApplyCuti) return;
@@ -214,15 +274,19 @@ const ApplyCuti = ({ user }) => {
         userId, userName, jenisCuti,
         durasiSesi: jenisCuti === 'Cuti setengah hari' || jenisCuti === 'Cuti Urgent' ? durasiSesi : 'Seharian Penuh',
         dariTanggal, sampaiTanggal, leaderApproval, spvApproval, managerApproval, alasan, pekerjaanTertunda,
+        coverOleh // Pastikan field ini ikut dikirim ke DB jika dibutuhkan backend
       };
 
+      // MENGEKSEKUSI API INSERT DATABASE
       await submitCuti(payloadCuti);
       
       const selisihHari = jedaHariKerja === 0 ? "1 Hari" : `${jedaHariKerja} Hari Kerja`;
-      const formatDari = new Date(dariTanggal).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
-      const formatSampai = new Date(sampaiTanggal).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
-      const formatTahun = new Date(sampaiTanggal).getFullYear();
+      const formatDari = new Date(dariTanggal.replace(/-/g, '/')).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+      const formatSampai = new Date(sampaiTanggal.replace(/-/g, '/')).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+      const formatTahun = new Date(sampaiTanggal.replace(/-/g, '/')).getFullYear();
 
+      // Memasukkan data ke baris riwayat lokal UI (Real-time update)
+      // Catatan DB: Sebaiknya ID didapatkan dari return value database (`response.data.id`) bukan `Date.now()`
       const pengajuanBaru = {
         userId: userId,
         userName: userName,
@@ -239,6 +303,7 @@ const ApplyCuti = ({ user }) => {
           totalHari: selisihHari,
           alasan: alasan,
           pekerjaanTertunda: pekerjaanTertunda,
+          coverOleh: coverOleh,
           leader: { nama: leaderApproval, status: 'Pending' },
           spv: { nama: spvApproval, status: 'Pending' },
           manager: { nama: managerApproval, status: 'Pending' }
@@ -247,11 +312,14 @@ const ApplyCuti = ({ user }) => {
 
       setRiwayatCuti(prev => [pengajuanBaru, ...prev]);
 
+      // Mereset isi Form Input setelah sukses tersimpan di DB
       setAlasan('');
       setPekerjaanTertunda('');
       setLeaderApproval('');
       setSpvApproval('');
       setManagerApproval('');
+      setCoverOleh('');
+      setIsEditing(false);
 
       alert('Pengajuan Cuti Berhasil Dikirim!');
     } catch (err) {
@@ -275,6 +343,7 @@ const ApplyCuti = ({ user }) => {
         spvApproval={spvApproval} setSpvApproval={setSpvApproval}
         managerApproval={managerApproval} setManagerApproval={setManagerApproval}
         pekerjaanTertunda={pekerjaanTertunda} setPekerjaanTertunda={setPekerjaanTertunda}
+        coverOleh={coverOleh} setCoverOleh={setCoverOleh}
         jedaHariKerja={jedaHariKerja}
         dinamisBatasMinStr={dinamisBatasMinStr}
         formatDateDisplay={formatDateDisplay}
@@ -282,6 +351,17 @@ const ApplyCuti = ({ user }) => {
         isSubmitting={isSubmitting}
         canApplyCuti={canApplyCuti}
         todayStr={todayStr}
+        currentUserRole={userRole}
+        isEditing={isEditing}
+        onCancelEdit={() => {
+          setIsEditing(false);
+          setAlasan('');
+          setPekerjaanTertunda('');
+          setCoverOleh('');
+          setLeaderApproval('');
+          setSpvApproval('');
+          setManagerApproval('');
+        }}
       />
 
       <LeaveHistory
@@ -297,6 +377,9 @@ const ApplyCuti = ({ user }) => {
         <LeaveDetailModal
           selectedDetail={selectedDetail}
           onClose={() => setSelectedDetail(null)}
+          currentUserRole={userRole}
+          handleEditKembali={handleEditKembali} // UBAH DI SINI: Meneruskan prop handler edit agar tombol di modal aktif
+          onRefreshData={loadRiwayat}
         />
       )}
     </div>
