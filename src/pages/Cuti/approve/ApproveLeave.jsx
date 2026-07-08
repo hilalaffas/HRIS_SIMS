@@ -6,7 +6,19 @@ import TabMenu from './components/TabMenu';
 import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
+import ActionReasonModal, { ACTION_CONFIG } from './components/ActionReasonModal';
 import { pendingRequests, allLeaveHistory, sisaCutiInfo, ALLOWED_ROLES } from './data/mockData';
+
+/**
+ * Format Date jadi string "YYYY-MM-DD HH:mm" agar konsisten dengan
+ * format `waktu` yang dipakai di riwayatLog pada mockData.js.
+ */
+const formatLogTimestamp = (date) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  const tanggal = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const jam = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${tanggal} ${jam}`;
+};
 
 /**
  * ApproveLeaving.jsx
@@ -29,7 +41,7 @@ import { pendingRequests, allLeaveHistory, sisaCutiInfo, ALLOWED_ROLES } from '.
  * reusable & mudah di-test.
  * ------------------------------------------------------------------
  */
-const ApproveLeaving = () => {
+const ApproveLeaving = ({ user }) => {
   const [activeTab, setActiveTab] = useState("proses"); // 'proses' | 'list'
   const [selectedDetail, setSelectedDetail] = useState(null);
 
@@ -37,32 +49,64 @@ const ApproveLeaving = () => {
   const [pending, setPending] = useState(pendingRequests);
   const [history, setHistory] = useState(allLeaveHistory);
 
+  // Permohonan yang sedang menunggu alasan dari approver.
+  // Bentuknya { item, action } | null. Selama ini bernilai isi,
+  // ActionReasonModal akan tampil di atas halaman.
+  const [actionRequest, setActionRequest] = useState(null);
+
   const pendingCount = pending.length;
 
   const handleOpenDetail = (item) => setSelectedDetail(item);
   const handleCloseDetail = () => setSelectedDetail(null);
 
   /**
-   * Handler aksi ACC / Revisi / Tolak.
+   * Langkah 1: tombol ACC/Revisi/Tolak diklik di ApproveSection.
+   * Belum mengubah status apa pun — hanya membuka ActionReasonModal
+   * supaya approver mengisi alasan/catatan terlebih dahulu.
+   */
+  const handleRequestAction = (item, action) => {
+    setActionRequest({ item, action });
+  };
+
+  /** Approver membatalkan / menutup modal alasan tanpa submit. */
+  const handleCancelAction = () => setActionRequest(null);
+
+  /**
+   * Langkah 2: approver submit alasan dari ActionReasonModal.
+   * Baru di sinilah status permohonan benar-benar berubah, dan
+   * alasan yang diisi ditambahkan sebagai entri baru di riwayatLog.
+   *
    * Saat ini hanya mengubah state lokal supaya preview terasa hidup.
    * Di project asli, ganti isi fungsi ini dengan pemanggilan API,
+   * contoh:
+   *   await api.post(`/cuti/approval/${id}`, { action, alasan });
    * lalu refetch/replace data pending & history setelah sukses.
    */
-  const handleAction = (id, action) => {
-    const statusMap = {
-      acc: "DISETUJUI",
-      revisi: "DIKEMBALIKAN",
-      tolak: "DITOLAK",
-    };
-    const newStatus = statusMap[action];
+  const handleConfirmAction = (id, action, alasan) => {
+    const config = ACTION_CONFIG[action];
+    if (!config) return;
 
-    // TODO: panggil API di sini, contoh:
-    // await api.post(`/cuti/approval/${id}`, { action });
+    const logEntry = {
+      nama: user?.name || "Approver",
+      waktu: formatLogTimestamp(new Date()),
+      statusBadge: config.statusValue,
+      catatan: alasan,
+    };
 
     setPending((prev) => prev.filter((item) => item.id !== id));
     setHistory((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, statusBerkas: newStatus } : item))
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              statusBerkas: config.statusValue,
+              riwayatLog: [...(item.riwayatLog || []), logEntry],
+            }
+          : item
+      )
     );
+
+    setActionRequest(null);
   };
 
   const tabs = useMemo(
@@ -84,15 +128,22 @@ const ApproveLeaving = () => {
           <ApproveSection
             data={pending}
             sisaCuti={sisaCutiInfo}
-            onAction={handleAction}
+            onRequestAction={handleRequestAction}
             onOpenDetail={handleOpenDetail}
           />
         ) : (
           <ListCutiSection data={history} onOpenDetail={handleOpenDetail} />
         )}
       </div>
-      {/*Bagian popup ApproveCuti*/}
+      {/*Bagian popup detail riwayat (FormCuti)*/}
       {selectedDetail && <FormCuti data={selectedDetail} onClose={handleCloseDetail} />}
+
+      {/*Bagian popup alasan ACC/Revisi/Tolak*/}
+      <ActionReasonModal
+        request={actionRequest}
+        onCancel={handleCancelAction}
+        onSubmit={handleConfirmAction}
+      />
     </div>
   );
 };

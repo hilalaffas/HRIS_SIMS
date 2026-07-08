@@ -14,15 +14,11 @@ import './ApproveSection.css';
  * Props:
  *  - data: array permohonan cuti yang perlu diproses
  *  - sisaCuti: { totalHari, berlakuHingga }
- *  - onRequestAction: (item, 'acc' | 'revisi' | 'tolak') => void
- *      Dipanggil saat tombol ACC/Revisi/Tolak diklik. TIDAK langsung
- *      mengubah status — hanya membuka ActionReasonModal di komponen
- *      induk (ApproveLeave.jsx). Status baru benar-benar berubah
- *      setelah approver mengisi alasan & submit modal tersebut.
+ *  - onAction: (id, 'acc' | 'revisi' | 'tolak') => void
  *  - onOpenDetail: (item) => void
  * ------------------------------------------------------------------
  */
-const ApprovalSection = ({ data, sisaCuti, onRequestAction, onOpenDetail }) => {
+const ApprovalSection = ({ data, sisaCuti, onAction, onOpenDetail }) => {
   return (
     <div className="approvalSection">
       <div className="approvalSection__toolbar">
@@ -76,21 +72,21 @@ const ApprovalSection = ({ data, sisaCuti, onRequestAction, onOpenDetail }) => {
                   <button
                     type="button"
                     className="alvBtnPill alvBtnPill--green"
-                    onClick={() => onRequestAction(item, "acc")}
+                    onClick={() => onAction(item.id, "acc")}
                   >
                     ACC
                   </button>
                   <button
                     type="button"
                     className="alvBtnPill alvBtnPill--amber"
-                    onClick={() => onRequestAction(item, "revisi")}
+                    onClick={() => onAction(item.id, "revisi")}
                   >
                     Revisi
                   </button>
                   <button
                     type="button"
                     className="alvBtnPill alvBtnPill--rose"
-                    onClick={() => onRequestAction(item, "tolak")}
+                    onClick={() => onAction(item.id, "tolak")}
                   >
                     Tolak
                   </button>

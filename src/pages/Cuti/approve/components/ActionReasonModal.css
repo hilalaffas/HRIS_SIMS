@@ -1,0 +1,224 @@
+/**
+ * ActionReasonModal.css
+ * ------------------------------------------------------------------
+ * Mengikuti bahasa visual Form.css (overlay blur + pop-in animation),
+ * dan memakai design tokens (--alv-*) yang sudah didefinisikan di
+ * ApproveLeave.css pada scope `.approve-leaving-page`.
+ * ------------------------------------------------------------------
+ */
+
+.action-reason__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100; /* Di atas FormCuti (1000) supaya tidak bertumpuk aneh */
+  background: rgba(15, 23, 20, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: actionReasonFadeIn 0.2s ease;
+}
+
+@keyframes actionReasonFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.action-reason__modal {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  background: var(--alv-bg-card, #fff);
+  border-radius: var(--alv-radius-lg, 16px);
+  box-shadow: var(--alv-shadow-modal, 0 20px 40px rgba(0, 0, 0, 0.3));
+  overflow: hidden;
+  animation: actionReasonPopIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes actionReasonPopIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header: warna berbeda tergantung jenis aksi (acc/revisi/tolak) */
+.action-reason__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px;
+  color: #fff;
+}
+
+.action-reason__modal--acc .action-reason__header {
+  background: linear-gradient(135deg, var(--alv-green, #059669), #047857);
+}
+.action-reason__modal--revisi .action-reason__header {
+  background: linear-gradient(135deg, var(--alv-amber, #d97706), #b45309);
+}
+.action-reason__modal--tolak .action-reason__header {
+  background: linear-gradient(135deg, var(--alv-rose, #e11d48), #be123c);
+}
+
+.action-reason__title {
+  margin: 0 0 4px 0;
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.action-reason__subtitle {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.action-reason__closeIcon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.action-reason__closeIcon:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.action-reason__body {
+  padding: 20px 22px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-reason__context {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: var(--alv-bg-table-head, #f8fafc);
+  border: 1px solid var(--alv-border, #e5e7eb);
+  border-radius: 10px;
+}
+
+.action-reason__contextName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--alv-text-primary, #1f2937);
+}
+
+.action-reason__contextMeta {
+  font-size: 12px;
+  color: var(--alv-text-secondary, #6b7280);
+}
+
+.action-reason__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--alv-text-muted, #9ca3af);
+}
+
+.action-reason__textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 90px;
+  border: 1px solid var(--alv-border, #e5e7eb);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--alv-text-primary, #1f2937);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.action-reason__textarea:focus {
+  outline: none;
+  border-color: var(--alv-primary, #123d2f);
+  box-shadow: 0 0 0 3px var(--alv-primary-tint, #e9f3ef);
+}
+
+.action-reason__helper {
+  font-size: 12px;
+  color: var(--alv-text-muted, #9ca3af);
+}
+
+.action-reason__error {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--alv-rose, #e11d48);
+}
+
+.action-reason__footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  margin-top: 8px;
+  border-top: 1px solid var(--alv-border, #e5e7eb);
+}
+
+.action-reason__btnCancel {
+  background: transparent;
+  color: var(--alv-text-secondary, #6b7280);
+  border: 1px solid var(--alv-border, #e5e7eb);
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.action-reason__btnCancel:hover {
+  background: var(--alv-bg-table-head, #f8fafc);
+}
+
+.action-reason__btnSubmit {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+
+.action-reason__btnSubmit:active {
+  transform: scale(0.97);
+}
+
+.action-reason__btnSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-reason__btnSubmit--acc { background: var(--alv-green, #059669); }
+.action-reason__btnSubmit--acc:hover:not(:disabled) { background: #047857; }
+
+.action-reason__btnSubmit--revisi { background: var(--alv-amber, #d97706); }
+.action-reason__btnSubmit--revisi:hover:not(:disabled) { background: #b45309; }
+
+.action-reason__btnSubmit--tolak { background: var(--alv-rose, #e11d48); }
+.action-reason__btnSubmit--tolak:hover:not(:disabled) { background: #be123c; }
+
+@media (max-width: 480px) {
+  .action-reason__modal { max-width: 100%; }
+}

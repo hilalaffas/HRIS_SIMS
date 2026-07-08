@@ -1,7 +1,7 @@
 // src/pages/Dashboard/components/CalendarCard.jsx
 import React, { useState, useEffect } from 'react';
 import { getHolidaysByYear } from '../../../services/holidayService';
-import { getTeamLeaveByYear } from '../../../services/cutiService';
+import { getTeamLeaveByYear } from '../../../services/CutiService';
 import { getCustomHolidaysByYear } from '../../../services/holidayCustomService';
 
 export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChange, refreshTrigger }) {

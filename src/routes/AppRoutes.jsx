@@ -3,13 +3,14 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import PublicRoute from '../components/PublicRoute'; 
-import Login from '../pages/Login/Login';
+import Login from '../pages/Login/login';
 import MainLayout from '../layouts/MainLayout';
 import Dashboard from '../pages/Dashboard/Dashboard';
 import ApplyCuti from '../pages/Cuti/applycuti/ApplyCuti';
 import ProfilePage from '../pages/Profile/profile';
 import ForgotPassword from '../pages/ForgotPassword/ForgotPassword';
-import ApproveLeave from '../pages/cuti/approve/ApproveLeave';
+import ApproveLeave from '../pages/Cuti/approve/ApproveLeave';
+import Karyawan from '../pages/Karyawan/Karyawan';
 
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
   return (
@@ -38,7 +39,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           <Route path="/ApplyCuti" element={<ApplyCuti user={user} />} />
 
           {/* Wadah Halaman Approve Cuti */}
-          <Route path="/ApproveLeave" element={<ApproveLeave />} />
+          <Route path="/ApproveLeave" element={<ApproveLeave user={user} />} />
         
 
           {/* Wadah Halaman History Cuti */}
@@ -58,12 +59,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           } />
 
           {/* Wadah Halaman Manajemen Karyawan */}
-          <Route path="/karyawan" element={
-            <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100 min-h-50">
-              <h3 className="text-base font-bold text-gray-800 mb-2">Manajemen Data Karyawan</h3>
-              <p className="text-sm text-gray-500">Wadah halaman pengelolaan profil dan database karyawan.</p>
-            </div>
-          } />
+          <Route path="/karyawan" element={<Karyawan user={user} />} />
 
           {/* ============================================================
               TAMBAHAN: RUTE HALAMAN YANG SEBELUMNYA BELUM ADA DI SNIPPET KAMU 

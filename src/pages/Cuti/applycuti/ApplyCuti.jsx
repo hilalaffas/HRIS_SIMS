@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { submitCuti, getRiwayatByUser } from '../../../services/cutiService';
+import { submitCuti, getRiwayatByUser } from '../../../services/CutiService';
 import LeaveSummaryCard from '../applycuti/components/LeaveSummaryCard';
 import LeaveForm from '../applycuti/components/LeaveForm';
 import LeaveHistory from '../applycuti/components/LeaveHistory';

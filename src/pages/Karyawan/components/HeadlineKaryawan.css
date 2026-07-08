@@ -1,0 +1,37 @@
+.headline-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px; /* Jarak dari teks ke garis pemisah */
+  border-bottom: 1px solid #e2e8f0; /* Ini garis transparan/tipis pertama */
+  margin-bottom: 10px; /* Jarak dari garis pemisah ke Tab Menu */
+}
+.headline-text h1 {
+  font-size: 20px;
+  color: #1a202c;
+  margin: 0 0 4px 0;
+  font-weight: 700;
+}
+
+.headline-text p {
+  font-size: 14px;
+  color: #718096;
+  margin: 0;
+}
+
+.btn-export {
+  background-color: #f7fafc;
+  border: 1px solid #cbd5e0;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.btn-export:hover {
+  background-color: #edf2f7;
+}

@@ -1,0 +1,107 @@
+.confirm-delete__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 20, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: confirmDeleteFadeIn 0.2s ease;
+}
+
+@keyframes confirmDeleteFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.confirm-delete__modal {
+  width: 100%;
+  max-width: 380px;
+  background: var(--kry-bg-card);
+  border-radius: var(--kry-radius-lg);
+  box-shadow: var(--kry-shadow-modal);
+  padding: 24px;
+  text-align: center;
+  animation: confirmDeletePopIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes confirmDeletePopIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.confirm-delete__icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--kry-rose-bg);
+  color: var(--kry-rose);
+  font-size: 20px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-delete__title {
+  margin: 0 0 8px 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--kry-text-primary);
+}
+
+.confirm-delete__desc {
+  margin: 0 0 20px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--kry-text-secondary);
+}
+
+.confirm-delete__desc strong {
+  color: var(--kry-text-primary);
+}
+
+.confirm-delete__footer {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-delete__btnCancel,
+.confirm-delete__btnConfirm {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.confirm-delete__btnCancel {
+  background: var(--kry-bg-table-head);
+  color: var(--kry-text-secondary);
+  border: 1px solid var(--kry-border);
+}
+
+.confirm-delete__btnCancel:hover {
+  background: var(--kry-border);
+}
+
+.confirm-delete__btnConfirm {
+  background: var(--kry-rose);
+  color: #fff;
+}
+
+.confirm-delete__btnConfirm:hover {
+  background: #be123c;
+}
+
+.confirm-delete__btnCancel:active,
+.confirm-delete__btnConfirm:active {
+  transform: scale(0.97);
+}

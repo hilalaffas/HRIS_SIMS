@@ -1,4 +1,7 @@
 // src/utils/roles.js
+// (Sebelumnya nama file ini Roles.js — di-rename ke lowercase supaya
+// konsisten dengan import di menuConfig.js & Dashboard.jsx, dan sesuai
+// struktur folder standar proyek.)
 
 export const ROLES = {
   KARYAWAN: 'karyawan',
