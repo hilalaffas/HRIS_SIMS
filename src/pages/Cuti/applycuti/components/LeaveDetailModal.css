@@ -1,0 +1,589 @@
+/* =========================================================================
+   STRUKTUR BARU: MODAL POP-UP WINDOWS EFFECT
+   ========================================================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content-box {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 620px; 
+  max-height: 90vh; /* Tambahan: membatasi tinggi maksimal 90% dari tinggi layar */
+  display: flex;    /* Tambahan: mendukung flex-layout */
+  flex-direction: column; /* Tambahan */
+  border-radius: 20px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  animation: slideUp 0.25s ease;
+}
+
+/* Tambahan: pastikan bagian body-nya otomatis memunculkan scrollbar jika kepanjangan */
+.modal-body-section {
+  padding: 24px;
+  overflow-y: auto; 
+}
+
+.modal-header-section {
+  background-color: #2d6a4f;
+  color: #ffffff;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title-text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 24px;
+  cursor: pointer;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  opacity: 1;
+}
+
+.modal-body-section {
+  padding: 24px;
+}
+
+.modal-info-row {
+  display: flex;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.modal-info-label {
+  width: 150px;
+  font-weight: bold;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.modal-info-value {
+  color: #1e293b;
+}
+
+.modal-info-value.value-highlight {
+  color: #2d6a4f;
+  font-weight: bold;
+}
+
+.modal-divider {
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 18px 0;
+}
+
+.modal-subtitle-text {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.modal-approval-status-box {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-approval-step {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.badge-step {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.badge-step.approved { background-color: #d1fae5; color: #065f46; }
+.badge-step.returned { background-color: #ffedd5; color: #c2410c; }
+.badge-step.pending  { background-color: #f1f5f9; color: #64748b; }
+
+.modal-feedback-alert {
+  margin-top: 16px;
+  background-color: #fef2f2;
+  border-left: 4px solid #ef4444;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.modal-feedback-alert strong {
+  display: block;
+  font-size: 12.5px;
+  color: #991b1b;
+  margin-bottom: 4px;
+}
+
+.modal-feedback-alert p {
+  margin: 0;
+  font-size: 13px;
+  color: #7f1d1d;
+  line-height: 1.4;
+}
+
+.modal-footer-section {
+  padding: 12px 24px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-modal-close {
+  background-color: #475569;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-modal-close:hover {
+  background-color: #334155;
+}
+
+.modal-grid-2col {
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-info-block {
+  flex: 1;
+}
+
+.modal-approval-horizontal-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.modal-approval-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-display-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 6px;
+  min-height: 45px;
+}
+
+.modal-display-box.highlight-box {
+  background: #fffdf5;
+  border-color: #fef08a;
+}
+
+.btn-modal-close-dark {
+  background-color: #113322;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* ==========================================================================
+   PERBAIKAN STRUKTUR SHADOW BOX LOG PEMERIKSAAN
+   ========================================================================== */
+.modal-log-card {
+  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.07);
+  border: none;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+  background-color: #ffffff;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-log-card .modal-log-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin-bottom: 8px !important;
+}
+
+.modal-log-card .modal-log-date {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.modal-log-card .modal-log-body {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 6px !important;
+}
+
+
+/* =========================================================================
+   STYLING UTAMA MODAL POP-OUT DETAIL CUTI
+   ========================================================================= */
+
+/* Overlay Latar Belakang (Blur & Gelap Transparan) */
+.form-cuti__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Kontainer Pop-out Utama (Lebar Dibatasi Sesuai Gambar) */
+.form-cuti__modal {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 620px; 
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  animation: formCutiPopIn 0.25s ease-out;
+}
+
+/* HEADER MODAL - Warna Hijau Gelap */
+.form-cuti__header {
+  background-color: #0f4c3a; /* Hijau gelap sesuai gambar */
+  color: #ffffff;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-cuti__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.form-cuti__subtitle {
+  margin: 4px 0 0 0;
+  font-size: 12.5px;
+  opacity: 0.85;
+}
+
+/* Tombol Silang (X) di Kanan Atas Header */
+.form-cuti__close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #ffffff;
+  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.form-cuti__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* BODY MODAL - Area Konten Ber-scroll */
+.form-cuti__body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* GRID SYSTEM - Baris Informasi Utama */
+.form-cuti__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Grid Khusus 3 Kolom Untuk Struktur Approval Menyamping */
+.form-cuti__grid--three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Penataan Field (Label & Value) */
+.form-cuti__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-cuti__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8; /* Abu-abu pucat kapital */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-cuti__value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Aksen Warna Hijau Khusus Durasi Kerja / Tanggal */
+.form-cuti__value--accent {
+  color: #0f4c3a;
+}
+
+/* Garis Pembatas Tipis */
+.form-cuti__divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 4px 0;
+}
+
+/* Kotak Box (Alasan Keterangan) */
+.form-cuti__box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: #334155;
+  margin-top: 6px;
+  min-height: 20px;
+}
+
+/* Kotak Box Khusus Berwarna Kuning (Pekerjaan Tertunda) */
+.form-cuti__box--warn {
+  background-color: #fffdf5;
+  border: 1px solid #fef08a;
+  color: #b45309;
+  font-style: italic;
+}
+
+/* AREA RIWAYAT LOG PEMERIKSAAN BERJENJANG */
+.form-cuti__section {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-cuti__log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Kartu Riwayat Tipis di Dalam Log */
+.form-cuti__log-item {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.form-cuti__log-content {
+  flex-grow: 1;          /* Memaksa kontainer ini menghabiskan seluruh sisa ruang kanan */
+  display: flex;
+  flex-direction: column;
+}
+
+.form-cuti__log-top {
+  display: flex;
+  justify-content: space-between; /* <-- Ini yang membuat nama di kiri dan tanggal di paling kanan */
+  align-items: center;
+  width: 100%;                   /* <-- Memastikan kontainer memakai lebar penuh kotak */
+}
+
+.form-cuti__log-role {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.form-cuti__log-time {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.form-cuti__log-bottom {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+/* Alert Box Merah Tambahan (Jika Data Dikembalikan) */
+.modal-feedback-alert {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+/* FOOTER MODAL */
+.form-cuti__footer {
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Tombol Tutup Utama di Pojok Kanan Bawah */
+.form-cuti__close-btn {
+  background-color: #0f4c3a;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.form-cuti__close-btn:hover {
+  background-color: #0b3a2c;
+}
+
+/* Mengatur baris nama dan tanggal agar melebar penuh */
+.form-cuti__log-row-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 4px; /* Memberi jarak sedikit dengan teks status di bawahnya */
+}
+
+/* Memastikan teks tanggal tidak turun ke bawah */
+.form-cuti__log-time {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap; /* Mencegah tanggal terpotong menjadi 2 baris */
+}
+
+/* ==========================================
+   TAMBAHAN UNTUK TOMBOL EDIT BERKAS
+   ========================================== */
+
+/* Gaya dasar tombol Edit Berkas */
+.form-cuti__edit-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #ea580c; /* Warna Oranye Accent sesuai indikasi Koreksi/Edit */
+  border: 1px solid #d97706;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Efek saat kursor diarahkan ke tombol Edit (Hover) */
+.form-cuti__edit-btn:hover {
+  background-color: #c2410c; /* Oranye lebih gelap saat di-hover */
+  border-color: #9a3412;
+  transform: translateY(-1px); /* Efek sedikit mengangkat */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Efek saat tombol Edit diklik (Active) */
+.form-cuti__edit-btn:active {
+  background-color: #9a3412;
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Penyesuaian responsif jika dibuka di layar HP/Mobile */
+@media (max-width: 640px) {
+  .form-cuti__footer {
+    display: flex;
+    flex-direction: column-reverse; /* Tombol utama (Edit) berada di atas tombol Tutup saat mobile */
+    gap: 10px;
+  }
+
+  .form-cuti__edit-btn,
+  .form-cuti__close-btn {
+    width: 100%; /* Tombol memenuhi lebar layar pada perangkat mobile */
+    text-align: center;
+  }
+}
+
+/* ANIMASI POP IN */
+@keyframes formCutiPopIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ANIMATION KEYFRAMES */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(15px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

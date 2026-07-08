@@ -1,0 +1,275 @@
+/* ==========================================
+   SEKSI RIWAYAT & STATUS PENGAJUAN
+   ========================================== */
+.history-container {
+  width: 100%;
+  max-width: 1450px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  margin-top: 24px;
+  overflow: hidden;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.history-title-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-header-icon {
+  font-size: 18px;
+  color: #2d6a4f;
+}
+
+.history-title {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  position: relative;
+  display: inline-block;
+}
+
+.history-filter-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.filter-dropdown {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #2d6a4f;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-dropdown:focus {
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
+}
+
+.history-body {
+  padding: 24px;
+  background-color: #ffffff;
+}
+
+.empty-history-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+  background-color: #fafafa;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background-color: #ffffff;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+}
+
+.history-item-card.border-alert-red {
+  border: 1px solid #fca5a5;
+  background-color: #ffffff;
+}
+
+.history-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.history-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-item-leave-type {
+  font-weight: bold;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.history-item-dates {
+  display: block;
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  padding: 0;
+}
+
+.dot-badge-global {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.dot-badge-item {
+  width: 10px;
+  height: 10px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.history-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-edit-inline {
+  background-color: #f59e0b;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.btn-edit-inline:hover {
+  background-color: #d97706;
+}
+
+.btn-edit-inline i {
+  font-size: 11px;
+}
+
+.status-badge-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  min-width: 110px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.status-badge-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.status-badge-btn.dikembalikan {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+.status-badge-btn.dikembalikan:hover {
+  background-color: #ffedd5;
+}
+
+.status-badge-btn.disetujuiacc {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.status-badge-btn.disetujuiacc:hover {
+  background-color: #d1fae5;
+}
+
+.status-badge-list {
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  display: inline-block !important;
+  text-align: center !important;
+}
+
+.status-badge-list.dalam-proses {
+  background-color: #fef08a !important;
+  color: #a16207 !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  display: inline-block !important;
+  text-align: center !important;
+}
+
+.status-badge-list.dikembalikan {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  display: inline-block !important;
+  text-align: center !important;
+}
+
+.status-badge-btn.proses-pill {
+  background-color: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  padding: 5px 16px !important;
+  border-radius: 20px !important;
+  cursor: pointer;
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+
+.status-badge-btn.proses-pill:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}

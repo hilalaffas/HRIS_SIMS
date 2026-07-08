@@ -1,0 +1,87 @@
+/* ==========================================
+   KARTU METRICS INFORMASI CUTI ATAS
+   ========================================== */
+.applycuti-cards-container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 1450px; /* Menyelaraskan lebar kartu dengan lebar form container */
+  box-sizing: border-box;
+}
+
+.applycuti-card {
+  flex: 1;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+  min-height: 140px;
+}
+
+/* Kartu Sisa Cuti - Hijau Pekat Serasi Form Header */
+.applycuti-card.total-leave-card {
+  background-color: #2d6a4f; 
+  color: #ffffff;
+}
+
+.applycuti-card-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.total-leave-card .applycuti-card-title {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.quota-leave-card .applycuti-card-title {
+  color: #94a3b8;
+}
+
+.applycuti-card-value-container {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.applycuti-card-value {
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.total-leave-card .applycuti-card-value {
+  color: #ffffff;
+}
+
+.applycuti-card-unit {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.total-leave-card .applycuti-card-unit {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.quota-leave-card .applycuti-card-unit.dark-text {
+  color: #475569;
+}
+
+.applycuti-card-footer {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.applycuti-card-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: #f1f5f9;
+  border-radius: 999px;
+  margin-top: 8px;
+}

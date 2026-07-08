@@ -1,4 +1,5 @@
 import React from 'react';
+import './LeaveSummaryCard.css';
 
 const LeaveSummaryCard = ({ sisaCutiTahunan }) => {
   const tahunBerjalan = new Date().getFullYear();

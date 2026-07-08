@@ -1,4 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './LeaveForm.css';
+
+// PINDAHAN DARI ApplyCuti.jsx
+export const hariLiburNasional = [];
+
+export const hitungBatasMinTanggal = (jumlahHariKerja, daftarHariLibur = []) => {
+  let date = new Date();
+  let sisaHari = jumlahHariKerja;
+
+  while (sisaHari > 0) {
+    date.setDate(date.getDate() + 1);
+    const dayOfWeek = date.getDay();
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isTanggalMerah = daftarHariLibur.includes(dateStr);
+
+    if (!isWeekend && !isTanggalMerah) {
+      sisaHari--;
+    }
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+// Fungsi internal format text lokal kalender
+const localFormatDateDisplay = (dateStr) => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+};
 
 const LeaveForm = ({
   jenisCuti, setJenisCuti,
@@ -13,11 +42,13 @@ const LeaveForm = ({
   coverOleh, setCoverOleh,
   jedaHariKerja,
   dinamisBatasMinStr,
-  formatDateDisplay,
   handleSubmit,
   isSubmitting,
   canApplyCuti,
-  todayStr
+  todayStr,
+  currentUserRole,
+  isEditing,       // <-- PROP BARU UNTUK KONTROL TOMBOL BATAL
+  onCancelEdit     // <-- PROP BARU UNTUK AKSI BATAL
 }) => {
   const [showDariCalendar, setShowDariCalendar] = useState(false);
   const [showSampaiCalendar, setShowSampaiCalendar] = useState(false);
@@ -29,10 +60,11 @@ const LeaveForm = ({
   const dariRef = useRef(null);
   const sampaiRef = useRef(null);
 
-  // Deteksi status kedaruratan fitur cuti
   const isMendesak = jenisCuti === 'Cuti Urgent' || jenisCuti === 'Cuti Berduka';
 
-// Sinkronisasi fokus bulan kalender berdasarkan perubahan tanggal riil
+  // Format deteksi huruf kecil untuk mencegah kesalahan penulisan string role
+  const isKaryawan = currentUserRole?.toLowerCase() === 'karyawan';
+
   useEffect(() => {
     if (dariTanggal) {
       const dDate = new Date(dariTanggal);
@@ -101,12 +133,11 @@ const LeaveForm = ({
           {days.map((item, idx) => {
             const itemStr = `${item.year}-${String(item.month + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
             const isMelanggarBatasMin = minDateStr && new Date(itemStr) < new Date(minDateStr);
-            const isTombolDisabled = isMelanggarBatasMin;
 
             return (
               <button
                 key={idx} type="button"
-                disabled={isTombolDisabled}
+                disabled={isMelanggarBatasMin}
                 onClick={() => onSelect(item)}
                 className={`mini-day-cell ${!item.isCurrentMonth ? 'outside-month' : ''} ${itemStr === selectedDateStr ? 'selected' : ''} ${itemStr === todayStr ? 'today' : ''} ${(new Date(item.year, item.month, item.day).getDay() === 0 || new Date(item.year, item.month, item.day).getDay() === 6) ? 'weekend' : ''}`}
               >
@@ -146,11 +177,7 @@ const LeaveForm = ({
         {(jenisCuti === 'Cuti setengah hari' ) && (
           <div className="form-group">
             <label className="form-label">DURASI SESI SETENGAH HARI *</label>
-            <select 
-              value={durasiSesi} 
-              onChange={(e) => setDurasiSesi(e.target.value)} 
-              className="form-control"
-            >
+            <select value={durasiSesi} onChange={(e) => setDurasiSesi(e.target.value)} className="form-control">
               <option value="Setengah Hari (Pagi)">Setengah Hari (Pagi: 08.00 - 12.00)</option>
               <option value="Setengah Hari (Siang)">Setengah Hari (Siang: 13.00 - 17.00)</option>
             </select>
@@ -161,7 +188,7 @@ const LeaveForm = ({
           <div className="form-group flex-1" ref={dariRef} style={{ position: 'relative' }}>
             <label className="form-label">DARI TANGGAL</label>
             <div className="input-with-icon">
-              <input type="text" readOnly value={formatDateDisplay(dariTanggal)} onClick={() => setShowDariCalendar(!showDariCalendar)} className="form-control text-input-clickable" placeholder="dd/mm/yyyy" />
+              <input type="text" readOnly value={localFormatDateDisplay(dariTanggal)} onClick={() => setShowDariCalendar(!showDariCalendar)} className="form-control text-input-clickable" placeholder="dd/mm/yyyy" />
               <i className="fa-regular fa-calendar-days input-icon-inside"></i>
             </div>
             {showDariCalendar && (() => {
@@ -173,7 +200,7 @@ const LeaveForm = ({
           <div className="form-group flex-1" ref={sampaiRef} style={{ position: 'relative' }}>
             <label className="form-label">SAMPAI TANGGAL</label>
             <div className="input-with-icon">
-              <input type="text" readOnly value={formatDateDisplay(sampaiTanggal)} onClick={() => setShowSampaiCalendar(!showSampaiCalendar)} className="form-control text-input-clickable" placeholder="dd/mm/yyyy" />
+              <input type="text" readOnly value={localFormatDateDisplay(sampaiTanggal)} onClick={() => setShowSampaiCalendar(!showSampaiCalendar)} className="form-control text-input-clickable" placeholder="dd/mm/yyyy" />
               <i className="fa-regular fa-calendar-days input-icon-inside"></i>
             </div>
             {showSampaiCalendar && (() => {
@@ -182,9 +209,7 @@ const LeaveForm = ({
                  : (new Date(dariTanggal) > new Date(dinamisBatasMinStr) ? dariTanggal : dinamisBatasMinStr);
 
                return renderMiniCalendar(
-                 sampaiViewDate, 
-                 setSampaiViewDate, 
-                 sampaiTanggal, 
+                 sampaiViewDate, setSampaiViewDate, sampaiTanggal, 
                  (item) => handleSelectDate(item, setSampaiTanggal, setShowSampaiCalendar, batasMinSampaiStr), 
                  batasMinSampaiStr
                );
@@ -196,7 +221,6 @@ const LeaveForm = ({
           Durasi pengajuan: {jedaHariKerja === 0 ? "1 Hari" : `${jedaHariKerja} Hari Kerja`}
         </div>
 
-        {/* PERBAIKAN 1: Penambahan atribut 'required' agar alur berjenjang wajib diisi oleh user */}
         <div className="form-group">
           <label className="form-label">PILIH ALUR APPROVAL CUTI *</label>
           <div className="approval-row">
@@ -204,7 +228,8 @@ const LeaveForm = ({
               <span className="badge-approval leader">Leader</span>
               <select value={leaderApproval} onChange={(e) => setLeaderApproval(e.target.value)} className="form-control" required>
                 <option value="">Pilih...</option>
-                <option value="None">None</option>
+                {/* Hanya tampilkan None jika role BUKAN karyawan */}
+                {!isKaryawan && <option value="None">None</option>}
                 <option value="Aden">Aden</option>
                 <option value="Ari">Ari</option>
                 <option value="Guntur">Guntur</option>
@@ -215,7 +240,8 @@ const LeaveForm = ({
               <span className="badge-approval spv">SPV</span>
               <select value={spvApproval} onChange={(e) => setSpvApproval(e.target.value)} className="form-control" required>
                 <option value="">Pilih...</option>
-                <option value="None">None</option>                
+                {/* Hanya tampilkan None jika role BUKAN karyawan */}
+                {!isKaryawan && <option value="None">None</option>}                
                 <option value="Mandala">Mandala</option>
               </select>
             </div>
@@ -223,7 +249,8 @@ const LeaveForm = ({
               <span className="badge-approval manager">Manager</span>
               <select value={managerApproval} onChange={(e) => setManagerApproval(e.target.value)} className="form-control" required>
                 <option value="">Pilih...</option>
-                <option value="None">None</option>
+                {/* Hanya tampilkan None jika role BUKAN karyawan */}
+                {!isKaryawan && <option value="None">None</option>}
                 <option value="Ade Mulya">Ade Mulya</option>
                 <option value="Fuad">Fuad</option>
                 <option value="Hendro">Hendro</option>
@@ -234,39 +261,40 @@ const LeaveForm = ({
           </div>
         </div>
 
-        {/* PERBAIKAN 2: Mengubah input type="text" menjadi textarea agar sesuai dengan layout kotak isian detail pada gambar */}
         <div className="form-group">
           <label className="form-label">ALASAN / KETERANGAN *</label>
           <textarea rows="3" value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Berikan alasan yang jelas..." className="form-control textarea-control" required />
         </div>
 
-        {/* SEBELUMNYA: Gabung menjadi satu textarea */}
-        {/* SEKARANG: Dipecah menjadi dua bagian */}
         <div className="form-group">
           <label className="form-label">PEKERJAAN TERTUNDA *</label>
-          <textarea 
-            rows="2" 
-            value={pekerjaanTertunda} 
-            onChange={(e) => setPekerjaanTertunda(e.target.value)} 
-            placeholder="Sebutkan pekerjaan apa saja yang tertunda..." 
-            className="form-control textarea-control" 
-            required 
-          />
+          <textarea rows="2" value={pekerjaanTertunda} onChange={(e) => setPekerjaanTertunda(e.target.value)} placeholder="Sebutkan pekerjaan apa saja yang tertunda..." className="form-control textarea-control" required />
         </div>
 
         <div className="form-group">
           <label className="form-label">DICOVER OLEH (BACKUP PIC) *</label>
-          <input 
-            type="text" 
-            value={coverOleh} // Catatan: Tambahkan state baru 'coverOleh' di ApplyCuti.js jika ingin dipisah datanya
-            onChange={(e) => setCoverOleh(e.target.value)} 
-            placeholder="Nama rekan kerja yang mem-backup pekerjaan Anda..." 
-            className="form-control" 
-            required 
-          />
+          <input type="text" value={coverOleh} onChange={(e) => setCoverOleh(e.target.value)} placeholder="Nama rekan kerja yang mem-backup pekerjaan Anda..." className="form-control" required />
         </div>
 
-        <div className="btn-group-right">
+        <div className="btn-group-right" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          {/* TOMBOL BATAL EDIT HANYA MUNCUL JIKA SEDANG MODE EDIT */}
+          {isEditing && (
+            <button 
+              type="button" 
+              className="btn btn-cancel-edit" 
+              onClick={onCancelEdit}
+              style={{
+                backgroundColor: '#6c757d',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Batal Edit
+            </button>
+          )}
           <button type="submit" className="btn btn-submit-dark" disabled={isSubmitting || !canApplyCuti}>
             {isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan'}
           </button>

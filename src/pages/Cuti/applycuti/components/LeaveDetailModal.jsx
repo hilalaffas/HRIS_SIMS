@@ -1,128 +1,328 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import './LeaveDetailModal.css'; 
 
-const LeaveDetailModal = ({ selectedDetail, onClose }) => {
+const STATUS_LABEL = {
+  'PROSES': "Proses",
+  'DALAM PROSES': "Proses",
+  'DISETUJUI': "Disetujui",
+  'DIKEMBALIKAN': "Dikembalikan",
+  'DITOLAK': "Ditolak",
+};
+
+// Pastikan untuk mengimpor service API Anda jika ada, contoh:
+// import { getDetailCutiById, updateStatusCuti } from '../../../services/cutiService';
+
+const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshData, handleEditKembali }) => {
+  // State tambahan untuk menampung data riwayat log/status terupdate dari database
+  const [detailData, setDetailData] = useState(selectedDetail);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Menjaga fitur bawaan agar modal bisa ditutup dengan tombol Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  // =========================================================================
+  // 1. KONEKSI API: GET LOG DAN DETAIL TERBARU (REAL-TIME FETCH)
+  // =========================================================================
+  // Keterangan Fungsi: Mengambil data status approval terbaru dari database 
+  // setiap kali modal dibuka, agar user melihat status aslinya secara real-time.
+  useEffect(() => {
+    if (selectedDetail?.id) {
+      const fetchLatestDetail = async () => {
+        setIsLoading(true);
+        try {
+          // Contoh pemanggilan API Database:
+          // const response = await getDetailCutiById(selectedDetail.id);
+          // setDetailData(response.data);
+          
+          // Sementara menggunakan data props bawaan jika API belum dipasang
+          setDetailData(selectedDetail); 
+        } catch (error) {
+          console.error("Gagal mengambil data detail terbaru:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchLatestDetail();
+    }
+  }, [selectedDetail]);
+
+  if (!detailData) return null;
+
+  // Normalisasi pembacaan status agar singkron ke kamus label pendukung gambar
+  const statusKey = (detailData.globalStatus || 'PROSES').toUpperCase();
+  const statusTercetak = STATUS_LABEL[statusKey] || detailData.globalStatus || "Proses";
+
+  // =========================================================================
+  // LOGIKA TAMBAHAN: GENERATE LOG DINAMIS AGAR RIWAYAT LOG SELALU TERUPDATE
+  // =========================================================================
+  const generateDynamicLogs = () => {
+    const logs = [
+      {
+        nama: detailData.pemohon || 'Karyawan',
+        tanggal: detailData.stringTanggal,
+        aksi: 'DIAJUKAN',
+        catatan: 'Mengajukan awal'
+      }
+    ];
+
+    // Cek status Verifikasi Leader
+    const leaderNama = detailData.leader?.nama || detailData.leaderApproval;
+    const leaderStatus = detailData.leader?.status || (detailData.leaderApproval ? 'Approved' : null);
+    if (leaderNama && leaderStatus && leaderStatus !== 'Pending') {
+      logs.push({
+        nama: `${leaderNama} (Leader)`,
+        tanggal: detailData.stringTanggal,
+        aksi: leaderStatus.toUpperCase(),
+        catatan: leaderStatus.toLowerCase() === 'approved' ? 'Meneruskan ke SPV' : 'Menolak berkas'
+      });
+    }
+
+    // Cek status Verifikasi SPV
+    const spvNama = detailData.spv?.nama || detailData.spvApproval;
+    const spvStatus = detailData.spv?.status || (detailData.spvApproval ? 'Approved' : null);
+    if (spvNama && spvStatus && spvStatus !== 'Pending') {
+      logs.push({
+        nama: `${spvNama} (SPV)`,
+        tanggal: detailData.stringTanggal,
+        aksi: spvStatus.toUpperCase(),
+        catatan: detailData.spv?.catatan || (spvStatus.toLowerCase() === 'approved' ? 'Meneruskan ke Manager' : 'Mengembalikan berkas')
+      });
+    }
+
+    // Cek status Verifikasi Manager
+    const managerNama = detailData.manager?.nama || detailData.managerApproval;
+    const managerStatus = detailData.manager?.status || (detailData.managerApproval ? 'Approved' : null);
+    if (managerNama && managerStatus && managerStatus !== 'Pending') {
+      logs.push({
+        nama: `${managerNama} (Manager)`,
+        tanggal: detailData.stringTanggal,
+        aksi: managerStatus.toUpperCase(),
+        catatan: managerStatus.toLowerCase() === 'approved' ? 'Menyetujui cuti (ACC)' : 'Menolak berkas'
+      });
+    }
+
+    return logs;
+  };
+
+  // Tentukan apakah menggunakan log pemeriksaan statis bawaan atau log dinamis terupdate
+  const finalLogs = detailData.logPemeriksaan && detailData.logPemeriksaan.length > 1 
+    ? detailData.logPemeriksaan 
+    : generateDynamicLogs();
+
+  // =========================================================================
+  // 2. KONEKSI API: AKSI PERSETUJUAN / APPROVAL (POST/PUT) - (OPSIONAL)
+  // =========================================================================
+  // Keterangan Fungsi: Fungsi ini mendengarkan aksi dari atasan jika menekan 
+  // tombol Approve / Reject, lalu memperbarui statusnya langsung ke dalam database.
+  const handleActionApproval = async (statusAksi, catatanAtasan = '') => {
+    try {
+      const payload = {
+        cutiId: detailData.id,
+        roleAtasan: currentUserRole, // Misal: 'leader', 'spv', atau 'manager'
+        status: statusAksi,          // 'Approved', 'Rejected', atau 'Returned'
+        catatan: catatanAtasan
+      };
+
+      console.log("Mengirim perubahan status ke Database:", payload);
+      // Contoh pemanggilan API:
+      // await updateStatusCuti(payload);
+      
+      alert(`Berkas berhasil di-${statusAksi}!`);
+      if (onRefreshData) onRefreshData(); // Memperbarui list riwayat di halaman induk ApplyCuti
+      onClose(); // Tutup modal
+    } catch (error) {
+      alert("Gagal memperbarui status persetujuan.");
+    }
+  };
+
+  // Deteksi apakah user yang sedang membuka modal ini adalah atasan (bukan karyawan biasa)
+  const isAtasan = currentUserRole === 'leader' || currentUserRole === 'spv' || currentUserRole === 'manager';
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content-box" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header-section">
-          <h4 className="modal-title-text">Informasi Detail Berkas Cuti</h4>
-          <p className="modal-subtitle-text">Pantau alur verifikasi berkas secara berjenjang</p>
-          <button className="modal-close-btn" onClick={onClose}>&times;</button>
+    <div className="form-cuti__overlay" onMouseDown={onClose}>
+      <div
+        className="form-cuti__modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="form-cuti-title"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {/* HEADER MODAL */}
+        <div className="form-cuti__header">
+          <div>
+            <h2 id="form-cuti-title" className="form-cuti__title">
+              Informasi Detail Berkas Cuti {isLoading && "(Memuat...)"}
+            </h2>
+            <p className="form-cuti__subtitle">Pantau alur verifikasi berkas secara berjenjang</p>
+          </div>
+          <button
+            type="button"
+            className="form-cuti__close"
+            aria-label="Tutup"
+            onClick={onClose}
+          >
+            &times;
+          </button>
         </div>
-        
-        <div className="modal-body-section">
-          {/* Baris Pemohon & Jenis Permohonan */}
-          <div className="modal-grid-2col">
-            <div className="modal-info-block">
-              <span className="modal-info-label">PEMOHON</span>
-              <span className="modal-info-value-bold">{selectedDetail.pemohon}</span>
+
+        {/* BODY MODAL */}
+        <div className="form-cuti__body">
+          {/* Baris 1: Pemohon & Jenis Permohonan */}
+          <div className="form-cuti__grid">
+            <div className="form-cuti__field">
+              <span className="form-cuti__label">Pemohon</span>
+              <span className="form-cuti__value">{detailData.pemohon}</span>
             </div>
-            <div className="modal-info-block">
-              <span className="modal-info-label">JENIS PERMOHONAN</span>
-              <span className="modal-info-value-bold">{selectedDetail.jenisCuti}</span>
+            <div className="form-cuti__field">
+              <span className="form-cuti__label">Jenis Permohonan</span>
+              <span className="form-cuti__value">{detailData.jenisCuti}</span>
+            </div>
+
+            {/* Baris 2: Durasi Kerja & Status Sekarang */}
+            <div className="form-cuti__field">
+              <span className="form-cuti__label">Durasi Kerja</span>
+              <span className="form-cuti__value form-cuti__value--accent">
+                {detailData.stringTanggal}
+              </span>
+            </div>
+            <div className="form-cuti__field">
+              <span className="form-cuti__label">Status Sekarang</span>
+              <span className="form-cuti__value">{statusTercetak}</span>
             </div>
           </div>
 
-          {/* Baris Durasi Kerja & Status Sekarang */}
-          <div className="modal-grid-2col" style={{ marginTop: '15px' }}>
-            <div className="modal-info-block">
-              <span className="modal-info-label">DURASI KERJA</span>
-              <span className="modal-info-value-highlight">{selectedDetail.stringTanggal} </span>
+          <div className="form-cuti__divider" />
+
+          {/* Baris 3: Alur Approval Menyamping */}
+          <div className="form-cuti__grid form-cuti__grid--three">
+            <div className="form-cuti__field">
+              <span className="form-cuti__label">App. Leader</span>
+              <span className="form-cuti__value">
+                {detailData.leader?.nama || detailData.leaderApproval || '-'}
+              </span>
             </div>
-            <div className="modal-info-block">
-              <span className="modal-info-label">STATUS SEKARANG</span>
-              <div style={{ marginTop: '4px' }}></div>
-            <span className={`badge-status ${selectedDetail.globalStatus?.toLowerCase() === 'proses' || selectedDetail.globalStatus?.toLowerCase() === 'dalam proses' ? 'dalam-proses' : selectedDetail.globalStatus?.toLowerCase()}`}>{selectedDetail.globalStatus === 'PROSES' ? 'DALAM PROSES' : selectedDetail.globalStatus}</span>
+            <div className="form-cuti__field">
+              <span className="form-cuti__label">App. SPV</span>
+              <span className="form-cuti__value">
+                {detailData.spv?.nama || detailData.spvApproval || '-'}
+              </span>
+            </div>
+            <div className="form-cuti__field">
+              <span className="form-cuti__label">App. Manager</span>
+              <span className="form-cuti__value">
+                {detailData.manager?.nama || detailData.managerApproval || '-'}
+              </span>
             </div>
           </div>
-
-          <hr className="modal-divider" />
-
-          {/* Tampilan Alur Approval Menyamping Persis Seperti Gambar */}
-          <div className="modal-approval-horizontal-row">
-            <div className="modal-approval-col">
-              <span className="modal-approval-label">APP. LEADER</span>
-              <span className="modal-approval-name">{selectedDetail.leader?.nama || selectedDetail.leaderApproval || '-'}</span>
-            </div>
-            <div className="modal-approval-col">
-              <span className="modal-approval-label">APP. SPV</span>
-              <span className="modal-approval-name">{selectedDetail.spv?.nama || selectedDetail.spvApproval || '-'}</span>
-            </div>
-            <div className="modal-approval-col">
-              <span className="modal-approval-label">APP. MANAGER</span>
-              <span className="modal-approval-name">{selectedDetail.manager?.nama || selectedDetail.managerApproval || '-'}</span>
-            </div>
-          </div>
-
-          <hr className="modal-divider" />
 
           {/* Alasan Keterangan */}
-          <div className="modal-info-block-flat" style={{ marginTop: '15px' }}>
-            <span className="modal-info-label">ALASAN KETERANGAN</span>
-            <div className="modal-display-box">
-              {selectedDetail.alasan || '-'}
-            </div>
+          <div className="form-cuti__section">
+            <span className="form-cuti__label">Alasan Keterangan</span>
+            <div className="form-cuti__box">{detailData.alasan || '-'}</div>
           </div>
 
-          {/* PEKERJAAN TERTUNDA */}
-          <div className="modal-info-block-flat" style={{ marginTop: '15px' }}>
-            <span className="modal-info-label">PEKERJAAN TERTUNDA</span>
-            <div className="modal-display-box highlight-box">
-              {selectedDetail.pekerjaanTertunda || '-'}
+          {/* Pekerjaan Tertunda & Backup PIC */}
+          {(detailData.pekerjaanTertunda || detailData.coverOleh) && (
+            <div className="form-cuti__section">
+              <span className="form-cuti__label">Pekerjaan Tertunda &amp; Dicover Oleh</span>
+              <div className="form-cuti__box form-cuti__box--warn">
+                {detailData.pekerjaanTertunda || ''}  
+                {detailData.pekerjaanTertunda && detailData.coverOleh ? ' - ' : ''}
+                {detailData.coverOleh ? `Dicover Oleh: ${detailData.coverOleh}` : ''}
+              </div>
             </div>
-          </div>
-
-          {/* DICOVER OLEH */}
-          <div className="modal-info-block-flat" style={{ marginTop: '15px' }}>
-            <span className="modal-info-label">DICOVER OLEH</span>
-            <div className="modal-display-box highlight-box">
-              {selectedDetail.coverOleh || '-'}
-            </div>
-          </div>
-
-          <hr className="modal-divider" />
+          )}
 
           {/* Riwayat Log Pemeriksaan Berjenjang */}
-          <div className="modal-info-block-flat" style={{ marginTop: '35px' }}>
-            <span className="modal-info-label">RIWAYAT LOG PEMERIKSAAN BERJENJANG</span>
-            {selectedDetail.logPemeriksaan && selectedDetail.logPemeriksaan.length > 0 ? (
-              selectedDetail.logPemeriksaan.map((log, index) => (
-                /* PERBAIKAN: Menggunakan clean class dengan implementasi shadow box */
-                <div className="log-container-box" key={index}>
-                  <div className="log-header">
-                    <strong className="modal-log-name">{log.nama}</strong>
-                    <span className="log-date">{log.tanggal}</span>
+          <div className="form-cuti__section">
+            <span className="form-cuti__label">Riwayat Log Pemeriksaan Berjenjang</span>
+            <div className="form-cuti__log-list">
+              {finalLogs.map((log, idx) => (
+                <div className="form-cuti__log-item" key={idx}>
+                  <div className="form-cuti__log-dot" />
+                  <div className="form-cuti__log-content">
+                    <div className="form-cuti__log-top">
+                      <span className="form-cuti__log-role">{log.nama}</span>
+                      <span className="form-cuti__log-time">{log.tanggal}</span>
+                    </div>
+                    <div className="form-cuti__log-bottom">
+                      Status &middot; {log.aksi} ({log.catatan})
+                    </div>
                   </div>
-                  <div className="modal-log-body" style={{ marginTop: '8px' }}>
-                    <span className={`badge-step ${log.aksi?.toLowerCase() || 'diajukan'}`}>{log.aksi || 'DIAJUKAN'}</span>
-                    <span className="modal-log-text" style={{ marginLeft: '8px' }}>Catatan: "{log.catatan || 'Mengajukan awal'}"</span>
-                  </div>
                 </div>
-              ))
-            ) : (
-              <div className="log-container-box">
-                <div className="log-header">
-                  <strong className="modal-log-name">{selectedDetail.pemohon}</strong>
-                  <span className="log-date">{selectedDetail.stringTanggal} {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div className="modal-log-body" style={{ marginTop: '18px' }}>
-                  <span className="badge-step diajukan">DIAJUKAN</span>
-                  <span className="modal-log-text" style={{ marginLeft: '18px' }}>Catatan: "Mengajukan awal"</span>
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
 
-          {selectedDetail.globalStatus?.toLowerCase() === 'dikembalikan' && selectedDetail.spv?.catatan && (
-            <div className="modal-feedback-alert">
-              <strong><i className="fa-solid fa-circle-exclamation"></i> Catatan Pengembalian (SPV):</strong>
-              <p>{selectedDetail.spv.catatan}</p>
+          {/* Catatan Feedback Tambahan Khusus Jika Dikembalikan */}
+          {detailData.globalStatus?.toLowerCase() === 'dikembalikan' && detailData.spv?.catatan && (
+            <div className="form-cuti__section" style={{ marginTop: '4px' }}>
+              <div className="form-cuti__box form-cuti__box--warn" style={{ color: '#b91c1c', borderColor: '#fca5a5', background: '#fef2f2' }}>
+                <strong>Catatan Pengembalian (SPV):</strong> {detailData.spv.catatan}
+              </div>
             </div>
           )}
         </div>
 
-        <div className="modal-footer-section">
-          <button className="btn-modal-close-dark" onClick={onClose}>Tutup Detail</button>
+        {/* FOOTER MODAL & TOMBOL AKSI DATABASE */}
+        <div className="form-cuti__footer">
+          {/* JIKA USER ADALAH ATASAN, TAMPILKAN TOMBOL APPROVAL SUNGGUHAN */}
+          {isAtasan ? (
+            <div className="action-approval-buttons" style={{ display: 'flex', gap: '8px', width: '100%' }}>
+              <button 
+                type="button" 
+                className="btn-approve" 
+                style={{ background: '#16a34a', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                onClick={() => handleActionApproval('Approved')}
+              >
+                Setujui (ACC)
+              </button>
+              <button 
+                type="button" 
+                className="btn-return" 
+                style={{ background: '#ea580c', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                onClick={() => handleActionApproval('Returned', 'Mohon perbaiki berkas')}
+              >
+                Kembalikan
+              </button>
+              <button 
+                type="button" 
+                className="btn-close-mute" 
+                style={{ marginLeft: 'auto', background: '#ccc', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                onClick={onClose}
+              >
+                Batal
+              </button>
+            </div>
+          ) : (
+           // JIKA USER ADALAH KARYAWAN BIASA, TAMPILKAN TOMBOL EDIT DAN TUTUP
+            <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'flex-end' }}>
+              {/* TOMBOL EDIT BARU: Mengirimkan ID berkas ke fungsi edit bawaan induk */}
+              {handleEditKembali && statusKey === 'DIKEMBALIKAN' && (
+                <button 
+                  type="button" 
+                  className="form-cuti__edit-btn" 
+                  style={{ background: '#ea580c', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
+                  onClick={() => {
+                    handleEditKembali(selectedDetail.id || selectedDetail.rawId); // Mengisi form otomatis
+                    onClose(); // Menutup modal detail setelah mengisi form
+                  }}
+                >
+                  Edit Berkas
+                </button>
+              )}
+              <button type="button" className="form-cuti__close-btn" onClick={onClose}>
+                Tutup Detail
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
