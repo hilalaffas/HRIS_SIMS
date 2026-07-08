@@ -44,11 +44,10 @@ const AppContent = () => {
     
     showToast(`Selamat datang kembali, ${userData.name}`, 'success');
     
-    // Gunakan navigate, BUKAN window.location.href
-   // navigate('/dashboard'); 
-   // Tunda redirect agar toast sempat tampil penuh sebelum halaman reload
+    // Gunakan navigate (client-side), bukan window.location.href (hard reload)
+    // Tunda redirect agar toast sempat tampil penuh sebelum pindah halaman
     setTimeout(() => {
-      window.location.href = '/dashboard';
+      navigate('/dashboard', { replace: true });
     }, TOAST_DURATION);
   };
 
@@ -60,11 +59,10 @@ const AppContent = () => {
     
     showToast('Anda berhasil keluar dari sistem.', 'success');
     
-    // Gunakan navigate untuk kembali ke login
-    //navigate('/login'); 
-     // Tunda redirect agar toast sempat tampil penuh sebelum halaman reload
+    // Gunakan navigate (client-side) untuk kembali ke login
+    // Tunda redirect agar toast sempat tampil penuh sebelum pindah halaman
     setTimeout(() => {
-      window.location.href = '/login';
+      navigate('/login', { replace: true });
     }, TOAST_DURATION);
   };
 

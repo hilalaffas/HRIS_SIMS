@@ -4,11 +4,11 @@
 // struktur folder standar proyek.)
 
 export const ROLES = {
-  KARYAWAN: 'karyawan',
+  KARYAWAN: 'member',
   SPV: 'spv',
   MANAGER: 'manager',
-  HR_ADMIN: 'hr admin',
-  SUPER_ADMIN: 'super admin',
+  HR_ADMIN: 'hrd_admin',
+  SUPER_ADMIN: 'super_admin',
 };
 
 /**

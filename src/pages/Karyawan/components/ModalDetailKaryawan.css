@@ -1,15 +1,15 @@
-.modal-overlay {
+.modal-overlay_modal_detail_karyawan {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background-color: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px); /* Efek blur background */
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
 }
 
-.modal-content {
+.modal-content_modal_detail_karyawan {
   background: white;
   width: 700px;
   border-radius: 8px;
@@ -17,8 +17,8 @@
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
-.modal-header {
-  background-color: #124a35;
+.modal-header_modal_detail_karyawan {
+  background-color: #1233c4;
   color: white;
   padding: 16px 24px;
   display: flex;
@@ -26,22 +26,22 @@
   align-items: flex-start;
 }
 
-.modal-title {
+.modal-title_modal_detail_karyawan {
   display: flex;
   flex-direction: column;
 }
 
-.modal-title .icon { margin-right: 8px; font-size: 18px;}
-.modal-title { font-weight: 700; font-size: 16px; }
+.modal-title_modal_detail_karyawan .icon_modal_detail_karyawan { margin-right: 8px; font-size: 18px;}
+.modal-title_modal_detail_karyawan { font-weight: 700; font-size: 16px; }
 
-.modal-subtitle {
+.modal-subtitle_modal_detail_karyawan {
   font-size: 12px;
   font-weight: 400;
   color: #c6f6d5;
   margin: 4px 0 0 0;
 }
 
-.btn-close {
+.btn-close_modal_detail_karyawan {
   background: none;
   border: none;
   color: white;
@@ -49,17 +49,17 @@
   cursor: pointer;
 }
 
-.modal-body {
+.modal-body_modal_detail_karyawan {
   padding: 24px;
 }
 
-.input-green-bg input {
+.input-green-bg_modal_detail_karyawan input {
   background-color: #f0fdf4;
 }
-.text-green { color: #2f855a !important; }
-.border-green { border: 1px solid #9ae6b4 !important; }
+.text-green_modal_detail_karyawan { color: #2f855a !important; }
+.border-green_modal_detail_karyawan { border: 1px solid #9ae6b4 !important; }
 
-.modal-footer {
+.modal-footer_modal_detail_karyawan {
   padding: 16px 24px;
   background-color: #f7fafc;
   border-top: 1px solid #e2e8f0;
@@ -68,12 +68,12 @@
   align-items: center;
 }
 
-.footer-actions {
+.footer-actions_modal_detail_karyawan {
   display: flex;
   gap: 12px;
 }
 
-.btn-delete {
+.btn-delete_modal_detail_karyawan {
   background-color: transparent;
   color: #e53e3e;
   border: 1px solid #fc8181;
@@ -82,9 +82,9 @@
   font-weight: 600;
   cursor: pointer;
 }
-.btn-delete:hover { background-color: #fff5f5; }
+.btn-delete_modal_detail_karyawan:hover { background-color: #fff5f5; }
 
-.btn-cancel {
+.btn-cancel_modal_detail_karyawan {
   background-color: white;
   border: 1px solid #cbd5e0;
   padding: 8px 16px;
@@ -93,7 +93,7 @@
   font-weight: 600;
 }
 
-.btn-save {
+.btn-save_modal_detail_karyawan {
   background-color: #124a35;
   color: white;
   border: none;

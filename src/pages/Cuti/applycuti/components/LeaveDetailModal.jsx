@@ -125,16 +125,17 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
     try {
       const payload = {
         cutiId: detailData.id,
-        roleAtasan: currentUserRole, // Misal: 'leader', 'spv', atau 'manager'
-        status: statusAksi,          // 'Approved', 'Rejected', atau 'Returned'
-        catatan: catatanAtasan
+        roleAtasan: currentUserRole,
+        status: statusAksi,          
+        catatan: catatanAtasan,
+        isUpdateOnly: true, // Flag instruksi ke backend agar hanya mengupdate status tanpa trigger kirim ulang data/log notice
       };
 
-      console.log("Mengirim perubahan status ke Database:", payload);
+      console.log("Mengupdate data status ke Database:", payload);
       // Contoh pemanggilan API:
       // await updateStatusCuti(payload);
       
-      alert(`Berkas berhasil di-${statusAksi}!`);
+      alert(`Berkas berhasil diperbarui ke status: ${statusAksi}!`);
       if (onRefreshData) onRefreshData(); // Memperbarui list riwayat di halaman induk ApplyCuti
       onClose(); // Tutup modal
     } catch (error) {

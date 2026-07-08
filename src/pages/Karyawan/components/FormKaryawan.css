@@ -1,31 +1,31 @@
-.form-card {
+.form-card_formkaryawan {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   margin-top: 0px;
   margin-bottom: 32px;
-  overflow: hidden; /* Wajib ada: agar warna hijau header tidak bocor ke luar border radius */
+  overflow: hidden;
 }
 
-.form-header-soft {
-  background-color: #f0fdf4; /* Warna hijau sangat soft (menyerupai Tailwind bg-green-50) */
+.form-header-soft_formkaryawan {
+  background-color: #f0fdf4;
   padding: 16px 24px;
   display: flex;
   align-items: center;
   gap: 0px;
   font-size: 16px;
   font-weight: 700;
-  color: #124a35; /* Warna hijau gelap untuk logo dan teks */
-  border-bottom: 1px solid #e2e8f0; /* Garis pemisah tipis antara header dan form putih */
+  color: #124a35;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.icon-user-add {
+.icon-user-add_formkaryawan {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.form-body {
+.form-body_formkaryawan {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
@@ -33,7 +33,7 @@
   padding: 24px;
 }
 
-.section-title {
+.section-title_formkaryawan {
   font-size: 14px;
   font-weight: 700;
   color: #124a35;
@@ -42,13 +42,13 @@
   padding-bottom: 8px;
 }
 
-.input-group {
+.input-group_formkaryawan {
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
 }
 
-.input-group label {
+.input-group_formkaryawan label {
   font-size: 11px;
   font-weight: 700;
   color: #718096;
@@ -56,7 +56,9 @@
   text-transform: uppercase;
 }
 
-.input-group input, .input-group select, .input-group textarea {
+.input-group_formkaryawan input, 
+.input-group_formkaryawan select, 
+.input-group_formkaryawan textarea {
   padding: 10px;
   border: 1px solid #cbd5e0;
   border-radius: 6px;
@@ -64,35 +66,37 @@
   color: #2d3748;
 }
 
-.input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+.input-group_formkaryawan input:focus, 
+.input-group_formkaryawan select:focus, 
+.input-group_formkaryawan textarea:focus {
   outline: none;
   border-color: #124a35;
 }
 
-.grid-2-col {
+.grid-2-col_formkaryawan {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.credential-box {
+.credential-box_formkaryawan {
   background-color: #f7fafc;
   padding: 16px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
 
-.password-wrapper {
+.password-wrapper_formkaryawan {
   position: relative;
 }
 
-.password-wrapper input {
+.password-wrapper_formkaryawan input {
   width: 100%;
   padding-right: 35px;
   box-sizing: border-box;
 }
 
-.eye-icon {
+.eye-icon_formkaryawan {
   position: absolute;
   right: 12px;
   top: 10px;
@@ -101,17 +105,17 @@
   user-select: none;
 }
 
-.text-red { color: #e53e3e !important; }
-.border-red { border-color: #fc8181 !important; background-color: #fff5f5; }
+.text-red_formkaryawan { color: #e53e3e !important; }
+.border-red_formkaryawan { border-color: #fc8181 !important; background-color: #fff5f5; }
 
-.form-actions {
+.form-actions_formkaryawan {
   grid-column: span 2;
   display: flex;
   justify-content: flex-end;
   margin-top: 10px;
 }
 
-.btn-submit {
+.btn-submit_formkaryawan {
   background-color: #124a35;
   color: white;
   padding: 12px 24px;
@@ -122,6 +126,6 @@
   transition: background-color 0.2s;
 }
 
-.btn-submit:hover {
+.btn-submit_formkaryawan:hover {
   background-color: #0d3828;
 }

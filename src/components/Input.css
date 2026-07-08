@@ -1,0 +1,10 @@
+/* src/components/Input.css */
+
+/* Beberapa browser (terutama Edge) otomatis menambahkan icon mata
+   bawaan untuk input type="password". Ini bikin icon mata jadi dobel
+   sama icon custom yang kita buat di Input.jsx. Baris di bawah ini
+   menyembunyikan icon bawaan browser tersebut. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}
