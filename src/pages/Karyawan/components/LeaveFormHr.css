@@ -1,0 +1,19 @@
+.card_leaveFormHr { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.header_leaveFormHr { background-color: #f0fdf4; padding: 20px 24px; border-bottom: 1px solid #e5e7eb; }
+.header-title-wrapper_leaveFormHr { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; color: #124a35; }
+.header-title-wrapper_leaveFormHr h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.header_leaveFormHr p { margin: 0; font-size: 13px; color: #047857; }
+.body_leaveFormHr { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.form-grid_leaveFormHr { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-grid-3_leaveFormHr { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.form-group_leaveFormHr { display: flex; flex-direction: column; gap: 6px; }
+.form-group_leaveFormHr label { font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
+.sub-group_leaveFormHr { display: flex; flex-direction: column; gap: 4px; }
+.sub-label_leaveFormHr { font-size: 12px; font-weight: 600; color: #374151; }
+.form-group_leaveFormHr input, .form-group_leaveFormHr select, .sub-group_leaveFormHr select { padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; color: #2d3748; background-color: #ffffff; outline: none; transition: border-color 0.2s; }
+.form-group_leaveFormHr input:focus, .form-group_leaveFormHr select:focus, .sub-group_leaveFormHr select:focus { border-color: #124a35; }
+.info-box_leaveFormHr { background-color: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; font-size: 13px; text-align: center; padding: 12px; border-radius: 6px; margin-top: 4px; }
+.mt-4 { margin-top: 16px; }
+.footer-actions_leaveFormHr { display: flex; justify-content: flex-end; margin-top: 16px; border-top: 1px solid #f3f4f6; padding-top: 20px; }
+.btn-submit_leaveFormHr { background-color: #124a35; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background-color 0.2s; }
+.btn-submit_leaveFormHr:hover { background-color: #0d3828; }

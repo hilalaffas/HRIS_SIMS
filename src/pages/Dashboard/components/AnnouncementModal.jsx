@@ -1,11 +1,28 @@
 // src/pages/Dashboard/components/AnnouncementModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function AnnouncementModal({ isOpen, onClose, onSubmit }) {
+export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialData = null }) {
   const [judul, setJudul] = useState('');
   const [label, setLabel] = useState('penting');
   const [isi, setIsi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isEditMode = !!initialData;
+
+  // Isi ulang form setiap modal dibuka: kosong untuk mode Tambah,
+  // terisi data lama untuk mode Edit.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialData) {
+      setJudul(initialData.judul || '');
+      setLabel(initialData.label || 'penting');
+      setIsi(initialData.isi || '');
+    } else {
+      setJudul('');
+      setLabel('penting');
+      setIsi('');
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -40,7 +57,9 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit }) {
 
         {/* Header */}
         <div className="bg-[#0A4D44] px-6 py-4 flex items-center justify-between">
-          <h3 className="text-white font-bold text-base">Buat Pengumuman Baru</h3>
+          <h3 className="text-white font-bold text-base">
+            {isEditMode ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'}
+          </h3>
           <button type="button" onClick={handleClose} className="text-white hover:opacity-70 text-lg leading-none">
             &times;
           </button>
@@ -104,7 +123,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit }) {
               disabled={isSubmitting}
               className="px-5 py-2 rounded-lg bg-[#0A4D44] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60"
             >
-              {isSubmitting ? 'Menyimpan...' : 'Terbitkan Berita'}
+              {isSubmitting ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Terbitkan Berita'}
             </button>
           </div>
         </form>

@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import './FormKaryawan.css';
 
 const FormKaryawan = ({ onSubmit, canManageRole }) => {
+const [fileName, setFileName] = useState("Tidak ada file");
+
+const handleFileChange = (e) => {
+  if (e.target.files.length > 0) {
+    setFileName(e.target.files[0].name);
+  }
+};
   const [formData, setFormData] = useState({
     fullName: '', nik: '', joinDate: '', division: '',
     position: '', address: '', email: '', phone: '',
@@ -10,10 +17,32 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+const handleInputChange = (e) => {
+  const { name, value } = e.target;
+  let updatedFormData = { ...formData, [name]: value };
+
+  // Logika pengisian Role otomatis berdasarkan Position (Jabatan)
+  if (name === 'position') {
+    if (value === 'Leader' || value === 'SPV' || value === 'Manager') {
+      updatedFormData.role = 'MANAGER';
+    } 
+    else if (value === 'HRD_Karyawan') { // Jika posisi yang dipilih adalah HR Admin
+      // Sesuai permintaan Anda: otomatis terisi manager
+      updatedFormData.role = 'MANAGER'; 
+      
+      // Catatan: Jika Anda berubah pikiran dan ingin HR Admin otomatis 
+      // mendapat role Admin (HR), ubah 'MANAGER' di atas menjadi 'HRD_Admin'.
+    } 
+    else if (value === 'Staff') {
+      updatedFormData.role = 'Member';
+    } 
+    else {
+      updatedFormData.role = ''; // Reset jika jabatan dikosongkan
+    }
+  }
+
+  setFormData(updatedFormData);
+};
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -39,7 +68,19 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
           
           <div className="input-group_formkaryawan">
             <label>FOTO PROFIL</label>
-            <input type="file" className="file-input" />
+            <div className="file-upload-container">
+              <label htmlFor="arquivo" className="btn-upload_formkaryawan">
+                Choose File
+              </label>
+              <span className="file-name_formkaryawan">{fileName}</span>
+              <input 
+                type="file" 
+                id="arquivo" 
+                className="file-input-hidden" 
+                onChange={handleFileChange} 
+                accept=".jpg, .jpeg, .png, .gif, .pdf" 
+              />
+            </div>
           </div>
           
           <div className="input-group_formkaryawan">
@@ -71,13 +112,18 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
             </div>
             <div className="input-group_formkaryawan">
               <label>JABATAN</label>
-              <select name="position" onChange={handleInputChange}>
+              {/* --- SELECT JABATAN --- */}
+              <select 
+                name="position" 
+                value={formData.position} 
+                onChange={handleInputChange}
+              >
                 <option value="">Pilih Jabatan...</option>
                 <option value="Staff">Staff</option>
                 <option value="Leader">Leader</option>
                 <option value="SPV">SPV</option>
                 <option value="Manager">Manager</option>
-                <option value="HR Admin">HR Admin</option>
+                <option value="HRD_Admin">HR Admin</option>
               </select>
             </div>
           </div>
@@ -136,11 +182,18 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
             {canManageRole && (
               <div className="input-group_formkaryawan mt-3">
                 <label>HAK AKSES SISTEM (ROLE) *</label>
-                <select name="role" onChange={handleInputChange} required>
+                {/* --- SELECT HAK AKSES (ROLE) --- */}
+                <select 
+                  name="role" 
+                  value={formData.role} 
+                  onChange={handleInputChange} 
+                  required
+                >
                   <option value="">Pilih Akses...</option>
-                  <option value="Admin">Admin (HR)</option>
-                  <option value="Superadmin">Superadmin</option>
-                  <option value="Member">Karyawan Biasa</option>
+                  <option value="Member">Karyawan Biasa (Member)</option>
+                  <option value="MANAGER">Manager / Supervisor</option>
+                  <option value="HRD_Admin">Admin (HR)</option>
+                  <option value="SUPER_ADMIN">Superadmin</option>
                 </select>
               </div>
             )}

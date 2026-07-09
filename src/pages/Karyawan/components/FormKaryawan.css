@@ -1,131 +1,171 @@
-.form-card_formkaryawan {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  margin-top: 0px;
-  margin-bottom: 32px;
-  overflow: hidden;
+  .form-card_formkaryawan {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-top: 0px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .form-header-soft_formkaryawan {
+    background-color: #f0fdf4;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #124a35;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .icon-user-add_formkaryawan {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .form-body_formkaryawan {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    background-color: #ffffff;
+    padding: 24px;
+  }
+
+  .section-title_formkaryawan {
+    font-size: 14px;
+    font-weight: 700;
+    color: #124a35;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 8px;
+  }
+
+  .input-group_formkaryawan {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .input-group_formkaryawan label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .input-group_formkaryawan input, 
+  .input-group_formkaryawan select, 
+  .input-group_formkaryawan textarea {
+    padding: 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #000000;
+  }
+
+  .input-group_formkaryawan input:focus, 
+  .input-group_formkaryawan select:focus, 
+  .input-group_formkaryawan textarea:focus {
+    outline: none;
+    border-color: #124a35;
+  }
+
+  .grid-2-col_formkaryawan {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .credential-box_formkaryawan {
+    background-color: #f7fafc;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .password-wrapper_formkaryawan {
+    position: relative;
+  }
+
+  .password-wrapper_formkaryawan input {
+    width: 100%;
+    padding-right: 35px;
+    box-sizing: border-box;
+  }
+
+  .eye-icon_formkaryawan {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    cursor: pointer;
+    color: #a0aec0;
+    user-select: none;
+  }
+
+  .text-red_formkaryawan { color: #e53e3e !important; }
+  .border-red_formkaryawan { border-color: #fc8181 !important; background-color: #fff5f5; }
+
+  .form-actions_formkaryawan {
+    grid-column: span 2;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .btn-submit_formkaryawan {
+    background-color: #124a35;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .btn-submit_formkaryawan:hover {
+    background-color: #0d3828;
+  }
+
+  /* Sembunyikan input file asli */
+.file-input-hidden {
+  display: none;
 }
 
-.form-header-soft_formkaryawan {
-  background-color: #f0fdf4;
-  padding: 16px 24px;
+/* Container agar tombol dan teks nama file sejajar */
+.file-upload-container {
   display: flex;
   align-items: center;
-  gap: 0px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #124a35;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
 }
 
-.icon-user-add_formkaryawan {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.form-body_formkaryawan {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  background-color: #ffffff;
-  padding: 24px;
-}
-
-.section-title_formkaryawan {
-  font-size: 14px;
-  font-weight: 700;
-  color: #124a35;
-  margin-bottom: 16px;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 8px;
-}
-
-.input-group_formkaryawan {
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-}
-
-.input-group_formkaryawan label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #718096;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-}
-
-.input-group_formkaryawan input, 
-.input-group_formkaryawan select, 
-.input-group_formkaryawan textarea {
-  padding: 10px;
+/* Styling tombol custom */
+.btn-upload_formkaryawan {
+  background-color: #edf2f7;
+  color: #030303;
+  padding: 8px 16px;
   border: 1px solid #cbd5e0;
   border-radius: 6px;
-  font-size: 14px;
-  color: #2d3748;
-}
-
-.input-group_formkaryawan input:focus, 
-.input-group_formkaryawan select:focus, 
-.input-group_formkaryawan textarea:focus {
-  outline: none;
-  border-color: #124a35;
-}
-
-.grid-2-col_formkaryawan {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.credential-box_formkaryawan {
-  background-color: #f7fafc;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.password-wrapper_formkaryawan {
-  position: relative;
-}
-
-.password-wrapper_formkaryawan input {
-  width: 100%;
-  padding-right: 35px;
-  box-sizing: border-box;
-}
-
-.eye-icon_formkaryawan {
-  position: absolute;
-  right: 12px;
-  top: 10px;
-  cursor: pointer;
-  color: #a0aec0;
-  user-select: none;
-}
-
-.text-red_formkaryawan { color: #e53e3e !important; }
-.border-red_formkaryawan { border-color: #fc8181 !important; background-color: #fff5f5; }
-
-.form-actions_formkaryawan {
-  grid-column: span 2;
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
-}
-
-.btn-submit_formkaryawan {
-  background-color: #124a35;
-  color: white;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  display: inline-block;
 }
 
-.btn-submit_formkaryawan:hover {
-  background-color: #0d3828;
+.btn-upload_formkaryawan:hover {
+  background-color: #e2e8f0;
+}
+
+/* Styling teks nama file */
+.file-name_formkaryawan {
+  font-size: 13px;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }

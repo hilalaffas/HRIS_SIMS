@@ -15,6 +15,7 @@ export const loginUser = async (username, password) => {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       const user = MOCK_USERS.find(
+        
         (u) => u.username === username && u.password === password
       );
 

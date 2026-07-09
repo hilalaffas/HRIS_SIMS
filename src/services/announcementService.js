@@ -120,3 +120,38 @@ export async function addAnnouncement(payload) {
   writeAll([newItem, ...all]);
   return newItem;
 }
+
+/**
+ * Ubah pengumuman yang sudah ada.
+ * id: id pengumuman yang mau diubah
+ * payload: { judul, label, isi }
+ * createdAt & author sengaja tidak diubah supaya info "diposting oleh ... X hari lalu" tetap akurat.
+ */
+export async function updateAnnouncement(id, payload) {
+  const all = readAll();
+  const idx = all.findIndex((item) => item.id === id);
+  if (idx === -1) {
+    throw new Error('Pengumuman tidak ditemukan.');
+  }
+
+  const updated = {
+    ...all[idx],
+    judul: payload.judul,
+    label: payload.label,
+    isi: payload.isi,
+  };
+
+  all[idx] = updated;
+  writeAll(all);
+  return updated;
+}
+
+/**
+ * Hapus pengumuman berdasarkan id.
+ */
+export async function deleteAnnouncement(id) {
+  const all = readAll();
+  const filtered = all.filter((item) => item.id !== id);
+  writeAll(filtered);
+  return true;
+}

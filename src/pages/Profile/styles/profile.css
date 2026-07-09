@@ -1,0 +1,575 @@
+.profile-header-block {
+  display: flex;
+  flex-direction: column;    /* Menjaga urutan elemen tetap tegak lurus ke bawah */
+  align-items: left;       /* Menjaga semua elemen presisi di tengah-tengah */
+  text-align: left;        
+  margin-top: 24px;          /* DIUBAH: Hapus -60px agar foto turun seutuhnya di bawah banner hijau */
+  margin-bottom: 30px;
+  position: relative;        
+  width: 100%;
+}
+
+.profile-main-name {
+  margin: 0 0 6px 0;
+  font-size: 26px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.profile-main-nik {
+  margin: 0 0 20px 0;        /* Jarak antara teks NIK dengan tombol di bawahnya */
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* Tombol Edit Data Profil */
+.btn-edit-data {
+  background-color: #2d6a4f;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;        
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+  display: inline-block;     
+}
+/* profile-page.css */
+
+.profile-page-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+
+.profile-banner-top {
+  height: 120px;
+  background-color: #1e6244;
+}
+
+.profile-card-content {
+  padding: 0 40px 40px 40px;
+}
+
+.profile-header-block {
+  display: flex;
+  /* Menggunakan wrap agar jika ada elemen yang didorong penuh, dia otomatis turun */
+  flex-wrap: wrap;           
+  flex-direction: row;       
+  align-items: flex-end;     
+  margin-top: -60px;         /* Tetap mempertahankan posisi memotong setengah banner hijau */
+  margin-bottom: 20px;
+  position: relative;        /* Kunci utama agar tombol absolute tetap presisi di kanan */
+  width: 100%;
+}
+
+.profile-avatar-large {
+  width: 120px;
+  height: 120px;
+  background-color: #f5f7fa;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: bold;
+  color: #1e6244;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;            /* Mencegah lingkaran foto menyusut */
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer; 
+}
+
+/* Tambahan: Mengatur Gambar Preview dari Lokal/Web */
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;         /* Menjaga foto proporsional tanpa gepeng */
+  border-radius: 50%;
+}
+
+/* Tambahan: Lapisan Transparan Ikon Kamera (Default: Tersembunyi) */
+.profile-avatar-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4); /* Efek gelap transparan halus */
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease, visibility 200ms ease;
+}
+
+/* Tambahan: Munculkan Lapisan Kamera Saat Avatar Di-hover */
+.profile-avatar-large:hover .profile-avatar-hover-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
+.profile-title-wrapper {
+  margin-left: 0px;
+  padding-bottom: 10px;
+  width: 100%;
+  flex: none; 
+}
+
+.profile-main-name {
+  margin: 0 0 4px 0;
+  font-size: 26px;
+  color: #0f172a;
+  font-weight: 700;
+  text-align: left;
+}
+
+.profile-main-nik {
+  margin: 0;
+  font-size: 14px;
+  color: #94a3b8;
+  text-align: left;
+}
+
+.btn-edit-data {
+  position: absolute;        /* Dicabut dari alur flex normal */
+  right: 0;                  /* Dikunci tepat di ujung kanan kontainer */
+  top: 70px;                 /* Diturunkan sedikit agar tidak menabrak garis banner, tetap di atas nama/NIK */
+  background-color: #2d6a4f;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+
+.btn-edit-data:hover {
+  background-color: #1e4c38;
+}
+
+/* Form Grid */
+.profile-info-grid {
+  display: flex;
+  gap: 60px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 30px;
+}
+
+.info-column {
+  flex: 1;
+}
+
+.section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #2d6a4f;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.info-group {
+  margin-bottom: 20px;
+}
+
+.info-group label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.info-group p {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.info-group .text-readonly {
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Teks tambahan ringan di dalam kurung, mis. "(Orang Tua)" di sebelah nomor telepon darurat —
+   sengaja TIDAK bold, beda dari field readonly di atas, supaya terlihat sebagai keterangan tambahan. */
+.text-muted-inline {
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* Label khusus untuk kontak darurat (wajib diisi) */
+.info-group.emergency-contact label {
+  color: #dc2626;
+}
+
+/* Desain Komponen Input Baru Saat Mode Edit */
+.form-input-profile {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #334155;
+  outline: none;
+}
+
+.form-input-profile:focus {
+  border-color: #2d6a4f;
+}
+
+/* Tombol Aksi Simpan & Batal */
+.profile-action-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 20px;
+}
+
+.btn-profile-save {
+  background-color: #2d6a4f;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-profile-cancel {
+  background-color: #ffffff;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+/* ===================================================== */
+/* HALAMAN EDIT DATA PROFIL — inline, BUKAN popup/modal    */
+/* ===================================================== */
+
+/* Overlay gelap di belakang popup — menutupi seluruh layar */
+.profile-edit-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 900;
+  animation: profileOverlayFadeIn 180ms ease;
+}
+
+@keyframes profileOverlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.profile-edit-page {
+  width: 100%;
+  max-width: 1000px;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
+  animation: profilePopupZoomIn 200ms ease;
+}
+
+@keyframes profilePopupZoomIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.profile-edit-header {
+  background-color: #1e6244;
+  color: #ffffff;
+  padding: 24px 40px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-radius: 16px 16px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.profile-edit-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  opacity: 0.85;
+  transition: background-color 150ms ease, opacity 150ms ease;
+}
+
+.profile-edit-close:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  opacity: 1;
+}
+
+/* Input file avatar utama — disembunyikan, dipicu lewat klik lingkaran avatar */
+.profile-avatar-file-input {
+  display: none;
+}
+.profile-photo-picker {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.profile-photo-button {
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 14px;
+  margin-right: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms ease;
+}
+
+.profile-photo-button:hover {
+  background-color: #e2e8f0;
+}
+
+.profile-photo-filename {
+  font-size: 14px;
+  color: #334155;
+}
+
+/* Input file asli disembunyikan secara visual, tetap bisa diakses (aksesibilitas) */
+.profile-photo-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.profile-edit-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.profile-edit-header p {
+  margin: 0;
+  font-size: 13px;
+  color: #d1e7dd;
+}
+
+.profile-edit-body {
+  padding: 32px 40px 40px 40px;
+}
+
+/* Section wrapper di halaman edit: judul + grid 2 kolom di bawahnya */
+.profile-edit-section {
+  margin-bottom: 28px;
+}
+
+.section-title-edit {
+  margin: 0 0 18px 0;
+  padding-bottom: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.profile-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+  row-gap: 4px;
+}
+
+/* Field yang perlu mengambil lebar penuh (misal: alamat, tanggal, jabatan) */
+.info-group-full {
+  grid-column: 1 / -1;
+}
+
+/* Section Keamanan & Kata Sandi */
+.profile-security-block {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 30px;
+  margin-top: 30px;
+}
+
+.profile-password-grid {
+  display: flex;
+  gap: 24px;
+}
+
+.profile-password-grid .info-group {
+  flex: 1;
+}
+
+.profile-password-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin: 4px 0 0 0;
+}
+
+/* Wrapper input password + tombol mata (show/hide) */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper .form-input-profile {
+  padding-right: 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 4px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.password-toggle-btn:hover {
+  color: #2d6a4f;
+}
+
+/* Baris gabungan "Nomor Telepon Darurat" + "Hubungan" di form edit —
+   ditempatkan berdampingan dalam satu sel grid (kolom kanan). */
+.info-group-darurat-hubungan {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.info-group-darurat-hubungan .info-group:first-child {
+  flex: 1.4;
+}
+
+.info-group-darurat-hubungan .info-group:last-child {
+  flex: 1;
+  min-width: 130px;
+}
+
+/* Style khusus dropdown select agar konsisten dengan input teks lain */
+select.form-input-profile {
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+select.form-input-profile:disabled {
+  cursor: not-allowed;
+}
+
+/* Field yang terkunci (readonly): abu-abu + cursor stop */
+.form-input-profile:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
+.field-lock-icon {
+  margin-left: 6px;
+  font-size: 10px;
+  cursor: help;
+}
+
+
+/* ===================================================== */
+/* TOAST NOTIFIKASI (kanan bawah)                          */
+/* ===================================================== */
+
+.profile-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #1e6244;
+  border: none;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
+  border-radius: 14px;
+  padding: 14px 22px;
+  width: fit-content;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 250ms ease, transform 250ms ease;
+  z-index: 1000;
+}
+
+.profile-toast-show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.profile-toast-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+  background-color: transparent;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.profile-toast-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
