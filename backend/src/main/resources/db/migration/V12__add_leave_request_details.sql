@@ -1,0 +1,4 @@
+ALTER TABLE leave_requests
+    ADD COLUMN IF NOT EXISTS reason VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS pending_work TEXT,
+    ADD COLUMN IF NOT EXISTS covered_by VARCHAR(150);
