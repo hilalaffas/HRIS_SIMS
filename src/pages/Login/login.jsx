@@ -4,13 +4,41 @@ import { Link } from 'react-router-dom';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { loginUser } from '../../services/authService';
+import AccountLocked from './AccountLocked';
+import './Login.css';
 
+const MAX_ATTEMPTS = 3;
+
+// Helper untuk baca/tulis jumlah percobaan gagal & status nonaktif per-username.
+// Disimpan di localStorage supaya tetap "ingat" walau halaman di-refresh.
+const getFailedAttempts = (username) => {
+  const data = JSON.parse(localStorage.getItem('loginFailedAttempts') || '{}');
+  return data[username] || 0;
+};
+
+const setFailedAttempts = (username, count) => {
+  const data = JSON.parse(localStorage.getItem('loginFailedAttempts') || '{}');
+  data[username] = count;
+  localStorage.setItem('loginFailedAttempts', JSON.stringify(data));
+};
+
+const isAccountDeactivated = (username) => {
+  const data = JSON.parse(localStorage.getItem('deactivatedAccounts') || '{}');
+  return !!data[username];
+};
+
+const setAccountDeactivated = (username) => {
+  const data = JSON.parse(localStorage.getItem('deactivatedAccounts') || '{}');
+  data[username] = true;
+  localStorage.setItem('deactivatedAccounts', JSON.stringify(data));
+};
 
 const Login = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showLockedScreen, setShowLockedScreen] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,39 +49,52 @@ const Login = ({ onLoginSuccess }) => {
       return;
     }
 
+    // Jika akun ini sudah pernah dinonaktifkan sebelumnya, tolak tanpa
+    // perlu memanggil API login lagi.
+    if (isAccountDeactivated(username)) {
+      setError('Akun Anda dinonaktifkan. Hubungi Admin HR.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Panggil API simulasi yang sudah kita buat di authService
       const userData = await loginUser(username, password);
+      setFailedAttempts(username, 0); // reset counter kalau berhasil login
       onLoginSuccess(userData);
     } catch (err) {
-      setError(err.message);
+      const attempts = getFailedAttempts(username) + 1;
+      setFailedAttempts(username, attempts);
+
+      if (attempts >= MAX_ATTEMPTS) {
+        // Sudah 3x salah -> nonaktifkan akun & tampilkan layar khusus
+        setAccountDeactivated(username);
+        setShowLockedScreen(true);
+      } else {
+        setError(`Username atau Password salah. (Percobaan gagal: ${attempts}/${MAX_ATTEMPTS})`);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (showLockedScreen) {
+    return <AccountLocked onBack={() => setShowLockedScreen(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#0A4D44] flex items-center justify-center p-4 font-sans">
-      <div className="bg-white rounded-3xl w-full max-w-100 p-8 shadow-2xl relative">
+      <div className="bg-white rounded-[24px] w-full max-w-[400px] p-8 shadow-2xl relative">
         
         {/* Logo area */}
         <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center mb-5 shadow-sm overflow-hidden">
           <span className="text-[#009A66] font-black text-2xl tracking-tighter flex">
-            <span className="inline-block animate-[letterDrop_0.5s_ease-out_0s_both]">S</span>
-            <span className="inline-block animate-[letterDrop_0.5s_ease-out_0.12s_both]">I</span>
-            <span className="inline-block animate-[letterDrop_0.5s_ease-out_0.24s_both]">M</span>
-            <span className="inline-block animate-[letterDrop_0.5s_ease-out_0.36s_both]">S</span>
+            <span className="inline-block letter-drop-0">S</span>
+            <span className="inline-block letter-drop-1">I</span>
+            <span className="inline-block letter-drop-2">M</span>
+            <span className="inline-block letter-drop-3">S</span>
           </span>
         </div>
-
-        <style>{`
-          @keyframes letterDrop {
-            0% { transform: translateY(-40px); opacity: 0; }
-            60% { transform: translateY(4px); opacity: 1; }
-            100% { transform: translateY(0px); opacity: 1; }
-          }
-        `}</style>
 
         <h1 className="text-[22px] font-bold text-gray-900 text-center mb-1">
           SYS Indonesia
@@ -61,12 +102,6 @@ const Login = ({ onLoginSuccess }) => {
         <p className="text-[13px] text-gray-500 text-center mb-8">
           Sistem Informasi Manajemen Cuti Karyawan
         </p>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-lg mb-5 text-sm text-center font-medium">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit}>
           <Input
@@ -94,6 +129,12 @@ const Login = ({ onLoginSuccess }) => {
               Lupa Sandi?
             </Link>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-lg mt-4 text-xs text-center font-medium">
+              {error}
+            </div>
+          )}
 
           <div className="mt-5">
             <Button type="submit" isLoading={isLoading}>

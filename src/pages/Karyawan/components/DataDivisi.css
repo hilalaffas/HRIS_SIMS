@@ -1,0 +1,202 @@
+/* CONTAINER UTAMA */
+.card_data_divisi {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* HEADER BAGIAN ATAS (WARNA HIJAU SOFT) */
+.header_data_divisi {
+  background-color: #f0fdf4; /* Warna hijau sangat soft sesuai gambar */
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.header-info_data_divisi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title-wrapper_data_divisi {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-wrapper_data_divisi h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827; /* Hitam tegas */
+}
+
+.icon_data_divisi {
+  display: flex;
+  align-items: center;
+}
+
+.header-info_data_divisi p {
+  margin: 0;
+  font-size: 13px;
+  color: #047857; /* Teks hijau untuk deskripsi */
+}
+
+/* KONTROL TAMBAH DIVISI */
+.header-actions_data_divisi {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.input-new_data_divisi {
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 220px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-new_data_divisi:focus {
+  border-color: #064e3b;
+}
+
+.btn-add_data_divisi {
+  background-color: #064e3b; /* Hijau gelap khas tombol tambah */
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-add_data_divisi:hover {
+  background-color: #022c22;
+}
+
+/* HEADER LIST DATA */
+.list-header_data_divisi {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+}
+
+/* BODY LIST DATA */
+.list-body_data_divisi {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-row_data_divisi {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  background-color: #ffffff;
+  transition: background-color 0.15s;
+}
+
+.list-row_data_divisi:hover {
+  background-color: #f9fafb;
+}
+
+.list-row_data_divisi:last-child {
+  border-bottom: none;
+}
+
+.row-name_data_divisi {
+  flex: 1;
+}
+
+.divisi-name-text_data_divisi {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151; /* Warna teks gelap kebiruan */
+}
+
+.input-edit_data_divisi {
+  padding: 8px 12px;
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  width: 80%;
+  outline: none;
+}
+
+/* TOMBOL AKSI (EDIT & HAPUS) */
+.row-actions_data_divisi {
+  display: flex;
+  gap: 20px;
+}
+
+.btn-action-edit_data_divisi, 
+.btn-action-delete_data_divisi {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.btn-action-edit_data_divisi {
+  color: #10b981; /* Hijau Emerald */
+}
+
+.btn-action-edit_data_divisi:hover {
+  color: #059669;
+}
+
+.btn-action-delete_data_divisi {
+  color: #e11d48; /* Merah Rose */
+}
+
+.btn-action-delete_data_divisi:hover {
+  color: #be123c;
+}
+
+.btn-save-edit_data_divisi {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-save-edit_data_divisi:hover {
+  background-color: #059669;
+}
+
+/* EMPTY STATE */
+.empty-state_data_divisi {
+  padding: 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}

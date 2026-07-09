@@ -1,11 +1,13 @@
 // src/services/authService.js
 
 const MOCK_USERS = [
-  { username: 'staff', password: 'ASDasd123', role: 'karyawan', name: 'Iqbal Purnomo (Staff)' },
-  { username: 'spv', password: 'ASDasd123', role: 'spv', name: 'Mandala Putra (Supervisor)' },
-  { username: 'manager', password: 'ASDasd123', role: 'manager', name: 'Ade Mulya (Manager)' },
-  { username: 'admin', password: 'ASDasd123', role: 'hr admin', name: 'Fadjri Manalu (HR Admin)' },
-  { username: 'superadmin', password: 'ASDasd123', role: 'super admin', name: 'Dian Kusuma (Super Admin)' },
+  { username: 'staff', password: 'ASDasd123', role: 'Member', name: 'Iqbal Purnomo (Staff)' },
+  { username: 'lead', password: 'ASDasd123', role: 'Leader', name: 'Jasmine Renata (Leader)' },
+  { username: 'spv', password: 'ASDasd123', role: 'SPV', name: 'Mandala Putra (Supervisor)' },
+  { username: 'manager', password: 'ASDasd123', role: 'Manager', name: 'Ade Mulya (Manager)' },
+  { username: 'hrkaryawan', password: 'ASDasd123', role: 'HRD_Karyawan', name: 'Fadjri Karyawan (HR Karyawan)' },
+  { username: 'hradmin', password: 'ASDasd123', role: 'HRD_Admin', name: 'Fadjri Admin (HR Admin)' },
+  { username: 'superadmin', password: 'ASDasd123', role: 'SUPER_ADMIN', name: 'Muto Yuki (Super Admin)' },
 ];
 
 export const loginUser = async (username, password) => {
@@ -13,6 +15,7 @@ export const loginUser = async (username, password) => {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       const user = MOCK_USERS.find(
+        
         (u) => u.username === username && u.password === password
       );
 

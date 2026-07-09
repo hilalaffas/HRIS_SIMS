@@ -5,8 +5,16 @@ import CalendarCard from './components/CalendarCard';
 import HariLiburPanel from './components/HariLiburPanel';
 import AnnouncementModal from './components/AnnouncementModal';
 import HolidayModal from './components/HolidayModal';
-import { addAnnouncement } from '../../services/announcementService';
-import { addCustomHoliday } from '../../services/holidayCustomService';
+import {
+  addAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+} from '../../services/announcementService';
+import {
+  addCustomHoliday,
+  updateCustomHoliday,
+  deleteCustomHoliday,
+} from '../../services/holidayCustomService';
 import './Dashboard.css';
 
 export default function DashboardHR({ user }) {
@@ -28,18 +36,86 @@ export default function DashboardHR({ user }) {
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
 
+  // Item yang sedang diedit. null berarti modal dalam mode "Tambah".
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [editingHoliday, setEditingHoliday] = useState(null);
+
+  // ----- Pengumuman -----
+
+  const handleOpenAddAnnouncement = () => {
+    setEditingAnnouncement(null);
+    setIsAnnouncementModalOpen(true);
+  };
+
+  const handleOpenEditAnnouncement = (item) => {
+    setEditingAnnouncement(item);
+    setIsAnnouncementModalOpen(true);
+  };
+
+  const handleCloseAnnouncementModal = () => {
+    setIsAnnouncementModalOpen(false);
+    setEditingAnnouncement(null);
+  };
+
   const handleSubmitAnnouncement = async ({ judul, label, isi }) => {
-    await addAnnouncement({
-      judul,
-      label,
-      isi,
-      author: user?.name || 'HRD',
-    });
+    if (editingAnnouncement) {
+      await updateAnnouncement(editingAnnouncement.id, { judul, label, isi });
+    } else {
+      await addAnnouncement({
+        judul,
+        label,
+        isi,
+        author: user?.name || 'HRD',
+      });
+    }
     setAnnouncementRefreshKey((k) => k + 1);
   };
 
+  const handleDeleteAnnouncement = async (id) => {
+    const confirmed = window.confirm('Yakin ingin menghapus pengumuman ini?');
+    if (!confirmed) return;
+    await deleteAnnouncement(id);
+    setAnnouncementRefreshKey((k) => k + 1);
+  };
+
+  // ----- Hari Libur -----
+
+  const handleOpenAddHoliday = () => {
+    setEditingHoliday(null);
+    setIsHolidayModalOpen(true);
+  };
+
+  const handleOpenEditHoliday = (item) => {
+    // item berasal dari holidaysThisMonth: { day, month, year, agenda, holidayId, ... }
+    const mm = String(item.month + 1).padStart(2, '0');
+    const dd = String(item.day).padStart(2, '0');
+    setEditingHoliday({
+      id: item.holidayId,
+      tanggal: `${item.year}-${mm}-${dd}`,
+      nama: item.agenda,
+    });
+    setIsHolidayModalOpen(true);
+  };
+
+  const handleCloseHolidayModal = () => {
+    setIsHolidayModalOpen(false);
+    setEditingHoliday(null);
+  };
+
   const handleSubmitHoliday = async ({ tanggal, nama }) => {
-    await addCustomHoliday({ tanggal, nama });
+    if (editingHoliday) {
+      await updateCustomHoliday(editingHoliday.id, { tanggal, nama });
+    } else {
+      await addCustomHoliday({ tanggal, nama });
+    }
+    setCalendarRefreshKey((k) => k + 1);
+  };
+
+  const handleDeleteHoliday = async (item) => {
+    if (!item.holidayId) return;
+    const confirmed = window.confirm('Yakin ingin menghapus hari libur ini?');
+    if (!confirmed) return;
+    await deleteCustomHoliday(item.holidayId);
     setCalendarRefreshKey((k) => k + 1);
   };
 
@@ -50,18 +126,22 @@ export default function DashboardHR({ user }) {
       <div className="dashboard__announcements">
         <div className="dashboard__section-header">
           <h2 className="dashboard__section-title">PENGUMUMAN &amp; PORTAL BERITA</h2>
-          <button type="button" onClick={() => setIsAnnouncementModalOpen(true)} className="dashboard__action-btn">
+          <button type="button" onClick={handleOpenAddAnnouncement} className="dashboard__action-btn">
             <i className="fa-solid fa-plus"></i> Tambah Berita
           </button>
         </div>
-        <AnnouncementSection key={announcementRefreshKey} />
+        <AnnouncementSection
+          key={announcementRefreshKey}
+          onEdit={handleOpenEditAnnouncement}
+          onDelete={handleDeleteAnnouncement}
+        />
       </div>
 
       {/* Kolom Kanan: Kalender + Hari Libur Bulan Ini */}
       <div className="dashboard__sidebar">
         <div className="dashboard__section-header">
           <h2 className="dashboard__section-title">KALENDER KERJA</h2>
-          <button type="button" onClick={() => setIsHolidayModalOpen(true)} className="dashboard__action-btn">
+          <button type="button" onClick={handleOpenAddHoliday} className="dashboard__action-btn">
             <i className="fa-solid fa-plus"></i> Tambah Hari Libur
           </button>
         </div>
@@ -71,21 +151,27 @@ export default function DashboardHR({ user }) {
           onHolidaysChange={setHolidaysThisMonth}
           refreshTrigger={calendarRefreshKey}
         />
-        <HariLiburPanel holidays={holidaysThisMonth} />
+        <HariLiburPanel
+          holidays={holidaysThisMonth}
+          onEdit={handleOpenEditHoliday}
+          onDelete={handleDeleteHoliday}
+        />
       </div>
 
-      {/* Modal Buat Pengumuman Baru */}
+      {/* Modal Pengumuman (Tambah / Edit) */}
       <AnnouncementModal
         isOpen={isAnnouncementModalOpen}
-        onClose={() => setIsAnnouncementModalOpen(false)}
+        onClose={handleCloseAnnouncementModal}
         onSubmit={handleSubmitAnnouncement}
+        initialData={editingAnnouncement}
       />
 
-      {/* Modal Jadwalkan Hari Libur */}
+      {/* Modal Hari Libur (Tambah / Edit) */}
       <HolidayModal
         isOpen={isHolidayModalOpen}
-        onClose={() => setIsHolidayModalOpen(false)}
+        onClose={handleCloseHolidayModal}
         onSubmit={handleSubmitHoliday}
+        initialData={editingHoliday}
       />
     </div>
   );

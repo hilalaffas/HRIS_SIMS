@@ -44,12 +44,13 @@ const AppContent = () => {
     
     showToast(`Selamat datang kembali, ${userData.name}`, 'success');
     
-    // Gunakan navigate, BUKAN window.location.href
-   // navigate('/dashboard'); 
-   // Tunda redirect agar toast sempat tampil penuh sebelum halaman reload
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, TOAST_DURATION);
+    // TIDAK perlu navigate manual di sini.
+    // Begitu token di-set di localStorage (di atas) dan state currentUser
+    // berubah, AppRoutes akan re-render dan PublicRoute otomatis
+    // mendeteksi token lalu redirect ke /dashboard.
+    // Navigate manual + setTimeout sebelumnya menyebabkan DOUBLE navigasi
+    // (satu dari PublicRoute otomatis, satu lagi dari sini 2.5 detik
+    // kemudian) yang terlihat seperti "2x refresh" setelah toast hilang.
   };
 
   const handleConfirmLogout = () => {
@@ -60,12 +61,10 @@ const AppContent = () => {
     
     showToast('Anda berhasil keluar dari sistem.', 'success');
     
-    // Gunakan navigate untuk kembali ke login
-    //navigate('/login'); 
-     // Tunda redirect agar toast sempat tampil penuh sebelum halaman reload
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, TOAST_DURATION);
+    // TIDAK perlu navigate manual di sini.
+    // Begitu localStorage.clear() dipanggil dan state currentUser berubah,
+    // AppRoutes akan re-render dan ProtectedRoute otomatis mendeteksi
+    // token yang sudah hilang lalu redirect ke /login.
   };
 
   return (

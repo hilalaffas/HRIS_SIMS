@@ -12,6 +12,7 @@ import ForgotPassword from '../pages/ForgotPassword/ForgotPassword';
 import ApproveLeave from '../pages/Cuti/approve/ApproveLeave';
 import Karyawan from '../pages/Karyawan/Karyawan';
 
+
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
   return (
     <Routes>
@@ -30,7 +31,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
         <Route element={<MainLayout onLogout={onLogout} user={user} />}>
 
           {/* Halaman Profile */}
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage role={user.role} />} />
 
           {/* Halaman Dashboard Utama (Menampilkan Berita & Kalender), beda konten per role */}
           <Route path="/dashboard" element={<Dashboard user={user} />} />

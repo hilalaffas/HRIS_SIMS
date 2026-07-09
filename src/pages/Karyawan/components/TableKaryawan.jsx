@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import './TableKaryawan.css';
 import ModalDetailKaryawan from './ModalDetailKaryawan';
-
-// Dummy data for testing display
-const initialEmployees = [
-  { id: 1, name: 'Andi Santoso', nik: 'SYS-2026-0042', role: 'MEMBER', position: 'Senior Software Engineer', division: 'Kaihatsu', leave: 8, status: 'AKTIF', avatar: 'https://i.pravatar.cc/150?u=1' },
-  { id: 2, name: 'Budi Wibowo', nik: 'SYS-2026-0005', role: 'LEADER', position: 'Manager', division: 'Tantai Kensa (Aisin)', leave: 12, status: 'AKTIF', avatar: 'https://i.pravatar.cc/150?u=2' },
-  { id: 3, name: 'Rian HR', nik: 'SYS-2026-0001', role: 'HR', position: 'HR Admin', division: 'Others', leave: 12, status: 'AKTIF', avatar: 'https://i.pravatar.cc/150?u=3' },
-];
+import { dataMockKaryawan } from '../data/dataMockKaryawan'; // Sesuaikan path folder data Anda
 
 const TableKaryawan = ({ currentUserRole }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,7 +19,6 @@ const TableKaryawan = ({ currentUserRole }) => {
       <div className="table-header-controls">
         <h3>Direktori Aktif</h3>
         <div className="filters">
-          {/* Filter Jabatan Baru Ditambahkan */}
           <select 
             className="filter-select" 
             value={filterJabatan} 
@@ -61,7 +54,8 @@ const TableKaryawan = ({ currentUserRole }) => {
           </tr>
         </thead>
         <tbody>
-          {initialEmployees.map((emp) => (
+          {/* Menggunakan dataMockKaryawan */}
+          {dataMockKaryawan.map((emp) => (
             <tr key={emp.id}>
               <td>
                 <div className="employee-info">
@@ -91,6 +85,7 @@ const TableKaryawan = ({ currentUserRole }) => {
 
       {isModalOpen && (
         <ModalDetailKaryawan 
+          isOpen={isModalOpen} // INI PERBAIKANNYA: Prop isOpen wajib dikirim
           employeeData={selectedEmployee} 
           currentUserRole={currentUserRole}
           onClose={() => setIsModalOpen(false)} 

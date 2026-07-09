@@ -1,104 +1,296 @@
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px); /* Efek blur background */
+/* =========================================
+   1. OVERLAY (MEMBUAT POPUP & EFEK BLUR)
+   ========================================= */
+.modal-overlay_detail_karyawan {
+  position: fixed; /* Membuatnya melayang menutupi layar */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Latar belakang gelap transparan */
+  backdrop-filter: blur(5px); /* EFEK BLUR PADA BACKGROUND */
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999; /* Memastikan popup berada di paling atas */
+  padding: 20px;
 }
 
-.modal-content {
-  background: white;
-  width: 700px;
-  border-radius: 8px;
+/* =========================================
+   2. CONTAINER MODAL
+   ========================================= */
+.modal-container_detail_karyawan {
+  background-color: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 850px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
-.modal-header {
-  background-color: #124a35;
-  color: white;
-  padding: 16px 24px;
+/* =========================================
+   3. NOTIFIKASI TOAST
+   ========================================= */
+.notification-toast_detail_karyawan {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #d1fae5;
+  color: #065f46;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  z-index: 10000;
+  animation: slideDown 0.3s ease-out forwards;
+  border: 1px solid #34d399;
+}
+
+@keyframes slideDown {
+  from { top: -50px; opacity: 0; }
+  to { top: 20px; opacity: 1; }
+}
+
+/* =========================================
+   4. HEADER
+   ========================================= */
+.modal-header_detail_karyawan {
+  background-color: #124a35; 
+  color: #ffffff;
+  padding: 20px 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
 
-.modal-title {
+.header-title-wrapper_detail_karyawan {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  margin-bottom: 6px;
 }
 
-.modal-title .icon { margin-right: 8px; font-size: 18px;}
-.modal-title { font-weight: 700; font-size: 16px; }
-
-.modal-subtitle {
-  font-size: 12px;
-  font-weight: 400;
-  color: #c6f6d5;
-  margin: 4px 0 0 0;
+.header-title-wrapper_detail_karyawan h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
 }
 
-.btn-close {
+.header-content_detail_karyawan p {
+  margin: 0;
+  font-size: 13px;
+  color: #a7f3d0;
+}
+
+.btn-close_detail_karyawan {
   background: none;
   border: none;
-  color: white;
-  font-size: 18px;
+  color: #ffffff;
+  font-size: 20px;
   cursor: pointer;
+  padding: 4px;
+  line-height: 1;
 }
 
-.modal-body {
+/* =========================================
+   5. BODY & FORM
+   ========================================= */
+.modal-body_detail_karyawan {
   padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.input-green-bg input {
-  background-color: #f0fdf4;
+.section-container_detail_karyawan {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-.text-green { color: #2f855a !important; }
-.border-green { border: 1px solid #9ae6b4 !important; }
 
-.modal-footer {
+.section-title_detail_karyawan {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 4px 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.form-grid_detail_karyawan {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-grid-3_detail_karyawan {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group_detail_karyawan {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.w-half_detail_karyawan {
+  width: calc(50% - 8px);
+}
+
+.form-group_detail_karyawan label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group_detail_karyawan input,
+.form-group_detail_karyawan select,
+.form-group_detail_karyawan textarea {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #2d3748;
+  font-family: inherit;
+  background-color: #ffffff;
+}
+
+.form-group_detail_karyawan input:focus,
+.form-group_detail_karyawan select:focus,
+.form-group_detail_karyawan textarea:focus {
+  outline: none;
+  border-color: #124a35;
+}
+
+/* SPESIFIK STYLING (Merah & Hijau) */
+.error-group_detail_karyawan label {
+  color: #e53e3e;
+}
+.error-group_detail_karyawan input,
+.error-group_detail_karyawan select {
+  border-color: #fc8181;
+  background-color: #fff5f5;
+}
+
+.success-group_detail_karyawan label {
+  color: #124a35;
+}
+.success-group_detail_karyawan select {
+  color: #047857;
+  font-weight: 600;
+}
+
+.green-bg-group_detail_karyawan label {
+  color: #124a35;
+}
+.green-bg-group_detail_karyawan input {
+  background-color: #ecfdf5;
+  border-color: #6ee7b7;
+  font-weight: 600;
+}
+
+/* PASSWORD WRAPPER */
+.password-wrapper_detail_karyawan {
+  position: relative;
+  display: flex;
+}
+.password-wrapper_detail_karyawan input {
+  width: 100%;
+  padding-right: 40px;
+}
+.eye-icon_detail_karyawan {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #a0aec0;
+  user-select: none;
+}
+
+/* =========================================
+   6. FOOTER & BUTTONS
+   ========================================= */
+.modal-footer_detail_karyawan {
   padding: 16px 24px;
-  background-color: #f7fafc;
   border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: #ffffff;
 }
 
-.footer-actions {
+.footer-actions_detail_karyawan {
   display: flex;
   gap: 12px;
 }
 
-.btn-delete {
-  background-color: transparent;
-  color: #e53e3e;
+.btn-delete_detail_karyawan {
+  padding: 10px 16px;
+  background-color: #fff5f5;
   border: 1px solid #fc8181;
-  padding: 8px 16px;
   border-radius: 6px;
+  color: #e53e3e;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.btn-delete:hover { background-color: #fff5f5; }
 
-.btn-cancel {
-  background-color: white;
+.btn-delete_detail_karyawan:hover {
+  background-color: #fed7d7;
+}
+
+.btn-cancel_detail_karyawan {
+  padding: 10px 20px;
+  background-color: #ffffff;
   border: 1px solid #cbd5e0;
-  padding: 8px 16px;
   border-radius: 6px;
+  color: #4a5568;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel_detail_karyawan:hover {
+  background-color: #f7fafc;
+}
+
+.btn-save_detail_karyawan {
+  padding: 10px 24px;
+  background-color: #124a35;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-save_detail_karyawan:hover {
+  background-color: #0d3828;
+}
+
+/* Styling untuk opsi di dalam dropdown */
+.text-green-option {
+  color: #047857; /* Hijau */
   font-weight: 600;
 }
 
-.btn-save {
-  background-color: #124a35;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
+.text-red-option {
+  color: #e53e3e; /* Merah */
   font-weight: 600;
 }

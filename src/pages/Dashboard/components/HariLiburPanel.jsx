@@ -6,9 +6,13 @@ import React from 'react';
  * Data `holidays` didapat dari callback onHolidaysChange milik CalendarCard,
  * supaya otomatis ikut berubah saat user geser bulan (prev/next).
  *
- * Bentuk tiap item holidays: { day, month, year, agenda }
+ * Bentuk tiap item holidays: { day, month, year, agenda, isCustomHoliday, holidayId }
+ *
+ * Tombol Edit/Hapus HANYA muncul untuk hari libur custom (isCustomHoliday === true),
+ * karena hari libur nasional bawaan berasal dari API pemerintah, bukan dari
+ * database kita, jadi tidak bisa/tidak seharusnya diubah dari sini.
  */
-export default function HariLiburPanel({ holidays = [] }) {
+export default function HariLiburPanel({ holidays = [], onEdit, onDelete }) {
   const formatDate = (h) => {
     const mm = String(h.month + 1).padStart(2, '0');
     const dd = String(h.day).padStart(2, '0');
@@ -24,14 +28,43 @@ export default function HariLiburPanel({ holidays = [] }) {
       {holidays.length > 0 ? (
         <div className="flex flex-col divide-y divide-gray-100">
           {holidays.map((h, idx) => (
-            <div key={idx} className="flex items-center justify-between py-3">
-              <div>
-                <p className="font-semibold text-sm text-gray-800">{h.agenda}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(h)}</p>
+            <div key={idx} className="py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-sm text-gray-800">{h.agenda}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{formatDate(h)}</p>
+                </div>
+                <span
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
+                    h.isCustomHoliday ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+                  }`}
+                >
+                  {h.isCustomHoliday ? 'TAMBAHAN' : 'NASIONAL'}
+                </span>
               </div>
-              <span className="text-[10px] font-bold bg-red-50 text-red-500 px-2.5 py-1 rounded-full shrink-0">
-                NASIONAL
-              </span>
+
+              {h.isCustomHoliday && (onEdit || onDelete) && (
+                <div className="flex items-center gap-3 mt-2">
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(h)}
+                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 transition-colors flex items-center gap-1"
+                    >
+                      <i className="fa-solid fa-pen"></i> Edit
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(h)}
+                      className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors flex items-center gap-1"
+                    >
+                      <i className="fa-solid fa-trash"></i> Hapus
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -1,14 +1,12 @@
 // src/utils/roles.js
-// (Sebelumnya nama file ini Roles.js — di-rename ke lowercase supaya
-// konsisten dengan import di menuConfig.js & Dashboard.jsx, dan sesuai
-// struktur folder standar proyek.)
 
 export const ROLES = {
-  KARYAWAN: 'karyawan',
+  KARYAWAN: 'member',
+  LEADER: 'leader',
   SPV: 'spv',
   MANAGER: 'manager',
-  HR_ADMIN: 'hr admin',
-  SUPER_ADMIN: 'super admin',
+  HR_ADMIN: 'hrd_admin',
+  SUPER_ADMIN: 'super_admin',
 };
 
 /**
@@ -23,9 +21,13 @@ export function isSuperAdmin(user) {
   return role === ROLES.SUPER_ADMIN || role === 'superadmin';
 }
 
+/**
+ * Leader, SPV, dan Manager sama-sama diarahkan ke DashboardManager.
+ * (Nama fungsi dipertahankan supaya import di Dashboard.jsx tidak perlu diubah.)
+ */
 export function isManagerOrSpv(user) {
   const role = getUserRole(user);
-  return role === ROLES.MANAGER || role === ROLES.SPV;
+  return role === ROLES.MANAGER || role === ROLES.SPV || role === ROLES.LEADER;
 }
 
 export function isHrAdmin(user) {

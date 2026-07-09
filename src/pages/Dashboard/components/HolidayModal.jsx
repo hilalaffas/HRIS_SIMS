@@ -1,10 +1,25 @@
 // src/pages/Dashboard/components/HolidayModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function HolidayModal({ isOpen, onClose, onSubmit }) {
+export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = null }) {
   const [tanggal, setTanggal] = useState('');
   const [nama, setNama] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isEditMode = !!initialData;
+
+  // Isi ulang form setiap modal dibuka: kosong untuk mode Tambah,
+  // terisi data lama untuk mode Edit.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialData) {
+      setTanggal(initialData.tanggal || '');
+      setNama(initialData.nama || '');
+    } else {
+      setTanggal('');
+      setNama('');
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -38,7 +53,9 @@ export default function HolidayModal({ isOpen, onClose, onSubmit }) {
 
         {/* Header */}
         <div className="bg-[#0A4D44] px-6 py-4 flex items-center justify-between">
-          <h3 className="text-white font-bold text-base">Jadwalkan Hari Libur</h3>
+          <h3 className="text-white font-bold text-base">
+            {isEditMode ? 'Edit Hari Libur' : 'Jadwalkan Hari Libur'}
+          </h3>
           <button type="button" onClick={handleClose} className="text-white hover:opacity-70 text-lg leading-none">
             &times;
           </button>
@@ -86,7 +103,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit }) {
               disabled={isSubmitting}
               className="px-5 py-2 rounded-lg bg-[#0A4D44] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60"
             >
-              {isSubmitting ? 'Menyimpan...' : 'Simpan Libur'}
+              {isSubmitting ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Simpan Libur'}
             </button>
           </div>
         </form>
