@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,5 +26,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .badRequest()
                 .body(e.getMessage());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<?> handleMaxSizeException(MaxUploadSizeExceededException exc) {
+        return ResponseEntity.badRequest().body("Gagal: Ukuran file foto melebihi batas maksimal 1MB.");
     }
 }

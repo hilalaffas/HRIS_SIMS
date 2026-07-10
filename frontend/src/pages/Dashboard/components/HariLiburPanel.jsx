@@ -2,15 +2,15 @@
 import React from 'react';
 
 /**
- * Menampilkan daftar hari libur nasional bulan yang sedang aktif di kalender.
- * Data `holidays` didapat dari callback onHolidaysChange milik CalendarCard,
- * supaya otomatis ikut berubah saat user geser bulan (prev/next).
+ * Menampilkan daftar hari libur bulan yang sedang aktif di kalender.
+ * Data `holidays` didapat dari callback onHolidaysChange milik CalendarCard.
  *
- * Bentuk tiap item holidays: { day, month, year, agenda, isCustomHoliday, holidayId }
+ * Bentuk tiap item holidays: { day, month, year, agenda, isNational, holidayId }
  *
- * Tombol Edit/Hapus HANYA muncul untuk hari libur custom (isCustomHoliday === true),
- * karena hari libur nasional bawaan berasal dari API pemerintah, bukan dari
- * database kita, jadi tidak bisa/tidak seharusnya diubah dari sini.
+ * Tombol Edit/Hapus tampil untuk SEMUA hari libur (nasional maupun tambahan),
+ * sesuai kebijakan: backend mengizinkan HR/Admin mengubah/menghapus hari libur
+ * apa pun lewat /api/holidays. Badge NASIONAL/TAMBAHAN di sini murni informasi,
+ * bukan pembatas hak akses.
  */
 export default function HariLiburPanel({ holidays = [], onEdit, onDelete }) {
   const formatDate = (h) => {
@@ -36,14 +36,14 @@ export default function HariLiburPanel({ holidays = [], onEdit, onDelete }) {
                 </div>
                 <span
                   className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                    h.isCustomHoliday ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+                    h.isNational ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'
                   }`}
                 >
-                  {h.isCustomHoliday ? 'TAMBAHAN' : 'NASIONAL'}
+                  {h.isNational ? 'NASIONAL' : 'TAMBAHAN'}
                 </span>
               </div>
 
-              {h.isCustomHoliday && (onEdit || onDelete) && (
+              {(onEdit || onDelete) && (
                 <div className="flex items-center gap-3 mt-2">
                   {onEdit && (
                     <button
@@ -70,7 +70,7 @@ export default function HariLiburPanel({ holidays = [], onEdit, onDelete }) {
         </div>
       ) : (
         <p className="text-xs text-gray-400 italic pt-3">
-          Tidak ada hari libur nasional bulan ini.
+          Tidak ada hari libur bulan ini.
         </p>
       )}
     </div>

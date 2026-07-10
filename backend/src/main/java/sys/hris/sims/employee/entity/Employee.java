@@ -43,6 +43,22 @@ public class Employee {
     @Column(name = "join_date")
     private LocalDate joinDate;
 
+    @Column(name = "nik_karyawan")
+    private String nikKaryawan;
+
+    @Column(name = "photo")
+    private String photo;
+
+    @Column(name = "emergency_contact_name")
+    private String emergencyContactName;
+
+    @Column(name = "emergency_contact_phone")
+    private String emergencyContactPhone;
+
+    @ManyToOne
+    @JoinColumn(name = "emergency_contact_relationship_id")
+    private EmergencyContactRelationship emergencyContactRelationship;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 }

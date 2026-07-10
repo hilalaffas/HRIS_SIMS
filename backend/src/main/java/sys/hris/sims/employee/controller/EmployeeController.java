@@ -17,6 +17,12 @@ import org.springframework.security.core.Authentication;
 
 import sys.hris.sims.user.entity.User;
 
+import sys.hris.sims.employee.dto.UpdateEmployeeRequest;
+import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
+import java.nio.file.*;
+import java.util.UUID;
+import org.springframework.http.MediaType;
+
 @RestController
 @RequestMapping("/api/karyawan")
 @RequiredArgsConstructor
@@ -26,6 +32,8 @@ public class EmployeeController {
     private final ActivityLogService activityLogService;
 
     private final UserRepository userRepository;
+
+    private final EmergencyContactRelationshipRepository relationshipRepository;
 
     // helper method ambil userId dari token
     private Long getCurrentUserId(Authentication authentication) {
@@ -85,13 +93,57 @@ public class EmployeeController {
     }
 
     // PUT update karyawan
-    @PutMapping("/{id}")
-    public ResponseEntity<Employee> updateKaryawan(
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateKaryawan(
             @PathVariable Long id,
-            @RequestBody Employee karyawan, Authentication authentication, HttpServletRequest httpRequest) {
+            @ModelAttribute UpdateEmployeeRequest request, // Gunakan @ModelAttribute
+            Authentication authentication, 
+            HttpServletRequest httpRequest) {
+
+        // 1. Ambil data karyawan lama
+        Employee employee = karyawanService.getKaryawanById(id);
+
+        // 2. Update field data biasa
+        employee.setFullName(request.getFullName());
+        employee.setAddress(request.getAddress());
+        employee.setPhoneNumber(request.getPhoneNumber());
+        employee.setGender(request.getGender());
+        employee.setNikKaryawan(request.getNikKaryawan());
+        employee.setEmergencyContactName(request.getEmergencyContactName());
+        employee.setEmergencyContactPhone(request.getEmergencyContactPhone());
+
+        // Update relasi kontak darurat jika ada
+        if (request.getEmergencyContactRelationshipId() != null) {
+            var rel = relationshipRepository.findById(request.getEmergencyContactRelationshipId()).orElse(null);
+            employee.setEmergencyContactRelationship(rel);
+        }
+
+        // 3. LOGIKA UPLOAD FOTO BARU
+        if (request.getPhoto() != null && !request.getPhoto().isEmpty()) {
+            try {
+                // Hapus file lama jika ada (agar tidak menumpuk)
+                if (employee.getPhoto() != null) {
+                    Files.deleteIfExists(Paths.get(employee.getPhoto()));
+                }
+
+                String uploadDir = "uploads/photos/";
+                Path uploadPath = Paths.get(uploadDir);
+                if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+
+                String fileName = UUID.randomUUID().toString() + "_" + request.getPhoto().getOriginalFilename();
+                Path filePath = uploadPath.resolve(fileName);
+                Files.copy(request.getPhoto().getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+                
+                employee.setPhoto(filePath.toString());
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError().body("Gagal mengupdate foto: " + e.getMessage());
+            }
+        }
+
+        // 4. Simpan perubahan
+        Employee updated = karyawanService.updateKaryawan(id, employee);
         
-        // catat activity log
-        Employee updated = karyawanService.updateKaryawan(id, karyawan);
+        // Catat Log
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "UPDATE_KARYAWAN", "employees", id, "Mengupdate karyawan id: " + id, httpRequest);
         
         return ResponseEntity.ok(updated);

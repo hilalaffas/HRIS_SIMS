@@ -252,6 +252,11 @@ public class SecurityConfig {
                                 "/v3/api-docs/**")
                         .permitAll()
 
+                        // ==========================
+                        // UPLOADS (Akses File Foto)
+                        // ==========================
+                        .requestMatchers("/uploads/**").permitAll()
+
                         .anyRequest().authenticated()
 
                 )
