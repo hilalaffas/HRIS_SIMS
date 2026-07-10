@@ -14,6 +14,7 @@ sys\hris\sims\activity_logs\service\ActivityLogService.class
 sys\hris\sims\leave\repository\LeaveRequestApprovalRepository.class
 sys\hris\sims\role\repository\RoleRepository.class
 sys\hris\sims\leave\entity\LeaveRequestApproval.class
+sys\hris\sims\employee\dto\UpdateEmployeeRequest.class
 sys\hris\sims\employee\entity\Employee$EmployeeBuilder.class
 sys\hris\sims\holiday\entity\Holiday$HolidayBuilder.class
 sys\hris\sims\auth\dto\ChangePasswordRequest.class
@@ -55,6 +56,7 @@ sys\hris\sims\leavetype\service\LeaveTypeService.class
 sys\hris\sims\user\entity\User$UserBuilder.class
 sys\hris\sims\auth\controller\AuthController.class
 sys\hris\sims\auth\service\AuthService.class
+sys\hris\sims\employee\repository\EmergencyContactRelationshipRepository.class
 sys\hris\sims\role\entity\Roles.class
 sys\hris\sims\SimsApplication.class
 sys\hris\sims\leave\entity\LeaveRequest$LeaveRequestBuilder.class
@@ -64,9 +66,11 @@ sys\hris\sims\activity_logs\controller\ActivityLogController.class
 sys\hris\sims\divisi\repository\DivisiRepository.class
 sys\hris\sims\passwordreset\repository\PasswordResetRequestRepository.class
 sys\hris\sims\passwordreset\service\PasswordResetService.class
+sys\hris\sims\config\WebMvcConfig.class
 sys\hris\sims\employee\service\EmployeeService.class
 sys\hris\sims\holiday\service\HolidayService.class
 sys\hris\sims\user\service\UserService.class
+sys\hris\sims\employee\entity\EmergencyContactRelationship.class
 sys\hris\sims\passwordreset\controller\PasswordResetController.class
 sys\hris\sims\activity_logs\entity\ActivityLog$ActivityLogBuilder.class
 sys\hris\sims\passwordreset\dto\PasswordResetResponse$PasswordResetResponseBuilder.class

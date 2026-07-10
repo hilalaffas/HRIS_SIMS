@@ -7,32 +7,6 @@ import { loginUser } from '../../services/authService';
 import AccountLocked from './AccountLocked';
 import './Login.css';
 
-const MAX_ATTEMPTS = 3;
-
-// Helper untuk baca/tulis jumlah percobaan gagal & status nonaktif per-username.
-// Disimpan di localStorage supaya tetap "ingat" walau halaman di-refresh.
-const getFailedAttempts = (username) => {
-  const data = JSON.parse(localStorage.getItem('loginFailedAttempts') || '{}');
-  return data[username] || 0;
-};
-
-const setFailedAttempts = (username, count) => {
-  const data = JSON.parse(localStorage.getItem('loginFailedAttempts') || '{}');
-  data[username] = count;
-  localStorage.setItem('loginFailedAttempts', JSON.stringify(data));
-};
-
-const isAccountDeactivated = (username) => {
-  const data = JSON.parse(localStorage.getItem('deactivatedAccounts') || '{}');
-  return !!data[username];
-};
-
-const setAccountDeactivated = (username) => {
-  const data = JSON.parse(localStorage.getItem('deactivatedAccounts') || '{}');
-  data[username] = true;
-  localStorage.setItem('deactivatedAccounts', JSON.stringify(data));
-};
-
 const Login = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -49,29 +23,19 @@ const Login = ({ onLoginSuccess }) => {
       return;
     }
 
-    // Jika akun ini sudah pernah dinonaktifkan sebelumnya, tolak tanpa
-    // perlu memanggil API login lagi.
-    if (isAccountDeactivated(username)) {
-      setError('Akun Anda dinonaktifkan. Hubungi Admin HR.');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      // Panggil API simulasi yang sudah kita buat di authService
       const userData = await loginUser(username, password);
-      setFailedAttempts(username, 0); // reset counter kalau berhasil login
       onLoginSuccess(userData);
     } catch (err) {
-      const attempts = getFailedAttempts(username) + 1;
-      setFailedAttempts(username, attempts);
+      const message = err.message || 'Username atau password salah.';
 
-      if (attempts >= MAX_ATTEMPTS) {
-        // Sudah 3x salah -> nonaktifkan akun & tampilkan layar khusus
-        setAccountDeactivated(username);
+      // Backend mengirim pesan ini kalau akun sudah dinonaktifkan
+      // (baik karena 3x gagal login, maupun dinonaktifkan manual oleh HR).
+      if (message.toLowerCase().includes('dinonaktifkan')) {
         setShowLockedScreen(true);
       } else {
-        setError(`Username atau Password salah. (Percobaan gagal: ${attempts}/${MAX_ATTEMPTS})`);
+        setError(message);
       }
     } finally {
       setIsLoading(false);

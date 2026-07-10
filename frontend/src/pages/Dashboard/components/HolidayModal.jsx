@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = null }) {
   const [tanggal, setTanggal] = useState('');
   const [nama, setNama] = useState('');
+  const [isNational, setIsNational] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!initialData;
@@ -15,9 +16,11 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
     if (initialData) {
       setTanggal(initialData.tanggal || '');
       setNama(initialData.nama || '');
+      setIsNational(!!initialData.isNational);
     } else {
       setTanggal('');
       setNama('');
+      setIsNational(false);
     }
   }, [isOpen, initialData]);
 
@@ -26,6 +29,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
   const resetForm = () => {
     setTanggal('');
     setNama('');
+    setIsNational(false);
   };
 
   const handleClose = () => {
@@ -39,7 +43,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
 
     setIsSubmitting(true);
     try {
-      await onSubmit({ tanggal, nama });
+      await onSubmit({ tanggal, nama, isNational });
       resetForm();
       onClose();
     } finally {
@@ -89,6 +93,18 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
               required
             />
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isNational}
+              onChange={(e) => setIsNational(e.target.checked)}
+              className="w-4 h-4 accent-[#0A4D44]"
+            />
+            <span className="text-xs text-gray-600">
+              Tandai sebagai hari libur nasional (bukan libur tambahan perusahaan)
+            </span>
+          </label>
 
           <div className="flex justify-end gap-3 mt-2">
             <button

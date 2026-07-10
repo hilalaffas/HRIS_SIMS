@@ -34,8 +34,10 @@ const AppContent = () => {
   };
 
   const handleLoginSuccess = (userData) => {
-    // Simpan ke storage
-    localStorage.setItem('token', 'dummy-token-12345'); // Nanti ganti dengan token dari API
+    // Catatan: token ASLI dari backend sudah disimpan duluan oleh authService.loginUser()
+    // (lewat api.js -> setToken(), key localStorage 'token' -- sama dengan yang dicek
+    // ProtectedRoute/PublicRoute). Jadi di sini TIDAK perlu (dan TIDAK BOLEH) menimpa
+    // dengan token dummy lagi.
     localStorage.setItem('user_name', userData.name);
     localStorage.setItem('user_role', userData.role);
 
@@ -45,12 +47,9 @@ const AppContent = () => {
     showToast(`Selamat datang kembali, ${userData.name}`, 'success');
     
     // TIDAK perlu navigate manual di sini.
-    // Begitu token di-set di localStorage (di atas) dan state currentUser
+    // Begitu token di-set di localStorage (oleh authService) dan state currentUser
     // berubah, AppRoutes akan re-render dan PublicRoute otomatis
     // mendeteksi token lalu redirect ke /dashboard.
-    // Navigate manual + setTimeout sebelumnya menyebabkan DOUBLE navigasi
-    // (satu dari PublicRoute otomatis, satu lagi dari sini 2.5 detik
-    // kemudian) yang terlihat seperti "2x refresh" setelah toast hilang.
   };
 
   const handleConfirmLogout = () => {

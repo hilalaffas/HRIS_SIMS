@@ -11,10 +11,10 @@ import {
   deleteAnnouncement,
 } from '../../services/announcementService';
 import {
-  addCustomHoliday,
-  updateCustomHoliday,
-  deleteCustomHoliday,
-} from '../../services/holidayCustomService';
+  addHoliday,
+  updateHoliday,
+  deleteHoliday,
+} from '../../services/holidayService';
 import './Dashboard.css';
 
 export default function DashboardSuperAdmin({ user }) {
@@ -39,7 +39,7 @@ export default function DashboardSuperAdmin({ user }) {
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [editingHoliday, setEditingHoliday] = useState(null);
 
-  // ----- Pengumuman -----
+  // ----- Pengumuman (masih localStorage, backend belum ada) -----
 
   const handleOpenAddAnnouncement = () => {
     setEditingAnnouncement(null);
@@ -77,7 +77,7 @@ export default function DashboardSuperAdmin({ user }) {
     setAnnouncementRefreshKey((k) => k + 1);
   };
 
-  // ----- Hari Libur -----
+  // ----- Hari Libur (sudah tersambung ke backend /api/holidays) -----
 
   const handleOpenAddHoliday = () => {
     setEditingHoliday(null);
@@ -85,13 +85,14 @@ export default function DashboardSuperAdmin({ user }) {
   };
 
   const handleOpenEditHoliday = (item) => {
-    // item berasal dari holidaysThisMonth: { day, month, year, agenda, holidayId, ... }
+    // item berasal dari holidaysThisMonth: { day, month, year, agenda, holidayId, isNational }
     const mm = String(item.month + 1).padStart(2, '0');
     const dd = String(item.day).padStart(2, '0');
     setEditingHoliday({
       id: item.holidayId,
       tanggal: `${item.year}-${mm}-${dd}`,
       nama: item.agenda,
+      isNational: item.isNational,
     });
     setIsHolidayModalOpen(true);
   };
@@ -101,21 +102,29 @@ export default function DashboardSuperAdmin({ user }) {
     setEditingHoliday(null);
   };
 
-  const handleSubmitHoliday = async ({ tanggal, nama }) => {
-    if (editingHoliday) {
-      await updateCustomHoliday(editingHoliday.id, { tanggal, nama });
-    } else {
-      await addCustomHoliday({ tanggal, nama });
+  const handleSubmitHoliday = async ({ tanggal, nama, isNational }) => {
+    try {
+      if (editingHoliday) {
+        await updateHoliday(editingHoliday.id, { tanggal, nama, isNational });
+      } else {
+        await addHoliday({ tanggal, nama, isNational });
+      }
+      setCalendarRefreshKey((k) => k + 1);
+    } catch (err) {
+      alert(err.message || 'Gagal menyimpan hari libur.');
     }
-    setCalendarRefreshKey((k) => k + 1);
   };
 
   const handleDeleteHoliday = async (item) => {
     if (!item.holidayId) return;
     const confirmed = window.confirm('Yakin ingin menghapus hari libur ini?');
     if (!confirmed) return;
-    await deleteCustomHoliday(item.holidayId);
-    setCalendarRefreshKey((k) => k + 1);
+    try {
+      await deleteHoliday(item.holidayId);
+      setCalendarRefreshKey((k) => k + 1);
+    } catch (err) {
+      alert(err.message || 'Gagal menghapus hari libur.');
+    }
   };
 
   return (

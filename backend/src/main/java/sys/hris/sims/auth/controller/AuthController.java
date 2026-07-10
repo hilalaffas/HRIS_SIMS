@@ -1,17 +1,20 @@
 package sys.hris.sims.auth.controller;
 
 import jakarta.transaction.Transactional;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import sys.hris.sims.auth.dto.LoginRequest;
 import sys.hris.sims.auth.dto.LoginResponse;
 import sys.hris.sims.auth.dto.RegisterRequest;
 import sys.hris.sims.employee.entity.Employee;
+import sys.hris.sims.employee.entity.EmergencyContactRelationship;
 import sys.hris.sims.employee.repository.EmployeeRepository;
+import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
 import sys.hris.sims.role.entity.Roles;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.role.repository.RoleRepository;
@@ -22,6 +25,12 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import org.springframework.security.core.Authentication;
 import sys.hris.sims.auth.dto.ChangePasswordRequest;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -29,27 +38,30 @@ public class AuthController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final EmployeeRepository employeeRepository;
+    private final EmergencyContactRelationshipRepository relationshipRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
     private final AuthService authService;
 
     public AuthController(UserRepository userRepository,
-                      RoleRepository roleRepository,
-                      EmployeeRepository employeeRepository,
-                      JwtService jwtService,
-                      PasswordEncoder passwordEncoder,
-                      ActivityLogService activityLogService,
-                      AuthService authService) {
+                          RoleRepository roleRepository,
+                          EmployeeRepository employeeRepository,
+                          EmergencyContactRelationshipRepository relationshipRepository,
+                          JwtService jwtService,
+                          PasswordEncoder passwordEncoder,
+                          ActivityLogService activityLogService,
+                          AuthService authService) {
 
-    this.userRepository = userRepository;
-    this.roleRepository = roleRepository;
-    this.employeeRepository = employeeRepository;
-    this.jwtService = jwtService;
-    this.passwordEncoder = passwordEncoder;
-    this.activityLogService = activityLogService;
-    this.authService = authService;
-}
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.employeeRepository = employeeRepository;
+        this.relationshipRepository = relationshipRepository;
+        this.jwtService = jwtService;
+        this.passwordEncoder = passwordEncoder;
+        this.activityLogService = activityLogService;
+        this.authService = authService;
+    }
 
     // helper method ambil userId dari token
     private Long getCurrentUserId(Authentication authentication) {
@@ -57,9 +69,10 @@ public class AuthController {
         return user != null ? user.getUserId() : null;
     }
 
-    @PostMapping("/register")
+    // UBAH DARI @RequestBody MENJADI @ModelAttribute & Tambah consumes
+    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request,
+    public ResponseEntity<?> register(@ModelAttribute RegisterRequest request,
                                       Authentication authentication,
                                       HttpServletRequest httpRequest) {
         User existing = userRepository.findByUsername(request.getUsername());
@@ -81,11 +94,39 @@ public class AuthController {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
                 .roleId(role)
+                .failedAttempts(0)
+                .isActive(true)
                 .build();
 
         userRepository.save(user);
 
         if (isEmployeeProfileComplete(request)) {
+            
+            // 1. Cari Relasi Kontak Darurat (Jika dikirim)
+            EmergencyContactRelationship rel = null;
+            if (request.getEmergencyContactRelationshipId() != null) {
+                rel = relationshipRepository.findById(request.getEmergencyContactRelationshipId()).orElse(null);
+            }
+
+            // 2. Proses Simpan Foto (Jika dikirim)
+            String savedPhotoPath = null;
+            if (request.getPhoto() != null && !request.getPhoto().isEmpty()) {
+                try {
+                    MultipartFile file = request.getPhoto();
+                    Path uploadPath = Paths.get("uploads/photos/");
+                    if (!Files.exists(uploadPath)) {
+                        Files.createDirectories(uploadPath);
+                    }
+                    String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+                    Path filePath = uploadPath.resolve(fileName);
+                    Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+                    savedPhotoPath = filePath.toString();
+                } catch (Exception e) {
+                    return ResponseEntity.status(500).body("Gagal menyimpan foto: " + e.getMessage());
+                }
+            }
+
+            // 3. Simpan Employee dengan tambahan NIK, Kontak, dan Foto
             Employee employee = Employee.builder()
                     .user(user)
                     .fullName(request.getFullName())
@@ -93,13 +134,19 @@ public class AuthController {
                     .phoneNumber(request.getPhoneNumber())
                     .gender(request.getGender())
                     .isActive(true)
+                    // Field Baru:
+                    .nikKaryawan(request.getNikKaryawan())
+                    .emergencyContactName(request.getEmergencyContactName())
+                    .emergencyContactPhone(request.getEmergencyContactPhone())
+                    .emergencyContactRelationship(rel)
+                    .photo(savedPhotoPath)
                     .build();
             employeeRepository.save(employee);
         }
 
         // catat activity log
-        activityLogService.log(authentication.getName(),
-                getCurrentUserId(authentication),
+        activityLogService.log(authentication != null ? authentication.getName() : "System",
+                authentication != null ? getCurrentUserId(authentication) : null,
                 "REGISTER_USER",
                 "users",
                 user.getUserId(),
@@ -112,6 +159,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         User user = userRepository.findByUsername(request.getUsername());
+
         if (user == null) {
             // catat log username tidak ditemukan
             activityLogService.log(
@@ -126,12 +174,64 @@ public class AuthController {
 
             return ResponseEntity.status(401).body("Invalid username or password");
         }
-        boolean isValid = isPasswordValid(request.getPassword(), user);
-        if (!isValid) {
-            // catat activity log
-            activityLogService.log(request.getUsername(), user.getUserId(), "LOGIN_FAILED", "users", null, "Gagal login", httpRequest);
-            return ResponseEntity.status(401).body("Invalid username or password");
+
+        if (!user.getIsActive()) {
+
+            activityLogService.log(
+                    user.getUsername(),
+                    user.getUserId(),
+                    "LOGIN_BLOCKED",
+                    "users",
+                    user.getUserId(),
+                    "Login ditolak karena akun dinonaktifkan",
+                    httpRequest
+            );
+
+            return ResponseEntity.status(403)
+                    .body("Akun telah dinonaktifkan. Silakan hubungi HR.");
         }
+
+        boolean isValid = isPasswordValid(request.getPassword(), user);
+
+        if (!isValid) {
+
+            user.setFailedAttempts(user.getFailedAttempts() + 1);
+
+            if (user.getFailedAttempts() >= 3) {
+
+                user.setIsActive(false);
+
+                activityLogService.log(
+                        user.getUsername(),
+                        user.getUserId(),
+                        "ACCOUNT_LOCKED",
+                        "users",
+                        user.getUserId(),
+                        "Akun dinonaktifkan karena 3 kali gagal login",
+                        httpRequest
+                );
+            }
+
+            userRepository.save(user);
+
+            activityLogService.log(
+                    request.getUsername(),
+                    user.getUserId(),
+                    "LOGIN_FAILED",
+                    "users",
+                    null,
+                    "Gagal login",
+                    httpRequest
+            );
+
+            return ResponseEntity.status(401)
+                    .body("Invalid username or password");
+        }
+        if (user.getFailedAttempts() > 0) {
+            user.setFailedAttempts(0);
+            userRepository.save(user);
+        }
+
         String role = user.getRoleId().getRoleName();
         String token = jwtService.generateToken(user.getUsername(), role);
 
@@ -142,13 +242,13 @@ public class AuthController {
     }
 
     @PutMapping("/change-password")
-public ResponseEntity<?> changePassword(
-        @RequestBody ChangePasswordRequest request,
-        Authentication authentication) {
+    public ResponseEntity<?> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
 
-    return ResponseEntity.ok(
-            authService.changePassword(authentication, request));
-}
+        return ResponseEntity.ok(
+                authService.changePassword(authentication, request));
+    }
 
     private boolean isPasswordValid(String rawPassword, User user) {
         String storedPassword = user.getPassword();
