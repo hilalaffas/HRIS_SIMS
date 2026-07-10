@@ -1,13 +1,12 @@
 // src/pages/Dashboard/components/CalendarCard.jsx
 import React, { useState, useEffect } from 'react';
-import { getHolidaysByYear } from '../../../services/holidayService';
+import { getHolidaysByMonth } from '../../../services/holidayService';
 import { getTeamLeaveByYear } from '../../../services/cutiService';
-import { getCustomHolidaysRawByYear } from '../../../services/holidayCustomService';
 
 export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChange, refreshTrigger }) {
   const todayObj = new Date();
   const [viewDate, setViewDate] = useState(new Date(todayObj.getFullYear(), todayObj.getMonth(), 1));
-  // holidays: map tanggal -> { name, isCustom, id }
+  // holidays: map tanggal ('YYYY-MM-DD') -> { name, isNational, id }
   const [holidays, setHolidays] = useState({});
   const [teamLeaves, setTeamLeaves] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -18,35 +17,39 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
   ];
 
   const currentYear = viewDate.getFullYear();
-  const currentMonth = viewDate.getMonth();
+  const currentMonth = viewDate.getMonth(); // 0-indexed (JS)
 
-  // Ambil data libur nasional (bawaan), libur custom (dari HR/Admin), & cuti tim
+  // Ambil data hari libur bulan aktif dari backend, & cuti tim setahun
   useEffect(() => {
     const loadCalendarData = async () => {
       setIsLoading(true);
-      const [officialHolidays, customHolidayList, teamLeaveData] = await Promise.all([
-        getHolidaysByYear(currentYear),
-        getCustomHolidaysRawByYear(currentYear),
-        getTeamLeaveByYear(currentYear),
-      ]);
+      try {
+        const [holidayList, teamLeaveData] = await Promise.all([
+          getHolidaysByMonth(currentYear, currentMonth + 1), // backend 1-indexed (LocalDate Java)
+          getTeamLeaveByYear(currentYear),
+        ]);
 
-      // Gabungkan libur nasional bawaan + libur custom (custom menimpa jika tanggal sama),
-      // sambil menyimpan id & sumber datanya supaya panel Hari Libur tahu item mana
-      // yang boleh di-Edit/Hapus.
-      const holidayMap = {};
-      Object.entries(officialHolidays || {}).forEach(([dateKey, name]) => {
-        holidayMap[dateKey] = { name, isCustom: false, id: null };
-      });
-      (customHolidayList || []).forEach((item) => {
-        holidayMap[item.tanggal] = { name: item.nama, isCustom: true, id: item.id };
-      });
+        const holidayMap = {};
+        (holidayList || []).forEach((h) => {
+          // h.date dari backend berbentuk 'YYYY-MM-DD' (LocalDate diserialisasi Jackson)
+          holidayMap[h.date] = {
+            name: h.name,
+            isNational: !!h.isNational,
+            id: h.holidayId,
+          };
+        });
 
-      setHolidays(holidayMap);
-      setTeamLeaves(teamLeaveData || {});
-      setIsLoading(false);
+        setHolidays(holidayMap);
+        setTeamLeaves(teamLeaveData || {});
+      } catch (err) {
+        console.error('Gagal memuat data kalender:', err);
+        setHolidays({});
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadCalendarData();
-  }, [currentYear, refreshTrigger]);
+  }, [currentYear, currentMonth, refreshTrigger]);
 
   const handlePrevMonth = () => {
     setViewDate(new Date(currentYear, currentMonth - 1, 1));
@@ -73,7 +76,7 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
         isCurrentMonth: false,
         isToday: false,
         isHoliday: false,
-        isCustomHoliday: false,
+        isNational: false,
         holidayId: null,
         isTeamLeave: false,
         teamLeaveList: [],
@@ -100,7 +103,7 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
         isCurrentMonth: true,
         isToday: isToday,
         isHoliday: !!holidayInfo,
-        isCustomHoliday: holidayInfo?.isCustom || false,
+        isNational: holidayInfo?.isNational || false,
         holidayId: holidayInfo?.id || null,
         isTeamLeave: teamLeaveList.length > 0,
         teamLeaveList,
@@ -118,7 +121,7 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
         isCurrentMonth: false,
         isToday: false,
         isHoliday: false,
-        isCustomHoliday: false,
+        isNational: false,
         holidayId: null,
         isTeamLeave: false,
         teamLeaveList: [],

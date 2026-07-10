@@ -147,16 +147,20 @@ const Karyawan = ({ user }) => {
 
   // Fungsi ketika HR melakukan Revoke (Pulihkan)
   const handleRevokeCuti = (cutiId) => {
-    setRiwayatCuti((prev) => 
-      prev.map(item => {
-        if (item.id === cutiId) {
-          // Catat ke Log Sistem
-          addLogActivity(user?.name || 'Admin HR', `memulihkan (revoke) status cuti "${item.karyawan?.nama}" kembali ke Proses.`);
-          return { ...item, statusBerkas: 'PROSES' };
-        }
-        return item;
-      })
-    );
+  // 1. Cari data yang akan di-revoke terlebih dahulu
+    const targetCuti = riwayatCuti.find(item => item.id === cutiId);
+    
+    if (targetCuti) {
+      // 2. Catat log hanya SATU KALI di sini
+      addLogActivity(user?.name || 'Admin HR', `memulihkan (revoke) status cuti "${targetCuti.karyawan?.  nama}" kembali ke Proses.`);
+      
+      // 3. Update state setelah log berhasil dicatat
+      setRiwayatCuti((prev) => 
+        prev.map(item => 
+          item.id === cutiId ? { ...item, statusBerkas: 'PROSES' } : item
+        )
+      );
+    }
   };
 
   return (

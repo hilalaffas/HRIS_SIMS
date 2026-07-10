@@ -1,67 +1,80 @@
 // src/services/authService.js
+import { api, setToken, clearToken } from './api';
 
-const MOCK_USERS = [
-  { username: 'staff', password: 'ASDasd123', role: 'Member', name: 'Iqbal Purnomo (Staff)' },
-  { username: 'lead', password: 'ASDasd123', role: 'Leader', name: 'Jasmine Renata (Leader)' },
-  { username: 'spv', password: 'ASDasd123', role: 'SPV', name: 'Mandala Putra (Supervisor)' },
-  { username: 'manager', password: 'ASDasd123', role: 'Manager', name: 'Ade Mulya (Manager)' },
-  { username: 'hrkaryawan', password: 'ASDasd123', role: 'HRD_Karyawan', name: 'Fadjri Karyawan (HR Karyawan)' },
-  { username: 'hradmin', password: 'ASDasd123', role: 'HRD_Admin', name: 'Fadjri Admin (HR Admin)' },
-  { username: 'superadmin', password: 'ASDasd123', role: 'SUPER_ADMIN', name: 'Muto Yuki (Super Admin)' },
-];
+const USER_KEY = 'sims_user';
 
+/**
+ * Login ke backend asli lewat POST /api/auth/login.
+ * Response backend (LoginResponse): { token, username, role }
+ *
+ * CATATAN: backend saat ini belum mengembalikan nama lengkap user di response
+ * login, jadi field `name` untuk sementara memakai `username`. Kalau nanti ada
+ * endpoint profil (misal GET /api/users/me) yang mengembalikan nama lengkap,
+ * kabari saya supaya field ini disambungkan ke sana.
+ */
 export const loginUser = async (username, password) => {
-  // Simulasi loading dari server selama 800ms
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const user = MOCK_USERS.find(
-        
-        (u) => u.username === username && u.password === password
-      );
+  const data = await api.post('/api/auth/login', { username, password });
 
-      if (user) {
-        const { password, ...userData } = user; // Hapus password dari object response
-        resolve(userData);
-      } else {
-        reject(new Error("Username atau password salah!"));
-      }
-    }, 800);
-  });
+  if (!data?.token) {
+    throw new Error('Login gagal: token tidak diterima dari server.');
+  }
+
+  setToken(data.token);
+
+  const userData = {
+    username: data.username,
+    role: data.role,
+    name: data.username, // sementara, lihat catatan di atas
+  };
+
+  localStorage.setItem(USER_KEY, JSON.stringify(userData));
+  return userData;
 };
 
+export const logoutUser = () => {
+  clearToken();
+  localStorage.removeItem(USER_KEY);
+};
+
+/**
+ * Ambil user yang sedang login dari localStorage (dipakai saat reload halaman,
+ * supaya session tidak hilang tanpa perlu login ulang selama token masih valid).
+ */
+export const getCurrentUser = () => {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * BELUM TERSAMBUNG KE BACKEND SUNGGUHAN.
+ * Endpoint POST /api/password-reset/forgot-password sudah ada di SecurityConfig
+ * (permitAll), tapi bentuk request/response DTO-nya belum saya lihat, jadi
+ * fungsi ini masih mock supaya alur "Lupa Password" di UI tidak error.
+ * Kabari kalau mau saya sambungkan ke endpoint aslinya.
+ */
 export const checkUsernameExists = async (identifier) => {
-  // Simulasi pengecekan username ke server selama 500ms
   return new Promise((resolve) => {
     setTimeout(() => {
-      const exists = MOCK_USERS.some((u) => u.username === identifier);
-      resolve(exists);
-    }, 500);
+      resolve(!!identifier);
+    }, 300);
   });
 };
 
 export const requestPasswordReset = async (identifier) => {
-  // Simulasi permintaan reset password ke server selama 1000ms
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       if (!identifier || !identifier.trim()) {
-        reject(new Error("Email atau username wajib diisi."));
+        reject(new Error('Email atau username wajib diisi.'));
         return;
       }
-
-      // Catatan: demi keamanan, respons SELALU sukses baik akun ditemukan
-      // atau tidak, supaya orang lain tidak bisa menebak akun mana yang terdaftar.
-      // Di backend asli, pengecekan MOCK_USERS di bawah ini akan diganti
-      // dengan query database + pengiriman email berisi link/token reset.
-      const userExists = MOCK_USERS.some(
-        (u) => u.username === identifier
-      );
-
       resolve({
         success: true,
-        message: userExists
-          ? "Instruksi reset password telah dikirim."
-          : "Jika akun terdaftar, instruksi reset password telah dikirim.",
+        message: 'Jika akun terdaftar, instruksi reset password telah dikirim.',
       });
-    }, 1000);
+    }, 500);
   });
 };

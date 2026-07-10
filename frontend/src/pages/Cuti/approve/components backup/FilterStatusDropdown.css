@@ -1,0 +1,108 @@
+.filter-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-status__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--alv-rose);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.filter-status__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 170px;
+  background: var(--alv-bg-card);
+  border: 1px solid var(--alv-border);
+  border-radius: var(--alv-radius-md);
+  padding: 8px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--alv-text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.filter-status__trigger.is-open {
+  border-color: var(--alv-green);
+  box-shadow: 0 0 0 3px var(--alv-green-bg);
+}
+
+.filter-status__chevron {
+  color: var(--alv-green);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.filter-status__trigger.is-open .filter-status__chevron {
+  transform: rotate(180deg);
+}
+
+.filter-status__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 220px;
+  background: var(--alv-bg-card);
+  border: 1px solid var(--alv-border);
+  border-radius: var(--alv-radius-md);
+  box-shadow: var(--alv-shadow-modal);
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  animation: filterStatusPop 0.14s ease;
+}
+
+@keyframes filterStatusPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-status__option {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--alv-text-primary);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.13s ease; /* Transisi halus saat kursor bergerak */
+}
+
+/* MENGIKUTI POSISI KURSOR: Efek hover disamakan dengan warna hijau tua pada desain */
+.filter-status__option:hover {
+  background: #113d2b; /* Menggunakan warna hijau gelap sesuai image_bf82e6.png */
+  color: #fff;
+}
+
+
+@media (max-width: 640px) {
+  .filter-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .filter-status__trigger {
+    width: 100%;
+  }
+}
