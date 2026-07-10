@@ -1,62 +1,118 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './DataDivisi.css';
-import { initialDivisiList } from '../data/mockDivisi';
+import {
+  getAllDivisi,
+  createDivisi,
+  updateDivisi,
+  deleteDivisi,
+} from '../../../services/divisiService';
 
 const DataDivisi = ({ karyawanList }) => {
-  const [divisiList, setDivisiList] = useState(initialDivisiList);
+  // State Utama
+  const [divisiList, setDivisiList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // State Input & Form
   const [newDivisiName, setNewDivisiName] = useState('');
-  
-  // State untuk mode Edit
+  const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Fungsi Tambah Divisi
-  const handleAddDivisi = () => {
-    if (!newDivisiName.trim()) return;
-    
-    const newDivisi = {
-      id: `DIV-${Date.now()}`,
-      name: newDivisiName.trim()
-    };
-    
-    setDivisiList([...divisiList, newDivisi]);
-    setNewDivisiName(''); // Reset input
+  // State Toast
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToastMessage = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000);
   };
 
-  // Fungsi Mulai Edit
+  // 1. Fetch Data
+  const fetchDivisiList = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await getAllDivisi();
+      setDivisiList(data || []);
+    } catch (err) {
+      setLoadError(err.message || 'Gagal memuat data divisi.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDivisiList();
+  }, []);
+
+  // 2. Handler Tambah
+  const handleAddDivisi = async () => {
+    if (!newDivisiName.trim()) return;
+    setIsAdding(true);
+    try {
+      await createDivisi(newDivisiName.trim());
+      setNewDivisiName('');
+      await fetchDivisiList();
+      showToastMessage('Divisi berhasil ditambah!', 'success');
+    } catch (err) {
+      showToastMessage(err.message || 'Gagal menambah divisi.', 'error');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  // 3. Handler Edit
   const handleStartEdit = (divisi) => {
     setEditingId(divisi.id);
-    setEditValue(divisi.name);
+    setEditValue(divisi.namaDivisi);
   };
 
-  // Fungsi Simpan Edit
-  const handleSaveEdit = (id) => {
-    if (!editValue.trim()) {
-      setEditingId(null);
-      return;
-    }
-    setDivisiList(divisiList.map(div => 
-      div.id === id ? { ...div, name: editValue.trim() } : div
-    ));
+  const handleCancelEdit = () => {
     setEditingId(null);
+    setEditValue('');
   };
 
-  // Fungsi Hapus Divisi
-  const handleDelete = (divisi) => {
-    // 1. Cek apakah ada karyawan yang menggunakan divisi ini
-    // Asumsi properti di karyawanList bernama 'division' atau 'departemen'
-    const isUsed = karyawanList.some(
-      (emp) => emp.division === divisi.name || emp.departemen === divisi.name
+  const handleSaveEdit = async () => {
+    if (!editValue.trim()) return;
+    setIsSavingEdit(true);
+    try {
+      await updateDivisi(editingId, editValue.trim());
+      setEditingId(null);
+      await fetchDivisiList();
+      showToastMessage('Divisi berhasil diperbarui.', 'success');
+    } catch (err) {
+      showToastMessage(err.message || 'Gagal menyimpan perubahan.', 'error');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  // 4. Handler Hapus
+  const handleDeleteRequest = (divisi) => {
+    // Validasi apakah divisi dipakai karyawan
+    const isUsed = karyawanList?.some(
+      (emp) => emp.division === divisi.namaDivisi || emp.departemen === divisi.namaDivisi
     );
 
     if (isUsed) {
-      alert(`Gagal menghapus! Divisi "${divisi.name}" masih digunakan oleh karyawan aktif.`);
-      return;
+      showToastMessage(`Gagal! Divisi "${divisi.namaDivisi}" masih digunakan oleh karyawan.`, 'error');
+    } else {
+      setDeleteTarget(divisi);
     }
+  };
 
-    // 2. Jika aman, lakukan penghapusan
-    if (window.confirm(`Yakin ingin menghapus divisi ${divisi.name}?`)) {
-      setDivisiList(divisiList.filter(div => div.id !== divisi.id));
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteDivisi(deleteTarget.id);
+      await fetchDivisiList();
+      setDeleteTarget(null);
+      showToastMessage('Divisi berhasil dihapus.', 'success');
+    } catch (err) {
+      showToastMessage(err.message || 'Gagal menghapus divisi.', 'error');
     }
   };
 
@@ -66,7 +122,6 @@ const DataDivisi = ({ karyawanList }) => {
       <div className="header_data_divisi">
         <div className="header-info_data_divisi">
           <div className="title-wrapper_data_divisi">
-            {/* Icon Hierarchy SVG */}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="icon_data_divisi">
               <path d="M17 17.5C17 18.8807 15.8807 20 14.5 20C13.1193 20 12 18.8807 12 17.5C12 16.1193 13.1193 15 14.5 15C15.8807 15 17 16.1193 17 17.5ZM17 17.5H22M12 17.5H7M10 6.5C10 7.88071 8.88071 9 7.5 9C6.11929 9 5 7.88071 5 6.5C5 5.11929 6.11929 4 7.5 4C8.88071 4 10 5.11929 10 6.5ZM10 6.5H19M7.5 9V15M7.5 15C8.88071 15 10 16.1193 10 17.5C10 18.8807 8.88071 20 7.5 20C6.11929 20 5 18.8807 5 17.5C5 16.1193 6.11929 15 7.5 15Z" stroke="#124a35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -74,17 +129,18 @@ const DataDivisi = ({ karyawanList }) => {
           </div>
           <p>Kelola daftar divisi departemen untuk karyawan.</p>
         </div>
-        
+
         <div className="header-actions_data_divisi">
-          <input 
-            type="text" 
-            placeholder="Nama Divisi Baru..." 
+          <input
+            type="text"
+            placeholder="Nama Divisi Baru..."
             value={newDivisiName}
             onChange={(e) => setNewDivisiName(e.target.value)}
+            disabled={isAdding}
             className="input-new_data_divisi"
           />
-          <button className="btn-add_data_divisi" onClick={handleAddDivisi}>
-            + Tambah
+          <button className="btn-add_data_divisi" onClick={handleAddDivisi} disabled={isAdding}>
+            {isAdding ? 'Menambah...' : '+ Tambah'}
           </button>
         </div>
       </div>
@@ -97,51 +153,80 @@ const DataDivisi = ({ karyawanList }) => {
         </div>
 
         <div className="list-body_data_divisi">
-          {divisiList.map((divisi) => (
+          {isLoading && <div className="empty-state_data_divisi">Memuat data...</div>}
+          {!isLoading && loadError && <div className="empty-state_data_divisi" style={{ color: '#b91c1c' }}>{loadError}</div>}
+          
+          {!isLoading && !loadError && divisiList.map((divisi) => (
             <div className="list-row_data_divisi" key={divisi.id}>
-              
-              {/* Kolom Nama / Mode Edit */}
               <div className="row-name_data_divisi">
-                {editingId === divisi.id ? (
-                  <input 
-                    type="text" 
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="input-edit_data_divisi"
-                    autoFocus
-                  />
-                ) : (
-                  <span className="divisi-name-text_data_divisi">{divisi.name}</span>
-                )}
+                <span className="divisi-name-text_data_divisi">{divisi.namaDivisi}</span>
               </div>
-
-              {/* Kolom Aksi */}
               <div className="row-actions_data_divisi">
-                {editingId === divisi.id ? (
-                  <button className="btn-save-edit_data_divisi" onClick={() => handleSaveEdit(divisi.id)}>
-                    Simpan
-                  </button>
-                ) : (
-                  <>
-                    <button className="btn-action-edit_data_divisi" onClick={() => handleStartEdit(divisi)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      Edit
-                    </button>
-                    <button className="btn-action-delete_data_divisi" onClick={() => handleDelete(divisi)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                      Hapus
-                    </button>
-                  </>
-                )}
+                <button className="btn-action-edit_data_divisi" onClick={() => handleStartEdit(divisi)}>
+                  Edit
+                </button>
+                <button className="btn-action-delete_data_divisi" onClick={() => handleDeleteRequest(divisi)}>
+                  Hapus
+                </button>
               </div>
             </div>
           ))}
-          
-          {divisiList.length === 0 && (
-            <div className="empty-state_data_divisi">Belum ada data divisi.</div>
-          )}
         </div>
       </div>
+
+      {/* MODAL EDIT */}
+      {editingId && (
+        <div className="modal-overlay_data_divisi">
+          <div className="modal-content_data_divisi">
+            {/* Header Modal */}
+            <div className="modal-header-edit_data_divisi">
+              <h3>Edit Nama Divisi</h3>
+            </div>
+            
+            {/* Body Modal */}
+            <div className="modal-body-edit_data_divisi">
+              <label>NAMA DIVISI BARU</label>
+              <input 
+                type="text" 
+                value={editValue} 
+                onChange={(e) => setEditValue(e.target.value)} 
+                autoFocus 
+              />
+            </div>
+            
+            {/* Footer Modal */}
+            <div className="modal-footer-edit_data_divisi">
+              <button className="btn-batal-modal_data_divisi" onClick={handleCancelEdit}>
+                Batal
+              </button>
+              <button className="btn-simpan-modal_data_divisi" onClick={handleSaveEdit} disabled={isSavingEdit}>
+                {isSavingEdit ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS */}
+      {deleteTarget && (
+        <div className="modal-overlay_data_divisi">
+          <div className="modal-delete-content_data_divisi">
+            <h3>Hapus Divisi</h3>
+            <p>Yakin ingin menghapus "{deleteTarget.namaDivisi}"?</p>
+            <div className="modal-delete-footer_data_divisi">
+              <button className="btn-batal-modal_data_divisi" onClick={() => setDeleteTarget(null)}>Batal</button>
+              <button className="btn-confirm-delete_data_divisi" onClick={handleConfirmDelete}>Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST */}
+      {toast.show && (
+        <div className={`toast_data_divisi toast_data_divisi--${toast.type}`}>
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };

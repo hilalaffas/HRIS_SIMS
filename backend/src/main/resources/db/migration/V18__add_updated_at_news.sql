@@ -1,0 +1,2 @@
+ALTER TABLE news
+ADD COLUMN updated_at TIMESTAMP;

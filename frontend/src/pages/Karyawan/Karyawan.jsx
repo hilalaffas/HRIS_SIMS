@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import './Karyawan.css';
 import HeadlineKaryawan from './components/HeadlineKaryawan';
 import TabMenuKaryawan from './components/TabMenuKaryawan';
@@ -13,13 +13,17 @@ import LogSistem from './components/LogSistem';
 import { initialLogs } from './data/mockLogs'
 import LeaveFormHr from './components/LeaveFormHr';
 import LeaveListHr from './components/LeaveListHr';
-// Sesuaikan nama 'mockDataCuti' dengan nama variabel yang di-export dari mockData.js tersebut
 import {allLeaveHistory} from '../Cuti/approve/data/mockData';
+import FormCuti from '../Cuti/approve/components/Form';
+import { getKaryawanList } from '../../services/karyawanService';
 
 
 const Karyawan = ({ user }) => {
     // 2. Tambahkan state untuk Log
   const [logList, setLogList] = useState(initialLogs);
+
+  // State untuk menyimpan data cuti yang sedang diklik tombol "Rincian"-nya
+const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   // 3. Buat Fungsi Pencatat Aktivitas
   const addLogActivity = (aktor, aksi, type = 'normal') =>  {
@@ -37,7 +41,7 @@ const Karyawan = ({ user }) => {
   };
 
 
-  const [karyawanList, setKaryawanList] = useState(initialKaryawanList);
+  const [karyawanList, setKaryawanList] = useState([]);
   // [BARU] State untuk data cuti HR
   const [riwayatCuti, setRiwayatCuti] = useState(allLeaveHistory || []);
   
@@ -67,22 +71,33 @@ const Karyawan = ({ user }) => {
   const handleOpenEdit = (item) => setEditTarget(item);
   const handleCloseEdit = () => setEditTarget(null);
 
-  const handleSubmitAddForm = (formData) => {
-    const newItem = {
-      ...formData,
-      id: `KRY-${String(karyawanList.length + 1).padStart(4, '0')}`,
-      kodeKaryawan: `SYS-${new Date().getFullYear()}-${String(karyawanList.length + 1).padStart(4, '0')}`,
-      tanggalBergabung: new Date().toLocaleDateString('id-ID', {
-        day: 'numeric', month: 'short', year: 'numeric',
-      }),
-      status: 'Aktif'
-    };
+  const fetchKaryawan = async () => {
+    try {
+      const response = await getKaryawanList();
+      // Asumsi backend mengembalikan array of object di response.data atau response langsung
+      setKaryawanList(response.data || response || []);
+    } catch (error) {
+      console.error("Gagal menarik data karyawan:", error);
+    }
+  };
 
-    // PANGGIL FUNGSI LOG DI SINI
-    addLogActivity(user?.name || 'Admin HR', `menambahkan karyawan baru bernama "${formData.fullName}".`);
+  useEffect(() => {
+    fetchKaryawan();
+  }, []);
 
-    setKaryawanList((prev) => [newItem, ...prev]);
-    setShowAddForm(false);
+  const handleSubmitAddForm = async (formData) => {
+    // Catatan: registrasi ke backend (termasuk upload foto) SUDAH dilakukan
+    // di dalam FormKaryawan.jsx. Di sini kita TIDAK perlu panggil registerKaryawan lagi
+    // (sebelumnya ini menyebabkan data terkirim dobel ke backend).
+    // Cukup ambil ulang daftar karyawan dari server supaya tabel langsung ter-update
+    // tanpa reload halaman, dan datanya selalu konsisten dengan backend.
+    try {
+      await fetchKaryawan();
+      setShowAddForm(false);
+      addLogActivity(user?.name, `menambahkan karyawan baru: ${formData.fullName}`);
+    } catch (error) {
+      console.error("Gagal me-refresh daftar karyawan:", error);
+    }
   };
 
   const handleSubmitEditModal = (formData) => {
@@ -201,7 +216,7 @@ const Karyawan = ({ user }) => {
               data={riwayatCuti} 
               sisaCuti={{ totalHari: 12 }} 
               currentUserRole={currentUserRole}
-              onOpenDetail={(item) => console.log("Buka Detail Cuti", item)}
+              onOpenDetail={(item) => setDetailCutiTarget(item)}
               onRevokeLeave={handleRevokeCuti}
             />
           </div>
@@ -230,6 +245,14 @@ const Karyawan = ({ user }) => {
         onCancel={handleCancelDelete}
         onConfirm={() => handleConfirmDelete(deleteTarget?.id)}
       />
+
+      {/* --- TAMBAHKAN KODE INI --- */}
+      {detailCutiTarget && (
+        <FormCuti 
+          data={detailCutiTarget} 
+          onClose={() => setDetailCutiTarget(null)} 
+        />
+      )}
     </div>
   );
 };

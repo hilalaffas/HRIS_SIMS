@@ -130,3 +130,22 @@
   gap: 4px;
 }
 .btn-edit:hover { text-decoration: underline; }
+
+/* Update CSS untuk btn-edit */
+.btn-edit {
+  background: none;
+  border: none;
+  color: #0891b2; /* Warna teal/cyan yang mirip dengan referensi */
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px; /* Jarak antara icon dan teks */
+  padding: 4px 8px; /* Tambahan padding agar area klik lebih luas */
+  transition: all 0.2s ease;
+}
+
+.btn-edit:hover { 
+  color: #0e7490; /* Warna sedikit lebih gelap saat di-hover */
+  text-decoration: underline; 
+}
