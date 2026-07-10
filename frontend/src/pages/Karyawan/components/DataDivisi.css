@@ -1,4 +1,6 @@
-/* CONTAINER UTAMA */
+/* =========================================
+   CONTAINER & HEADER UTAMA
+   ========================================= */
 .card_data_divisi {
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
@@ -8,9 +10,8 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-/* HEADER BAGIAN ATAS (WARNA HIJAU SOFT) */
 .header_data_divisi {
-  background-color: #f0fdf4; /* Warna hijau sangat soft sesuai gambar */
+  background-color: #f0fdf4;
   padding: 20px 24px;
   display: flex;
   justify-content: space-between;
@@ -34,7 +35,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #111827; /* Hitam tegas */
+  color: #111827;
 }
 
 .icon_data_divisi {
@@ -45,10 +46,12 @@
 .header-info_data_divisi p {
   margin: 0;
   font-size: 13px;
-  color: #047857; /* Teks hijau untuk deskripsi */
+  color: #047857;
 }
 
-/* KONTROL TAMBAH DIVISI */
+/* =========================================
+   KONTROL TAMBAH DIVISI
+   ========================================= */
 .header-actions_data_divisi {
   display: flex;
   gap: 12px;
@@ -70,7 +73,7 @@
 }
 
 .btn-add_data_divisi {
-  background-color: #064e3b; /* Hijau gelap khas tombol tambah */
+  background-color: #064e3b;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -85,7 +88,9 @@
   background-color: #022c22;
 }
 
-/* HEADER LIST DATA */
+/* =========================================
+   TABEL / LIST DATA
+   ========================================= */
 .list-header_data_divisi {
   display: flex;
   justify-content: space-between;
@@ -98,7 +103,6 @@
   letter-spacing: 0.5px;
 }
 
-/* BODY LIST DATA */
 .list-body_data_divisi {
   display: flex;
   flex-direction: column;
@@ -118,10 +122,6 @@
   background-color: #f9fafb;
 }
 
-.list-row_data_divisi:last-child {
-  border-bottom: none;
-}
-
 .row-name_data_divisi {
   flex: 1;
 }
@@ -129,21 +129,12 @@
 .divisi-name-text_data_divisi {
   font-size: 15px;
   font-weight: 600;
-  color: #374151; /* Warna teks gelap kebiruan */
-}
-
-.input-edit_data_divisi {
-  padding: 8px 12px;
-  border: 1px solid #10b981;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 600;
   color: #374151;
-  width: 80%;
-  outline: none;
 }
 
-/* TOMBOL AKSI (EDIT & HAPUS) */
+/* =========================================
+   TOMBOL AKSI (EDIT & HAPUS)
+   ========================================= */
 .row-actions_data_divisi {
   display: flex;
   gap: 20px;
@@ -163,7 +154,7 @@
 }
 
 .btn-action-edit_data_divisi {
-  color: #10b981; /* Hijau Emerald */
+  color: #10b981;
 }
 
 .btn-action-edit_data_divisi:hover {
@@ -171,32 +162,187 @@
 }
 
 .btn-action-delete_data_divisi {
-  color: #e11d48; /* Merah Rose */
+  color: #e11d48;
 }
 
 .btn-action-delete_data_divisi:hover {
   color: #be123c;
 }
 
-.btn-save-edit_data_divisi {
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.btn-save-edit_data_divisi:hover {
-  background-color: #059669;
-}
-
-/* EMPTY STATE */
 .empty-state_data_divisi {
   padding: 32px;
   text-align: center;
   color: #6b7280;
   font-size: 14px;
 }
+
+/* =========================================
+   MODAL OVERLAY
+   ========================================= */
+.modal-overlay_data_divisi {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(30, 41, 59, 0.5); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+/* =========================================
+   MODAL EDIT DIVISI
+   ========================================= */
+.modal-content_data_divisi {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-header-edit_data_divisi {
+  background-color: #1a4d33;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header-edit_data_divisi h3 {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.btn-close-modal_data_divisi {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.modal-body-edit_data_divisi {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-body-edit_data_divisi label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.modal-body-edit_data_divisi input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.modal-footer-edit_data_divisi {
+  padding: 0 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* =========================================
+   MODAL KONFIRMASI HAPUS
+   ========================================= */
+.modal-delete-content_data_divisi {
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.modal-delete-header-title_data_divisi {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.modal-delete-icon-wrapper_data_divisi {
+  background-color: #ffe4e6;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-delete-footer_data_divisi {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* Tombol Global Modal */
+.btn-batal-modal_data_divisi {
+  padding: 10px 20px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-simpan-modal_data_divisi,
+.btn-confirm-delete_data_divisi {
+  padding: 10px 24px;
+  border: none;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-simpan-modal_data_divisi { background-color: #1a4d33; }
+.btn-confirm-delete_data_divisi { background-color: #059669; }
+
+/* =========================================
+   TOAST NOTIFICATION
+   ========================================= */
+.toast_data_divisi {
+  position: fixed;
+  bottom: 32px;
+  right: 32px; 
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  z-index: 2000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.toast_data_divisi--success { background-color: #0d5c3f; }
+.toast_data_divisi--error { background-color: #b91c1c; }

@@ -2,8 +2,14 @@ import React, { useState, useEffect } from 'react';
 // BARIS INI SANGAT PENTING:
 import './ModalDetailKaryawan.css';
 
-const ModalDetailKaryawan = ({ isOpen, onClose, employeeData, currentUserRole }) => {
+const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUserRole, onSave, onDelete }) => {
+  // isOpen diberi default `true` karena Karyawan.jsx (parent) memanggil modal ini
+  // secara conditional lewat `{editTarget && (<ModalDetailKaryawan ... />)}` dan
+  // TIDAK pernah mengirim prop isOpen. Tanpa default ini, isOpen selalu undefined
+  // sehingga `!isOpen` selalu true dan modal selalu return null (tombol Edit
+  // kelihatan seperti tidak berfungsi, padahal modalnya menolak render sendiri).
   const [formData, setFormData] = useState({
+    id: null, employeeId: null,
     namaLengkap: '', nik: '', jabatan: '', alamat: '',
     email: '', divisi: '', telp: '', telpDarurat: '', hubDarurat: '',
     tglGabung: '', username: '', role: '', status: '',
@@ -14,22 +20,27 @@ const ModalDetailKaryawan = ({ isOpen, onClose, employeeData, currentUserRole })
   const [notification, setNotification] = useState('');
 
   // Mengisi form ketika data karyawan (dari tombol edit) masuk
+  // Mengisi form ketika data karyawan (dari tombol edit) masuk
   useEffect(() => {
     if (employeeData) {
       setFormData({
-        namaLengkap: employeeData.name || '',
-        nik: employeeData.nik || '',
+        id: employeeData.id ?? employeeData.employeeId ?? null,
+        employeeId: employeeData.employeeId ?? employeeData.id ?? null,
+        namaLengkap: employeeData.fullName || '',
+        nik: employeeData.nikKaryawan || '',
         jabatan: employeeData.position || '',
         alamat: employeeData.address || '',
-        email: employeeData.email || '',
+        // Email dan Username biasanya ada di tabel User relasinya
+        email: employeeData.user?.email || '',
         divisi: employeeData.division || '',
-        telp: employeeData.phone || '',
-        telpDarurat: employeeData.emergencyContact || '',
-        hubDarurat: employeeData.emergencyRelation || '',
+        telp: employeeData.phoneNumber || '',
+        telpDarurat: employeeData.emergencyContactPhone || '',
+        // Hubungan darurat biasanya berelasi ke tabel reference
+        hubDarurat: employeeData.emergencyContactRelationship?.name || '',
         tglGabung: employeeData.joinDate || '',
-        username: employeeData.username || '',
-        role: employeeData.role || 'MEMBER',
-        status: employeeData.status || 'Aktif',
+        username: employeeData.user?.username || '',
+        role: employeeData.user?.roleId?.roleName || 'MEMBER',
+        status: employeeData.isActive ? 'Aktif' : 'Nonaktif',
         cutiTahunan: employeeData.leave || 0,
         cutiSakit: employeeData.sickLeave || 12
       });
@@ -46,6 +57,13 @@ const ModalDetailKaryawan = ({ isOpen, onClose, employeeData, currentUserRole })
 
   const handleSimpan = (e) => {
     e.preventDefault();
+
+    // Sebelumnya prop onSave dikirim dari Karyawan.jsx tapi tidak pernah
+    // dipanggil di sini, jadi perubahan form tidak pernah tersimpan ke list utama.
+    if (onSave) {
+      onSave(formData);
+    }
+
     setNotification(`Data profil akun ${formData.namaLengkap} berhasil diperbarui.`);
     
     setTimeout(() => {
@@ -193,7 +211,7 @@ const ModalDetailKaryawan = ({ isOpen, onClose, employeeData, currentUserRole })
 
         <div className="modal-footer_detail_karyawan">
           {currentUserRole === 'superadmin' ? (
-            <button className="btn-delete_detail_karyawan">🗑️ Hapus Akun</button>
+            <button className="btn-delete_detail_karyawan" onClick={onDelete}>🗑️ Hapus Akun</button>
           ) : (
             <div />
           )}

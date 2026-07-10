@@ -245,6 +245,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/holidays/**").hasAnyRole(ADMIN_ROLES)
 
                         // ==========================
+                        // News
+                        // ==========================
+                        .requestMatchers(HttpMethod.GET, "/api/news/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/news").hasAnyRole(ADMIN_ROLES)
+                        .requestMatchers(HttpMethod.PUT, "/api/news/**").hasAnyRole(ADMIN_ROLES)
+                        .requestMatchers(HttpMethod.DELETE, "/api/news/**").hasAnyRole(ADMIN_ROLES)
+
+                        // ==========================
                         // SWAGGER
                         // ==========================
                         .requestMatchers(
