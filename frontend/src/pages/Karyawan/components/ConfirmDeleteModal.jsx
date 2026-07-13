@@ -41,7 +41,7 @@ const ConfirmDeleteModal = ({ item, onCancel, onConfirm }) => {
           Hapus Data Karyawan?
         </h2>
         <p className="confirm-delete__desc">
-          Kamu akan menghapus <strong>{item.nama}</strong> ({item.kodeKaryawan}) secara permanen.
+          Kamu akan menghapus <strong>{item.fullName}</strong> ({item.nikKaryawan}) secara permanen.
           Tindakan ini tidak dapat dibatalkan.
         </p>
 

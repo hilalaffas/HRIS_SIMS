@@ -1,7 +1,8 @@
 package sys.hris.sims.employee.dto; // Sesuaikan package Anda
 
-import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
+
+import lombok.Data;
 
 @Data
 public class UpdateEmployeeRequest {
@@ -10,6 +11,7 @@ public class UpdateEmployeeRequest {
     private String phoneNumber;
     private String gender;
     private String nikKaryawan;
+    private Long divisiId;
     private String emergencyContactName;
     private String emergencyContactPhone;
     private Integer emergencyContactRelationshipId;

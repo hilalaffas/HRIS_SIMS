@@ -50,7 +50,9 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
             <select name="karyawanId" value={formData.karyawanId} onChange={handleInputChange} required>
               <option value="">Pilih...</option>
               {karyawanList?.map(k => (
-                <option key={k.id} value={k.id}>{k.name} ({k.nik})</option>
+                <option key={k.employeeId || k.id} value={k.employeeId || k.id}>
+                  {k.fullName} ({k.nikKaryawan})
+                </option>
               ))}
             </select>
           </div>

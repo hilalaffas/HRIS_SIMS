@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 // BARIS INI SANGAT PENTING:
 import './ModalDetailKaryawan.css';
+import { updateKaryawan } from '../../../services/karyawanService';
+import { getAllDivisi } from '../../../services/divisiService';
 
 const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUserRole, onSave, onDelete }) => {
   // isOpen diberi default `true` karena Karyawan.jsx (parent) memanggil modal ini
@@ -11,13 +13,29 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
   const [formData, setFormData] = useState({
     id: null, employeeId: null,
     namaLengkap: '', nik: '', jabatan: '', alamat: '',
-    email: '', divisi: '', telp: '', telpDarurat: '', hubDarurat: '',
+    email: '', divisiId: '', telp: '', telpDarurat: '', hubDarurat: '',
     tglGabung: '', username: '', role: '', status: '',
     cutiTahunan: 0, cutiSakit: 0
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [notification, setNotification] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Daftar divisi diambil dari backend, sama seperti FormKaryawan, supaya
+  // otomatis ikut update begitu ada penambahan/perubahan divisi.
+  const [divisiList, setDivisiList] = useState([]);
+  const [isLoadingDivisi, setIsLoadingDivisi] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    getAllDivisi()
+      .then((data) => { if (isMounted) setDivisiList(data || []); })
+      .catch(() => { if (isMounted) setDivisiList([]); })
+      .finally(() => { if (isMounted) setIsLoadingDivisi(false); });
+    return () => { isMounted = false; };
+  }, []);
 
   // Mengisi form ketika data karyawan (dari tombol edit) masuk
   // Mengisi form ketika data karyawan (dari tombol edit) masuk
@@ -32,7 +50,7 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
         alamat: employeeData.address || '',
         // Email dan Username biasanya ada di tabel User relasinya
         email: employeeData.user?.email || '',
-        divisi: employeeData.division || '',
+        divisiId: employeeData.divisi?.id || '',
         telp: employeeData.phoneNumber || '',
         telpDarurat: employeeData.emergencyContactPhone || '',
         // Hubungan darurat biasanya berelasi ke tabel reference
@@ -55,21 +73,45 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSimpan = (e) => {
+  const handleSimpan = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
 
-    // Sebelumnya prop onSave dikirim dari Karyawan.jsx tapi tidak pernah
-    // dipanggil di sini, jadi perubahan form tidak pernah tersimpan ke list utama.
-    if (onSave) {
-      onSave(formData);
+    const targetId = formData.employeeId ?? formData.id;
+    if (!targetId) {
+      setErrorMessage('ID karyawan tidak ditemukan, coba tutup dan buka lagi modal ini.');
+      return;
+    }
+    if (!formData.divisiId) {
+      setErrorMessage('Divisi wajib dipilih.');
+      return;
     }
 
-    setNotification(`Data profil akun ${formData.namaLengkap} berhasil diperbarui.`);
-    
-    setTimeout(() => {
-      setNotification('');
-      // onClose(); // Hilangkan komentar ini jika ingin modal auto-close setelah save
-    }, 3000);
+    const relMap = { 'Orang Tua': 1, 'Pasangan': 2, 'Saudara Kandung': 3, 'Teman Dekat': 4 };
+
+    const data = new FormData();
+    data.append('fullName', formData.namaLengkap);
+    data.append('address', formData.alamat);
+    data.append('phoneNumber', formData.telp);
+    data.append('nikKaryawan', formData.nik);
+    data.append('divisiId', formData.divisiId);
+    data.append('emergencyContactPhone', formData.telpDarurat);
+    data.append('emergencyContactRelationshipId', relMap[formData.hubDarurat] || 1);
+
+    setIsSubmitting(true);
+    try {
+      await updateKaryawan(targetId, data);
+      setNotification(`Data profil akun ${formData.namaLengkap} berhasil diperbarui.`);
+      if (onSave) onSave(formData);
+      setTimeout(() => {
+        setNotification('');
+        // onClose(); // Hilangkan komentar ini jika ingin modal auto-close setelah save
+      }, 3000);
+    } catch (error) {
+      setErrorMessage(error.message || 'Gagal menyimpan perubahan.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -79,6 +121,12 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
         {notification && (
           <div className="notification-toast_detail_karyawan">
             ✅ {notification}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="notification-toast_detail_karyawan" style={{ background: '#fee2e2', color: '#b91c1c' }}>
+            ⚠️ {errorMessage}
           </div>
         )}
 
@@ -131,10 +179,11 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
               </div>
               <div className="form-group_detail_karyawan">
                 <label>DIVISI / DEPARTEMEN *</label>
-                <select name="divisi" value={formData.divisi} onChange={handleInputChange}>
-                  <option value="Kaihatsu">Kaihatsu</option>
-                  <option value="Tantai Kensa (Aisin)">Tantai Kensa (Aisin)</option>
-                  <option value="Others">Others</option>
+                <select name="divisiId" value={formData.divisiId} onChange={handleInputChange} disabled={isLoadingDivisi}>
+                  <option value="">{isLoadingDivisi ? 'Memuat divisi...' : 'Pilih Divisi...'}</option>
+                  {divisiList.map((divisi) => (
+                    <option key={divisi.id} value={divisi.id}>{divisi.namaDivisi}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -218,7 +267,9 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
           
           <div className="footer-actions_detail_karyawan">
             <button className="btn-cancel_detail_karyawan" onClick={onClose}>Batal</button>
-            <button className="btn-save_detail_karyawan" onClick={handleSimpan}>Simpan Perubahan Data</button>
+            <button className="btn-save_detail_karyawan" onClick={handleSimpan} disabled={isSubmitting}>
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan Data'}
+            </button>
           </div>
         </div>
       </div>

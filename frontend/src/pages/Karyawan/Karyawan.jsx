@@ -15,7 +15,7 @@ import LeaveFormHr from './components/LeaveFormHr';
 import LeaveListHr from './components/LeaveListHr';
 import {allLeaveHistory} from '../Cuti/approve/data/mockData';
 import FormCuti from '../Cuti/approve/components/Form';
-import { getKaryawanList } from '../../services/karyawanService';
+import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService';
 
 
 const Karyawan = ({ user }) => {
@@ -100,11 +100,18 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     }
   };
 
-  const handleSubmitEditModal = (formData) => {
-    // PANGGIL FUNGSI LOG DI SINI
-    addLogActivity(user?.name || 'Admin HR', `mengupdate profil "${formData.namaLengkap}".`);
-    setKaryawanList((prev) => prev.map((k) => (k.id === formData.id ? { ...k, ...formData } : k)));
-    setEditTarget(null);
+  const handleSubmitEditModal = async (formData) => {
+    // Catatan: penyimpanan ke backend SUDAH dilakukan di dalam
+    // ModalDetailKaryawan.jsx (sama seperti pola FormKaryawan.jsx untuk
+    // tambah karyawan). Di sini kita cukup refetch dari server supaya
+    // tabel selalu konsisten dengan data asli, termasuk divisi yang baru diubah.
+    try {
+      await fetchKaryawan();
+      addLogActivity(user?.name || 'Admin HR', `mengupdate profil "${formData.namaLengkap}".`);
+      setEditTarget(null);
+    } catch (error) {
+      console.error("Gagal me-refresh daftar karyawan:", error);
+    }
   };
 
   const handleRequestDelete = (item) => {
@@ -113,16 +120,21 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   };
   const handleCancelDelete = () => setDeleteTarget(null);
 
-  const handleConfirmDelete = (id) => {
+  const handleConfirmDelete = async (id) => {
     // Cari nama karyawan sebelum dihapus untuk ditulis di log
-    const deletedKaryawan = karyawanList.find(k => k.id === id);
-    
-    // PANGGIL FUNGSI LOG DI SINI
-    if(deletedKaryawan) {
-      addLogActivity(user?.name || 'Admin HR', `menghapus data karyawan "${deletedKaryawan.name}".`);
+    const deletedKaryawan = karyawanList.find((k) => (k.employeeId ?? k.id) === id);
+
+    try {
+      await deleteKaryawan(id);
+      if (deletedKaryawan) {
+        addLogActivity(user?.name || 'Admin HR', `menghapus data karyawan "${deletedKaryawan.fullName}".`);
+      }
+      await fetchKaryawan();
+    } catch (error) {
+      console.error("Gagal menghapus karyawan:", error);
+    } finally {
+      setDeleteTarget(null);
     }
-    setKaryawanList((prev) => prev.filter((k) => k.id !== id));
-    setDeleteTarget(null);
   };
 
   if (!hasAccess) {
@@ -137,46 +149,47 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   // Fungsi ketika HR submit cuti susulan
   const handleSubmitCutiSusulan = (formData) => {
-    // Tambahkan kembali di sini untuk keperluan debugging
-  console.log("Submit Cuti Susulan Data:", formData);
-    // Cari nama karyawan untuk dimasukkan ke log
-    const karyawan = karyawanList.find(k => k.id === formData.karyawanId);
-    const namaKaryawan = karyawan ? karyawan.name : 'Karyawan';
-
-    const cutiBaru = {
-      id: `CUTI-HR-${Date.now()}`,
-      karyawan: { nama: namaKaryawan, kode: karyawan?.nik || '-' },
-      jenisCuti: formData.jenisCuti,
-      durasi: `${formData.startDate} s/d ${formData.endDate}`,
-      statusBerkas: 'DISETUJUI', // Karena bypass / auto-acc
-      // ... Anda bisa menambahkan properti lain sesuai kebutuhan mock data
-    };
-
-    setRiwayatCuti((prev) => [cutiBaru, ...prev]);
-    
-    // Catat ke Log Sistem
-    addLogActivity(user?.name || 'Admin HR', `menginput cuti susulan (Auto-ACC) untuk "${namaKaryawan}".`);
-    
-    alert('Cuti susulan berhasil diproses!');
-  };
-
-  // Fungsi ketika HR melakukan Revoke (Pulihkan)
-  const handleRevokeCuti = (cutiId) => {
-  // 1. Cari data yang akan di-revoke terlebih dahulu
-    const targetCuti = riwayatCuti.find(item => item.id === cutiId);
-    
-    if (targetCuti) {
-      // 2. Catat log hanya SATU KALI di sini
-      addLogActivity(user?.name || 'Admin HR', `memulihkan (revoke) status cuti "${targetCuti.karyawan?.  nama}" kembali ke Proses.`);
+      console.log("Submit Cuti Susulan Data:", formData);
       
-      // 3. Update state setelah log berhasil dicatat
-      setRiwayatCuti((prev) => 
-        prev.map(item => 
-          item.id === cutiId ? { ...item, statusBerkas: 'PROSES' } : item
-        )
-      );
-    }
-  };
+      // PERBAIKAN: Gunakan k.employeeId atau k.id untuk pencarian
+      const karyawan = karyawanList.find(k => (k.employeeId || k.id) === formData.karyawanId);
+      
+      // PERBAIKAN: Gunakan fullName, bukan name
+      const namaKaryawan = karyawan ? karyawan.fullName : 'Karyawan';
+  
+      const cutiBaru = {
+        id: `CUTI-HR-${Date.now()}`,
+        // PERBAIKAN: Gunakan nikKaryawan, bukan nik
+        karyawan: { nama: namaKaryawan, kode: karyawan?.nikKaryawan || '-' },
+        jenisCuti: formData.jenisCuti,
+        durasi: `${formData.startDate} s/d ${formData.endDate}`,
+        statusBerkas: 'DISETUJUI', 
+      };
+    
+      setRiwayatCuti((prev) => [cutiBaru, ...prev]);
+      
+      addLogActivity(user?.name || 'Admin HR', `menginput cuti susulan (Auto-ACC) untuk "${namaKaryawan}".  `);
+      
+      alert('Cuti susulan berhasil diproses!');
+    };
+  
+    // Fungsi ketika HR melakukan Revoke (Pulihkan)
+    const handleRevokeCuti = (cutiId) => {
+    // 1. Cari data yang akan di-revoke terlebih dahulu
+      const targetCuti = riwayatCuti.find(item => item.id === cutiId);
+      
+      if (targetCuti) {
+        // 2. Catat log hanya SATU KALI di sini
+        addLogActivity(user?.name || 'Admin HR', `memulihkan (revoke) status cuti "${targetCuti.karyawan?.    nama}" kembali ke Proses.`);
+        
+        // 3. Update state setelah log berhasil dicatat
+        setRiwayatCuti((prev) => 
+          prev.map(item => 
+            item.id === cutiId ? { ...item, statusBerkas: 'PROSES' } : item
+          )
+        );
+      }
+    };
 
   return (
     <div className="karyawan-page">
@@ -243,7 +256,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
       <ConfirmDeleteModal
         item={deleteTarget}
         onCancel={handleCancelDelete}
-        onConfirm={() => handleConfirmDelete(deleteTarget?.id)}
+        onConfirm={() => handleConfirmDelete(deleteTarget?.employeeId ?? deleteTarget?.id)}
       />
 
       {/* --- TAMBAHKAN KODE INI --- */}

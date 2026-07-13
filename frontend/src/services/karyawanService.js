@@ -32,12 +32,31 @@ export const getKaryawanList = () => {
     return api.get('/api/karyawan'); // Ganti dengan endpoint Get All Karyawan Anda
 };
 
-// 3. UPDATE
-export const updateKaryawan = (id, data) => {
-    return api.put(`/api/employees/${id}`, data);
+// 3. UPDATE (Khusus FormData juga, sama seperti register -- backend-nya
+// consumes = MULTIPART_FORM_DATA_VALUE karena ada upload foto)
+export const updateKaryawan = async (id, formData) => {
+    const token = getStoredToken();
+
+    const response = await fetch(`${BASE_URL}/api/karyawan/${id}`, {
+        method: 'PUT',
+        headers: {
+            // Sama seperti registerKaryawan: jangan set Content-Type manual.
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: formData
+    });
+
+    const rawText = await response.text();
+    let data = rawText;
+    try { data = JSON.parse(rawText); } catch (e) {}
+
+    if (!response.ok) {
+        throw new Error(data.message || data || 'Gagal memperbarui data karyawan');
+    }
+    return data;
 };
 
 // 4. DELETE
 export const deleteKaryawan = (id) => {
-    return api.delete(`/api/employees/${id}`);
+    return api.delete(`/api/karyawan/${id}`);
 };

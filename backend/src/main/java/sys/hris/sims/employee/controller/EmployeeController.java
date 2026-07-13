@@ -19,6 +19,8 @@ import sys.hris.sims.user.entity.User;
 
 import sys.hris.sims.employee.dto.UpdateEmployeeRequest;
 import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
+import sys.hris.sims.divisi.entity.Divisi;
+import sys.hris.sims.divisi.repository.DivisiRepository;
 import java.nio.file.*;
 import java.util.UUID;
 import org.springframework.http.MediaType;
@@ -34,6 +36,8 @@ public class EmployeeController {
     private final UserRepository userRepository;
 
     private final EmergencyContactRelationshipRepository relationshipRepository;
+
+    private final DivisiRepository divisiRepository;
 
     // helper method ambil userId dari token
     private Long getCurrentUserId(Authentication authentication) {
@@ -103,14 +107,27 @@ public class EmployeeController {
         // 1. Ambil data karyawan lama
         Employee employee = karyawanService.getKaryawanById(id);
 
-        // 2. Update field data biasa
-        employee.setFullName(request.getFullName());
-        employee.setAddress(request.getAddress());
-        employee.setPhoneNumber(request.getPhoneNumber());
-        employee.setGender(request.getGender());
-        employee.setNikKaryawan(request.getNikKaryawan());
-        employee.setEmergencyContactName(request.getEmergencyContactName());
-        employee.setEmergencyContactPhone(request.getEmergencyContactPhone());
+        // 2. Update field data biasa -- HANYA timpa field yang benar-benar
+        // dikirim dari form. Sebelumnya semua field ditimpa tanpa syarat,
+        // jadi kalau form pengirim tidak punya input untuk field tertentu
+        // (mis. ModalDetailKaryawan tidak punya input gender / nama kontak
+        // darurat), field itu ikut kehapus jadi kosong setiap kali disimpan.
+        if (isNotBlank(request.getFullName())) employee.setFullName(request.getFullName());
+        if (isNotBlank(request.getAddress())) employee.setAddress(request.getAddress());
+        if (isNotBlank(request.getPhoneNumber())) employee.setPhoneNumber(request.getPhoneNumber());
+        if (isNotBlank(request.getGender())) employee.setGender(request.getGender());
+        if (isNotBlank(request.getNikKaryawan())) employee.setNikKaryawan(request.getNikKaryawan());
+        if (isNotBlank(request.getEmergencyContactName())) employee.setEmergencyContactName(request.getEmergencyContactName());
+        if (isNotBlank(request.getEmergencyContactPhone())) employee.setEmergencyContactPhone(request.getEmergencyContactPhone());
+
+        // Update divisi jika dikirim (divisiId wajib valid kalau dikirim)
+        if (request.getDivisiId() != null) {
+            Divisi divisi = divisiRepository.findById(request.getDivisiId()).orElse(null);
+            if (divisi == null) {
+                return ResponseEntity.status(400).body("Divisi tidak ditemukan");
+            }
+            employee.setDivisi(divisi);
+        }
 
         // Update relasi kontak darurat jika ada
         if (request.getEmergencyContactRelationshipId() != null) {
@@ -158,5 +175,9 @@ public class EmployeeController {
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "DELETE_KARYAWAN", "employees", id, "Menonaktifkan karyawan id: " + id, httpRequest);
 
         return ResponseEntity.ok("Karyawan berhasil dinonaktifkan");
+    }
+
+    private boolean isNotBlank(String value) {
+        return value != null && !value.isBlank();
     }
 }

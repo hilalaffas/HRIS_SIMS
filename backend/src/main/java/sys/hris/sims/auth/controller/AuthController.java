@@ -15,6 +15,8 @@ import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.entity.EmergencyContactRelationship;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
+import sys.hris.sims.divisi.entity.Divisi;
+import sys.hris.sims.divisi.repository.DivisiRepository;
 import sys.hris.sims.role.entity.Roles;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.role.repository.RoleRepository;
@@ -31,6 +33,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
+import java.time.LocalDate;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -39,6 +43,7 @@ public class AuthController {
     private final RoleRepository roleRepository;
     private final EmployeeRepository employeeRepository;
     private final EmergencyContactRelationshipRepository relationshipRepository;
+    private final DivisiRepository divisiRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
@@ -48,6 +53,7 @@ public class AuthController {
                           RoleRepository roleRepository,
                           EmployeeRepository employeeRepository,
                           EmergencyContactRelationshipRepository relationshipRepository,
+                          DivisiRepository divisiRepository,
                           JwtService jwtService,
                           PasswordEncoder passwordEncoder,
                           ActivityLogService activityLogService,
@@ -57,6 +63,7 @@ public class AuthController {
         this.roleRepository = roleRepository;
         this.employeeRepository = employeeRepository;
         this.relationshipRepository = relationshipRepository;
+        this.divisiRepository = divisiRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.activityLogService = activityLogService;
@@ -89,6 +96,18 @@ public class AuthController {
             return ResponseEntity.status(400).body("Role not found");
         }
 
+        // Divisi wajib divalidasi di sini (sebelum user disimpan), supaya kalau
+        // divisiId tidak valid, tidak ada User "nyangkut" tanpa Employee.
+        Divisi divisi = null;
+        if (isEmployeeProfileComplete(request)) {
+            if (request.getDivisiId() != null) {
+                divisi = divisiRepository.findById(request.getDivisiId()).orElse(null);
+            }
+            if (divisi == null) {
+                return ResponseEntity.status(400).body("Divisi tidak ditemukan");
+            }
+        }
+
         User user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -101,7 +120,7 @@ public class AuthController {
         userRepository.save(user);
 
         if (isEmployeeProfileComplete(request)) {
-            
+
             // 1. Cari Relasi Kontak Darurat (Jika dikirim)
             EmergencyContactRelationship rel = null;
             if (request.getEmergencyContactRelationshipId() != null) {
@@ -129,6 +148,7 @@ public class AuthController {
             // 3. Simpan Employee dengan tambahan NIK, Kontak, dan Foto
             Employee employee = Employee.builder()
                     .user(user)
+                    .divisi(divisi)
                     .fullName(request.getFullName())
                     .address(request.getAddress())
                     .phoneNumber(request.getPhoneNumber())
@@ -140,6 +160,9 @@ public class AuthController {
                     .emergencyContactPhone(request.getEmergencyContactPhone())
                     .emergencyContactRelationship(rel)
                     .photo(savedPhotoPath)
+                    .joinDate(request.getJoinDate() != null && !request.getJoinDate().isBlank() 
+                              ? LocalDate.parse(request.getJoinDate()) 
+                              : null)
                     .build();
             employeeRepository.save(employee);
         }

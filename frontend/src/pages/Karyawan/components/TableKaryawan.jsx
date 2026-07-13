@@ -64,7 +64,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
               <td><span className="badge-role">{emp.user?.roleId?.roleName || 'MEMBER'}</span></td>
               <td>
                 <p className="emp-position">{emp.position || 'Staff'}</p>
-                <p className="emp-division">{emp.division || 'Umum'}</p>
+                <p className="emp-division">{emp.divisi?.namaDivisi || 'Umum'}</p>
               </td>
               <td className="text-center font-bold text-green">{emp.leave || 12}</td>
               <td><span className="badge-status">{emp.isActive ? 'AKTIF' : 'NONAKTIF'}</span></td>
