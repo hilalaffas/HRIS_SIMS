@@ -46,8 +46,6 @@ C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\leavetype\controller\Leav
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\leavetype\entity\LeaveType.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\leavetype\repository\LeaveTypeRepository.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\leavetype\service\LeaveTypeService.java
-<<<<<<< HEAD
-=======
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\news\controller\NewsController.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\news\dto\NewsRequest.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\news\dto\NewsResponse.java
@@ -55,7 +53,6 @@ C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\news\entity\News.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\news\repository\NewsRepository.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\news\service\NewsService.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\news\service\NewsServiceImpl.java
->>>>>>> develop
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\passwordreset\controller\PasswordResetController.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\passwordreset\dto\ApprovePasswordResetRequest.java
 C:\Users\Admin\web\backend\src\main\java\sys\hris\sims\passwordreset\dto\ForgotPasswordRequest.java

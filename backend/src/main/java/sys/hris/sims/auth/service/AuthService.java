@@ -1,10 +1,11 @@
 package sys.hris.sims.auth.service;
 
-import jakarta.transaction.Transactional;
+import java.time.LocalDate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import sys.hris.sims.auth.dto.ChangePasswordRequest;
 import sys.hris.sims.auth.dto.RegisterRequest;
 import sys.hris.sims.employee.entity.Employee;
@@ -14,13 +15,6 @@ import sys.hris.sims.role.repository.RoleRepository;
 import sys.hris.sims.security.JwtService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
-
-import org.springframework.web.multipart.MultipartFile;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -76,6 +70,19 @@ public class AuthService {
                     .phoneNumber(request.getPhoneNumber())
                     .gender(request.getGender())
                     .isActive(true)
+                    // ======== TAMBAHKAN BARIS INI ========
+                    .joinDate(request.getJoinDate() != null && !request.getJoinDate().isBlank() 
+                              ? LocalDate.parse(request.getJoinDate()) 
+                              : null)
+                    // =====================================
+                    
+                    // Catatan: Saya lihat NIK dan Emergency Contact juga belum di-mapping di sini. 
+                    // Kalau di entity Employee sudah ada, sekalian ditambahkan juga ya Mas biar tidak null:
+                    // .nikKaryawan(request.getNikKaryawan())
+                    // .emergencyContactName(request.getEmergencyContactName())
+                    // .emergencyContactPhone(request.getEmergencyContactPhone())
+                    // .emergencyContactRelationshipId(request.getEmergencyContactRelationshipId())
+                    
                     .build();
             employeeRepository.save(employee);
         }

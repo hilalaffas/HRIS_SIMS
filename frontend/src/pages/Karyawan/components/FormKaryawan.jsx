@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './FormKaryawan.css';
 import { registerKaryawan } from '../../../services/karyawanService';
+import { getAllDivisi } from '../../../services/divisiService';
 import Toast from '../../../components/Toast'; // Sesuaikan path ini jika perlu
 
 const ROLE_POSITION_MAP = {
@@ -19,7 +20,7 @@ const POSITION_ROLE_ID_MAP = {
 };
 
 const getInitialFormData = (canManageRole) => ({
-  fullName: '', nik: '', joinDate: '', division: '',
+  fullName: '', nik: '', joinDate: '', divisiId: '',
   position: canManageRole ? '' : 'Staff',
   address: '', email: '', phone: '',
   emergencyContact: '', emergencyRelation: '', emergencyPhone: '',
@@ -35,6 +36,30 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [formResetKey, setFormResetKey] = useState(0);
   const [toast, setToast] = useState(null); // State untuk Toast
+
+  // Daftar divisi diambil dari backend, supaya otomatis ikut update
+  // begitu ada penambahan/perubahan divisi di menu Manajemen Divisi.
+  const [divisiList, setDivisiList] = useState([]);
+  const [isLoadingDivisi, setIsLoadingDivisi] = useState(true);
+  const [divisiError, setDivisiError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDivisi = async () => {
+      setIsLoadingDivisi(true);
+      setDivisiError(null);
+      try {
+        const data = await getAllDivisi();
+        if (isMounted) setDivisiList(data || []);
+      } catch (err) {
+        if (isMounted) setDivisiError(err.message || 'Gagal memuat data divisi.');
+      } finally {
+        if (isMounted) setIsLoadingDivisi(false);
+      }
+    };
+    fetchDivisi();
+    return () => { isMounted = false; };
+  }, []);
 
   const triggerToast = (message, type) => {
     setToast({ message, type });
@@ -65,7 +90,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
     e.preventDefault();
     
     // Validasi Field Wajib
-    if (!formData.fullName || !formData.nik || !formData.username || !formData.password) {
+    if (!formData.fullName || !formData.nik || !formData.username || !formData.password || !formData.divisiId) {
       triggerToast('Harap lengkapi field yang bertanda bintang (*)', 'error');
       return;
     }
@@ -83,10 +108,16 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
     data.append('phoneNumber', formData.phone);
     data.append('nikKaryawan', formData.nik);
     data.append('roleId', mappedRoleId);
+    data.append('divisiId', formData.divisiId);
     data.append('emergencyContactPhone', formData.emergencyPhone);
     data.append('emergencyContactName', formData.emergencyContact);
     data.append('emergencyContactRelationshipId', mappedRelId);
     data.append('gender', formData.gender);
+    
+    if (formData.joinDate) {
+      data.append('joinDate', formData.joinDate); 
+    }
+
     if (file) data.append('photo', file);
 
     try {
@@ -146,20 +177,38 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
               <input type="text" name="nik" onChange={handleInputChange} required />
             </div>
             <div className="input-group_formkaryawan">
-              <label>TGL MASUK</label>
+              <label>TANGGAL MASUK</label>
               <input type="date" name="joinDate" onChange={handleInputChange} />
             </div>
           </div>
           <div className="grid-2-col_formkaryawan">
             <div className="input-group_formkaryawan">
               <label>DIVISI / DEPT *</label>
-              <select name="division" onChange={handleInputChange} required>
-                <option value="">Pilih Divisi / Dept...</option>
-                <option value="Tantai Kensa (Aisin)">Tantai Kensa (Aisin)</option>
-                <option value="Kaihatsu">Kaihatsu</option>
-                <option value="TTSI">TTSI</option>
-                <option value="Others">Others</option>
+              <select
+                name="divisiId"
+                value={formData.divisiId}
+                onChange={handleInputChange}
+                disabled={isLoadingDivisi || !!divisiError}
+                required
+              >
+                <option value="">
+                  {isLoadingDivisi
+                    ? 'Memuat divisi...'
+                    : divisiError
+                    ? 'Gagal memuat divisi'
+                    : 'Pilih Divisi / Dept...'}
+                </option>
+                {divisiList.map((divisi) => (
+                  <option key={divisi.id} value={divisi.id}>
+                    {divisi.namaDivisi}
+                  </option>
+                ))}
               </select>
+              {divisiError && (
+                <span className="text-red_formkaryawan" style={{ fontSize: '12px' }}>
+                  {divisiError}
+                </span>
+              )}
             </div>
             <div className="input-group_formkaryawan">
               <label>JABATAN</label>
