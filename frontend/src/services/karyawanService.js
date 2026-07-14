@@ -1,7 +1,7 @@
 // src/services/karyawanService.js
 import { api, getStoredToken } from './api'; // Import dari folder yang sama
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://sims-backend-api-61je.onrender.com';
 
 // 1. CREATE / REGISTER (Khusus FormData, bypass JSON.stringify dari api.js)
 export const registerKaryawan = async (formData) => {
