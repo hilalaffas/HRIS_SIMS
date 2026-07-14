@@ -10,8 +10,8 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
 
   // Definisi kondisi role-role khusus
   const isSuperAdmin = userRole.includes('super_admin');
-  const isHRAdmin = userRole.includes('hrd_karyawan') || userRole.includes('hrd_admin') || userRole.includes('admin') && !isSuperAdmin;
-  const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader');
+  const isHRAdmin = userRole.includes('hrd_admin') || (userRole.includes('admin') && !isSuperAdmin);
+  const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader') || userRole.includes('hrd_karyawan');
 
   // 1. DAFTAR MENU BERDASARKAN HAK AKSES (MENYESUAIKAN GAMBAR)
   
