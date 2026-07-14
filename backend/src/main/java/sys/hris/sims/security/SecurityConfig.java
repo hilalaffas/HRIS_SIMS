@@ -50,7 +50,7 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173",
+        configuration.setAllowedOriginPatterns(List.of("https://sims-gamma-three.vercel.app/",
                                                 "https://*.ngrok-free.dev"));
 
         configuration.setAllowedMethods(List.of(
