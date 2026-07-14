@@ -1,7 +1,7 @@
 // src/pages/Dashboard/components/CalendarCard.jsx
 import React, { useState, useEffect } from 'react';
 import { getHolidaysByMonth } from '../../../services/holidayService';
-import { getTeamLeaveByYear } from '../../../services/cutiService';
+import { getTeamLeaveByYear } from '../../../services/CutiService';
 
 export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChange, refreshTrigger }) {
   const todayObj = new Date();
