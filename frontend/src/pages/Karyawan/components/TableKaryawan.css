@@ -149,3 +149,66 @@
   color: #0e7490; /* Warna sedikit lebih gelap saat di-hover */
   text-decoration: underline; 
 }
+/* Styling untuk background gelap Modal */
+.photo-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Memastikan modal berada di paling depan */
+}
+
+/* Container untuk foto dan tombol close */
+.photo-modal-content {
+  position: relative;
+  background-color: transparent;
+  padding: 10px;
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Styling untuk foto yang diperbesar */
+.zoomed-photo {
+  max-width: 400px;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  border-radius: 5%; /* Dibuat bulat, hapus baris ini jika ingin fotonya kotak */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  object-fit: cover;
+  background-color: #fff;
+}
+
+/* Tombol X untuk menutup modal */
+.close-photo-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  transition: background-color 0.2s;
+}
+
+.close-photo-btn:hover {
+  background-color: #d81212;
+}
