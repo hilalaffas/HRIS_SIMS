@@ -19,19 +19,37 @@
   margin: 0;
 }
 
+/* Styling utama tombol */
 .btn-export {
-  background-color: #f7fafc;
-  border: 1px solid #cbd5e0;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #2d3748;
+  align-items: center; 
+  justify-content: center; 
+  gap: 10px; /* Jarak icon dan teks sedikit dilebarkan */
+  
+  /* Padding sedikit dibesarkan agar icon 24px tidak terlihat sesak */
+  padding: 6px 8px; 
+  background-color: #a7a9ac;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
 }
 
+/* Efek saat kursor diarahkan ke tombol */
 .btn-export:hover {
-  background-color: #edf2f7;
+  background-color: #124a35;
+}
+
+/* Memastikan wrapper SVG tidak memiliki margin ekstra */
+.icon-document {
+  display: flex;
+  align-items: center;
+}
+
+/* Mengembalikan ukuran icon agar teks CSV di dalam icon terbaca jelas */
+.icon-document svg {
+  width: 24px;  /* Ubah dari 20px menjadi 24px atau 28px */
+  height: 24px; /* Ubah dari 20px menjadi 24px atau 28px */
 }
