@@ -6,7 +6,7 @@ import TableKaryawan from './components/TableKaryawan';
 import FormKaryawan from './components/FormKaryawan';
 import ModalDetailKaryawan from './components/ModalDetailKaryawan'; // [BARU] Import komponen modal baru
 import ConfirmDeleteModal from './components/ConfirmDeleteModal';
-import { isSuperAdmin, isHrAdmin } from '../../utils/roles';
+import { isSuperAdmin, isHrAdmin } from '../../utils/roles1';
 import DataDivisi from './components/DataDivisi';
 import LogSistem from './components/LogSistem';
 import { initialLogs } from './data/mockLogs'
