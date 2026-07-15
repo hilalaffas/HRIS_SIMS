@@ -1,133 +1,386 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getApprovers, getLeaveBalance, getLeaveTypes, getRiwayatByUser, resubmitCuti, submitCuti } from '../../../services/CutiService';
-import LeaveSummaryCard from './components/LeaveSummaryCard';
-import LeaveForm, { hariLiburNasional, hitungBatasMinTanggal } from './components/LeaveForm';
-import LeaveHistory from './components/LeaveHistory';
-import LeaveDetailModal from './components/LeaveDetailModal';
-import { getAllHolidays } from '../../../services/holidayService';
-import './ApplyCuti.css';
+import React, { useState, useRef, useEffect } from 'react';
+import { submitCuti, getRiwayatByUser, getAllApprovalOptions } from '../../../services/CutiService';
+import LeaveSummaryCard from '../applycuti/components/LeaveSummaryCard';
+import LeaveForm from '../applycuti/components/LeaveForm';
+import LeaveHistory from '../applycuti/components/LeaveHistory';
+import LeaveDetailModal from '../applycuti/components/LeaveDetailModal';
+import '../applycuti/ApplyCuti.css';
 
-const isoToday = () => new Date().toISOString().slice(0, 10);
-const isSupervisor = (role = '') => ['LEADER', 'SPV', 'MANAGER'].includes(
-  String(role).trim().toUpperCase().replace(/^ROLE_/, '')
-);
-const countWorkingDays = (startDate, endDate, holidayDates) => {
-  if (!startDate || !endDate || startDate > endDate) return 0;
-  let total = 0;
-  for (const date = new Date(`${startDate}T00:00:00`); date <= new Date(`${endDate}T00:00:00`); date.setDate(date.getDate() + 1)) {
-    const weekend = date.getDay() === 0 || date.getDay() === 6;
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    if (!weekend && !holidayDates.has(key)) total++;
+const hariLiburNasional = []; 
+
+const hitungBatasMinTanggal = (jumlahHariKerja, daftarHariLibur = []) => {
+  let date = new Date();
+  let sisaHari = jumlahHariKerja;
+
+  while (sisaHari > 0) {
+    date.setDate(date.getDate() + 1);
+    const dayOfWeek = date.getDay();
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isTanggalMerah = daftarHariLibur.includes(dateStr);
+
+    if (!isWeekend && !isTanggalMerah) {
+      sisaHari--;
+    }
   }
-  return total;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
+
+// OPSI JENIS CUTI MENGIKUTI STRUKTUR DATABASE (leave_type_id & name)
+const JENIS_CUTI_OPTIONS = [
+  { leaveTypeId: 1, name: "Cuti tahunan" },
+  { leaveTypeId: 2, name: "Cuti setengah hari" },
+  { leaveTypeId: 3, name: "Cuti nikah (Khusus)" },
+  { leaveTypeId: 4, name: "Cuti meninggal" },
+  { leaveTypeId: 5, name: "Cuti melahirkan (Khusus)" },
+  { leaveTypeId: 6, name: "Cuti Urgent" }
+];
 
 const ApplyCuti = ({ user }) => {
-  const todayStr = isoToday();
-  const userRole = user?.role || user?.jabatan || 'Karyawan';
-  const atasan = isSupervisor(userRole);
-  const [types, setTypes] = useState([]);
-  const [approvers, setApprovers] = useState({ LEADER: [], SPV: [], MANAGER: [] });
-  const [balance, setBalance] = useState(0);
-  const [holidayDates, setHolidayDates] = useState(() => new Set());
-  const [history, setHistory] = useState([]);
-  const [error, setError] = useState('');
-  const [jenisCuti, setJenisCuti] = useState('');
-  const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka'].includes(jenisCuti) ? 0 : 5;
-  const dinamisBatasMinStr = hitungBatasMinTanggal(jedaHariKerja, hariLiburNasional);
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  // Form States disamakan dengan field LeaveForm & Database
+  const [leaveTypeId, setLeaveTypeId] = useState(2); // Default ke Cuti setengah hari (ID: 2)
+  const [leaveType, setLeaveType] = useState('Cuti setengah hari');
   const [durasiSesi, setDurasiSesi] = useState('Setengah Hari (Pagi)');
-  const [dariTanggal, setDariTanggal] = useState(todayStr);
-  const [sampaiTanggal, setSampaiTanggal] = useState(todayStr);
-  const [alasan, setAlasan] = useState('');
-  const [pekerjaanTertunda, setPekerjaanTertunda] = useState('');
-  const [coverOleh, setCoverOleh] = useState('');
-  const [leaderApproval, setLeaderApproval] = useState('');
-  const [spvApproval, setSpvApproval] = useState('');
-  const [managerApproval, setManagerApproval] = useState('');
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(todayStr);
+  const [reason, setReason] = useState('');
+  
+  const [leaderEmployeeId, setLeaderEmployeeId] = useState('');
+  const [spvEmployeeId, setSpvEmployeeId] = useState('');
+  const [managerEmployeeId, setManagerEmployeeId] = useState('');
+  
+  const [pendingWork, setPendingWork] = useState('');
+  const [coveredBy, setCoveredBy] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null); 
+
+  // UI/History States
+  const [riwayatCuti, setRiwayatCuti] = useState([]);
   const [filterStatus, setFilterStatus] = useState('Semua Berkas');
-  const [selectedDetail, setSelectedDetail] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const jumlahHariCuti = countWorkingDays(dariTanggal, sampaiTanggal, holidayDates);
+  const [selectedDetail, setSelectedDetail] = useState(null);
+
+  // Opsi dropdown Approval (Leader/SPV/Manager), diambil dari "database" (cutiService)
+  const [leaderOptions, setLeaderOptions] = useState([]);
+  const [spvOptions, setSpvOptions] = useState([]);
+  const [managerOptions, setManagerOptions] = useState([]);
+
   const formTopRef = useRef(null);
 
-  const load = useCallback(async () => {
-    try {
-      const [leaveTypes, leader, spv, manager, leaveBalance, records, holidays] = await Promise.all([
-        getLeaveTypes(), getApprovers('LEADER'), getApprovers('SPV'), getApprovers('MANAGER'), getLeaveBalance(), getRiwayatByUser(),
-        getAllHolidays(),
-      ]);
-      setTypes(leaveTypes); setJenisCuti(current => current || leaveTypes[0]?.name || '');
-      setApprovers({ LEADER: leader, SPV: spv, MANAGER: manager });
-      setBalance(leaveBalance.remainingAnnualLeave ?? 0); setHistory(records); setHolidayDates(new Set(holidays.map((holiday) => holiday.date))); setError('');
-    } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
-  }, []);
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { if (atasan) { setLeaderApproval(''); setSpvApproval(''); } }, [atasan]);
+  // User Meta
+  const userRole = (user?.jabatan || user?.role || 'karyawan').toLowerCase();
+  const isManager = userRole.includes('manager');
+  const canApplyCuti = !userRole.includes('super admin') && userRole !== 'superadmin';
+  const userId = user?.id ?? 'guest';
+  const userName = user?.nama || user?.name || 'Karyawan';
+  
+  const sisaCutiTahunan = user?.sisa_cuti_tahunan ?? 12; 
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (new Date(dariTanggal) < new Date(dinamisBatasMinStr) || new Date(sampaiTanggal) < new Date(dariTanggal)) {
-      setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); return;
+  // Jeda Hari Kerja Aturan Validasi
+  let jedaHariKerja = 5;
+  if (leaveType === 'Cuti Urgent' || leaveType === 'Cuti Berduka' || leaveType === 'Cuti meninggal') {
+    jedaHariKerja = 0;
+  }
+
+  const dinamisBatasMinStr = (leaveType === 'Cuti Urgent' || leaveType === 'Cuti Berduka' || leaveType === 'Cuti meninggal') 
+    ? todayStr 
+    : hitungBatasMinTanggal(jedaHariKerja, hariLiburNasional);
+
+  useEffect(() => {
+    if (isEditing) return;
+
+    const isMendesak = leaveType === 'Cuti Urgent' || leaveType === 'Cuti Berduka' || leaveType === 'Cuti meninggal';
+    if (isMendesak) {
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else {
+      setStartDate(dinamisBatasMinStr);
+      setEndDate(dinamisBatasMinStr);
     }
-    const type = types.find(item => item.name === jenisCuti);
-    if (!type || !managerApproval || (!atasan && (!leaderApproval || !spvApproval))) {
-      setError('Pilih seluruh approver yang wajib sebelum mengirim pengajuan.'); return;
-    }
-    setIsSubmitting(true);
+  }, [leaveType, dinamisBatasMinStr, todayStr, isEditing]);
+
+  const loadRiwayat = async () => {
     try {
-      const payload = { leaveTypeId: type.leaveTypeId, dariTanggal, sampaiTanggal, alasan, pekerjaanTertunda, coverOleh,
-        leaderEmployeeId: atasan ? null : Number(leaderApproval), spvEmployeeId: atasan ? null : Number(spvApproval), managerEmployeeId: Number(managerApproval) };
-      if (editingId) {
-        await resubmitCuti(editingId, payload);
-      } else {
-        await submitCuti(payload);
-      }
-      setAlasan(''); setPekerjaanTertunda(''); setCoverOleh(''); setLeaderApproval(''); setSpvApproval(''); setManagerApproval(''); setEditingId(null);
-      await load(); alert(editingId ? 'Perbaikan cuti berhasil diajukan kembali.' : 'Pengajuan cuti berhasil dikirim.');
-    } catch (err) { setError(err.message || 'Pengajuan cuti gagal dikirim.'); }
-    finally { setIsSubmitting(false); }
+      const data = await getRiwayatByUser(userId);
+
+      const filteredResult = (data || []).filter(item => {
+        if (isManager) {
+          return item.userId === userId || item.rawDetail?.manager?.nama?.toLowerCase() === userName.toLowerCase();
+        }
+        return item.userId === userId;
+      });
+
+      setRiwayatCuti(filteredResult);
+    } catch (err) {
+      console.error('Gagal mengambil riwayat cuti dari API:', err);
+      setRiwayatCuti([]);
+    }
   };
 
-  const handleOpenDetail = (item) => setSelectedDetail({
-    ...item.rawDetail, id: item.id, pemohon: item.userName || user?.name, jenisCuti: item.jenisCuti,
-    globalStatus: item.status?.toUpperCase(), stringTanggal: item.stringTanggal,
-    logPemeriksaan: item.rawDetail?.reviewNote ? [{ nama: 'Atasan', aksi: item.status, catatan: item.rawDetail.reviewNote }] : [],
-  });
+  useEffect(() => {
+    loadRiwayat();
+  }, [userId, userName, isManager]);
+
+  useEffect(() => {
+    const loadApprovalOptions = async () => {
+      try {
+        const { leaderOptions, spvOptions, managerOptions } = await getAllApprovalOptions();
+        setLeaderOptions(leaderOptions);
+        setSpvOptions(spvOptions);
+        setManagerOptions(managerOptions);
+      } catch (err) {
+        console.error('Gagal mengambil data approval (Leader/SPV/Manager):', err);
+      }
+    };
+    loadApprovalOptions();
+  }, []);
+
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  };
+
+  const handleOpenDetail = (item) => {
+    const dari = item.rawDetail?.dariTanggal || item.dariTanggal;
+    const sampai = item.rawDetail?.sampaiTanggal || item.sampaiTanggal;
+    let tanggalFinal = item.stringTanggal;
+
+    if (dari && sampai) {
+      try {
+        const dObj = new Date(dari.replace(/-/g, '/'));
+        const sObj = new Date(sampai.replace(/-/g, '/'));
+        
+        if (!isNaN(dObj) && !isNaN(sObj)) {
+          const formatDari = dObj.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+          const formatSampai = sObj.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+          const formatTahun = sObj.getFullYear();
+          tanggalFinal = `${formatDari} - ${formatSampai} ${formatTahun}`;
+        }
+      } catch (e) {
+        tanggalFinal = item.stringTanggal;
+      }
+    }
+
+    setSelectedDetail({
+      ...(item.rawDetail || {}),
+      id: item.id, 
+      pemohon: item.userName || 'Karyawan', 
+      leaveTypeId: item.rawDetail?.leaveTypeId || item.leaveTypeId,
+      leaveType: item.rawDetail?.leaveType || item.leaveType,
+      globalStatus: (item.status || 'PROSES').toUpperCase(), 
+      stringTanggal: tanggalFinal || item.stringTanggal,
+      logPemeriksaan: item.rawDetail?.logPemeriksaan || [
+        {
+          nama: `${item.userName} (ID: ${item.userId || 'SYS-2026-0005'})`, 
+          tanggal: tanggalFinal, 
+          aksi: 'DIAJUKAN',
+          catatan: 'Mengajukan awal'
+        }
+      ]
+    });
+
+    if (item.isUnread) {
+      setRiwayatCuti(prevRiwayat => 
+        prevRiwayat.map(riwayat => 
+          riwayat.id === item.id ? { ...riwayat, isUnread: false } : riwayat
+        )
+      );
+    }      
+  };    
 
   const handleEditKembali = (id) => {
-    const item = history.find((record) => record.id === id);
-    if (!item || item.status !== 'Dikembalikan') return;
+    const itemTarget = riwayatCuti.find(item => item.id === id);
+    if (itemTarget) {
+      const dataSumber = itemTarget.rawDetail || itemTarget; 
+      
+      setEditingId(id);
+      setLeaveTypeId(dataSumber.leaveTypeId || 1);
+      setLeaveType(dataSumber.leaveType || 'Cuti tahunan');
+      setStartDate(dataSumber.dariTanggal || todayStr);
+      setEndDate(dataSumber.sampaiTanggal || todayStr);
+      setReason(dataSumber.reason || '');
+      setPendingWork(dataSumber.pendingWork || '');
+      setCoveredBy(dataSumber.coveredBy || '');
+      setIsEditing(true);
+      setLeaderEmployeeId(dataSumber.leaderEmployeeId || '');
+      setSpvEmployeeId(dataSumber.spvEmployeeId || '');
+      setManagerEmployeeId(dataSumber.managerEmployeeId || '');
 
-    const detail = item.rawDetail || {};
-    setJenisCuti(detail.jenisCuti || item.jenisCuti);
-    setDariTanggal(detail.dariTanggal || todayStr);
-    setSampaiTanggal(detail.sampaiTanggal || todayStr);
-    setAlasan(detail.alasan || '');
-    setPekerjaanTertunda(detail.pekerjaanTertunda || '');
-    setCoverOleh(detail.coverOleh || '');
-    setLeaderApproval('');
-    setSpvApproval('');
-    setManagerApproval('');
-    setEditingId(id);
-    setError('Lengkapi kembali approver, lalu simpan perbaikan cuti Anda.');
-    formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (formTopRef.current) {
+        formTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setError('');
+  const handleSubmit = async (e) => {
+    if (!canApplyCuti) return;
+    setIsSubmitting(true);
+    try {
+      // KHUSUS ROLE MANAGER: jika ketiga approval dipilih "None", tidak ada
+      // atasan lain yang bisa menyetujui — pengajuan otomatis dianggap
+      // "Disetujui" tanpa proses approval berjenjang.
+      const semuaApprovalNone = leaderEmployeeId === 'None' && spvEmployeeId === 'None' && managerEmployeeId === 'None';
+      const isAutoApproved = isManager && semuaApprovalNone;
+      const statusAwal = isAutoApproved ? 'Disetujui' : 'Proses';
+
+      const payloadCuti = {
+        userId, userName, leaveTypeId, leaveType,
+        durasiSesi: leaveType === 'Cuti setengah hari' || leaveType === 'Cuti Urgent' ? durasiSesi : 'Seharian Penuh',
+        dariTanggal: startDate, sampaiTanggal: endDate, leaderEmployeeId, spvEmployeeId, managerEmployeeId, reason, pendingWork,
+        coveredBy,
+        autoApproved: isAutoApproved,
+        id: editingId
+      };
+
+      await submitCuti(payloadCuti);
+      
+      const selisihHari = jedaHariKerja === 0 ? "1 Hari" : `${jedaHariKerja} Hari Kerja`;
+      const formatDari = new Date(startDate.replace(/-/g, '/')).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+      const formatSampai = new Date(endDate.replace(/-/g, '/')).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+      const formatTahun = new Date(endDate.replace(/-/g, '/')).getFullYear();
+
+      if (isEditing && editingId) {
+        setRiwayatCuti(prev => prev.map(item => {
+          if (item.id === editingId) {
+            return {
+              ...item,
+              leaveType: leaveType.toUpperCase(),
+              stringTanggal: `${formatDari} - ${formatSampai} ${formatTahun}`,
+              totalHari: selisihHari,
+              status: statusAwal,
+              isUnread: true,
+              rawDetail: {
+                ...item.rawDetail,
+                leaveTypeId: leaveTypeId,
+                leaveType: leaveType,
+                dariTanggal: startDate,
+                sampaiTanggal: endDate,
+                totalHari: selisihHari,
+                reason: reason,
+                pendingWork: pendingWork,
+                coveredBy: coveredBy,
+                leader: isAutoApproved ? null : { nama: 'Pilihan Leader', status: 'Pending' },
+                spv: isAutoApproved ? null : { nama: 'Pilihan SPV', status: 'Pending' },
+                manager: isAutoApproved ? null : { nama: 'Pilihan Manager', status: 'Pending' }
+              }
+            };
+          }
+          return item;
+        }));
+      } else {
+        const pengajuanBaru = {
+          userId: userId,
+          userName: userName,
+          id: Date.now(), 
+          leaveType: leaveType.toUpperCase(),
+          stringTanggal: `${formatDari} - ${formatSampai} ${formatTahun}`,
+          totalHari: selisihHari,
+          status: statusAwal,
+          isUnread: true,
+          rawDetail: {
+            leaveTypeId: leaveTypeId,
+            leaveType: leaveType,
+            dariTanggal: startDate,
+            sampaiTanggal: endDate,
+            totalHari: selisihHari,
+            reason: reason,
+            pendingWork: pendingWork,
+            coveredBy: coveredBy,
+            leaderEmployeeId, spvEmployeeId, managerEmployeeId
+          }
+        };
+        setRiwayatCuti(prev => [pengajuanBaru, ...prev]);
+      }
+
+      setReason('');
+      setPendingWork('');
+      setLeaderEmployeeId('');
+      setSpvEmployeeId('');
+      setManagerEmployeeId('');
+      setCoveredBy('');
+      setIsEditing(false);
+      setEditingId(null);
+
+      alert(
+        isEditing
+          ? 'Perubahan Berkas Cuti Berhasil Diperbarui!'
+          : isAutoApproved
+            ? 'Pengajuan Cuti Berhasil Dikirim dan Otomatis Disetujui (tanpa approval atasan)!'
+            : 'Pengajuan Cuti Berhasil Dikirim!'
+      );
+    } catch (err) {
+      alert('Terjadi kesalahan, silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  return <div className="form-wrapper" ref={formTopRef}>
-    <LeaveSummaryCard sisaCutiTahunan={balance} />
-    {error && <div className="empty-history-box">{error}</div>}
-    <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, dariTanggal, setDariTanggal, sampaiTanggal, setSampaiTanggal,
-      alasan, setAlasan, leaderApproval, setLeaderApproval, spvApproval, setSpvApproval, managerApproval, setManagerApproval, jedaHariKerja, dinamisBatasMinStr,
-      pekerjaanTertunda, setPekerjaanTertunda, coverOleh, setCoverOleh, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
-      leaveTypes={types} approvers={approvers} isSupervisor={atasan} currentUserRole={userRole} canApplyCuti />
-    <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} />
-    {selectedDetail && <LeaveDetailModal selectedDetail={selectedDetail} onClose={() => setSelectedDetail(null)} currentUserRole={userRole} />}
-  </div>;
+  return (
+    <div className="form-wrapper" ref={formTopRef}>
+      <LeaveSummaryCard sisaCutiTahunan={sisaCutiTahunan} />
+
+      <LeaveForm
+        leaveType={leaveType} setleaveType={setLeaveType}
+        leaveTypeId={leaveTypeId} setLeaveTypeId={setLeaveTypeId}
+        jenisCutiOptions={JENIS_CUTI_OPTIONS}
+        leaderOptions={leaderOptions}
+        spvOptions={spvOptions}
+        managerOptions={managerOptions}
+        durasiSesi={durasiSesi} setDurasiSesi={setDurasiSesi}
+        startDate={startDate} setstartDate={setStartDate}
+        endDate={endDate} setendDate={setEndDate}
+        reason={reason} setReason={setReason}
+        leaderEmployeeId={leaderEmployeeId} setleaderEmployeeId={setLeaderEmployeeId}
+        spvEmployeeId={spvEmployeeId} setspvEmployeeId={setSpvEmployeeId}
+        managerEmployeeId={managerEmployeeId} setmanagerEmployeeId={setManagerEmployeeId}
+        pendingWork={pendingWork} setpendingWork={setPendingWork}
+        coveredBy={coveredBy} setcoveredBy={setCoveredBy}
+        jedaHariKerja={jedaHariKerja}
+        dinamisBatasMinStr={dinamisBatasMinStr}
+        handleSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+        canApplyCuti={canApplyCuti}
+        todayStr={todayStr}
+        currentUserRole={userRole}
+        isEditing={isEditing}
+        onCancelEdit={() => {
+          setIsEditing(false);
+          setEditingId(null);
+          setReason('');
+          setPendingWork('');
+          setCoveredBy('');
+          setLeaderEmployeeId('');
+          setSpvEmployeeId('');
+          setManagerEmployeeId('');
+        }}
+      />
+
+      <LeaveHistory
+        riwayatCuti={riwayatCuti}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        formatDateDisplay={formatDateDisplay}
+        handleOpenDetail={handleOpenDetail}
+        handleEditKembali={handleEditKembali}
+      />
+
+      {selectedDetail && (
+        <LeaveDetailModal
+          selectedDetail={selectedDetail}
+          onClose={() => setSelectedDetail(null)}
+          currentUserRole={userRole}
+          handleEditKembali={handleEditKembali} 
+          onRefreshData={loadRiwayat}
+        />
+      )}
+    </div>
+  );
 };
+
 export default ApplyCuti;
