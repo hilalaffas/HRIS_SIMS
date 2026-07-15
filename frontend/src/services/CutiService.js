@@ -1,136 +1,96 @@
-// src/services/cutiService.js
+import { api } from './api';
 
-/**
- * SUMBER DATA TUNGGAL untuk fitur cuti.
- * Dipakai oleh ApplyCuti.jsx (submit & riwayat) dan CalendarCard.jsx (tandai kalender).
- *
- * SAAT INI: pakai localStorage sebagai "database" sementara, supaya data
- * yang disubmit dari form ApplyCuti langsung nyambung ke kalender Dashboard
- * tanpa perlu backend.
- *
- * NANTI (kalau backend & Postgres sudah siap):
- * Ganti ISI setiap fungsi di bawah dengan pemanggilan API (pakai `api` dari
- * src/api/axios.js), TANPA mengubah nama fungsi atau bentuk data yang
- * dikembalikan. Komponen yang memanggil (ApplyCuti.jsx, CalendarCard.jsx)
- * tidak perlu diubah sama sekali kalau bentuk data (shape) dijaga tetap sama.
- *
- * Contoh nanti:
- * export async function submitCuti(payload) {
- *   const res = await api.post('/cuti', payload);
- *   return res.data;
- * }
- */
+const statusLabel = (value) => ({ PENDING: 'Dalam Proses', APPROVED: 'Disetujui (ACC)', RETURNED: 'Dikembalikan', REJECTED: 'Ditolak' }[String(value || '').toUpperCase()] || value || 'Dalam Proses');
+const statusCode = (value) => ({ PENDING: 'PROSES', APPROVED: 'DISETUJUI', RETURNED: 'DIKEMBALIKAN', REJECTED: 'DITOLAK' }[String(value || '').toUpperCase()] || 'PROSES');
+const dateText = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
-const STORAGE_KEY = 'dummy_cuti_pengajuan';
+export const getLeaveBalance = () => api.get('/api/cuti/balance/me');
+export const getApprovers = (role) => api.get(`/api/karyawan/approvers?role=${role}`);
+export const getLeaveTypes = () => api.get('/api/jenis-cuti');
 
-// Status yang dianggap "sedang/akan cuti" untuk pewarnaan kalender.
-// Ditolak & dikembalikan tidak dianggap cuti aktif.
-const STATUS_AKTIF = ['Dalam Proses', 'Disetujui (ACC)'];
-
-function readAll() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (err) {
-    console.error('Gagal membaca data cuti dari localStorage:', err);
-    return [];
-  }
-}
-
-function writeAll(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (err) {
-    console.error('Gagal menyimpan data cuti ke localStorage:', err);
-  }
-}
-
-/**
- * Kirim pengajuan cuti baru.
- * payload: { userId, userName, jenisCuti, dariTanggal, sampaiTanggal, alasan }
- * return: record baru yang tersimpan (termasuk id & status default)
- */
 export async function submitCuti(payload) {
-  const all = readAll();
-
-  const newRecord = {
-    id: Date.now(),
-    userId: payload.userId ?? 'guest',
-    userName: payload.userName ?? 'Karyawan',
-    jenisCuti: payload.jenisCuti,
-    dariTanggal: payload.dariTanggal,
-    sampaiTanggal: payload.sampaiTanggal,
-    alasan: payload.alasan ?? '',
-    status: 'Dalam Proses',
-    createdAt: new Date().toISOString(),
+  const body = {
+    leaveType: { leaveTypeId: Number(payload.leaveTypeId) },
+    startDate: payload.dariTanggal,
+    endDate: payload.sampaiTanggal,
+    reason: payload.alasan,
+    pendingWork: payload.pekerjaanTertunda,
+    coveredBy: payload.coverOleh,
+    leaderEmployeeId: payload.leaderEmployeeId || null,
+    spvEmployeeId: payload.spvEmployeeId || null,
+    managerEmployeeId: payload.managerEmployeeId || null,
   };
-
-  writeAll([newRecord, ...all]);
-  return newRecord;
+  return api.post('/api/cuti', body);
 }
 
-/**
- * Ambil riwayat pengajuan cuti milik satu user, terbaru dulu.
- */
-export async function getRiwayatByUser(userId) {
-  const all = readAll();
-  return all
-    .filter((item) => item.userId === userId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+export const resubmitCuti = (id, payload) => api.put(`/api/cuti/${id}/resubmit`, {
+  leaveType: { leaveTypeId: Number(payload.leaveTypeId) },
+  startDate: payload.dariTanggal,
+  endDate: payload.sampaiTanggal,
+  reason: payload.alasan,
+  pendingWork: payload.pekerjaanTertunda,
+  coveredBy: payload.coverOleh,
+  leaderEmployeeId: payload.leaderEmployeeId || null,
+  spvEmployeeId: payload.spvEmployeeId || null,
+  managerEmployeeId: payload.managerEmployeeId || null,
+});
+
+export function mapMyLeave(item) {
+  const status = item.status?.statusName || item.status || 'PENDING';
+  return {
+    id: item.leaveRequestId,
+    userName: item.employee?.fullName,
+    jenisCuti: item.leaveType?.name || 'Cuti',
+    stringTanggal: `${dateText(item.startDate)} - ${dateText(item.endDate)}`,
+    totalHari: `${item.totalDays || 0} Hari`,
+    status: statusLabel(status),
+    rawDetail: { jenisCuti: item.leaveType?.name, dariTanggal: item.startDate, sampaiTanggal: item.endDate, alasan: item.reason, pekerjaanTertunda: item.pendingWork, coverOleh: item.coveredBy, reviewNote: item.reviewNote },
+  };
 }
 
-/**
- * Ambil semua data cuti tim yang jatuh di tahun tertentu, dikelompokkan per
- * tanggal, untuk ditandai di kalender.
- * return: { "2026-06-10": [{ nama, jenisCuti, status }], ... }
- */
+export async function getRiwayatByUser() { return (await api.get('/api/cuti/me')).map(mapMyLeave); }
+
 export async function getTeamLeaveByYear(year) {
-  const all = readAll();
+  const requests = await api.get(`/api/cuti/calendar?year=${year}`);
   const result = {};
 
-  all.forEach((item) => {
-    if (!STATUS_AKTIF.includes(item.status)) return;
-
-    const start = new Date(item.dariTanggal);
-    const end = new Date(item.sampaiTanggal);
-
-    // Perluas rentang tanggal (dari - sampai) jadi tanggal per hari
-    for (
-      let d = new Date(start);
-      d <= end;
-      d.setDate(d.getDate() + 1)
-    ) {
-      if (d.getFullYear() !== Number(year)) continue;
-
-      const dateKey = d.toISOString().slice(0, 10); // YYYY-MM-DD
-      if (!result[dateKey]) result[dateKey] = [];
-      result[dateKey].push({
-        nama: item.userName,
-        jenisCuti: item.jenisCuti,
-        status: item.status,
-      });
-    }
-  });
+  requests
+    .filter((item) => ['PENDING', 'APPROVED'].includes(String(item.status?.statusName || item.status || '').toUpperCase()))
+    .forEach((item) => {
+      const start = new Date(`${item.startDate}T00:00:00`);
+      const end = new Date(`${item.endDate}T00:00:00`);
+      for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+        if (date.getFullYear() !== Number(year)) continue;
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        (result[key] ??= []).push({
+          nama: item.employee?.fullName || 'Karyawan',
+          jenisCuti: item.leaveType?.name || 'Cuti',
+          status: statusLabel(item.status?.statusName || item.status),
+        });
+      }
+    });
 
   return result;
 }
 
-/**
- * (Opsional, untuk simulasi alur approval nanti)
- * Ubah status satu pengajuan, misal dari HR/atasan.
- */
-export async function updateStatusCuti(id, status) {
-  const all = readAll();
-  const updated = all.map((item) =>
-    item.id === id ? { ...item, status } : item
-  );
-  writeAll(updated);
-  return updated.find((item) => item.id === id);
+export function mapApproval(item) {
+  const logs = item.approvalLogs || [];
+  const chain = Object.fromEntries(['LEADER', 'SPV', 'MANAGER'].map(role => {
+    const entry = logs.find(log => log.approverRole === role);
+    return [role.toLowerCase(), entry ? `${entry.approverName || role} (${entry.action})` : 'None'];
+  }));
+  return {
+    id: item.leaveRequestId,
+    karyawan: { nama: item.employeeName, kode: `CUTI-${item.leaveRequestId}`, jabatan: '-' },
+    jenisCuti: item.leaveType,
+    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${item.totalDays} Hari)`,
+    keterangan: item.reason || '-', pekerjaanDicover: [item.pendingWork, item.coveredBy].filter(Boolean).join(' • '),
+    statusBerkas: statusCode(item.overallStatus),
+    approvalChain: chain,
+    riwayatLog: logs.map(log => ({ nama: log.approverName || log.approverRole, waktu: log.actedAt ? new Date(log.actedAt).toLocaleString('id-ID') : '-', statusBadge: log.action, catatan: log.note || '-' })),
+  };
 }
 
-export async function getPendingApprovals() {
-  const all = readAll();
-  return all
-    .filter((item) => item.status === 'Dalam Proses')
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-}
+export const getPendingApprovals = async () => (await api.get('/api/cuti/approvals/my-task')).map(mapApproval);
+export const getApprovalHistory = async () => (await api.get('/api/cuti/approvals/history')).map(mapApproval);
+export const takeApprovalAction = (id, action, note) => api.put(`/api/cuti/${id}/${action}`, { note });
