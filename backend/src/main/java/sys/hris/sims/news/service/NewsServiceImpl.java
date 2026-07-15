@@ -42,8 +42,9 @@ public class NewsServiceImpl implements NewsService {
     @Override
     public List<NewsResponse> getAllNews() {
 
-        return newsRepository.findAll()
+        return newsRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
+                .filter(news -> Boolean.TRUE.equals(news.getPublished()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

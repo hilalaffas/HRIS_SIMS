@@ -120,6 +120,11 @@ public class SecurityConfig {
                         // ==========================
                         // EMPLOYEE
                         // ==========================
+                        // Dipakai formulir pengajuan cuti untuk memilih atasan.
+                        // Harus dideklarasikan sebelum pola /api/karyawan/** yang khusus admin.
+                        .requestMatchers(HttpMethod.GET, "/api/karyawan/approvers")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/**")
                         .hasAnyRole(ADMIN_ROLES)
 
@@ -163,6 +168,10 @@ public class SecurityConfig {
                         .hasAnyRole(APPROVER_ROLES)
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/cuti/calendar")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/cuti/**")
                         .hasAnyRole(
                                 "ADMIN",
@@ -187,6 +196,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/cuti/*/return")
                         .hasAnyRole(APPROVER_ROLES)
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/cuti/*/resubmit")
+                        .authenticated()
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/cuti/**")

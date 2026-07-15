@@ -2,8 +2,10 @@ package sys.hris.sims.leave.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
+import sys.hris.sims.holiday.repository.HolidayRepository;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.dto.LeaveApprovalLogResponse;
 import sys.hris.sims.leave.dto.LeaveApprovalResponse;
@@ -18,11 +20,14 @@ import sys.hris.sims.leavetype.repository.LeaveTypeRepository;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +48,7 @@ public class LeaveService {
     private final LeaveRequestApprovalRepository approvalRepository;
     private final LeaveTypeRepository leaveTypeRepository;
     private final UserRepository userRepository;
+    private final HolidayRepository holidayRepository;
 
     public List<LeaveRequest> getAllCuti() {
         return cutiRepository.findAll();
@@ -55,6 +61,16 @@ public class LeaveService {
 
     public List<LeaveRequest> getCutiByKaryawan(Long employeeId) {
         return cutiRepository.findByEmployee_EmployeeId(employeeId);
+    }
+
+    public List<LeaveRequest> getCalendarLeaves(int year) {
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = LocalDate.of(year, 12, 31);
+        return cutiRepository.findAll().stream()
+                .filter(cuti -> !cuti.getEndDate().isBefore(start) && !cuti.getStartDate().isAfter(end))
+                .filter(cuti -> ACTION_PENDING.equalsIgnoreCase(cuti.getStatus().getStatusName())
+                        || ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
+                .toList();
     }
 
     public LeaveRequest createCuti(LeaveRequest cuti) {
@@ -76,11 +92,12 @@ public class LeaveService {
             throw new RuntimeException("Karyawan pemohon wajib diisi");
         }
 
-        long totalDays = cuti.getStartDate()
-                .datesUntil(cuti.getEndDate().plusDays(1))
-                .count();
+        int totalDays = calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate());
+        if (totalDays <= 0) {
+            throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
+        }
 
-        cuti.setTotalDays((int) totalDays);
+        cuti.setTotalDays(totalDays);
         cuti.setStatus(getStatus(ACTION_PENDING));
 
         LeaveRequest savedCuti = cutiRepository.save(cuti);
@@ -141,7 +158,7 @@ public class LeaveService {
         Integer usedAnnualLeave = getCutiByKaryawan(employee.getEmployeeId()).stream()
                 .filter(cuti -> ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
                 .filter(cuti -> Boolean.TRUE.equals(cuti.getLeaveType().getDeductsAnnualQuota()))
-                .map(LeaveRequest::getTotalDays)
+                .map(cuti -> calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate()))
                 .reduce(0, Integer::sum);
 
         return new LeaveBalanceResponse(
@@ -158,7 +175,59 @@ public class LeaveService {
         cutiRepository.delete(cuti);
     }
 
+    @Transactional
+    public LeaveRequest resubmitCuti(Long leaveRequestId, LeaveRequest updatedCuti, String requesterUsername) {
+        LeaveRequest existingCuti = getCutiById(leaveRequestId);
+        Employee requester = getEmployeeByUsername(requesterUsername);
+
+        if (!existingCuti.getEmployee().getEmployeeId().equals(requester.getEmployeeId())) {
+            throw new RuntimeException("Hanya pemohon yang dapat mengedit cuti ini");
+        }
+        if (!ACTION_RETURNED.equalsIgnoreCase(existingCuti.getStatus().getStatusName())) {
+            throw new RuntimeException("Hanya cuti berstatus dikembalikan yang dapat diedit");
+        }
+        if (updatedCuti.getLeaveType() == null || updatedCuti.getLeaveType().getLeaveTypeId() == null) {
+            throw new RuntimeException("Jenis cuti wajib dipilih");
+        }
+        if (updatedCuti.getStartDate() == null || updatedCuti.getEndDate() == null
+                || updatedCuti.getEndDate().isBefore(updatedCuti.getStartDate())) {
+            throw new RuntimeException("Rentang tanggal cuti tidak valid");
+        }
+
+        existingCuti.setLeaveType(leaveTypeRepository.findById(updatedCuti.getLeaveType().getLeaveTypeId())
+                .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
+        existingCuti.setStartDate(updatedCuti.getStartDate());
+        existingCuti.setEndDate(updatedCuti.getEndDate());
+        int totalDays = calculateWorkingDays(updatedCuti.getStartDate(), updatedCuti.getEndDate());
+        if (totalDays <= 0) {
+            throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
+        }
+        existingCuti.setTotalDays(totalDays);
+        existingCuti.setReason(updatedCuti.getReason());
+        existingCuti.setPendingWork(updatedCuti.getPendingWork());
+        existingCuti.setCoveredBy(updatedCuti.getCoveredBy());
+        existingCuti.setLeaderEmployeeId(updatedCuti.getLeaderEmployeeId());
+        existingCuti.setSpvEmployeeId(updatedCuti.getSpvEmployeeId());
+        existingCuti.setManagerEmployeeId(updatedCuti.getManagerEmployeeId());
+        existingCuti.setStatus(getStatus(ACTION_PENDING));
+        existingCuti.setReviewedBy(null);
+        existingCuti.setReviewNote(null);
+        existingCuti.setApprovedAt(null);
+        existingCuti.setReturnedAt(null);
+        existingCuti.setSubmittedAt(LocalDateTime.now());
+
+        approvalRepository.deleteAll(approvalRepository.findByLeaveRequest_LeaveRequestId(leaveRequestId));
+        approvalRepository.flush();
+        LeaveRequest savedCuti = cutiRepository.save(existingCuti);
+        createApprovalSteps(savedCuti, requester);
+        return savedCuti;
+    }
+
     private LeaveRequest processApprovalAction(Long leaveRequestId, String reviewerUsername, String action, String note) {
+        if (note == null || note.isBlank()) {
+            throw new RuntimeException("Catatan approval wajib diisi");
+        }
+
         LeaveRequest cuti = getCutiById(leaveRequestId);
         Employee reviewer = getEmployeeByUsername(reviewerUsername);
         String approverRole = normalizeApproverRole(reviewer.getUser().getRoleId().getRoleName());
@@ -349,6 +418,22 @@ public class LeaveService {
         }
 
         return employee;
+    }
+
+    private int calculateWorkingDays(LocalDate startDate, LocalDate endDate) {
+        Set<LocalDate> holidays = holidayRepository.findByDateBetweenOrderByDateAsc(startDate, endDate).stream()
+                .map(holiday -> holiday.getDate())
+                .collect(Collectors.toSet());
+
+        int total = 0;
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            DayOfWeek day = date.getDayOfWeek();
+            boolean weekend = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
+            if (!weekend && !holidays.contains(date)) {
+                total++;
+            }
+        }
+        return total;
     }
 
     private LeaveRequestApproval buildApproval(LeaveRequest cuti, String role, Employee approver) {

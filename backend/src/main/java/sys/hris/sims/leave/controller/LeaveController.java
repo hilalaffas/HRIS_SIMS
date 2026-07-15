@@ -105,6 +105,11 @@ public class LeaveController {
         return ResponseEntity.ok(cutiService.getApprovalHistory(authentication.getName(), status));
     }
 
+    @GetMapping("/calendar")
+    public ResponseEntity<List<LeaveRequest>> getCalendarLeaves(@RequestParam int year) {
+        return ResponseEntity.ok(cutiService.getCalendarLeaves(year));
+    }
+
     // POST ajukan cuti baru
     @PostMapping
     public ResponseEntity<LeaveRequest> createCuti(@RequestBody LeaveRequest cuti, Authentication authentication, HttpServletRequest httpRequest) {
@@ -113,6 +118,17 @@ public class LeaveController {
         LeaveRequest saved = cutiService.createCuti(cuti, authentication.getName());
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "CREATE_CUTI", "leave_requests", saved.getLeaveRequestId(), "Mengajukan cuti", httpRequest);
 
+        return ResponseEntity.ok(saved);
+    }
+
+    @PutMapping("/{id}/resubmit")
+    public ResponseEntity<LeaveRequest> resubmitCuti(
+            @PathVariable Long id,
+            @RequestBody LeaveRequest cuti,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        LeaveRequest saved = cutiService.resubmitCuti(id, cuti, authentication.getName());
+        activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "RESUBMIT_CUTI", "leave_requests", id, "Memperbaiki dan mengajukan ulang cuti", httpRequest);
         return ResponseEntity.ok(saved);
     }
 
