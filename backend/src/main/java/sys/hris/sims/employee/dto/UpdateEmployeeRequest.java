@@ -16,4 +16,11 @@ public class UpdateEmployeeRequest {
     private String emergencyContactPhone;
     private Integer emergencyContactRelationshipId;
     private MultipartFile photo; // Ini untuk foto baru
+
+    // [BARU] Field yang sebelumnya sudah dikirim/ditampilkan di frontend
+    // (ModalDetailKaryawan.jsx) tapi belum ada tempat menampungnya di DTO,
+    // sehingga selalu hilang setiap kali form disimpan.
+    private String position;      // Jabatan
+    private Boolean isActive;     // Status akun: Aktif / Nonaktif
+    private String joinDate;      // Tanggal gabung, format yyyy-MM-dd (di-parse manual di controller)
 }

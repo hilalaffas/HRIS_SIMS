@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 // BARIS INI SANGAT PENTING:
 import './ModalDetailKaryawan.css';
 import { updateKaryawan } from '../../../services/karyawanService';
+import { updateUser } from '../../../services/userService';
 import { getAllDivisi } from '../../../services/divisiService';
+import { getAllRelationships } from '../../../services/relationshipService';
+import { getAllRoles } from '../../../services/roleService';
 
 const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUserRole, onSave, onDelete }) => {
   // isOpen diberi default `true` karena Karyawan.jsx (parent) memanggil modal ini
@@ -11,10 +14,10 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
   // sehingga `!isOpen` selalu true dan modal selalu return null (tombol Edit
   // kelihatan seperti tidak berfungsi, padahal modalnya menolak render sendiri).
   const [formData, setFormData] = useState({
-    id: null, employeeId: null,
+    id: null, employeeId: null, userId: null,
     namaLengkap: '', nik: '', jabatan: '', alamat: '',
     email: '', divisiId: '', telp: '', telpDarurat: '', hubDarurat: '',
-    tglGabung: '', username: '', role: '', status: '',
+    tglGabung: '', username: '', password: '', role: '', status: '',
     cutiTahunan: 0, cutiSakit: 0
   });
 
@@ -28,6 +31,15 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
   const [divisiList, setDivisiList] = useState([]);
   const [isLoadingDivisi, setIsLoadingDivisi] = useState(true);
 
+  // [BARU] Daftar hubungan kontak darurat & daftar role SEKARANG diambil dari
+  // backend (bukan di-hardcode) supaya id/nama yang dikirim SELALU cocok
+  // dengan data asli di database. Sebelumnya relMap & pilihan role di-hardcode
+  // manual dan nilainya tidak sinkron dengan tabel emergency_contact_relationships
+  // maupun tabel roles, jadi field itu berisiko tersimpan salah tanpa disadari.
+  const [relationshipList, setRelationshipList] = useState([]);
+  const [roleList, setRoleList] = useState([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+
   useEffect(() => {
     let isMounted = true;
     getAllDivisi()
@@ -37,13 +49,35 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
     return () => { isMounted = false; };
   }, []);
 
-  // Mengisi form ketika data karyawan (dari tombol edit) masuk
+  // [BARU]
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingOptions(true);
+    Promise.all([getAllRelationships(), getAllRoles()])
+      .then(([relationshipData, roleData]) => {
+        if (!isMounted) return;
+        setRelationshipList(relationshipData || []);
+        setRoleList(roleData || []);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setRelationshipList([]);
+          setRoleList([]);
+        }
+      })
+      .finally(() => { if (isMounted) setIsLoadingOptions(false); });
+    return () => { isMounted = false; };
+  }, []);
+
   // Mengisi form ketika data karyawan (dari tombol edit) masuk
   useEffect(() => {
     if (employeeData) {
       setFormData({
         id: employeeData.id ?? employeeData.employeeId ?? null,
         employeeId: employeeData.employeeId ?? employeeData.id ?? null,
+        // [BARU] userId dari relasi employee.user -- dibutuhkan untuk
+        // memanggil PUT /api/users/{userId} (username/email/role/password).
+        userId: employeeData.user?.userId ?? null,
         namaLengkap: employeeData.fullName || '',
         nik: employeeData.nikKaryawan || '',
         jabatan: employeeData.position || '',
@@ -57,7 +91,11 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
         hubDarurat: employeeData.emergencyContactRelationship?.name || '',
         tglGabung: employeeData.joinDate || '',
         username: employeeData.user?.username || '',
-        role: employeeData.user?.roleId?.roleName || 'MEMBER',
+        // [BARU] Password SELALU dikosongkan saat modal dibuka -- backend tidak
+        // pernah mengirim balik password (lihat @JsonIgnore di User.java), dan
+        // field ini hanya dikirim ke server kalau HR benar-benar mengetik yang baru.
+        password: '',
+        role: employeeData.user?.roleId?.roleName || '',
         status: employeeData.isActive ? 'Aktif' : 'Nonaktif',
         cutiTahunan: employeeData.leave || 0,
         cutiSakit: employeeData.sickLeave || 12
@@ -73,6 +111,13 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
     setFormData({ ...formData, [name]: value });
   };
 
+  // [BARU] HR_Admin biasa tidak boleh menaikkan siapa pun (termasuk dirinya
+  // sendiri) menjadi SUPER_ADMIN lewat form ini -- hanya SUPER_ADMIN yang boleh
+  // memilih role SUPER_ADMIN. Tombol Hapus di footer sudah pakai pola serupa.
+  const selectableRoles = currentUserRole === 'superadmin'
+    ? roleList
+    : roleList.filter((r) => (r.roleName || '').toUpperCase() !== 'SUPER_ADMIN');
+
   const handleSimpan = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -82,36 +127,83 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
       setErrorMessage('ID karyawan tidak ditemukan, coba tutup dan buka lagi modal ini.');
       return;
     }
+    if (!formData.userId) {
+      setErrorMessage('ID akun user tidak ditemukan, coba tutup dan buka lagi modal ini.');
+      return;
+    }
+    if (!formData.namaLengkap.trim() || !formData.nik.trim() || !formData.username.trim()) {
+      setErrorMessage('Nama Lengkap, NIK, dan Username wajib diisi.');
+      return;
+    }
     if (!formData.divisiId) {
       setErrorMessage('Divisi wajib dipilih.');
       return;
     }
 
-    const relMap = { 'Orang Tua': 1, 'Pasangan': 2, 'Saudara Kandung': 3, 'Teman Dekat': 4 };
+    // --- 1. Data karyawan (tabel employees) -> PUT /api/karyawan/{id} ---
+    const relasiTerpilih = relationshipList.find((r) => r.name === formData.hubDarurat);
 
-    const data = new FormData();
-    data.append('fullName', formData.namaLengkap);
-    data.append('address', formData.alamat);
-    data.append('phoneNumber', formData.telp);
-    data.append('nikKaryawan', formData.nik);
-    data.append('divisiId', formData.divisiId);
-    data.append('emergencyContactPhone', formData.telpDarurat);
-    data.append('emergencyContactRelationshipId', relMap[formData.hubDarurat] || 1);
+    const employeeForm = new FormData();
+    employeeForm.append('fullName', formData.namaLengkap);
+    employeeForm.append('address', formData.alamat);
+    employeeForm.append('phoneNumber', formData.telp);
+    employeeForm.append('nikKaryawan', formData.nik);
+    employeeForm.append('divisiId', formData.divisiId);
+    employeeForm.append('emergencyContactPhone', formData.telpDarurat);
+    if (relasiTerpilih) employeeForm.append('emergencyContactRelationshipId', relasiTerpilih.id);
+    // [BARU] Jabatan (kolom baru di backend, lihat migration V20)
+    if (formData.jabatan) employeeForm.append('position', formData.jabatan);
+    // [BARU] Status akun aktif/nonaktif -- FormData akan mengubah boolean JS
+    // menjadi string "true"/"false", dan Spring @ModelAttribute otomatis
+    // mem-parsingnya kembali menjadi Boolean.
+    employeeForm.append('isActive', formData.status === 'Aktif');
+    // [BARU] Tanggal gabung
+    if (formData.tglGabung) employeeForm.append('joinDate', formData.tglGabung);
+
+    // --- 2. Data akun (tabel users) -> PUT /api/users/{userId} ---
+    const roleTerpilih = roleList.find((r) => r.roleName === formData.role);
+    const userPayload = {
+      username: formData.username,
+      email: formData.email,
+    };
+    if (roleTerpilih) userPayload.idRole = roleTerpilih.roleId;
+    // Password hanya disertakan kalau HR benar-benar mengetik yang baru,
+    // supaya tidak menimpa password lama dengan string kosong.
+    if (formData.password && formData.password.trim() !== '') {
+      userPayload.password = formData.password;
+    }
 
     setIsSubmitting(true);
+
+    // Dipisah jadi 2 try/catch supaya kalau salah satu gagal, pesan errornya
+    // jelas menyebutkan bagian mana yang gagal (bukan cuma "gagal menyimpan").
     try {
-      await updateKaryawan(targetId, data);
-      setNotification(`Data profil akun ${formData.namaLengkap} berhasil diperbarui.`);
-      if (onSave) onSave(formData);
-      setTimeout(() => {
-        setNotification('');
-        // onClose(); // Hilangkan komentar ini jika ingin modal auto-close setelah save
-      }, 3000);
+      await updateKaryawan(targetId, employeeForm);
     } catch (error) {
-      setErrorMessage(error.message || 'Gagal menyimpan perubahan.');
-    } finally {
+      setErrorMessage('Gagal menyimpan data karyawan: ' + (error.message || 'terjadi kesalahan.'));
       setIsSubmitting(false);
+      return;
     }
+
+    try {
+      await updateUser(formData.userId, userPayload);
+    } catch (error) {
+      setErrorMessage(
+        'Data karyawan tersimpan, tapi akun login (username/email/role/password) GAGAL disimpan: ' +
+        (error.message || 'terjadi kesalahan.')
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+    setNotification(`Data profil akun ${formData.namaLengkap} berhasil diperbarui.`);
+    setFormData((prev) => ({ ...prev, password: '' }));
+    if (onSave) onSave(formData);
+    setTimeout(() => {
+      setNotification('');
+      // onClose(); // Hilangkan komentar ini jika ingin modal auto-close setelah save
+    }, 3000);
+    setIsSubmitting(false);
   };
 
   return (
@@ -157,6 +249,7 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
               <div className="form-group_detail_karyawan">
                 <label>JABATAN / POSISI</label>
                 <select name="jabatan" value={formData.jabatan} onChange={handleInputChange}>
+                  <option value="">Pilih Jabatan...</option>
                   <option value="Senior Software Engineer">Senior Software Engineer</option>
                   <option value="Manager">Manager</option>
                   <option value="HR Admin">HR Admin</option>
@@ -198,10 +291,11 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
               </div>
               <div className="form-group_detail_karyawan error-group_detail_karyawan">
                 <label>HUBUNGAN</label>
-                <select name="hubDarurat" value={formData.hubDarurat} onChange={handleInputChange}>
-                  <option value="Orang Tua">Orang Tua</option>
-                  <option value="Pasangan">Pasangan</option>
-                  <option value="Saudara Kandung">Saudara Kandung</option>
+                <select name="hubDarurat" value={formData.hubDarurat} onChange={handleInputChange} disabled={isLoadingOptions}>
+                  <option value="">{isLoadingOptions ? 'Memuat...' : 'Pilih Hubungan...'}</option>
+                  {relationshipList.map((rel) => (
+                    <option key={rel.id} value={rel.name}>{rel.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -221,7 +315,14 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
               <div className="form-group_detail_karyawan">
                 <label>UBAH PASSWORD</label>
                 <div className="password-wrapper_detail_karyawan">
-                  <input type={showPassword ? "text" : "password"} placeholder="Ketik untuk mengubah sandi" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Ketik untuk mengubah sandi"
+                    autoComplete="new-password"
+                  />
                   <span className="eye-icon_detail_karyawan" onClick={() => setShowPassword(!showPassword)}>👁️</span>
                 </div>
               </div>
@@ -229,10 +330,11 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
             <div className="form-grid_detail_karyawan">
               <div className="form-group_detail_karyawan">
                 <label>HAK AKSES ROLE *</label>
-                <select name="role" value={formData.role} onChange={handleInputChange}>
-                  <option value="MEMBER">Karyawan Biasa (MEMBER)</option>
-                  <option value="HR">HR Admin (HR)</option>
-                  <option value="MANAGER">Manager (MANAGER)</option>
+                <select name="role" value={formData.role} onChange={handleInputChange} disabled={isLoadingOptions}>
+                  <option value="">{isLoadingOptions ? 'Memuat role...' : 'Pilih Role...'}</option>
+                  {selectableRoles.map((r) => (
+                    <option key={r.roleId} value={r.roleName}>{r.roleName}</option>
+                  ))}
                 </select>
               </div>
               {/* Gunakan ternary operator untuk mengubah class berdasarkan value status */}
@@ -247,13 +349,18 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
             <div className="form-grid_detail_karyawan">
               <div className="form-group_detail_karyawan green-bg-group_detail_karyawan">
                 <label>SISA CUTI TAHUNAN *</label>
-                <input type="number" name="cutiTahunan" value={formData.cutiTahunan} onChange={handleInputChange} />
+                <input type="number" name="cutiTahunan" value={formData.cutiTahunan} onChange={handleInputChange} disabled title="Belum tersambung ke database, lihat catatan di bawah form." />
               </div>
               <div className="form-group_detail_karyawan green-bg-group_detail_karyawan">
                 <label>SISA CUTI SAKIT</label>
-                <input type="number" name="cutiSakit" value={formData.cutiSakit} onChange={handleInputChange} />
+                <input type="number" name="cutiSakit" value={formData.cutiSakit} onChange={handleInputChange} disabled title="Belum tersambung ke database, lihat catatan di bawah form." />
               </div>
             </div>
+            <p style={{ fontSize: '12px', color: '#92400e', background: '#fef3c7', padding: '8px 12px', borderRadius: '6px', margin: '8px 0 0' }}>
+              ⚠️ Kuota cuti di atas belum tersambung ke database -- tabel <code>employees</code> belum punya kolom kuota per-karyawan,
+              dan sistem cuti saat ini dihitung dari aturan per jenis cuti di tabel <code>leave_types</code>, bukan kuota manual per orang.
+              Nilai di sini murni tampilan sementara dan tidak ikut tersimpan.
+            </p>
           </div>
 
         </div>

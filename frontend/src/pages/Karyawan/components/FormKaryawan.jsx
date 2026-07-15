@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './FormKaryawan.css';
 import { registerKaryawan } from '../../../services/karyawanService';
 import { getAllDivisi } from '../../../services/divisiService';
+import { getAllRelationships } from '../../../services/relationshipService';
 import Toast from '../../../components/Toast'; // Sesuaikan path ini jika perlu
 
 const ROLE_POSITION_MAP = {
@@ -42,6 +43,22 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
   const [divisiList, setDivisiList] = useState([]);
   const [isLoadingDivisi, setIsLoadingDivisi] = useState(true);
   const [divisiError, setDivisiError] = useState(null);
+
+  // [BARU] Daftar hubungan kontak darurat diambil dari backend juga --
+  // sebelumnya id-nya di-hardcode manual (relMap) dan TIDAK cocok dengan
+  // data asli di tabel emergency_contact_relationships, jadi field
+  // "Hubungan" berisiko tersimpan salah tanpa disadari.
+  const [relationshipList, setRelationshipList] = useState([]);
+  const [isLoadingRelationships, setIsLoadingRelationships] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    getAllRelationships()
+      .then((data) => { if (isMounted) setRelationshipList(data || []); })
+      .catch(() => { if (isMounted) setRelationshipList([]); })
+      .finally(() => { if (isMounted) setIsLoadingRelationships(false); });
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -97,8 +114,13 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
 
     const data = new FormData();
     const mappedRoleId = POSITION_ROLE_ID_MAP[formData.position] || 7;
-    const relMap = { 'Orang Tua': 1, 'Pasangan': 2, 'Saudara Kandung': 3, 'Teman Dekat': 4 };
-    const mappedRelId = relMap[formData.emergencyRelation] || 1;
+    // [PERBAIKAN] relMap lama (Orang Tua:1, Pasangan:2, Saudara Kandung:3,
+    // Teman Dekat:4) TIDAK cocok dengan data asli di database (lihat
+    // migration V16: 1=Orang Tua, 2=Suami/Istri, 3=Anak, 4=Saudara Kandung,
+    // 5=Lainnya). Sekarang di-cari dari relationshipList yang diambil live
+    // dari backend, supaya id yang terkirim selalu benar.
+    const relasiTerpilih = relationshipList.find((r) => r.name === formData.emergencyRelation);
+    const mappedRelId = relasiTerpilih ? relasiTerpilih.id : null;
 
     data.append('username', formData.username);
     data.append('password', formData.password);
@@ -111,7 +133,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
     data.append('divisiId', formData.divisiId);
     data.append('emergencyContactPhone', formData.emergencyPhone);
     data.append('emergencyContactName', formData.emergencyContact);
-    data.append('emergencyContactRelationshipId', mappedRelId);
+    if (mappedRelId) data.append('emergencyContactRelationshipId', mappedRelId);
     data.append('gender', formData.gender);
     
     if (formData.joinDate) {
@@ -210,17 +232,6 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
                 </span>
               )}
             </div>
-            {canManageRole && (
-              <div className="input-group_formkaryawan mt-3">
-                <label>HAK AKSES SISTEM (ROLE) *</label>
-                <select name="role" value={formData.role} onChange={handleInputChange} required>
-                  <option value="">Pilih Akses...</option>
-                  <option value="Member">Karyawan Biasa (Member)</option>
-                  <option value="MANAGER">Manager / Supervisor / Leader</option>
-                  <option value="HRD_Admin">Admin (HR)</option>
-                </select>
-              </div>
-            )}
             <div className="input-group_formkaryawan">
               <label>JABATAN</label>
               <select name="position" value={formData.position} onChange={handleInputChange} disabled={!formData.role}>
@@ -265,12 +276,11 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
           </div>
           <div className="input-group_formkaryawan">
             <label className="text-red_formkaryawan">HUBUNGAN KONTAK DARURAT</label>
-            <select name="emergencyRelation" onChange={handleInputChange} className="border-red_formkaryawan">
-              <option value="">Pilih Hubungan...</option>
-              <option value="Orang Tua">Orang Tua</option>
-              <option value="Pasangan">Pasangan</option>
-              <option value="Saudara Kandung">Saudara Kandung</option>
-              <option value="Teman Dekat">Teman Dekat</option>
+            <select name="emergencyRelation" onChange={handleInputChange} className="border-red_formkaryawan" disabled={isLoadingRelationships}>
+              <option value="">{isLoadingRelationships ? 'Memuat...' : 'Pilih Hubungan...'}</option>
+              {relationshipList.map((rel) => (
+                <option key={rel.id} value={rel.name}>{rel.name}</option>
+              ))}
             </select>
           </div>
           <div className="credential-box_formkaryawan">
@@ -287,7 +297,17 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
                 </div>
               </div>
             </div>
-
+            {canManageRole && (
+              <div className="input-group_formkaryawan mt-3">
+                <label>HAK AKSES SISTEM (ROLE) *</label>
+                <select name="role" value={formData.role} onChange={handleInputChange} required>
+                  <option value="">Pilih Akses...</option>
+                  <option value="Member">Karyawan Biasa (Member)</option>
+                  <option value="MANAGER">Manager / Supervisor / Leader</option>
+                  <option value="HRD_Admin">Admin (HR)</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
         <div className="form-actions_formkaryawan">

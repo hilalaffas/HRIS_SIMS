@@ -34,12 +34,12 @@
 .history-title {
   display: flex;
   align-items: center;
-  gap: 8px;
   margin: 0;
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
   position: relative;
+  display: inline-block;
 }
 
 .history-filter-container {
@@ -246,18 +246,6 @@
 .status-badge-list.dikembalikan {
   background-color: #fee2e2 !important;
   color: #991b1b !important;
-  padding: 6px 14px !important;
-  border-radius: 6px !important;
-  font-weight: 700 !important;
-  font-size: 12px !important;
-  text-transform: uppercase !important;
-  display: inline-block !important;
-  text-align: center !important;
-}
-
-.status-badge-list.ditolak {
-  background-color: #1f2937 !important;
-  color: #f9fafb !important;
   padding: 6px 14px !important;
   border-radius: 6px !important;
   font-weight: 700 !important;

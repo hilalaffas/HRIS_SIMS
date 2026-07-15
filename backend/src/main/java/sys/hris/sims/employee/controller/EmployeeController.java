@@ -22,6 +22,8 @@ import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
 import sys.hris.sims.divisi.entity.Divisi;
 import sys.hris.sims.divisi.repository.DivisiRepository;
 import java.nio.file.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 
@@ -119,6 +121,23 @@ public class EmployeeController {
         if (isNotBlank(request.getNikKaryawan())) employee.setNikKaryawan(request.getNikKaryawan());
         if (isNotBlank(request.getEmergencyContactName())) employee.setEmergencyContactName(request.getEmergencyContactName());
         if (isNotBlank(request.getEmergencyContactPhone())) employee.setEmergencyContactPhone(request.getEmergencyContactPhone());
+
+        // [BARU] Jabatan (position) -- kolom baru, lihat migration V20
+        if (isNotBlank(request.getPosition())) employee.setPosition(request.getPosition());
+
+        // [BARU] Status akun (Aktif / Nonaktif). Dicek != null (bukan isNotBlank)
+        // karena ini Boolean, bukan String.
+        if (request.getIsActive() != null) employee.setIsActive(request.getIsActive());
+
+        // [BARU] Tanggal gabung. Dikirim frontend sebagai String "yyyy-MM-dd"
+        // (bawaan <input type="date">), jadi perlu di-parse manual ke LocalDate.
+        if (isNotBlank(request.getJoinDate())) {
+            try {
+                employee.setJoinDate(LocalDate.parse(request.getJoinDate()));
+            } catch (DateTimeParseException e) {
+                return ResponseEntity.status(400).body("Format tanggal gabung tidak valid, gunakan yyyy-MM-dd");
+            }
+        }
 
         // Update divisi jika dikirim (divisiId wajib valid kalau dikirim)
         if (request.getDivisiId() != null) {

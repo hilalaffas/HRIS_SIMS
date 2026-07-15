@@ -37,14 +37,18 @@ public class EmployeeService {
     }
 
     public Employee updateKaryawan(Long id, Employee karyawanBaru) {
-        Employee karyawan = getKaryawanById(id);
-        karyawan.setFullName(karyawanBaru.getFullName());
-        karyawan.setAddress(karyawanBaru.getAddress()); 
-        karyawan.setPhoneNumber(karyawanBaru.getPhoneNumber());
-        karyawan.setGender(karyawanBaru.getGender());
-        karyawan.setJoinDate(karyawanBaru.getJoinDate());
-        karyawan.setIsActive(karyawanBaru.getIsActive());
-        return karyawanRepository.save(karyawan);
+        // [PERBAIKAN BUG] Sebelumnya method ini mengambil ULANG data lama dari
+        // DB (getKaryawanById) lalu hanya menyalin 6 field (fullName, address,
+        // phoneNumber, gender, joinDate, isActive) dari karyawanBaru. Padahal
+        // controller sudah membangun `karyawanBaru` sebagai entity LENGKAP hasil
+        // partial-update (fullName, nik, divisi, kontak darurat, position, foto,
+        // dst). Akibatnya field selain 6 di atas -- termasuk NIK, divisi, kontak
+        // darurat, dan foto -- selalu hilang / tidak pernah tersimpan.
+        //
+        // Perbaikannya: simpan langsung entity yang sudah di-update controller,
+        // tidak perlu fetch ulang & copy manual.
+        karyawanBaru.setEmployeeId(id); // jaga-jaga, pastikan ID tetap konsisten (update, bukan insert baru)
+        return karyawanRepository.save(karyawanBaru);
     }
 
     public void deleteKaryawan(Long id) {

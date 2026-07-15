@@ -46,6 +46,9 @@ public class Employee {
     @Column(name = "nik_karyawan")
     private String nikKaryawan;
 
+    @Column(name = "position", length = 100)
+    private String position;
+
     @Column(name = "photo")
     private String photo;
 

@@ -36,8 +36,6 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
         </div>
       </div>
 
-      {/* [BARU] Wrapper agar tabel bisa digeser (scroll) horizontal di layar HP */}
-      <div className="table-scroll-wrapper">
       <table className="karyawan-table">
         <thead>
           <tr>
@@ -52,7 +50,14 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
         <tbody>
           {data.map((emp) => {
             // Definisikan URL foto agar lebih rapi dipanggil
-            const photoUrl = emp.photo ? `http://localhost:8080/${emp.photo}` : `https://ui-avatars.com/api/?name=${emp.fullName}`;
+            // [PERBAIKAN DEPLOY] Sebelumnya URL foto di-hardcode ke
+            // "http://localhost:8080", jadi foto profil pasti gagal tampil
+            // begitu di-deploy (backend aslinya ada di Render, bukan
+            // localhost). Sekarang pakai VITE_API_URL yang sama seperti
+            // services/api.js, dengan fallback ke URL Render kalau env var
+            // belum ke-set.
+            const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://sims-backend-api-61je.onrender.com';
+            const photoUrl = emp.photo ? `${API_BASE_URL}/${emp.photo}` : `https://ui-avatars.com/api/?name=${emp.fullName}`;
 
             return (
               <tr key={emp.employeeId || emp.id}>
@@ -94,7 +99,6 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
           })}
         </tbody>
       </table>
-      </div>
 
       {/* 3. Render Modal Popup jika ada foto yang dipilih */}
       {selectedPhoto && (
