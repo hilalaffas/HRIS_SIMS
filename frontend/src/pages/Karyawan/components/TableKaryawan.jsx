@@ -36,6 +36,8 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
         </div>
       </div>
 
+      {/* [BARU] Wrapper agar tabel bisa digeser (scroll) horizontal di layar HP */}
+      <div className="table-scroll-wrapper">
       <table className="karyawan-table">
         <thead>
           <tr>
@@ -92,6 +94,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
           })}
         </tbody>
       </table>
+      </div>
 
       {/* 3. Render Modal Popup jika ada foto yang dipilih */}
       {selectedPhoto && (

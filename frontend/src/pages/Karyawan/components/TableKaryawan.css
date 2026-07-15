@@ -212,3 +212,44 @@
 .close-photo-btn:hover {
   background-color: #d81212;
 }
+
+/* [BARU] =========================================
+   RESPONSIF MOBILE — TABEL BISA DIGESER (SCROLL)
+   Sebelumnya <table> tidak dibungkus wrapper scroll apa pun,
+   sehingga di layar HP kolom kanan (SISA CUTI, STATUS, AKSI)
+   terpotong oleh overflow:hidden pada layout. Solusi: bungkus
+   tabel dengan .table-scroll-wrapper (overflow-x: auto) dan
+   beri min-width pada tabel supaya kolom tetap nyaman dibaca,
+   sisanya tinggal digeser ke kanan/kiri.
+   ========================================================= */
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* scroll lebih halus di iOS */
+}
+
+.karyawan-table {
+  min-width: 800px;
+}
+
+@media (max-width: 768px) {
+  /* Header & filter di atas tabel ditumpuk supaya tidak ikut terpotong */
+  .table-header-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+
+  .search-box input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
