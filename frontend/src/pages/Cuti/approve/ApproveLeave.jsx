@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './ApproveLeave.css';
 
 import HeadlineApproval from './components/HeadlineApproval';
@@ -6,19 +6,8 @@ import TabMenu from './components/TabMenu';
 import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
-import ActionReasonModal, { ACTION_CONFIG } from './components/ActionReasonModal';
-import { pendingRequests, allLeaveHistory, sisaCutiInfo, ALLOWED_ROLES } from './data/mockData';
-
-/**
- * Format Date jadi string "YYYY-MM-DD HH:mm" agar konsisten dengan
- * format `waktu` yang dipakai di riwayatLog pada mockData.js.
- */
-const formatLogTimestamp = (date) => {
-  const pad = (n) => String(n).padStart(2, '0');
-  const tanggal = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  const jam = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  return `${tanggal} ${jam}`;
-};
+import ActionReasonModal from './components/ActionReasonModal';
+import { getApprovalHistory, getLeaveBalance, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
 
 /**
  * ApproveLeaving.jsx
@@ -41,13 +30,22 @@ const formatLogTimestamp = (date) => {
  * reusable & mudah di-test.
  * ------------------------------------------------------------------
  */
-const ApproveLeaving = ({ user }) => {
+const ApproveLeaving = () => {
   const [activeTab, setActiveTab] = useState("proses"); // 'proses' | 'list'
   const [selectedDetail, setSelectedDetail] = useState(null);
 
-  // TODO: ganti dua state di bawah ini dengan data dari API (React Query / fetch di control/)
-  const [pending, setPending] = useState(pendingRequests);
-  const [history, setHistory] = useState(allLeaveHistory);
+  const [pending, setPending] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [sisaCuti, setSisaCuti] = useState({ totalHari: 0 });
+  const [error, setError] = useState('');
+
+  const loadData = useCallback(async () => {
+    try {
+      const [tasks, records, balance] = await Promise.all([getPendingApprovals(), getApprovalHistory(), getLeaveBalance()]);
+      setPending(tasks); setHistory(records); setSisaCuti({ totalHari: balance.remainingAnnualLeave ?? 0 }); setError('');
+    } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
+  }, []);
+  useEffect(() => { loadData(); }, [loadData]);
 
   // Permohonan yang sedang menunggu alasan dari approver.
   // Bentuknya { item, action } | null. Selama ini bernilai isi,
@@ -82,31 +80,12 @@ const ApproveLeaving = ({ user }) => {
    *   await api.post(`/cuti/approval/${id}`, { action, alasan });
    * lalu refetch/replace data pending & history setelah sukses.
    */
-  const handleConfirmAction = (id, action, alasan) => {
-    const config = ACTION_CONFIG[action];
-    if (!config) return;
-
-    const logEntry = {
-      nama: user?.name || "Approver",
-      waktu: formatLogTimestamp(new Date()),
-      statusBadge: config.statusValue,
-      catatan: alasan,
-    };
-
-    setPending((prev) => prev.filter((item) => item.id !== id));
-    setHistory((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              statusBerkas: config.statusValue,
-              riwayatLog: [...(item.riwayatLog || []), logEntry],
-            }
-          : item
-      )
-    );
-
-    setActionRequest(null);
+  const handleConfirmAction = async (id, action, alasan) => {
+    try {
+      await takeApprovalAction(id, action === 'acc' ? 'approve' : action === 'revisi' ? 'return' : 'reject', alasan);
+      setActionRequest(null);
+      await loadData();
+    } catch (err) { alert(err.message || 'Aksi cuti gagal diproses.'); }
   };
 
   const tabs = useMemo(
@@ -122,17 +101,18 @@ const ApproveLeaving = ({ user }) => {
       <HeadlineApproval title="Pusat Persetujuan Cuti" description="Kelola antrean persetujuan dan tinjau riwayat keputusan Anda."/>
 
       <div className="approve-leaving-page__body">
+        {error && <div className="approvalSection__empty">{error}</div>}
         <TabMenu tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
       
         {activeTab === "proses" ? (
           <ApproveSection
             data={pending}
-            sisaCuti={sisaCutiInfo}
+            sisaCuti={sisaCuti}
             onRequestAction={handleRequestAction}
             onOpenDetail={handleOpenDetail}
           />
         ) : (
-          <ListCutiSection data={history} onOpenDetail={handleOpenDetail} />
+          <ListCutiSection data={history} sisaCuti={sisaCuti} onOpenDetail={handleOpenDetail} />
         )}
       </div>
       {/*Bagian popup detail riwayat (FormCuti)*/}

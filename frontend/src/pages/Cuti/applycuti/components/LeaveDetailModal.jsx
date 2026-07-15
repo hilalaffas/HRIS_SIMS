@@ -143,8 +143,10 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
     }
   };
 
-  // Deteksi apakah user yang sedang membuka modal ini adalah atasan (bukan karyawan biasa)
-  const isAtasan = currentUserRole === 'leader' || currentUserRole === 'spv' || currentUserRole === 'manager';
+  // Modal ini dipakai pada "Manajemen Cuti Saya" (berkas milik pemohon).
+  // Aksi approval hanya dilakukan di Pusat Persetujuan agar selalu melalui
+  // modal catatan dan endpoint approval yang benar.
+  const isAtasan = false;
 
   return (
     <div className="form-cuti__overlay" onMouseDown={onClose}>

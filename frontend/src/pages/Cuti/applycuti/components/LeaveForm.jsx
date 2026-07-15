@@ -44,9 +44,13 @@ const LeaveForm = ({
   dinamisBatasMinStr,
   handleSubmit,
   isSubmitting,
+  jumlahHariCuti = 0,
   canApplyCuti,
   todayStr,
   currentUserRole,
+  leaveTypes = [],
+  approvers = { LEADER: [], SPV: [], MANAGER: [] },
+  isSupervisor = false,
   isEditing,       // <-- PROP BARU UNTUK KONTROL TOMBOL BATAL
   onCancelEdit     // <-- PROP BARU UNTUK AKSI BATAL
 }) => {
@@ -60,7 +64,9 @@ const LeaveForm = ({
   const dariRef = useRef(null);
   const sampaiRef = useRef(null);
 
-  const isMendesak = jenisCuti === 'Cuti Urgent' || jenisCuti === 'Cuti Berduka';
+  const normalizedLeaveType = String(jenisCuti || '').trim().toLowerCase();
+  const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType);
+  const isHalfDayLeave = normalizedLeaveType === 'cuti setengah hari';
 
   // Format deteksi huruf kecil untuk mencegah kesalahan penulisan string role
   const isKaryawan = currentUserRole?.toLowerCase() === 'karyawan';
@@ -165,16 +171,11 @@ const LeaveForm = ({
         <div className="form-group">
           <label className="form-label">JENIS PERMOHONAN CUTI</label>
           <select value={jenisCuti} onChange={(e) => setJenisCuti(e.target.value)} className="form-control">
-            <option value="Cuti tahunan">Cuti tahunan</option>
-            <option value="Cuti setengah hari">Cuti setengah hari</option>
-            <option value="Cuti nikah (Khusus)">Cuti nikah (Khusus)</option>
-            <option value="Cuti Berduka">Cuti Berduka</option>
-            <option value="Cuti melahirkan (Khusus)">Cuti melahirkan (Khusus)</option>
-            <option value="Cuti Urgent">Cuti Urgent</option>
+            {leaveTypes.map(type => <option key={type.leaveTypeId} value={type.name}>{type.name}</option>)}
           </select>
         </div>
 
-        {(jenisCuti === 'Cuti setengah hari' ) && (
+        {isHalfDayLeave && (
           <div className="form-group">
             <label className="form-label">DURASI SESI SETENGAH HARI *</label>
             <select value={durasiSesi} onChange={(e) => setDurasiSesi(e.target.value)} className="form-control">
@@ -218,7 +219,7 @@ const LeaveForm = ({
         </div>
 
         <div className="duration-info-alert">
-          Durasi pengajuan: {jedaHariKerja === 0 ? "1 Hari" : `${jedaHariKerja} Hari Kerja`}
+          Durasi pengajuan: {jumlahHariCuti} Hari Kerja
         </div>
 
         <div className="form-group">
@@ -226,36 +227,23 @@ const LeaveForm = ({
           <div className="approval-row">
             <div className="approval-col">
               <span className="badge-approval leader">Leader</span>
-              <select value={leaderApproval} onChange={(e) => setLeaderApproval(e.target.value)} className="form-control" required>
-                <option value="">Pilih...</option>
-                {/* Hanya tampilkan None jika role BUKAN karyawan */}
-                {!isKaryawan && <option value="None">None</option>}
-                <option value="Aden">Aden</option>
-                <option value="Ari">Ari</option>
-                <option value="Guntur">Guntur</option>
-                <option value="Jasmin">Jasmin</option>
+              <select value={isSupervisor ? '' : leaderApproval} onChange={(e) => setLeaderApproval(e.target.value)} className="form-control" required={!isSupervisor} disabled={isSupervisor}>
+                <option value="">{isSupervisor ? 'None' : 'Pilih...'}</option>
+                {!isSupervisor && approvers.LEADER.map(person => <option key={person.employeeId} value={person.employeeId}>{person.fullName}</option>)}
               </select>
             </div>
             <div className="approval-col">
               <span className="badge-approval spv">SPV</span>
-              <select value={spvApproval} onChange={(e) => setSpvApproval(e.target.value)} className="form-control" required>
-                <option value="">Pilih...</option>
-                {/* Hanya tampilkan None jika role BUKAN karyawan */}
-                {!isKaryawan && <option value="None">None</option>}                
-                <option value="Mandala">Mandala</option>
+              <select value={isSupervisor ? '' : spvApproval} onChange={(e) => setSpvApproval(e.target.value)} className="form-control" required={!isSupervisor} disabled={isSupervisor}>
+                <option value="">{isSupervisor ? 'None' : 'Pilih...'}</option>
+                {!isSupervisor && approvers.SPV.map(person => <option key={person.employeeId} value={person.employeeId}>{person.fullName}</option>)}
               </select>
             </div>
             <div className="approval-col">
               <span className="badge-approval manager">Manager</span>
               <select value={managerApproval} onChange={(e) => setManagerApproval(e.target.value)} className="form-control" required>
                 <option value="">Pilih...</option>
-                {/* Hanya tampilkan None jika role BUKAN karyawan */}
-                {!isKaryawan && <option value="None">None</option>}
-                <option value="Ade Mulya">Ade Mulya</option>
-                <option value="Fuad">Fuad</option>
-                <option value="Hendro">Hendro</option>
-                <option value="Mery">Mery</option>
-                <option value="Nisa">Nisa</option>
+                {approvers.MANAGER.map(person => <option key={person.employeeId} value={person.employeeId}>{person.fullName}</option>)}
               </select>
             </div>
           </div>
@@ -296,7 +284,7 @@ const LeaveForm = ({
             </button>
           )}
           <button type="submit" className="btn btn-submit-dark" disabled={isSubmitting || !canApplyCuti}>
-            {isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan'}
+            {isSubmitting ? 'Menyimpan...' : isEditing ? 'Simpan Perbaikan' : 'Kirim Pengajuan'}
           </button>
         </div>
       </form>

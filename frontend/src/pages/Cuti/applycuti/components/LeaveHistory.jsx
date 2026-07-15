@@ -83,6 +83,7 @@ const LeaveHistory = ({
             <option value="Dalam Proses">Dalam Proses</option>
             <option value="Disetujui (ACC)">Disetujui (ACC)</option>
             <option value="Dikembalikan">Dikembalikan</option>
+            <option value="Ditolak">Ditolak</option>
           </select>
         </div>
       </div>
@@ -102,7 +103,7 @@ const LeaveHistory = ({
 
               return (
                 <div key={item.id} className={`history-item-card ${isDikembalikan ? 'border-alert-red' : ''}`}>
-                  <div className="history-item-left" onClick={() => handleOpenDetail(item)} style={{ cursor: 'pointer' }}>
+                  <div className="history-item-left" onClick={isProses ? undefined : () => handleOpenDetail(item)} style={{ cursor: isProses ? 'default' : 'pointer' }}>
                     {item.isUnread && <span className="dot-badge-item"></span>}
                     <div className="history-item-info">
                       <span className="history-item-leave-type">{item.jenisCuti}</span>
@@ -115,12 +116,9 @@ const LeaveHistory = ({
                   <div className="history-item-actions">
                     {isProses ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span className="status-badge-list dalam-proses" onClick={() => handleOpenDetail(item)} style={{ cursor: 'pointer' }}>
+                        <span className="status-badge-list dalam-proses">
                           DALAM PROSES
                         </span>
-                        <button type="button" className="btn-edit-inline" onClick={() => handleEditKembali(item.id)}>
-                          <i className="fa-regular fa-pen-to-square"></i> Edit
-                        </button>
                       </div>
                     ) : isDikembalikan ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
