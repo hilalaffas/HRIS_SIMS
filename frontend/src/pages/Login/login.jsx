@@ -6,6 +6,7 @@ import Button from '../../components/Button';
 import { loginUser } from '../../services/authService';
 import AccountLocked from './AccountLocked';
 import './Login.css';
+import logoImage from '../../assets/sims_logo.png';
 
 const Login = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
@@ -51,12 +52,9 @@ const Login = ({ onLoginSuccess }) => {
       <div className="bg-white rounded-[24px] w-full max-w-[400px] p-8 shadow-2xl relative">
         
         {/* Logo area */}
-        <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center mb-5 shadow-sm overflow-hidden">
+        <div className="w-26 h-19 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center mb-5 shadow-sm overflow-hidden">
           <span className="text-[#009A66] font-black text-2xl tracking-tighter flex">
-            <span className="inline-block letter-drop-0">S</span>
-            <span className="inline-block letter-drop-1">I</span>
-            <span className="inline-block letter-drop-2">M</span>
-            <span className="inline-block letter-drop-3">S</span>
+            <img src={logoImage} alt="Logo Aplikasi" width="100" />
           </span>
         </div>
 

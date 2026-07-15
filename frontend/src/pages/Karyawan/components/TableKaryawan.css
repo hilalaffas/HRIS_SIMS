@@ -115,6 +115,11 @@
   font-weight: 700;
 }
 
+.badge-status.inactive {
+  background-color: #fed7d7; /* Merah muda lembut */
+  color: #9b2c2c;           /* Merah tua untuk teks */
+}
+
 .text-center { text-align: center; }
 .font-bold { font-weight: 700; }
 .text-green { color: #2f855a; }

@@ -84,7 +84,11 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
                   <p className="emp-division">{emp.divisi?.namaDivisi || 'Umum'}</p>
                 </td>
                 <td className="text-center font-bold text-green">{emp.leave || 12}</td>
-                <td><span className="badge-status">{emp.isActive ? 'AKTIF' : 'NONAKTIF'}</span></td>
+                <td>
+                  <span className={`badge-status ${!emp.isActive ? 'inactive' : ''}`}>
+                    {emp.isActive ? 'AKTIF' : 'NONAKTIF'}
+                  </span>
+                </td>
                 <td>
                  <button className="btn-edit" onClick={() => onEdit(emp)}>
                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
