@@ -181,3 +181,39 @@
   text-overflow: ellipsis;
   max-width: 200px;
 }
+
+/* [BARU] =========================================
+   RESPONSIF MOBILE
+   Masalah: .form-body_formkaryawan & .grid-2-col_formkaryawan
+   sebelumnya SELALU 2 kolom (grid-template-columns: 1fr 1fr)
+   tanpa media query, sehingga di layar HP kolom kanan
+   (KREDENSIAL & KONTAK) terpotong/ketutupan karena parent
+   layout (.main-area-wrapper) overflow: hidden.
+   Solusi: turunkan jadi 1 kolom (menumpuk ke bawah) di
+   layar <= 768px supaya semua field tetap terlihat & bisa
+   diisi tanpa perlu geser horizontal.
+   ========================================================= */
+@media (max-width: 768px) {
+  .form-body_formkaryawan {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 16px;
+  }
+
+  .grid-2-col_formkaryawan {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions_formkaryawan {
+    grid-column: span 1;
+    justify-content: stretch;
+  }
+
+  .btn-submit_formkaryawan {
+    width: 100%;
+  }
+
+  .file-upload-container {
+    flex-wrap: wrap;
+  }
+}

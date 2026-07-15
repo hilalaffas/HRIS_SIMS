@@ -210,6 +210,17 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
                 </span>
               )}
             </div>
+            {canManageRole && (
+              <div className="input-group_formkaryawan mt-3">
+                <label>HAK AKSES SISTEM (ROLE) *</label>
+                <select name="role" value={formData.role} onChange={handleInputChange} required>
+                  <option value="">Pilih Akses...</option>
+                  <option value="Member">Karyawan Biasa (Member)</option>
+                  <option value="MANAGER">Manager / Supervisor / Leader</option>
+                  <option value="HRD_Admin">Admin (HR)</option>
+                </select>
+              </div>
+            )}
             <div className="input-group_formkaryawan">
               <label>JABATAN</label>
               <select name="position" value={formData.position} onChange={handleInputChange} disabled={!formData.role}>
@@ -276,17 +287,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
                 </div>
               </div>
             </div>
-            {canManageRole && (
-              <div className="input-group_formkaryawan mt-3">
-                <label>HAK AKSES SISTEM (ROLE) *</label>
-                <select name="role" value={formData.role} onChange={handleInputChange} required>
-                  <option value="">Pilih Akses...</option>
-                  <option value="Member">Karyawan Biasa (Member)</option>
-                  <option value="MANAGER">Manager / Supervisor / Leader</option>
-                  <option value="HRD_Admin">Admin (HR)</option>
-                </select>
-              </div>
-            )}
+
           </div>
         </div>
         <div className="form-actions_formkaryawan">

@@ -294,3 +294,52 @@
   color: #e53e3e; /* Merah */
   font-weight: 600;
 }
+
+/* [BARU] =========================================
+   RESPONSIF MOBILE
+   Masalah: .form-grid_detail_karyawan (2 kolom) dan
+   .form-grid-3_detail_karyawan (3 kolom) tanpa media query
+   membuat field di sisi kanan terpotong di layar HP.
+   Solusi: 1 kolom penuh di layar <= 768px, footer tombol
+   ditumpuk vertikal supaya tetap mudah ditekan di HP.
+   ========================================================= */
+@media (max-width: 768px) {
+  .modal-overlay_detail_karyawan {
+    padding: 12px;
+  }
+
+  .modal-container_detail_karyawan {
+    max-height: 95vh;
+  }
+
+  .modal-body_detail_karyawan {
+    padding: 16px;
+  }
+
+  .form-grid_detail_karyawan,
+  .form-grid-3_detail_karyawan {
+    grid-template-columns: 1fr;
+  }
+
+  .w-half_detail_karyawan {
+    width: 100%;
+  }
+
+  .modal-footer_detail_karyawan {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .footer-actions_detail_karyawan {
+    width: 100%;
+  }
+
+  .footer-actions_detail_karyawan button {
+    flex: 1;
+  }
+
+  .btn-delete_detail_karyawan {
+    justify-content: center;
+  }
+}
