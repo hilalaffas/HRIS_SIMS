@@ -10,8 +10,8 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
 
   // Definisi kondisi role-role khusus
   const isSuperAdmin = userRole.includes('super_admin');
-  const isHRAdmin = userRole.includes('hrd_admin') || (userRole.includes('admin') && !isSuperAdmin);
-  const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader') || userRole.includes('hrd_karyawan');
+  const isHRAdmin = userRole.includes('hrd_karyawan') || userRole.includes('hrd_admin') || userRole.includes('admin') && !isSuperAdmin;
+  const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader');
 
   // 1. DAFTAR MENU BERDASARKAN HAK AKSES (MENYESUAIKAN GAMBAR)
   
@@ -38,7 +38,7 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
       name: 'Persetujuan Cuti', 
       icon: 'fa-regular fa-circle-check', 
       badgeStyle: { backgroundColor: '#ff4d4d' }, 
-      count: notificationCounts?.approval || 1 // default ke 1 sesuai gambar jika kosong
+      count: notificationCounts?.approval ?? 0
     },
   ];
 

@@ -49,6 +49,8 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
       }
     };
     loadCalendarData();
+    const refreshTimer = window.setInterval(loadCalendarData, 30000);
+    return () => window.clearInterval(refreshTimer);
   }, [currentYear, currentMonth, refreshTrigger]);
 
   const handlePrevMonth = () => {
@@ -92,6 +94,8 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
 
       const holidayInfo = holidays[dateKey];
       const teamLeaveList = teamLeaves[dateKey] || [];
+      const dateObject = new Date(currentYear, currentMonth, i);
+      const isWeekend = dateObject.getDay() === 0 || dateObject.getDay() === 6;
       const isToday = i === todayObj.getDate() && 
                       currentMonth === todayObj.getMonth() && 
                       currentYear === todayObj.getFullYear();
@@ -105,8 +109,8 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
         isHoliday: !!holidayInfo,
         isNational: holidayInfo?.isNational || false,
         holidayId: holidayInfo?.id || null,
-        isTeamLeave: teamLeaveList.length > 0,
-        teamLeaveList,
+        isTeamLeave: teamLeaveList.length > 0 && !holidayInfo && !isWeekend,
+        teamLeaveList: !holidayInfo && !isWeekend ? teamLeaveList : [],
         agenda: holidayInfo?.name || ""
       });
     }
