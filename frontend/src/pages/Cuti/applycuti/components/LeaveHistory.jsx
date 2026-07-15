@@ -7,13 +7,13 @@ export const getFallbackDummyRiwayat = (userId, userName) => [
     userId: 'karyawan_01',
     userName: 'Andi Wijaya',            
     id: 101,
-    jenisCuti: 'CUTI TAHUNAN',
+    leaveType: 'CUTI TAHUNAN',
     stringTanggal: '25 June - 27 June 2026',
     totalHari: '3 Hari',
     status: 'Dikembalikan',
     isUnread: true,
     rawDetail: {
-      jenisCuti: 'Cuti tahunan',
+      leaveType: 'Cuti tahunan',
       dariTanggal: '2026-06-25',
       sampaiTanggal: '2026-06-27',
       totalHari: '3 Hari',
@@ -28,13 +28,13 @@ export const getFallbackDummyRiwayat = (userId, userName) => [
     userId: userId,
     userName: userName,
     id: 102,
-    jenisCuti: 'CUTI TAHUNAN',
+    leaveType: 'CUTI TAHUNAN',
     stringTanggal: '10 June - 12 June 2026',
     totalHari: '3 Hari',
     status: 'Disetujui (ACC)',
     isUnread: false,
     rawDetail: {
-      jenisCuti: 'Cuti tahunan',
+      leaveType: 'Cuti tahunan',
       dariTanggal: '2026-06-10',
       sampaiTanggal: '2026-06-12',
       totalHari: '3 Hari',
@@ -83,7 +83,6 @@ const LeaveHistory = ({
             <option value="Dalam Proses">Dalam Proses</option>
             <option value="Disetujui (ACC)">Disetujui (ACC)</option>
             <option value="Dikembalikan">Dikembalikan</option>
-            <option value="Ditolak">Ditolak</option>
           </select>
         </div>
       </div>
@@ -103,10 +102,10 @@ const LeaveHistory = ({
 
               return (
                 <div key={item.id} className={`history-item-card ${isDikembalikan ? 'border-alert-red' : ''}`}>
-                  <div className="history-item-left" onClick={isProses ? undefined : () => handleOpenDetail(item)} style={{ cursor: isProses ? 'default' : 'pointer' }}>
+                  <div className="history-item-left" onClick={() => handleOpenDetail(item)} style={{ cursor: 'pointer' }}>
                     {item.isUnread && <span className="dot-badge-item"></span>}
                     <div className="history-item-info">
-                      <span className="history-item-leave-type">{item.jenisCuti}</span>
+                      <span className="history-item-leave-type">{item.leaveType}</span>
                       <p className="history-item-dates">
                         {item.stringTanggal} {item.totalHari && `(${item.totalHari})`}
                       </p>
@@ -116,9 +115,12 @@ const LeaveHistory = ({
                   <div className="history-item-actions">
                     {isProses ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span className="status-badge-list dalam-proses">
+                        <span className="status-badge-list dalam-proses" onClick={() => handleOpenDetail(item)} style={{ cursor: 'pointer' }}>
                           DALAM PROSES
                         </span>
+                        <button type="button" className="btn-edit-inline" onClick={() => handleEditKembali(item.id)}>
+                          <i className="fa-regular fa-pen-to-square"></i> Edit
+                        </button>
                       </div>
                     ) : isDikembalikan ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

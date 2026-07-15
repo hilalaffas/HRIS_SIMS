@@ -332,3 +332,25 @@ input[type="date"]::-webkit-calendar-picker-table td:nth-child(7) {
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+/* Pastikan warna weekend tetap merah menyala walaupun di-disabled */
+.mini-day-cell.weekend:disabled {
+  color: #dc2626 !important;   /* Merah cerah */
+  opacity: 1 !important;        /* Cegah pudar otomatis oleh browser */
+  cursor: not-allowed;
+  background-color: transparent; /* Atau sesuaikan dengan tema Anda */
+}
+
+/* Pastikan warna tanggal merah nasional tetap merah menyala walaupun di-disabled */
+.mini-day-cell.holiday:disabled {
+  color: #dc2626 !important;   /* Merah cerah */
+  opacity: 1 !important;        /* Cegah pudar otomatis oleh browser */
+  cursor: not-allowed;
+  font-weight: bold;           /* Opsional: memberi aksen tebal untuk tanggal merah */
+}
+
+/* Efek opsional jika tanggal merah/weekend berada di luar bulan aktif (bulan lalu/depan) */
+.mini-day-cell.outside-month.weekend:disabled,
+.mini-day-cell.outside-month.holiday:disabled {
+  color: #fca5a5 !important;   /* Merah pudar tipis khusus untuk tanggal luar bulan */
+}
