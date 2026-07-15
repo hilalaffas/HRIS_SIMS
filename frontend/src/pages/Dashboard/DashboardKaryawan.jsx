@@ -1,9 +1,10 @@
 // src/pages/Dashboard/DashboardKaryawan.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AnnouncementSection from './components/AnnouncementSection';
 import CalendarCard from './components/CalendarCard';
 import HariLiburPanel from './components/HariLiburPanel';
 import CutiSummaryCards from './components/CutiSummaryCards';
+import { getLeaveBalance } from '../../services/CutiService';
 import './Dashboard.css';
 
 export default function DashboardKaryawan({ user }) {
@@ -17,11 +18,11 @@ export default function DashboardKaryawan({ user }) {
   });
 
   const [holidaysThisMonth, setHolidaysThisMonth] = useState([]);
+  const [sisaCutiTahunan, setSisaCutiTahunan] = useState(0);
 
-  const cutiSummary = {
-    sisaCutiTahunan: user?.sisa_cuti_tahunan ?? 8,
-    berlakuHingga: '31 Des 2026',
-  };
+  useEffect(() => {
+    getLeaveBalance().then((balance) => setSisaCutiTahunan(balance.remainingAnnualLeave ?? 0)).catch(() => setSisaCutiTahunan(0));
+  }, []);
 
   return (
     <div className="dashboard">
@@ -29,8 +30,8 @@ export default function DashboardKaryawan({ user }) {
       {/* Kolom Kiri: Card Sisa Cuti + Pengumuman */}
       <div className="dashboard__announcements">
         <CutiSummaryCards
-          sisaCutiTahunan={cutiSummary.sisaCutiTahunan}
-          berlakuHingga={cutiSummary.berlakuHingga}
+          sisaCutiTahunan={sisaCutiTahunan}
+          berlakuHingga={`31 Des ${new Date().getFullYear()}`}
         />
 
         <h2 className="dashboard__section-title">PENGUMUMAN &amp; PORTAL BERITA</h2>

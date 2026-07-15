@@ -9,11 +9,19 @@ export default function AnnouncementSection({ onEdit, onDelete }) {
   useEffect(() => {
     const loadAnnouncements = async () => {
       setIsLoading(true);
-      const data = await getAnnouncements();
-      setAnnouncements(data);
-      setIsLoading(false);
+      try {
+        const data = await getAnnouncements();
+        setAnnouncements(data);
+      } catch (error) {
+        console.error('Gagal memuat pengumuman:', error);
+        setAnnouncements([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadAnnouncements();
+    const refreshTimer = window.setInterval(loadAnnouncements, 30000);
+    return () => window.clearInterval(refreshTimer);
   }, []);
 
   if (isLoading) {
