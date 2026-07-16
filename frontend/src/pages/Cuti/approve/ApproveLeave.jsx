@@ -7,7 +7,7 @@ import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
 import ActionReasonModal from './components/ActionReasonModal';
-import { getApprovalHistory, getLeaveBalance, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
+import { getApprovalDetail, getApprovalHistory, getLeaveBalance, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
 
 /**
  * ApproveLeaving.jsx
@@ -54,7 +54,14 @@ const ApproveLeaving = () => {
 
   const pendingCount = pending.length;
 
-  const handleOpenDetail = (item) => setSelectedDetail(item);
+  const handleOpenDetail = async (item) => {
+    setSelectedDetail(item);
+    try {
+      setSelectedDetail(await getApprovalDetail(item.id));
+    } catch (err) {
+      setError(err.message || 'Gagal memuat detail cuti.');
+    }
+  };
   const handleCloseDetail = () => setSelectedDetail(null);
 
   /**

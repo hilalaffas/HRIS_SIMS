@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getApprovers, getLeaveBalance, getLeaveTypes, getRiwayatByUser, resubmitCuti, submitCuti } from '../../../services/CutiService';
+import { getApprovers, getLeaveBalance, getLeaveTypes, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../services/CutiService';
 import LeaveSummaryCard from './components/LeaveSummaryCard';
 import LeaveForm, { hariLiburNasional, hitungBatasMinTanggal } from './components/LeaveForm';
 import LeaveHistory from './components/LeaveHistory';
-import LeaveDetailModal from './components/LeaveDetailModal';
+import FormCuti from '../approve/components/Form';
 import { getAllHolidays } from '../../../services/holidayService';
 import './ApplyCuti.css';
 
@@ -89,11 +89,16 @@ const ApplyCuti = ({ user }) => {
     finally { setIsSubmitting(false); }
   };
 
-  const handleOpenDetail = (item) => setSelectedDetail({
-    ...item.rawDetail, id: item.id, pemohon: item.userName || user?.name, jenisCuti: item.jenisCuti,
-    globalStatus: item.status?.toUpperCase(), stringTanggal: item.stringTanggal,
-    logPemeriksaan: item.rawDetail?.reviewNote ? [{ nama: 'Atasan', aksi: item.status, catatan: item.rawDetail.reviewNote }] : [],
-  });
+  const handleOpenDetail = async (item) => {
+    setSelectedDetail({
+      id: item.id, karyawan: { nama: item.userName || 'Pemohon' }, jenisCuti: item.jenisCuti,
+      durasi: `${item.stringTanggal} (${item.totalHari})`, keterangan: item.rawDetail?.alasan || '-',
+      pekerjaanTertunda: item.rawDetail?.pekerjaanTertunda || '-', dicoverOleh: item.rawDetail?.coverOleh || '-',
+      statusBerkas: item.status === 'Dikembalikan' ? 'DIKEMBALIKAN' : 'PROSES', approvalChain: {}, riwayatLog: [],
+    });
+    try { setSelectedDetail(mapApproval(await getMyLeaveDetail(item.id))); }
+    catch (err) { setError(err.message || 'Gagal memuat detail cuti.'); }
+  };
 
   const handleEditKembali = (id) => {
     const item = history.find((record) => record.id === id);
@@ -127,7 +132,7 @@ const ApplyCuti = ({ user }) => {
       pekerjaanTertunda, setPekerjaanTertunda, coverOleh, setCoverOleh, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
       leaveTypes={types} approvers={approvers} isSupervisor={atasan} currentUserRole={userRole} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} />
-    {selectedDetail && <LeaveDetailModal selectedDetail={selectedDetail} onClose={() => setSelectedDetail(null)} currentUserRole={userRole} />}
+    {selectedDetail && <FormCuti data={selectedDetail} onClose={() => setSelectedDetail(null)} />}
   </div>;
 };
 export default ApplyCuti;
