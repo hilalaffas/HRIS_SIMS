@@ -50,15 +50,6 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // [PERBAIKAN DEPLOY] URL sebelumnya "https://sims-gamma-three.vercel.app/"
-        // punya trailing slash "/" di akhir. Header "Origin" yang dikirim
-        // browser TIDAK PERNAH punya trailing slash, jadi origin ini tidak
-        // akan pernah cocok -> semua request dari frontend Vercel diblok CORS
-        // secara diam-diam (biasanya muncul sebagai "Network Error" di
-        // frontend, bukan pesan error yang jelas).
-        // Ditambahkan juga wildcard *.vercel.app supaya preview deployment
-        // (URL acak tiap branch/PR) tetap bisa akses backend tanpa perlu
-        // menambah origin manual satu-satu.
         configuration.setAllowedOriginPatterns(List.of("http://localhost:5173",
                                                 "https://sims-gamma-three.vercel.app",
                                                 "https://*.vercel.app",
@@ -131,9 +122,11 @@ public class SecurityConfig {
                         // ==========================
                         // EMPLOYEE
                         // ==========================
-                        .requestMatchers(HttpMethod.GET, "/api/karyawan/approvers")   
-                        .authenticated()  
-                        
+                        // Dipakai formulir pengajuan cuti untuk memilih atasan.
+                        // Harus dideklarasikan sebelum pola /api/karyawan/** yang khusus admin.
+                        .requestMatchers(HttpMethod.GET, "/api/karyawan/approvers")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/**")
                         .hasAnyRole(ADMIN_ROLES)
 
@@ -177,6 +170,10 @@ public class SecurityConfig {
                         .hasAnyRole(APPROVER_ROLES)
 
                         .requestMatchers(HttpMethod.GET,
+                                "/api/cuti/calendar")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/cuti/**")
                         .hasAnyRole(
                                 "ADMIN",
@@ -201,6 +198,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/cuti/*/return")
                         .hasAnyRole(APPROVER_ROLES)
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/cuti/*/resubmit")
+                        .authenticated()
 
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/cuti/**")
