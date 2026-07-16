@@ -1,8 +1,17 @@
 .tab-menu-container {
   display: flex;
-  gap: 32px; /* Jarak antar kata di menu tab */
-  border-bottom: 1px solid #e2e8f0; /* Ini garis transparan/tipis kedua di bawah tab */
-  margin-bottom: 8px; /* Jarak antara tab menu dengan form di bawahnya */
+  gap: 32px; 
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 8px;
+  /* Tambahan untuk scroll horizontal */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Scroll halus di perangkat mobile */
+  scrollbar-width: none; /* Menyembunyikan scrollbar di Firefox */
+}
+
+/* Menyembunyikan scrollbar di Chrome/Safari/Edge */
+.tab-menu-container::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-item {
@@ -10,24 +19,25 @@
   border: none;
   font-size: 15px;
   font-weight: 600;
-  color: #a0aec0; /* Warna abu-abu untuk menu non-aktif */
-  padding: 0 0 12px 0; /* Jarak teks tab ke garis bawah */
+  color: #a0aec0;
+  padding: 0 0 12px 0;
   cursor: pointer;
   position: relative;
+  /* Tambahan agar teks tab tidak terlipat/mengecil saat di-scroll */
+  flex-shrink: 0;
 }
 
 .tab-item.active {
-  color: #124a35; /* Warna teks hijau gelap untuk menu aktif */
+  color: #124a35;
 }
 
-/* Indikator Garis Hijau untuk Menu Aktif */
 .tab-item.active::after {
   content: '';
   position: absolute;
-  bottom: -1px; /* Minus 1px agar garis hijaunya menutupi garis abu-abu lintasan */
+  bottom: -1px;
   left: 0;
   width: 100%;
   height: 2.5px;
   background-color: #124a35;
-  border-radius: 2px 2px 0 0; /* Sedikit melengkung di atasnya (opsional agar lebih manis) */
+  border-radius: 2px 2px 0 0;
 }
