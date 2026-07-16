@@ -9,9 +9,11 @@
  *   VITE_API_URL=http://localhost:8080
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://sims-backend-api-61je.onrender.com';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const TOKEN_KEY = 'token';
+
+export const toApiUrl = (path) => (path?.startsWith('/') ? `${BASE_URL}${path}` : path);
 
 export function setToken(token) {
   localStorage.setItem(TOKEN_KEY, token);
@@ -28,10 +30,10 @@ export function clearToken() {
 async function request(path, options = {}) {
   const token = getStoredToken();
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
+  const headers = { ...(options.headers || {}) };
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -69,5 +71,6 @@ export const api = {
   get: (path) => request(path, { method: 'GET' }),
   post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body) }),
+  putForm: (path, formData) => request(path, { method: 'PUT', body: formData }),
   delete: (path) => request(path, { method: 'DELETE' }),
 };

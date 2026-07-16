@@ -25,7 +25,7 @@ export const EMERGENCY_CONTACT_KEY = 'nomorTeleponDarurat';
 export const EMERGENCY_RELATION_KEY = 'hubunganDarurat';
 
 // Pilihan dropdown untuk field "Hubungan" (relasi dengan kontak darurat)
-export const EMERGENCY_RELATION_OPTIONS = ['Orang Tua', 'Pasangan', 'Saudara Kandung', 'Teman Dekat'];
+export const EMERGENCY_RELATION_OPTIONS = ['Orang Tua', 'Suami / Istri', 'Anak', 'Saudara Kandung', 'Lainnya'];
 
 // Konfigurasi field.
 // `lockedFor`: daftar role yang TIDAK BOLEH mengedit field ini.
