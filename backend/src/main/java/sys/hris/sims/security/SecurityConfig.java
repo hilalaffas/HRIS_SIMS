@@ -131,6 +131,9 @@ public class SecurityConfig {
                         // ==========================
                         // EMPLOYEE
                         // ==========================
+                        .requestMatchers(HttpMethod.GET, "/api/karyawan/approvers")   
+                        .authenticated()  
+                        
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/**")
                         .hasAnyRole(ADMIN_ROLES)
 
