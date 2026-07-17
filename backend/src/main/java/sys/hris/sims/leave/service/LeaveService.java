@@ -360,7 +360,8 @@ public class LeaveService {
                 cuti.getStatus().getStatusName(),
                 myApprovalStatus,
                 cuti.getReviewNote(),
-                logs
+                logs,
+                cuti.getSubmittedAt() // [BARU]
         );
     }
 

@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -22,4 +23,5 @@ public class LeaveApprovalResponse {
     private String myApprovalStatus;
     private String reviewNote;
     private List<LeaveApprovalLogResponse> approvalLogs;
+    private LocalDateTime submittedAt; // [BARU] dipakai utk timestamp notifikasi lonceng approver
 }
