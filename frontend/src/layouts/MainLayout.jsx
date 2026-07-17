@@ -62,7 +62,7 @@ export default function MainLayout({ onLogout, user }) {
         
         {/* NAVBAR / HEADER (Atas) - Menggunakan tag semantic <header> */}
         <header className="navbar-wrapper">
-          <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}/>
+          <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} user={user} />
         </header>
 
         {/* MAIN CONTENT / OUTLET (Tengah) */}
