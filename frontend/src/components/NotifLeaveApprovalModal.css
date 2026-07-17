@@ -1,0 +1,101 @@
+/* src/components/NotifLeaveApprovalModal.css */
+
+.modal-overlay_notif_leave {
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.45);
+  padding: 1rem;
+}
+
+.modal-card_notif_leave {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 420px;
+  padding: 1.75rem;
+  text-align: left;
+}
+
+.modal-icon-container_notif_leave {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  background-color: #e0f2fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.modal-icon_notif_leave {
+  font-size: 1.5rem;
+}
+
+.modal-title_notif_leave {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.75rem;
+}
+
+.modal-message_notif_leave {
+  color: #374151;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+}
+
+.modal-reason_notif_leave {
+  color: #6b7280;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+}
+
+.modal-time_notif_leave {
+  color: #6b7280;
+  font-size: 0.8rem;
+  margin: 0 0 1rem;
+}
+
+.modal-actions_notif_leave {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btn-tutup_notif_leave {
+  padding: 0.625rem 1.25rem;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-tutup_notif_leave:hover {
+  background-color: #f9fafb;
+}
+
+.btn-proses_notif_leave {
+  padding: 0.625rem 1.25rem;
+  background-color: #0284c7;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-proses_notif_leave:hover {
+  background-color: #0369a1;
+}

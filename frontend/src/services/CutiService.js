@@ -101,6 +101,7 @@ export function mapApproval(item) {
     dicoverOleh: item.coveredBy || '-',
     statusBerkas: statusCode(item.overallStatus),
     approvalChain: chain,
+    submittedAt: item.submittedAt || null, // [BARU] dipakai Navbar utk timestamp notifikasi
     riwayatLog: [
       ...submissionLog,
       ...logs.filter(log => String(log.action).toUpperCase() !== 'PENDING').map(log => ({

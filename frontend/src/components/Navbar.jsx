@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getRiwayatByUser } from '../services/CutiService'; // TAMBAHAN: Mengambil fungsi hit database service yang sama dengan ApplyCuti
+import { getRiwayatByUser, getPendingApprovals } from '../services/CutiService'; // TAMBAHAN: Mengambil fungsi hit database service yang sama dengan ApplyCuti
 // [BARU] Untuk notifikasi permintaan reset sandi (lonceng HR Admin/Super Admin)
 import { getPendingResetRequests, getPendingResetCount } from '../services/passwordResetService';
-import { isHrAdmin, isSuperAdmin } from '../utils/roles';
+import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
 import NotifPasswordResetModal from './NotifPasswordResetModal';
+import NotifLeaveApprovalModal from './NotifLeaveApprovalModal'; // [BARU]
 import './Navbar.css'; 
 
 // Tambahkan parameter object user untuk mengambil id data dari database/API
@@ -23,6 +24,17 @@ export default function Navbar({ toggleSidebar, user }) {
   const [resetRequests, setResetRequests] = useState([]);
   const [selectedResetNotif, setSelectedResetNotif] = useState(null);
   const canSeeResetNotif = isHrAdmin(user) || isSuperAdmin(user);
+
+  // [BARU] Notifikasi "ada cuti perlu diproses" -- ditujukan ke approver
+  // (Leader/SPV/Manager) yang DIPILIH SPESIFIK oleh pemohon saat submit cuti
+  // (lihat leaderEmployeeId/spvEmployeeId/managerEmployeeId di CutiService.js).
+  // Sumber data: /api/cuti/approvals/my-task, yang backend-nya SUDAH otomatis
+  // scoped ke employeeId approver yang sedang login -- jadi kalau Leader A,
+  // SPV B, Manager C dipilih di satu pengajuan, masing-masing akan melihat
+  // notifikasi ini di lonceng akun mereka sendiri saat login.
+  const [leaveApprovalTasks, setLeaveApprovalTasks] = useState([]);
+  const [selectedLeaveNotif, setSelectedLeaveNotif] = useState(null);
+  const canSeeLeaveApprovalNotif = isManagerOrSpv(user); // true utk Leader, SPV, & Manager
 
   // State tambahan untuk mendeteksi layar handphone (mobile)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -139,14 +151,6 @@ export default function Navbar({ toggleSidebar, user }) {
     raw: req,
   }));
 
-  const allNotifications = [...resetNotifications, ...notifications];
-
-  const handleNotifClick = (notif) => {
-    if (notif.type === 'password-reset') {
-      setSelectedResetNotif(notif.raw);
-    }
-  };
-
   const handleProcessReset = (request) => {
     setSelectedResetNotif(null);
     setShowDropdown(false);
@@ -156,6 +160,69 @@ export default function Navbar({ toggleSidebar, user }) {
     navigate(`/karyawan?employeeId=${request.employeeId}&resetRequestId=${request.id}`);
   };
   // === [BARU] AKHIR BAGIAN NOTIFIKASI RESET SANDI ===
+
+  // === [BARU] NOTIFIKASI "CUTI PERLU DIPROSES" (LEADER / SPV / MANAGER) ===
+  useEffect(() => {
+    if (!canSeeLeaveApprovalNotif) return;
+
+    let isMounted = true;
+
+    const fetchLeaveApprovalTasks = async () => {
+      try {
+        const data = await getPendingApprovals();
+        if (isMounted) setLeaveApprovalTasks(data || []);
+      } catch (error) {
+        console.error('Gagal memuat notifikasi cuti perlu diproses:', error);
+      }
+    };
+
+    fetchLeaveApprovalTasks();
+    // Polling ringan tiap 30 detik, sama seperti notifikasi reset sandi.
+    const intervalId = setInterval(fetchLeaveApprovalTasks, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [canSeeLeaveApprovalNotif]);
+
+  const leaveApprovalNotifications = leaveApprovalTasks.map((task) => ({
+    id: `leave-${task.id}`,
+    text: (
+      <>
+        <strong>{task.karyawan?.nama}</strong> mengajukan{' '}
+        <strong>{task.jenisCuti}</strong>, perlu diproses.
+      </>
+    ),
+    date: task.submittedAt
+      ? new Date(task.submittedAt).toLocaleDateString('id-ID', {
+          day: 'numeric', month: 'long', year: 'numeric',
+        })
+      : '-',
+    type: 'leave-approval',
+    raw: task,
+  }));
+
+  const handleProcessLeaveApproval = (task) => {
+    setSelectedLeaveNotif(null);
+    setShowDropdown(false);
+    // Arahkan ke halaman Approve Cuti sambil bawa leaveRequestId lewat query
+    // string -- ApproveLeave.jsx yang akan otomatis membuka detail
+    // pengajuan cuti yang bersangkutan (lihat ApproveLeave.jsx).
+    navigate(`/ApproveLeave?leaveRequestId=${task.id}`);
+  };
+  // === [BARU] AKHIR BAGIAN NOTIFIKASI CUTI PERLU DIPROSES ===
+
+  // Gabungan SEMUA jenis notifikasi jadi satu daftar/satu badge angka.
+  const allNotifications = [...leaveApprovalNotifications, ...resetNotifications, ...notifications];
+
+  const handleNotifClick = (notif) => {
+    if (notif.type === 'password-reset') {
+      setSelectedResetNotif(notif.raw);
+    } else if (notif.type === 'leave-approval') {
+      setSelectedLeaveNotif(notif.raw);
+    }
+  };
 
   // Effect untuk meng-update tanggal secara otomatis dalam format Indonesia & Deteksi ukuran layar
   useEffect(() => {
@@ -244,7 +311,7 @@ export default function Navbar({ toggleSidebar, user }) {
                       key={notif.id}
                       className="notification-item"
                       onClick={() => handleNotifClick(notif)}
-                      style={notif.type === 'password-reset' ? { cursor: 'pointer' } : undefined}
+                      style={['password-reset', 'leave-approval'].includes(notif.type) ? { cursor: 'pointer' } : undefined}
                     >
                       <div className="notification-icon-wrapper">
                         {notif.type === 'returned' && (
@@ -273,6 +340,14 @@ export default function Navbar({ toggleSidebar, user }) {
                             <path d="M11 12h5m0 0v2m0-2v-2" stroke="#8b5cf6" strokeWidth="1.8" strokeLinecap="round"/>
                           </svg>
                         )}
+                        {/* [BARU] Ikon khusus notifikasi cuti perlu diproses */}
+                        {notif.type === 'leave-approval' && (
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="icon-svg-leave-approval">
+                            <rect x="3" y="4" width="18" height="17" rx="2" stroke="#0284c7" strokeWidth="2"/>
+                            <path d="M3 9h18M8 2v4M16 2v4" stroke="#0284c7" strokeWidth="2" strokeLinecap="round"/>
+                            <circle cx="12" cy="14.5" r="1.6" fill="#0284c7"/>
+                          </svg>
+                        )}
                       </div>
 
                       <div className="notification-content">
@@ -280,6 +355,9 @@ export default function Navbar({ toggleSidebar, user }) {
                         <span className="notification-time">{notif.date}</span>
                         {notif.type === 'password-reset' && (
                           <span className="notification-action-hint">Klik untuk memproses →</span>
+                        )}
+                        {notif.type === 'leave-approval' && (
+                          <span className="notification-action-hint notification-action-hint_leave">Klik untuk memproses →</span>
                         )}
                       </div>
                     </li>
@@ -297,6 +375,13 @@ export default function Navbar({ toggleSidebar, user }) {
         request={selectedResetNotif}
         onClose={() => setSelectedResetNotif(null)}
         onProcess={handleProcessReset}
+      />
+
+      {/* [BARU] Modal detail notifikasi cuti perlu diproses */}
+      <NotifLeaveApprovalModal
+        request={selectedLeaveNotif}
+        onClose={() => setSelectedLeaveNotif(null)}
+        onProcess={handleProcessLeaveApproval}
       />
     </header>
   );

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom'; // [BARU] baca query param dari notifikasi cuti
 import './ApproveLeave.css';
 
 import HeadlineApproval from './components/HeadlineApproval';
@@ -33,6 +34,7 @@ import { getApprovalDetail, getApprovalHistory, getLeaveBalance, getPendingAppro
 const ApproveLeaving = () => {
   const [activeTab, setActiveTab] = useState("proses"); // 'proses' | 'list'
   const [selectedDetail, setSelectedDetail] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams(); // [BARU]
 
   const [pending, setPending] = useState([]);
   const [history, setHistory] = useState([]);
@@ -63,6 +65,24 @@ const ApproveLeaving = () => {
     }
   };
   const handleCloseDetail = () => setSelectedDetail(null);
+
+  // [BARU] Auto-buka detail pengajuan cuti kalau halaman ini diakses dari
+  // notifikasi "Cuti Perlu Diproses" (query param leaveRequestId, dikirim
+  // dari Navbar.jsx). Menunggu `pending` terisi dulu supaya pencariannya
+  // tidak sia-sia, lalu bersihkan query param supaya tidak auto-buka lagi.
+  useEffect(() => {
+    const leaveRequestIdParam = searchParams.get('leaveRequestId');
+    if (!leaveRequestIdParam || pending.length === 0) return;
+
+    const target = pending.find((item) => String(item.id) === String(leaveRequestIdParam));
+    if (target) {
+      setActiveTab('proses');
+      handleOpenDetail(target);
+    }
+
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending]);
 
   /**
    * Langkah 1: tombol ACC/Revisi/Tolak diklik di ApproveSection.

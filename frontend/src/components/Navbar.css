@@ -258,6 +258,11 @@
   font-weight: 600;
 }
 
+/* [BARU] Varian warna biru untuk hint notifikasi cuti perlu diproses */
+.notification-action-hint_leave {
+  color: #0284c7;
+}
+
 .notification-empty {
   padding: 2rem 1.5rem;
   font-size: 0.9rem;
