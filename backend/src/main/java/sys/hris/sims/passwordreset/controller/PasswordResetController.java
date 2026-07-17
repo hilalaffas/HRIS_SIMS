@@ -16,7 +16,7 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.passwordreset.dto.ApprovePasswordResetRequest;
 import sys.hris.sims.passwordreset.dto.ForgotPasswordRequest;
 import sys.hris.sims.passwordreset.dto.PasswordResetResponse;
-import sys.hris.sims.passwordreset.entity.PasswordResetRequest;
+import sys.hris.sims.passwordreset.dto.PendingPasswordResetResponse;
 import sys.hris.sims.passwordreset.service.PasswordResetService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
@@ -58,7 +58,7 @@ public class PasswordResetController {
 
     @GetMapping("/pending")
     @PreAuthorize("hasAnyRole('ADMIN','HRD_ADMIN','SUPER_ADMIN')")
-    public ResponseEntity<List<PasswordResetRequest>> getPendingRequests(
+    public ResponseEntity<List<PendingPasswordResetResponse>> getPendingRequests(
             Authentication authentication, 
             HttpServletRequest httpRequest) {
 

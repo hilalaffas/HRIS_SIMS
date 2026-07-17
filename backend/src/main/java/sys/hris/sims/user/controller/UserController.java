@@ -16,6 +16,9 @@ import sys.hris.sims.user.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+// [BARU] dibutuhkan untuk auto-approve permintaan reset password, lihat
+// blok passwordResetRequestId di updateUser() di bawah.
+import sys.hris.sims.passwordreset.service.PasswordResetService;
 
 @RestController
 @RequestMapping("/api/users")
@@ -24,15 +27,18 @@ public class UserController {
     private final RoleRepository rolesRepository;
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
+    private final PasswordResetService passwordResetService; // [BARU]
 
     public UserController(UserRepository userRepository,
                           RoleRepository rolesRepository,
                           PasswordEncoder passwordEncoder,
-                          ActivityLogService activityLogService) {
+                          ActivityLogService activityLogService,
+                          PasswordResetService passwordResetService) {
         this.userRepository = userRepository;
         this.rolesRepository = rolesRepository;
         this.passwordEncoder = passwordEncoder;
         this.activityLogService = activityLogService;
+        this.passwordResetService = passwordResetService; // [BARU]
     }
 
     // Helper untuk konsistensi data log
@@ -143,12 +149,33 @@ public class UserController {
             user.setRoleId(role);
         }
 
-        if (request.getPassword() != null &&
-                !request.getPassword().isBlank()) {
+        boolean passwordChanged = request.getPassword() != null &&
+                !request.getPassword().isBlank();
+
+        if (passwordChanged) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
         userRepository.save(user);
+
+        // [BARU] Auto-approve permintaan reset password (kalau ada & password
+        // memang diganti). Dibungkus try/catch sendiri: kalau gagal (mis. id
+        // sudah tidak PENDING lagi), password yang SUDAH tersimpan di atas
+        // tidak ikut batal -- cukup dicatat di activity log sebagai peringatan.
+        if (passwordChanged && request.getPasswordResetRequestId() != null) {
+            try {
+                passwordResetService.markResolved(request.getPasswordResetRequestId(), authentication);
+            } catch (Exception e) {
+                activityLogService.log(
+                        getUsername(authentication),
+                        getCurrentUserId(authentication),
+                        "AUTO_RESOLVE_RESET_FAILED",
+                        "password_resets",
+                        request.getPasswordResetRequestId(),
+                        "Password user " + user.getUsername() + " berhasil diganti, tapi gagal menandai permintaan reset selesai: " + e.getMessage(),
+                        httpRequest);
+            }
+        }
 
         activityLogService.log(
                 getUsername(authentication),
