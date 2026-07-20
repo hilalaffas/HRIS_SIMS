@@ -11,3 +11,5 @@ Web portal perusahaan berbasis React (Vite) yang mencakup fitur Absensi, Cuti, d
 1. Pastikan Node.js sudah terinstal.
 2. Jalankan `npm install` untuk mengunduh dependencies.
 3. Jalankan `npm run dev` untuk menyalakan server lokal.
+
+ok
