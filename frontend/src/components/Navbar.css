@@ -111,19 +111,37 @@
   color: #2A6B4F;
 }
 
+@keyframes notifBadgePulse {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 14px 5px rgba(239, 68, 68, 0.9);
+    opacity: 0.65;
+  }
+}
+
 /* Badge Lingkaran Merah Menyala di Atas Lonceng */
 .notification-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 0.5rem;
-  height: 0.5rem;
+  top: -4px;
+  right: -6px;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
   background-color: #ef4444;
   border-radius: 9999px;
   border: 1.5px solid #ffffff;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  animation: notifBadgePulse 1.4s ease-in-out infinite;
 }
-
 /* --- CSS TAMBAHAN UNTUK DROPDOWN NOTIFIKASI PERSIS SEPERTI GAMBAR --- */
 
 .notification-container {
