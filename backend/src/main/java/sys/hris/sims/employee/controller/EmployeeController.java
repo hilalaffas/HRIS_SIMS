@@ -1,31 +1,40 @@
 package sys.hris.sims.employee.controller;
 
-import lombok.RequiredArgsConstructor;
-import sys.hris.sims.employee.entity.Employee;
-import sys.hris.sims.employee.service.EmployeeService;
-import sys.hris.sims.user.repository.UserRepository;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import jakarta.servlet.http.HttpServletRequest;
-
-import java.util.List;
-import java.util.Map;
-import sys.hris.sims.activity_logs.service.ActivityLogService;
-import org.springframework.security.core.Authentication;
-
-import sys.hris.sims.user.entity.User;
-
-import sys.hris.sims.employee.dto.UpdateEmployeeRequest;
-import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
-import sys.hris.sims.divisi.entity.Divisi;
-import sys.hris.sims.divisi.repository.DivisiRepository;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.divisi.entity.Divisi;
+import sys.hris.sims.divisi.repository.DivisiRepository;
+import sys.hris.sims.employee.dto.UpdateEmployeeRequest;
+import sys.hris.sims.employee.entity.Employee;
+import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
+import sys.hris.sims.employee.service.EmployeeService;
+import sys.hris.sims.user.entity.User;
+import sys.hris.sims.user.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/karyawan")
@@ -192,6 +201,42 @@ public class EmployeeController {
 
         // [BARU] Status akun
         if (request.getIsActive() != null) employee.setIsActive(request.getIsActive());
+
+        // [PERBAIKAN BUG] Buka kunci login (users.is_active) saat HR
+        // mengaktifkan kembali status karyawan.
+        //
+        // Akar masalah: ada DUA kolom "aktif" yang terpisah -- employees.is_active
+        // (status kepegawaian, diatur toggle "Status" di form ini) dan
+        // users.is_active (kunci akun, di-set false OTOMATIS oleh
+        // AuthController.login() saat user 3x salah password). Form ini SELAMA
+        // INI cuma menyentuh employees.is_active, jadi walau HR sudah pilih
+        // "Aktif" di sini, users.is_active tetap false dan login tetap ditolak
+        // (lihat pengecekan `if (!user.getIsActive())` di AuthController.login()).
+        //
+        // Karena label form ini "status keaktifan akun" (bukan cuma status
+        // kepegawaian), yang paling sesuai ekspektasi HR: begitu status
+        // di-set "Aktif", otomatis buka juga kunci login-nya.
+        if (Boolean.TRUE.equals(request.getIsActive()) && employee.getUser() != null) {
+            User akunLogin = employee.getUser();
+            boolean akunSedangTerkunci = !Boolean.TRUE.equals(akunLogin.getIsActive())
+                    || akunLogin.getFailedAttempts() > 0;
+
+            if (akunSedangTerkunci) {
+                akunLogin.setIsActive(true);
+                akunLogin.setFailedAttempts(0);
+                userRepository.save(akunLogin);
+
+                activityLogService.log(
+                        authentication.getName(),
+                        getCurrentUserId(authentication),
+                        "ACCOUNT_UNLOCKED",
+                        "users",
+                        akunLogin.getUserId(),
+                        "Akun login " + akunLogin.getUsername() + " dibuka kembali (unlock) karena status karyawan diaktifkan oleh HR",
+                        httpRequest
+                );
+            }
+        }
 
         // [BARU] Tanggal gabung
         if (isNotBlank(request.getJoinDate())) {
