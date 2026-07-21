@@ -32,7 +32,7 @@ import org.springframework.http.MediaType;
 @RequiredArgsConstructor
 public class EmployeeController {
 
-    private final EmployeeService karyawanService;    
+    private final EmployeeService karyawanService;
     private final ActivityLogService activityLogService;
 
     private final UserRepository userRepository;
@@ -50,6 +50,10 @@ public class EmployeeController {
     // GET semua karyawan
     @GetMapping
     public ResponseEntity<List<Employee>> getAllKaryawan(Authentication authentication, HttpServletRequest httpRequest) {
+        
+        // [MERGED] catat activity log dari file kedua
+        activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_ALL_KARYAWAN", "employees", null, "Melihat semua data karyawan", httpRequest);
+
         return ResponseEntity.ok(karyawanService.getAllKaryawan());
     }
 
@@ -60,11 +64,19 @@ public class EmployeeController {
             Authentication authentication,
             HttpServletRequest httpRequest) {
 
-        List<Map<String, Object>> response = karyawanService.getApproversByRole(role).stream()
+        // [MERGED] catat activity log dan logika filter divisi dari file kedua
+        activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_APPROVERS", "employees", null, "Melihat daftar approver role: " + role, httpRequest);
+
+        Employee requester = karyawanService.getKaryawanByUsername(authentication.getName());
+        Long divisiId = requester.getDivisi() == null ? null : requester.getDivisi().getId();
+
+        List<Map<String, Object>> response = karyawanService.getApproversByRoleAndDivisi(role, divisiId).stream()
                 .map(employee -> Map.<String, Object>of(
                         "employeeId", employee.getEmployeeId(),
                         "fullName", employee.getFullName(),
-                        "roleName", employee.getUser().getRoleId().getRoleName()
+                        "roleName", employee.getUser().getRoleId().getRoleName(),
+                        "divisiId", employee.getDivisi().getId(),
+                        "namaDivisi", employee.getDivisi().getNamaDivisi()
                 ))
                 .toList();
 
@@ -72,8 +84,7 @@ public class EmployeeController {
     }
 
     // GET profil karyawan milik user yang sedang login (dipakai halaman Profile).
-    // Ditaruh sebelum /{id} supaya jelas ini endpoint khusus, meski Spring MVC
-    // tetap akan mencocokkan /me secara literal lebih spesifik daripada /{id}.
+    // Mempertahankan method ini dari file pertama.
     @GetMapping("/me")
     public ResponseEntity<Employee> getMyProfile(Authentication authentication, HttpServletRequest httpRequest) {
 
@@ -84,19 +95,19 @@ public class EmployeeController {
 
         return ResponseEntity.ok(me);
     }
+    
     // GET karyawan by ID
     @GetMapping("/{id}")
     public ResponseEntity<Employee> getKaryawanById(@PathVariable Long id, Authentication authentication, HttpServletRequest httpRequest) {
+        
+        // [MERGED] catat activity log dari file kedua
+        activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_KARYAWAN", "employees", id, "Melihat detail karyawan id: " + id, httpRequest);
+        
         return ResponseEntity.ok(karyawanService.getKaryawanById(id));
     }
 
     // PUT update profil milik user yang sedang login (dipakai halaman Profile).
-    // Beda dari PUT /{id} (khusus admin): endpoint ini SENGAJA tidak memproses
-    // field yang terkunci untuk semua role (nikKaryawan, divisiId, gender,
-    // tanggal bergabung) walau field itu ada di UpdateEmployeeRequest — supaya
-    // user tidak bisa mengubahnya lewat endpoint profil sendiri, kirim manual
-    // sekalipun (mis. lewat Postman). Perubahan data itu tetap harus lewat
-    // modul HR/Karyawan yang memakai endpoint admin.
+    // Mempertahankan method ini dari file pertama.
     @PutMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateMyProfile(
             @ModelAttribute UpdateEmployeeRequest request,
@@ -143,6 +154,7 @@ public class EmployeeController {
 
         return ResponseEntity.ok(updated);
     }
+    
     // POST tambah karyawan
     @PostMapping
     public ResponseEntity<Employee> createKaryawan(@RequestBody Employee karyawan, Authentication authentication, HttpServletRequest httpRequest) {
@@ -156,21 +168,17 @@ public class EmployeeController {
     }
 
     // PUT update karyawan
+    // Mempertahankan fungsi baru (Position, isActive, joinDate) dari file pertama
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateKaryawan(
             @PathVariable Long id,
-            @ModelAttribute UpdateEmployeeRequest request, // Gunakan @ModelAttribute
+            @ModelAttribute UpdateEmployeeRequest request, 
             Authentication authentication, 
             HttpServletRequest httpRequest) {
 
         // 1. Ambil data karyawan lama
         Employee employee = karyawanService.getKaryawanById(id);
 
-        // 2. Update field data biasa -- HANYA timpa field yang benar-benar
-        // dikirim dari form. Sebelumnya semua field ditimpa tanpa syarat,
-        // jadi kalau form pengirim tidak punya input untuk field tertentu
-        // (mis. ModalDetailKaryawan tidak punya input gender / nama kontak
-        // darurat), field itu ikut kehapus jadi kosong setiap kali disimpan.
         if (isNotBlank(request.getFullName())) employee.setFullName(request.getFullName());
         if (isNotBlank(request.getAddress())) employee.setAddress(request.getAddress());
         if (isNotBlank(request.getPhoneNumber())) employee.setPhoneNumber(request.getPhoneNumber());
@@ -179,15 +187,13 @@ public class EmployeeController {
         if (isNotBlank(request.getEmergencyContactName())) employee.setEmergencyContactName(request.getEmergencyContactName());
         if (isNotBlank(request.getEmergencyContactPhone())) employee.setEmergencyContactPhone(request.getEmergencyContactPhone());
 
-        // [BARU] Jabatan (position) -- kolom baru, lihat migration V20
+        // [BARU] Jabatan (position)
         if (isNotBlank(request.getPosition())) employee.setPosition(request.getPosition());
 
-        // [BARU] Status akun (Aktif / Nonaktif). Dicek != null (bukan isNotBlank)
-        // karena ini Boolean, bukan String.
+        // [BARU] Status akun
         if (request.getIsActive() != null) employee.setIsActive(request.getIsActive());
 
-        // [BARU] Tanggal gabung. Dikirim frontend sebagai String "yyyy-MM-dd"
-        // (bawaan <input type="date">), jadi perlu di-parse manual ke LocalDate.
+        // [BARU] Tanggal gabung
         if (isNotBlank(request.getJoinDate())) {
             try {
                 employee.setJoinDate(LocalDate.parse(request.getJoinDate()));

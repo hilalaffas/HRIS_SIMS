@@ -64,6 +64,15 @@ public class LeaveService {
         return cutiRepository.findByEmployee_EmployeeId(employeeId);
     }
 
+    public LeaveApprovalResponse getMyLeaveDetail(Long leaveRequestId, String username) {
+        Employee requester = getEmployeeByUsername(username);
+        LeaveRequest cuti = getCutiById(leaveRequestId);
+        if (!cuti.getEmployee().getEmployeeId().equals(requester.getEmployeeId())) {
+            throw new RuntimeException("Anda tidak memiliki akses ke detail cuti ini");
+        }
+        return toApprovalResponse(cuti, null);
+    }
+
     public List<LeaveRequest> getCalendarLeaves(int year) {
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end = LocalDate.of(year, 12, 31);
@@ -78,6 +87,7 @@ public class LeaveService {
         return createCuti(cuti, null);
     }
 
+    @Transactional
     public LeaveRequest createCuti(LeaveRequest cuti, String requesterUsername) {
         Employee requester = cuti.getEmployee();
         if (requester == null && requesterUsername != null) {
@@ -109,14 +119,7 @@ public class LeaveService {
     }
 
     /**
-     * [BARU] Cuti Darurat/Susulan yang diinput HR Admin/Super Admin atas nama
-     * karyawan (mis. karyawan berduka & tidak sempat mengajukan sendiri).
-     * Sesuai keputusan bisnis: begitu disubmit dari halaman HRD/Super Admin,
-     * status langsung APPROVED (auto-ACC) — TIDAK masuk antrean pending
-     * Leader/SPV/Manager manapun. Leader/SPV/Manager tetap dipilih di form
-     * hanya untuk keperluan pencatatan/audit trail (BR-07, FR-029, UC-15).
-     * Endpoint pemanggilnya (POST /api/cuti/urgent) sudah dibatasi role
-     * HRD_ADMIN & SUPER_ADMIN di SecurityConfig.
+     * Cuti Darurat/Susulan yang diinput HR Admin/Super Admin atas nama karyawan
      */
     @Transactional
     public LeaveRequest createUrgentCuti(LeaveRequest cuti, String hrUsername) {
@@ -205,6 +208,17 @@ public class LeaveService {
                         || cuti.getStatus().getStatusName().equalsIgnoreCase(status))
                 .map(cuti -> toApprovalResponse(cuti, approver.getEmployeeId()))
                 .toList();
+    }
+
+    public LeaveApprovalResponse getApprovalDetail(Long leaveRequestId, String username) {
+        Employee approver = getCurrentApprover(username);
+        boolean assignedToApprover = approvalRepository
+                .findByLeaveRequest_LeaveRequestIdAndApproverEmployee_EmployeeId(leaveRequestId, approver.getEmployeeId())
+                .isPresent();
+        if (!assignedToApprover) {
+            throw new RuntimeException("Anda tidak memiliki akses ke detail cuti ini");
+        }
+        return toApprovalResponse(getCutiById(leaveRequestId), approver.getEmployeeId());
     }
 
     public LeaveBalanceResponse getMyLeaveBalance(String username) {
@@ -342,27 +356,22 @@ public class LeaveService {
                 throw new RuntimeException("Cuti Leader/SPV/Manager hanya boleh memilih approver Manager");
             }
 
-            Employee manager = getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER);
+            Employee manager = getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, requester);
             if (manager.getEmployeeId().equals(requester.getEmployeeId())) {
                 throw new RuntimeException("Manager tidak boleh approve cuti miliknya sendiri");
             }
             approvals.add(buildApproval(cuti, ROLE_MANAGER, manager));
         } else {
-            approvals.add(buildApproval(cuti, ROLE_LEADER, getSelectedApprover(cuti.getLeaderEmployeeId(), ROLE_LEADER)));
-            approvals.add(buildApproval(cuti, ROLE_SPV, getSelectedApprover(cuti.getSpvEmployeeId(), ROLE_SPV)));
-            approvals.add(buildApproval(cuti, ROLE_MANAGER, getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER)));
+            approvals.add(buildApproval(cuti, ROLE_LEADER, getSelectedApprover(cuti.getLeaderEmployeeId(), ROLE_LEADER, requester)));
+            approvals.add(buildApproval(cuti, ROLE_SPV, getSelectedApprover(cuti.getSpvEmployeeId(), ROLE_SPV, requester)));
+            approvals.add(buildApproval(cuti, ROLE_MANAGER, getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, requester)));
         }
 
         approvalRepository.saveAll(approvals);
     }
 
     /**
-     * [BARU] Versi auto-approved dari createApprovalSteps, khusus alur Cuti
-     * Susulan/Darurat oleh HR (createUrgentCuti). Leader/SPV/Manager yang
-     * dipilih tetap dicatat sebagai baris approval, tapi langsung berstatus
-     * APPROVED dengan catatan bahwa ini bypass dari HR — bukan PENDING,
-     * supaya TIDAK muncul di antrean tugas approval mereka
-     * (lihat getApprovalTasks yang hanya membaca action == PENDING).
+     * Versi auto-approved dari createApprovalSteps, khusus alur Cuti Susulan/Darurat
      */
     private void createApprovalStepsAutoApproved(LeaveRequest cuti, Employee targetEmployee, Employee hrActor) {
         List<LeaveRequestApproval> approvals = new ArrayList<>();
@@ -374,12 +383,12 @@ public class LeaveService {
             if (hasValue(cuti.getLeaderEmployeeId()) || hasValue(cuti.getSpvEmployeeId())) {
                 throw new RuntimeException("Karyawan berperan Leader/SPV/Manager, cukup pilih approver Manager saja");
             }
-            Employee manager = getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER);
+            Employee manager = getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, targetEmployee);
             approvals.add(buildApproval(cuti, ROLE_MANAGER, manager, ACTION_APPROVED, autoNote, actedAt));
         } else {
-            approvals.add(buildApproval(cuti, ROLE_LEADER, getSelectedApprover(cuti.getLeaderEmployeeId(), ROLE_LEADER), ACTION_APPROVED, autoNote, actedAt));
-            approvals.add(buildApproval(cuti, ROLE_SPV, getSelectedApprover(cuti.getSpvEmployeeId(), ROLE_SPV), ACTION_APPROVED, autoNote, actedAt));
-            approvals.add(buildApproval(cuti, ROLE_MANAGER, getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER), ACTION_APPROVED, autoNote, actedAt));
+            approvals.add(buildApproval(cuti, ROLE_LEADER, getSelectedApprover(cuti.getLeaderEmployeeId(), ROLE_LEADER, targetEmployee), ACTION_APPROVED, autoNote, actedAt));
+            approvals.add(buildApproval(cuti, ROLE_SPV, getSelectedApprover(cuti.getSpvEmployeeId(), ROLE_SPV, targetEmployee), ACTION_APPROVED, autoNote, actedAt));
+            approvals.add(buildApproval(cuti, ROLE_MANAGER, getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, targetEmployee), ACTION_APPROVED, autoNote, actedAt));
         }
 
         approvalRepository.saveAll(approvals);
@@ -431,7 +440,7 @@ public class LeaveService {
                 myApprovalStatus,
                 cuti.getReviewNote(),
                 logs,
-                cuti.getSubmittedAt() // [BARU]
+                cuti.getSubmittedAt()
         );
     }
 
@@ -492,7 +501,7 @@ public class LeaveService {
         return value != null && value > 0;
     }
 
-    private Employee getSelectedApprover(Long employeeId, String expectedRole) {
+    private Employee getSelectedApprover(Long employeeId, String expectedRole, Employee requester) {
         if (!hasValue(employeeId)) {
             throw new RuntimeException("Approver " + expectedRole + " wajib dipilih");
         }
@@ -503,6 +512,18 @@ public class LeaveService {
 
         if (!expectedRole.equals(role)) {
             throw new RuntimeException("Approver yang dipilih harus memiliki role " + expectedRole);
+        }
+
+        if (!Boolean.TRUE.equals(employee.getIsActive())) {
+            throw new RuntimeException("Approver " + expectedRole + " sudah tidak aktif");
+        }
+
+        if (requester.getDivisi() == null) {
+            throw new RuntimeException("Divisi pemohon belum ditentukan");
+        }
+        if (employee.getDivisi() == null
+                || !requester.getDivisi().getId().equals(employee.getDivisi().getId())) {
+            throw new RuntimeException("Approver " + expectedRole + " harus berasal dari divisi yang sama dengan pemohon");
         }
 
         return employee;
@@ -528,8 +549,7 @@ public class LeaveService {
         return buildApproval(cuti, role, approver, ACTION_PENDING, null, null);
     }
 
-    // [BARU] Overload untuk baris approval yang langsung final (dipakai alur
-    // Cuti Susulan HR yang auto-ACC, lihat createApprovalStepsAutoApproved).
+    // Overload untuk baris approval yang langsung final (Cuti Susulan HR auto-ACC)
     private LeaveRequestApproval buildApproval(LeaveRequest cuti, String role, Employee approver, String action, String note, LocalDateTime actedAt) {
         return LeaveRequestApproval.builder()
                 .leaveRequest(cuti)
