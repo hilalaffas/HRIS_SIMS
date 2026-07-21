@@ -35,11 +35,11 @@ export const getLeaveTypes = () => api.get('/api/jenis-cuti');
 export async function submitCuti(payload) {
   const body = {
     leaveType: { leaveTypeId: Number(payload.leaveTypeId) },
-    startDate: payload.startDate,
-    endDate: payload.endDate,
-    reason: payload.reason,
-    pendingWork: payload.pendingWork,
-    coveredBy: payload.coveredBy,
+    startDate: payload.startDate || payload.dariTanggal,
+    endDate: payload.endDate || payload.sampaiTanggal,
+    reason: payload.reason || payload.alasan,
+    pendingWork: payload.pendingWork || payload.pekerjaanTertunda,
+    coveredBy: payload.coveredBy || payload.coverOleh,
     leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
     spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
     managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
@@ -47,13 +47,30 @@ export async function submitCuti(payload) {
   return api.post('/api/cuti', body);
 }
 
+// [BARU MERGED] Cuti Susulan/Darurat oleh HR Admin/Super Admin
+export async function submitUrgentCuti(payload) {
+  const body = {
+    employee: { employeeId: Number(payload.karyawanId) },
+    leaveType: { leaveTypeId: Number(payload.leaveTypeId) },
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+    reason: payload.alasan || payload.reason,
+    pendingWork: payload.pekerjaanTertunda || payload.pendingWork,
+    coveredBy: payload.dicoverOleh || payload.coveredBy,
+    leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
+    spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
+    managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
+  };
+  return api.post('/api/cuti/urgent', body);
+}
+
 export const resubmitCuti = (id, payload) => api.put(`/api/cuti/${id}/resubmit`, {
   leaveType: { leaveTypeId: Number(payload.leaveTypeId) },
-  startDate: payload.startDate,
-  endDate: payload.endDate,
-  reason: payload.reason,
-  pendingWork: payload.pendingWork,
-  coveredBy: payload.coveredBy,
+  startDate: payload.startDate || payload.dariTanggal,
+  endDate: payload.endDate || payload.sampaiTanggal,
+  reason: payload.reason || payload.alasan,
+  pendingWork: payload.pendingWork || payload.pekerjaanTertunda,
+  coveredBy: payload.coveredBy || payload.coverOleh,
   leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
   spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
   managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
@@ -157,6 +174,7 @@ export function mapApproval(item, employeeLookup = {}) {
     coveredBy: item.coveredBy || '-',
     statusBerkas: statusCode(item.overallStatus || item.status?.statusName || item.status),
     approvalChain: chain,
+    submittedAt: item.submittedAt || null, 
     riwayatLog: [
       ...submissionLog,
       ...logs.filter(log => String(log.action).toUpperCase() !== 'PENDING').map(log => ({
@@ -167,6 +185,36 @@ export function mapApproval(item, employeeLookup = {}) {
       })),
     ],
   };
+}
+
+// [BARU MERGED] Dipakai tab "Cuti Karyawan" di halaman Manajemen Karyawan (HR/Super Admin)
+export function mapKaryawanLeave(item) {
+  const status = item.status?.statusName || item.status || 'PENDING';
+  const hasBeenReviewed = String(status).toUpperCase() !== 'PENDING';
+
+  return {
+    id: item.leaveRequestId,
+    karyawan: { nama: item.employee?.fullName, kode: item.employee?.nikKaryawan || '-' },
+    jenisCuti: item.leaveType?.name || 'Cuti',
+    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${item.totalDays || 0} Hari)`,
+    statusBerkas: statusCode(status),
+    keterangan: item.reason || '-',
+    pekerjaanTertunda: item.pendingWork || '-',
+    dicoverOleh: item.coveredBy || '-',
+    approvalChain: { leader: '-', spv: '-', manager: '-' },
+    riwayatLog: hasBeenReviewed ? [{
+      nama: item.reviewedBy?.fullName || 'Sistem',
+      waktu: logDateText(item.approvedAt || item.returnedAt),
+      statusBadge: logStatusLabel(status),
+      catatan: item.reviewNote || '-',
+    }] : [],
+  };
+}
+
+// [BARU MERGED] Mengambil seluruh cuti untuk HR
+export async function getAllLeaveRequestsForHr() {
+  const res = await api.get('/api/cuti');
+  return Array.isArray(res) ? res.map(mapKaryawanLeave) : [];
 }
 
 export const getPendingApprovals = async () => {
