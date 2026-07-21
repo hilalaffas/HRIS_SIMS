@@ -86,7 +86,7 @@ public class PasswordResetService {
         // Tidak semua User pasti punya baris di tabel employees (mis. akun
         // sistem), jadi employeeId dkk boleh null -- frontend perlu menangani
         // kemungkinan ini (tombol "Proses" disembunyikan/nonaktif kalau null).
-        Employee employee = employeeRepository.findByUser(user).orElse(null);
+        Employee employee = employeeRepository.findFirstByUserOrderByEmployeeIdAsc(user).orElse(null);
 
         return PendingPasswordResetResponse.builder()
                 .id(request.getId())

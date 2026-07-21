@@ -27,7 +27,7 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
       name: 'Manajemen Cuti Saya', 
       icon: 'fa-regular fa-calendar-check',
       // Menampilkan dot merah statis/notifikasi sesuai Gambar 1 (Karyawan) jika diperlukan
-      hasDot: true 
+      hasDot: notificationCounts?.leaveRequest ?? false
     });
   }
 

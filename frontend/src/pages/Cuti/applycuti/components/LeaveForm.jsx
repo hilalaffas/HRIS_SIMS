@@ -47,6 +47,7 @@ const LeaveForm = ({
   jumlahHariCuti = 0,
   canApplyCuti,
   todayStr,
+  currentUserRole,
   leaveTypes = [],
   approvers = { LEADER: [], SPV: [], MANAGER: [] },
   isSupervisor = false,
@@ -67,8 +68,8 @@ const LeaveForm = ({
   const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType);
   const isHalfDayLeave = normalizedLeaveType === 'cuti setengah hari';
 
-  const approverDivisi = [...approvers.LEADER, ...approvers.SPV, ...approvers.MANAGER]
-    .find(person => person.namaDivisi)?.namaDivisi;
+  // Format deteksi huruf kecil untuk mencegah kesalahan penulisan string role
+  const isKaryawan = currentUserRole?.toLowerCase() === 'karyawan';
 
   useEffect(() => {
     if (dariTanggal) {
@@ -223,11 +224,6 @@ const LeaveForm = ({
 
         <div className="form-group">
           <label className="form-label">PILIH ALUR APPROVAL CUTI *</label>
-          {approverDivisi && (
-            <div className="duration-info-alert">
-              Alur approval Divisi {approverDivisi}
-            </div>
-          )}
           <div className="approval-row">
             <div className="approval-col">
               <span className="badge-approval leader">Leader</span>
