@@ -208,7 +208,7 @@ public class AuthController {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
 
-        Employee employee = employeeRepository.findByUser(user).orElse(null);
+        Employee employee = employeeRepository.findFirstByUserOrderByEmployeeIdAsc(user).orElse(null);
 
         if (employee != null && !employee.getIsActive()) {
             activityLogService.log(
