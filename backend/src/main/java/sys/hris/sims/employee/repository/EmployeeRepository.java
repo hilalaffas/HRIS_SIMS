@@ -13,5 +13,5 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Optional<Employee> findFirstByUser_Username(String username);
     List<Employee> findByIsActive(Boolean isActive); 
     List<Employee> findByFullNameContainingIgnoreCase(String nama);
-    Optional<Employee> findFirstByUserOrderByEmployeeIdAsc(User user);
+    Optional<Employee> findByUser(User user);
 }
