@@ -216,10 +216,32 @@ export function mapApproval(item, employeeLookup = {}) {
 }
 
 // [BARU MERGED] Dipakai tab "Cuti Karyawan" di halaman Manajemen Karyawan (HR/Super Admin)
-export function mapKaryawanLeave(item) {
+// [FIX] Sebelumnya approvalChain di-hardcode '-' semua, sehingga modal
+// "Rincian" (FormCuti, dipakai bersama dengan halaman Approval Cuti) selalu
+// menampilkan App. Leader/SPV/Manager kosong padahal di halaman Approval
+// datanya muncul benar. Disamakan dengan logika mapApproval() supaya kedua
+// halaman konsisten memakai sumber data yang sama (assignment & approvalLogs).
+export function mapKaryawanLeave(item, employeeLookup = {}) {
   const status = item.status?.statusName || item.status || 'PENDING';
   const hasBeenReviewed = String(status).toUpperCase() !== 'PENDING';
   const totalDays = normalizedLeaveDays(item);
+  const logs = Array.isArray(item.approvalLogs) ? item.approvalLogs : [];
+
+  const leaderAssigned = item.leader?.fullName || item.leader?.nama || item.leaderEmployee?.fullName || item.leaderName;
+  const spvAssigned = item.spv?.fullName || item.spv?.nama || item.spvEmployee?.fullName || item.spvName;
+  const managerAssigned = item.manager?.fullName || item.manager?.nama || item.managerEmployee?.fullName || item.managerName;
+
+  const leaderById = employeeLookup[item.leaderEmployeeId] || employeeLookup[item.leaderId];
+  const spvById = employeeLookup[item.spvEmployeeId] || employeeLookup[item.spvId];
+  const managerById = employeeLookup[item.managerEmployeeId] || employeeLookup[item.managerId];
+
+  const getApproverFromLog = (role) => logs.find(log => String(log.approverRole).toUpperCase() === role)?.approverName;
+
+  const chain = {
+    leader: getApproverFromLog('LEADER') || leaderAssigned || leaderById || '-',
+    spv: getApproverFromLog('SPV') || spvAssigned || spvById || '-',
+    manager: getApproverFromLog('MANAGER') || managerAssigned || managerById || '-',
+  };
 
   return {
     id: item.leaveRequestId,
@@ -230,7 +252,7 @@ export function mapKaryawanLeave(item) {
     keterangan: item.reason || '-',
     pekerjaanTertunda: item.pendingWork || '-',
     dicoverOleh: item.coveredBy || '-',
-    approvalChain: { leader: '-', spv: '-', manager: '-' },
+    approvalChain: chain,
     riwayatLog: hasBeenReviewed ? [{
       nama: item.reviewedBy?.fullName || 'Sistem',
       waktu: logDateText(item.approvedAt || item.returnedAt),
