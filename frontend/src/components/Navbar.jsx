@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getRiwayatByUser, getPendingApprovals } from '../services/CutiService'; // TAMBAHAN: Mengambil fungsi hit database service yang sama dengan ApplyCuti
 // [BARU] Untuk notifikasi permintaan reset sandi (lonceng HR Admin/Super Admin)
@@ -18,6 +18,20 @@ export default function Navbar({ toggleSidebar, user }) {
   
   // === BAGIAN TAMBAHAN NOTIFIKASI REAL-TIME DARI DATABASE (START) ===
   const [showDropdown, setShowDropdown] = useState(false);
+  const notificationRef = useRef(null); // [BARU] Ref pembungkus lonceng + panel dropdown, dipakai untuk deteksi klik di luar
+
+  // [BARU] Auto-tutup dropdown notifikasi saat pengguna klik di area manapun di luar lonceng/panelnya
+  // (pola sama persis dengan FilterStatusDropdown.jsx agar konsisten satu aplikasi)
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const [notifications, setNotifications] = useState([]);
   const [announcementNotifications, setAnnouncementNotifications] = useState([]);
   const [holidayNotifications, setHolidayNotifications] = useState([]);
@@ -401,7 +415,7 @@ export default function Navbar({ toggleSidebar, user }) {
       <div className="navbar-actions">
         <span className="navbar-date">{currentDate}</span>
         
-        <div className="notification-container">
+        <div className="notification-container" ref={notificationRef}>
           <button 
             className="btn-notification" 
             title="Notifikasi"
