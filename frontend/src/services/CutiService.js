@@ -41,7 +41,16 @@ const dayText = (value) => Number(value).toLocaleString('id-ID', {
 });
 
 export const getLeaveBalance = () => api.get('/api/cuti/balance/me');
-export const getApprovers = (role) => api.get(`/api/karyawan/approvers?role=${role}`);
+
+// [UBAH] Tambah employeeId opsional -- dipakai form Cuti Susulan (HR pilih
+// approver ATAS NAMA karyawan lain, bukan dirinya sendiri). Pemanggilan lama
+// tanpa employeeId (mis. Ajukan Cuti normal) tetap jalan persis seperti sebelumnya,
+// karena query hanya menambahkan &employeeId=... kalau parameter itu diisi.
+export const getApprovers = (role, employeeId) => {
+  const query = employeeId ? `role=${role}&employeeId=${employeeId}` : `role=${role}`;
+  return api.get(`/api/karyawan/approvers?${query}`);
+};
+
 export const getLeaveTypes = () => api.get('/api/jenis-cuti');
 
 export async function submitCuti(payload) {

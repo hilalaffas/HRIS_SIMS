@@ -12,6 +12,9 @@ import DataDivisi from './components/DataDivisi';
 import LogSistem from './components/LogSistem';
 import LeaveFormHr from './components/LeaveFormHr';
 import LeaveListHr from './components/LeaveListHr';
+// [BARU] Toast sukses/gagal untuk aksi HR di halaman ini (mis. Cuti Susulan),
+// pola sama seperti FormKaryawan.jsx.
+import Toast from '../../components/Toast';
 // [UBAH] Data cuti karyawan sekarang diambil dari backend asli
 // (getAllLeaveRequestsForHr), bukan lagi dari mock allLeaveHistory.
 import { getAllLeaveRequestsForHr } from '../../services/CutiService';
@@ -26,6 +29,14 @@ const Karyawan = ({ user }) => {
 
   // State untuk menyimpan data cuti yang sedang diklik tombol "Rincian"-nya
 const [detailCutiTarget, setDetailCutiTarget] = useState(null);
+
+  // [BARU] Toast sukses/gagal untuk halaman ini (mis. setelah submit Cuti
+  // Susulan). action opsional -> render link kecil (mis. "Detail") di toast.
+  const [toast, setToast] = useState(null);
+  const triggerToast = (message, type = 'success', action = null) => {
+    setToast({ message, type, action });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // 3. Buat Fungsi Pencatat Aktivitas
   const addLogActivity = (aktor, aksi, type = 'normal') =>  {
@@ -136,8 +147,10 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     try {
       const data = await getAllLeaveRequestsForHr();
       setRiwayatCuti(data || []);
+      return data || [];
     } catch (error) {
       console.error('Gagal menarik data cuti karyawan:', error);
+      return [];
     }
   };
 
@@ -244,13 +257,22 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   // [UBAH] Fungsi ketika HR submit cuti susulan — pengiriman ke backend
   // (POST /api/cuti/urgent) SUDAH dilakukan di dalam LeaveFormHr.jsx (sama
   // seperti pola FormKaryawan.jsx untuk tambah karyawan). Di sini kita
-  // cukup refetch dari server supaya tabel selalu konsisten dengan data asli.
+  // cukup refetch dari server supaya tabel selalu konsisten dengan data asli,
+  // lalu tampilkan toast sukses dengan link "Detail" ke pengajuan barunya.
   const handleSubmitCutiSusulan = async (info) => {
     try {
-      await fetchRiwayatCuti();
+      const freshList = await fetchRiwayatCuti();
       addLogActivity(user?.name || 'Admin HR', `menginput cuti susulan (Auto-ACC) untuk "${info?.karyawanNama || 'karyawan'}".`);
+
+      const createdItem = freshList.find((item) => item.id === info?.leaveRequestId);
+      triggerToast(
+        'Cuti Backdate berhasil diproses (Auto-ACC).',
+        'success',
+        createdItem ? { label: 'Detail', onClick: () => setDetailCutiTarget(createdItem) } : null
+      );
     } catch (error) {
       console.error('Gagal me-refresh riwayat cuti setelah submit cuti susulan:', error);
+      triggerToast('Cuti susulan tersimpan, tapi gagal memuat ulang daftar. Coba refresh halaman.', 'error');
     }
   };
 
@@ -275,6 +297,16 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   return (
     <div className="karyawan-page">
+      {/* [BARU] Toast sukses/gagal (mis. hasil submit Cuti Susulan) */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          actionLabel={toast.action?.label}
+          onAction={toast.action?.onClick}
+        />
+      )}
+
       {/* [UBAH] Headline mungkin tidak perlu props stats jika mengikuti UI referensi, 
           tapi saya biarkan jika Anda masih membutuhkannya di dalam komponennya */}
       <HeadlineKaryawan data={karyawanList} />
