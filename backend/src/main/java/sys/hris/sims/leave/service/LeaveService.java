@@ -64,6 +64,21 @@ public class LeaveService {
         return cutiRepository.findByEmployee_EmployeeId(employeeId);
     }
 
+    /**
+     * [BARU] Riwayat approval PER-LEVEL (Leader/SPV/Manager) untuk cuti milik
+     * sendiri — dipakai frontend untuk notifikasi granular ke pengaju setiap
+     * kali satu level approve (bukan cuma status akhir). Reuse
+     * toApprovalResponse() yang sudah ada; currentEmployeeId sengaja null
+     * karena di sini yang melihat adalah PENGAJU, bukan approver, jadi field
+     * myApprovalStatus tidak relevan.
+     */
+    public List<LeaveApprovalResponse> getMyApprovalTimeline(String username) {
+        Employee requester = getEmployeeByUsername(username);
+        return getCutiByKaryawan(requester.getEmployeeId()).stream()
+                .map(cuti -> toApprovalResponse(cuti, null))
+                .toList();
+    }
+
     // Endpoint detail cuti untuk si pemohon sendiri, LENGKAP dengan info
     // approver (Leader/SPV/Manager). Data approver dipetakan lewat toApprovalResponse().
     public LeaveApprovalResponse getMyLeaveDetail(Long leaveRequestId, String username) {

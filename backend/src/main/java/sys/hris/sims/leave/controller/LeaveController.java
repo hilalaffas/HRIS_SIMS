@@ -56,6 +56,14 @@ public class LeaveController {
         return ResponseEntity.ok(cutiService.getCutiByKaryawan(employee.getEmployeeId()));
     }
 
+    // [BARU] GET riwayat approval per-level (Leader/SPV/Manager) untuk cuti
+    // milik sendiri -- dipakai notifikasi granular di navbar: notif setiap
+    // level approve (Leader -> SPV -> Manager), bukan cuma status akhir.
+    @GetMapping("/me/approval-timeline")
+    public ResponseEntity<List<LeaveApprovalResponse>> getMyApprovalTimeline(Authentication authentication) {
+        return ResponseEntity.ok(cutiService.getMyApprovalTimeline(authentication.getName()));
+    }
+
     // GET semua cuti
     @GetMapping
     public ResponseEntity<List<LeaveRequest>> getAllCuti(Authentication authentication, HttpServletRequest httpRequest) {

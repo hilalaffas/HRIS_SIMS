@@ -15,7 +15,9 @@ const dateText = (value) => {
   return isNaN(parsed.getTime()) ? '-' : parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-const logDateText = (value) => {
+// [UBAH] Diekspor (sebelumnya cuma internal) supaya bisa dipakai Navbar.jsx
+// untuk format timestamp notifikasi approval per-level.
+export const logDateText = (value) => {
   if (!value) return '-';
   const parsed = new Date(value);
   if (isNaN(parsed.getTime())) return '-';
@@ -109,6 +111,11 @@ export async function getRiwayatByUser() {
   const res = await api.get('/api/cuti/me');
   return Array.isArray(res) ? res.map(mapMyLeave) : []; 
 }
+
+// [BARU] Riwayat approval per-level (Leader/SPV/Manager) untuk cuti milik
+// sendiri -- dipakai Navbar.jsx untuk notifikasi granular ke pengaju setiap
+// level approve (bukan cuma status akhir keseluruhan).
+export const getMyApprovalTimeline = () => api.get('/api/cuti/me/approval-timeline');
 
 export const getMyLeaveDetail = (id) => api.get(`/api/cuti/${id}/detail`);
 

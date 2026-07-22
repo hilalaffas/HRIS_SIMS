@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getRiwayatByUser, getPendingApprovals } from '../services/CutiService'; // TAMBAHAN: Mengambil fungsi hit database service yang sama dengan ApplyCuti
+// [UBAH] getRiwayatByUser (status akhir saja) diganti getMyApprovalTimeline
+// (per-level Leader/SPV/Manager) supaya notifikasi bisa granular per approve.
+import { getMyApprovalTimeline, getPendingApprovals, logDateText } from '../services/CutiService';
 // [BARU] Untuk notifikasi permintaan reset sandi (lonceng HR Admin/Super Admin)
 import { getPendingResetRequests, getPendingResetCount } from '../services/passwordResetService';
 import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
@@ -34,14 +36,33 @@ function markLeaveNotifSeen(userKey, seenKeys) {
   }
 }
 
-// [BARU] Teks notifikasi status cuti untuk pengaju sendiri, per jenis aksi.
-// Sebelumnya hanya "approved" & "returned" yang ditangani -- "rejected" (Ditolak)
-// belum pernah punya notifikasi sama sekali.
-const LEAVE_STATUS_NOTIF_TEXT = {
-  approved: (jenis) => <>Pengajuan <strong>{jenis}</strong> Anda telah <strong>disetujui.</strong></>,
-  rejected: (jenis) => <>Pengajuan <strong>{jenis}</strong> Anda telah <strong>ditolak.</strong></>,
-  returned: (jenis) => <>Pengajuan <strong>{jenis}</strong> Anda telah <strong>dikembalikan.</strong></>,
-};
+// [UBAH] Sebelumnya cuma 1 notif per status akhir (approved/rejected/returned).
+// Sekarang per-LEVEL: setiap kali Leader/SPV/Manager approve, pengaju dapat
+// notif sendiri-sendiri -- teksnya otomatis beda tergantung siapa yang approve
+// (dan Manager, karena selalu level terakhir di alur SIMS, jadi notif finalnya
+// "Cuti Anda disetujui"). Reject/Return tetap 1 notif (langsung hentikan alur).
+const ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager' };
+
+function buildLeaveStepNotifText(role, approverName, action, jenis) {
+  const roleLabel = ROLE_LABEL[role] || role;
+  const name = approverName || 'Approver';
+
+  if (action === 'APPROVED') {
+    if (role === 'MANAGER') {
+      // Manager = approver level terakhir (BRD 4.4) -> ini notif final "disetujui".
+      return <><strong>{name}</strong> ({roleLabel}) telah menyetujui cuti <strong>{jenis}</strong> Anda. Cuti Anda <strong>disetujui.</strong></>;
+    }
+    const nextRole = role === 'LEADER' ? 'SPV' : 'Manager';
+    return <><strong>{name}</strong> ({roleLabel}) telah menyetujui cuti <strong>{jenis}</strong> Anda. Menunggu persetujuan {nextRole}.</>;
+  }
+  if (action === 'REJECTED') {
+    return <><strong>{name}</strong> ({roleLabel}) menolak pengajuan cuti <strong>{jenis}</strong> Anda.</>;
+  }
+  if (action === 'RETURNED') {
+    return <><strong>{name}</strong> ({roleLabel}) mengembalikan pengajuan cuti <strong>{jenis}</strong> Anda untuk diperbaiki.</>;
+  }
+  return null;
+}
 
 // Tambahkan parameter object user untuk mengambil id data dari database/API
 export default function Navbar({ toggleSidebar, user }) {
@@ -85,10 +106,13 @@ export default function Navbar({ toggleSidebar, user }) {
   useEffect(() => {
     const fetchNotificationFromDB = async () => {
       try {
-        // Ambil riwayat cuti milik user yang login -- /api/cuti/me sudah
-        // otomatis di-scope ke user tersebut oleh backend lewat token JWT,
-        // jadi tidak perlu (dan tidak bisa) difilter ulang pakai userId di sini.
-        const rawData = await getRiwayatByUser();
+        // [UBAH] Sebelumnya pakai getRiwayatByUser() yang cuma kasih status
+        // AKHIR (approved/rejected/returned/pending) per cuti -- tidak bisa
+        // tahu Leader sudah approve tapi SPV belum, dsb. Sekarang pakai
+        // getMyApprovalTimeline() yang isinya approvalLogs per-level
+        // (Leader/SPV/Manager), supaya bisa kasih notif setiap kali SATU
+        // level approve -- bukan cuma sekali di akhir.
+        const rawData = await getMyApprovalTimeline();
 
         if (!rawData || rawData.length === 0) {
           setNotifications([]);
@@ -99,48 +123,44 @@ export default function Navbar({ toggleSidebar, user }) {
         const mappedNotifications = [];
 
         rawData.forEach((item) => {
-          const statusBerkas = item.status ? item.status.toLowerCase() : 'proses';
-          const jenisCutiNama = item.rawDetail?.jenisCuti || item.jenisCuti || 'Cuti tahunan';
-          const stringTanggal = item.stringTanggal || 'Tanggal tidak tersedia';
+          const jenisCutiNama = item.leaveType || 'Cuti';
 
-          // [UBAH] Sebelumnya ada gate `item.userId === userId` yang SELALU
-          // false (mapMyLeave() tidak pernah set field userId, dan userId di
-          // sini pun selalu 'guest') -- jadi notifikasi status cuti untuk
-          // pengaju sendiri TIDAK PERNAH muncul. Gate itu juga sebenarnya
-          // tidak diperlukan lagi karena rawData di atas sudah pasti cuma
-          // berisi cuti milik user yang login (lihat catatan getRiwayatByUser).
-          let notifKind = null;
-          if (statusBerkas.includes('kembali')) {
-            notifKind = 'returned';
-          } else if (statusBerkas.includes('setuju') || statusBerkas.includes('acc')) {
-            notifKind = 'approved';
-          } else if (statusBerkas.includes('tolak')) {
-            // [BARU] Status "Ditolak" sebelumnya tidak pernah menghasilkan notifikasi sama sekali.
-            notifKind = 'rejected';
-          }
+          (item.approvalLogs || []).forEach((log) => {
+            // PENDING (belum diproses level ini) tidak menghasilkan notif.
+            if (!['APPROVED', 'REJECTED', 'RETURNED'].includes(log.action)) return;
 
-          if (!notifKind) return;
+            // [BARU] seenKey sekarang per-LEVEL (leaveRequestId + role + action),
+            // bukan cuma per-cuti -- supaya notif "Leader approve" & "Manager
+            // approve" pada cuti yang SAMA dianggap 2 notif terpisah, bukan 1.
+            const seenKey = `${item.leaveRequestId}-${log.approverRole}-${log.action}`;
+            if (seenIds.has(seenKey)) return;
 
-          // [BARU] Lewati notifikasi yang sudah pernah ditandai dibaca supaya
-          // tidak muncul berulang tiap kali dropdown notifikasi dibuka.
-          const seenKey = `${item.id}-${notifKind}`;
-          if (seenIds.has(seenKey)) return;
+            const text = buildLeaveStepNotifText(log.approverRole, log.approverName, log.action, jenisCutiNama);
+            if (!text) return;
 
-          mappedNotifications.push({
-            id: `${notifKind}-${item.id}`,
-            seenKey,
-            text: LEAVE_STATUS_NOTIF_TEXT[notifKind](jenisCutiNama),
-            date: stringTanggal,
-            type: notifKind,
+            // Type dipakai untuk ikon & hint klik -- direuse dari 3 tipe yang
+            // sudah ada (approved/rejected/returned), teks yang membedakan
+            // apakah itu approval per-level atau approval final.
+            const notifType = log.action === 'APPROVED' ? 'approved' : log.action === 'REJECTED' ? 'rejected' : 'returned';
+
+            mappedNotifications.push({
+              id: seenKey,
+              seenKey,
+              text,
+              date: logDateText(log.actedAt),
+              type: notifType,
+              rawDate: log.actedAt,
+            });
           });
 
           // Catatan: notifikasi "ada pengajuan baru masuk" untuk atasan
-          // (Leader/SPV/Manager) TIDAK ditangani di loop ini lagi -- versi
-          // lamanya juga tidak pernah benar-benar jalan (rawDetail tidak
-          // pernah punya field leader/spv/manager). Notifikasi itu sekarang
-          // sepenuhnya ditangani oleh mekanisme leaveApprovalTasks di bawah
-          // (sumbernya /api/cuti/approvals/my-task, sudah scoped per approver).
+          // (Leader/SPV/Manager) TIDAK ditangani di loop ini -- itu sepenuhnya
+          // ditangani mekanisme leaveApprovalTasks di bawah (sumbernya
+          // /api/cuti/approvals/my-task, sudah scoped per approver).
         });
+
+        // Notifikasi terbaru di atas
+        mappedNotifications.sort((a, b) => new Date(b.rawDate || 0) - new Date(a.rawDate || 0));
 
         setNotifications(mappedNotifications);
       } catch (error) {
