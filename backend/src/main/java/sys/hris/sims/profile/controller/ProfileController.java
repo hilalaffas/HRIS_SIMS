@@ -25,6 +25,7 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.employee.repository.EmergencyContactRelationshipRepository;
 import sys.hris.sims.profile.dto.ProfileResponse;
 import sys.hris.sims.profile.dto.UpdateProfileRequest;
+import sys.hris.sims.storage.CloudinaryService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
