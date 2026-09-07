@@ -18,20 +18,19 @@ export default function DashboardManager({ user }) {
   });
 
   const [holidaysThisMonth, setHolidaysThisMonth] = useState([]);
-  const [sisaCutiTahunan, setSisaCutiTahunan] = useState(0);
+  // [UBAH] Simpan seluruh objek balance (bukan cuma remainingAnnualLeave)
+  // supaya CutiSummaryCards bisa nampilin Total (Tahunan + Sisa Cuti manual).
+  const [leaveBalance, setLeaveBalance] = useState(null);
 
   useEffect(() => {
-    getLeaveBalance().then((balance) => setSisaCutiTahunan(balance.remainingAnnualLeave ?? 0)).catch(() => setSisaCutiTahunan(0));
+    getLeaveBalance().then(setLeaveBalance).catch(() => setLeaveBalance(null));
   }, []);
 
   return (
     <div className="dashboard">
 
       <div className="dashboard__announcements">
-        <CutiSummaryCards
-          sisaCutiTahunan={sisaCutiTahunan}
-          berlakuHingga={`31 Des ${new Date().getFullYear()}`}
-        />
+        <CutiSummaryCards balance={leaveBalance} />
 
         <h2 className="dashboard__section-title">PENGUMUMAN &amp; PORTAL BERITA</h2>
         <AnnouncementSection />

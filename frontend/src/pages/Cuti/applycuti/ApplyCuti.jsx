@@ -49,7 +49,9 @@ const ApplyCuti = ({ user }) => {
   const atasan = isSupervisor(userRole);
   const [types, setTypes] = useState([]);
   const [approvers, setApprovers] = useState({ LEADER: [], SPV: [], MANAGER: [] });
-  const [balance, setBalance] = useState(0);
+  // [UBAH] Sekarang nyimpen objek balance lengkap (bukan cuma angka
+  // remainingAnnualLeave) supaya CutiSummaryCards bisa nampilin Total.
+  const [balance, setBalance] = useState(null);
   const [holidayDates, setHolidayDates] = useState(() => new Set());
   const [history, setHistory] = useState([]);
   const [error, setError] = useState('');
@@ -94,7 +96,15 @@ const ApplyCuti = ({ user }) => {
       const legacyHalfDayCorrection = records
         .filter(record => record.status === 'Disetujui (ACC)' && record.totalDays === 0.5 && record.reportedTotalDays === 1)
         .length * 0.5;
-      setBalance((leaveBalance.remainingAnnualLeave ?? 0) + legacyHalfDayCorrection);
+      // [UBAH] Koreksi legacy tetap diterapkan, tapi sekarang ke objek
+      // balance lengkap (remainingAnnualLeave & totalRemainingLeave),
+      // supaya field lain (Sisa Cuti manual, tanggal refresh) tetap terbawa.
+      const correctedAnnual = (leaveBalance.remainingAnnualLeave ?? 0) + legacyHalfDayCorrection;
+      setBalance({
+        ...leaveBalance,
+        remainingAnnualLeave: correctedAnnual,
+        totalRemainingLeave: correctedAnnual + (leaveBalance.remainingManualLeave ?? 0),
+      });
       setHistory(records); setHolidayDates(new Set(holidays.map((holiday) => holiday.date))); setError('');
     } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
   }, []);
@@ -189,7 +199,7 @@ const ApplyCuti = ({ user }) => {
 
   return <div className="form-wrapper" ref={formTopRef}>
     <div className="applycuti-summary-wrapper">
-      <CutiSummaryCards sisaCutiTahunan={balance} berlakuHingga={`31 Des ${new Date().getFullYear()}`} />
+      <CutiSummaryCards balance={balance} />
     </div>
     {error && <div className="empty-history-box">{error}</div>}
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,

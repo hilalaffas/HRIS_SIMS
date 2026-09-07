@@ -433,14 +433,28 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
                   name="manualLeaveBalance"
                   value={formData.manualLeaveBalance}
                   onChange={handleInputChange}
-                  title="Diisi manual oleh HR."
+                  title="Alokasi awal yang diisi HR. Sisa yang benar-benar tersisa (setelah kepakai cuti) otomatis muncul di kolom Total di bawah."
                 />
               </div>
+            </div>
+            {/* [BARU] Total gabungan Sisa Cuti Tahunan + Sisa Cuti -- dihitung
+                backend (annualLeaveInfo.totalRemainingLeave), ini angka yang
+                sama yang tampil di Dashboard karyawan. */}
+            <div className="form-group_detail_karyawan green-bg-group_detail_karyawan">
+              <label>TOTAL SISA CUTI (TAHUNAN + LAMA)</label>
+              <input
+                type="text"
+                value={isLoadingBalance ? 'Memuat...' : `${annualLeaveInfo?.totalRemainingLeave ?? formData.annualLeaveBalance} hari`}
+                disabled
+                title="Sisa Cuti Tahunan + sisa Sisa Cuti (manual) yang belum terpakai. Saat karyawan mengajukan cuti, Sisa Cuti (manual) dipotong lebih dulu."
+              />
             </div>
             <p style={{ fontSize: '12px', color: '#374151', background: '#f3f4f6', padding: '8px 12px', borderRadius: '6px', margin: '8px 0 0' }}>
               ℹ️ <strong>Sisa Cuti Tahunan</strong> dihitung otomatis: mulai berlaku 1 tahun setelah tanggal bergabung, dan
               refresh tiap tahun mengikuti tanggal bergabung tersebut -- field ini tidak bisa diketik manual.
-              <strong> Sisa Cuti</strong> di sebelahnya adalah kuota tambahan yang boleh diisi bebas oleh HR.
+              <strong> Sisa Cuti</strong> di sebelahnya adalah alokasi awal (kuota tambahan) yang boleh diisi bebas oleh HR --
+              ini yang dipotong <strong>lebih dulu</strong> saat karyawan cuti, sebelum Cuti Tahunan.
+              <strong> Total</strong> di bawah adalah gabungan sisa keduanya setelah dikurangi pemakaian.
             </p>
           </div>
 
