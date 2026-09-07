@@ -9,6 +9,9 @@ import NotifModal from './components/NotifModal';
 import { getAllHolidays } from '../../../services/holidayService';
 import './ApplyCuti.css';
 
+// [BARU] Interval polling live-sync riwayat cuti (lihat useEffect di bawah).
+const HISTORY_POLL_INTERVAL_MS = 15000;
+
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const isSupervisor = (role = '') => ['LEADER', 'SPV', 'MANAGER'].includes(
   String(role).trim().toUpperCase().replace(/^ROLE_/, '')
@@ -55,6 +58,9 @@ const ApplyCuti = ({ user }) => {
   const [balance, setBalance] = useState(null);
   const [holidayDates, setHolidayDates] = useState(() => new Set());
   const [history, setHistory] = useState([]);
+  // [BARU] Timestamp sinkronisasi terakhir, dipakai LeaveHistory untuk
+  // menampilkan indikator "Live · terakhir diperbarui ...".
+  const [historySyncedAt, setHistorySyncedAt] = useState(null);
   const [error, setError] = useState('');
   const [jenisCuti, setJenisCuti] = useState('');
   const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka', 'Cuti Setengah Hari'].includes(jenisCuti) ? 0 : 5;
@@ -115,8 +121,35 @@ const ApplyCuti = ({ user }) => {
       await load();
       const latest = await getRiwayatByUser();
       setHistory(latest);
+      setHistorySyncedAt(new Date());
     };
     initData();
+
+    // [BARU] Live-sync riwayat cuti: polling tiap 15 detik (interval yang
+    // sama dipakai RiwayatCuti.jsx / badge notifikasi MainLayout.jsx),
+    // plus langsung sinkron begitu tab ini kembali aktif. Fetch ini "silent"
+    // (tidak ada spinner) supaya tidak mengganggu user yang sedang mengisi
+    // formulir pengajuan cuti di atas.
+    const syncHistory = async () => {
+      try {
+        const latest = await getRiwayatByUser();
+        setHistory(latest);
+        setHistorySyncedAt(new Date());
+      } catch {
+        // Diamkan error polling background -- error fetch awal (initData)
+        // sudah cukup untuk ditampilkan lewat state `error`.
+      }
+    };
+    const intervalId = window.setInterval(syncHistory, HISTORY_POLL_INTERVAL_MS);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') syncHistory();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [load]);  
   
   //useEffect(() => { if (atasan) { setLeaderEmployeeId(''); setSpvEmployeeId(''); } }, [atasan]);
@@ -212,7 +245,7 @@ const ApplyCuti = ({ user }) => {
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
       leaveTypes={types} approvers={approvers} isSupervisor={atasan} canApplyCuti />
-    <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} />
+    <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
   <FormCuti
     data={selectedDetail}
