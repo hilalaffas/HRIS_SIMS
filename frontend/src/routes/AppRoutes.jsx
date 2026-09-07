@@ -11,6 +11,9 @@ import ProfilePage from '../pages/Profile/profile';
 import ForgotPassword from '../pages/ForgotPassword/ForgotPassword';
 import ApproveLeave from '../pages/Cuti/approve/ApproveLeave';
 import Karyawan from '../pages/Karyawan/Karyawan';
+// [BARU] Halaman Riwayat Cuti (sebelumnya placeholder <div>, sekarang
+// terhubung ke backend + real-time polling + pagination, lihat RiwayatCuti.jsx)
+import RiwayatCuti from '../pages/Cuti/RiwayatCuti';
 
 
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
@@ -43,13 +46,9 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           <Route path="/ApproveLeave" element={<ApproveLeave user={user} />} />
         
 
-          {/* Wadah Halaman History Cuti */}
-          <Route path="/history-cuti" element={
-            <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100 min-h-50">
-              <h3 className="text-base font-bold text-gray-800 mb-2">Riwayat & Pelacakan Alur Cuti</h3>
-              <p className="text-sm text-gray-500">Wadah halaman riwayat sudah siap. Di sinilah list kartu status approval (Leader, SPV, Manager) akan berjejer.</p>
-            </div>
-          } />
+          {/* [UBAH] Wadah Halaman History Cuti -- sebelumnya placeholder statis,
+              sekarang RiwayatCuti.jsx (role-aware, real-time, berpaginasi) */}
+          <Route path="/history-cuti" element={<RiwayatCuti user={user} />} />
 
           {/* Wadah Halaman Absensi */}
           <Route path="/absensi" element={

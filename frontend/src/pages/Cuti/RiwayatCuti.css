@@ -1,0 +1,442 @@
+/**
+ * RiwayatCuti.css
+ * ------------------------------------------------------------------
+ * Design tokens (CSS variables) khusus halaman Riwayat Cuti, di-scope di
+ * `.riwayat-cuti-page` (pola yang sama dengan ApproveLeave.css / --alv-*),
+ * memakai skema warna status yang sama (hijau/kuning/oranye/merah) supaya
+ * konsisten secara visual dengan modul Persetujuan Cuti.
+ * ------------------------------------------------------------------
+ */
+
+.riwayat-cuti-page {
+  --rc-primary: #1e345e;
+  --rc-primary-tint: #eaeef6;
+
+  --rc-green: #059669;
+  --rc-green-bg: #ecfdf5;
+  --rc-green-border: #a7f3d0;
+
+  --rc-amber: #b45309;
+  --rc-amber-bg: #fffbeb;
+  --rc-amber-border: #fde68a;
+
+  --rc-orange: #c2410c;
+  --rc-orange-bg: #fff7ed;
+  --rc-orange-border: #fed7aa;
+
+  --rc-rose: #e11d48;
+  --rc-rose-bg: #fff1f2;
+  --rc-rose-border: #fecdd3;
+
+  --rc-text-primary: #1f2937;
+  --rc-text-secondary: #6b7280;
+  --rc-text-muted: #9ca3af;
+  --rc-border: #e5e7eb;
+  --rc-bg-card: #ffffff;
+  --rc-bg-head: #f8fafc;
+
+  --rc-radius-lg: 16px;
+  --rc-radius-md: 12px;
+  --rc-radius-full: 999px;
+  --rc-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--rc-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.riwayat-cuti-page *,
+.riwayat-cuti-page *::before,
+.riwayat-cuti-page *::after {
+  box-sizing: border-box;
+}
+
+/* ---------- Header ---------- */
+.riwayat-cuti-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.riwayat-cuti-page__title {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--rc-text-primary);
+}
+
+.riwayat-cuti-page__desc {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--rc-text-secondary);
+  max-width: 560px;
+}
+
+.riwayat-cuti-page__sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rc-green);
+  background: var(--rc-green-bg);
+  border: 1px solid var(--rc-green-border);
+  border-radius: var(--rc-radius-full);
+  padding: 6px 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.riwayat-cuti-page__syncDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rc-green);
+  box-shadow: 0 0 0 rgba(5, 150, 105, 0.5);
+  animation: rc-pulse 1.8s infinite;
+}
+
+.riwayat-cuti-page__syncTime {
+  color: var(--rc-text-muted);
+  font-weight: 500;
+}
+
+@keyframes rc-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.45); }
+  70% { box-shadow: 0 0 0 6px rgba(5, 150, 105, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+}
+
+/* ---------- Stat cards ---------- */
+.riwayat-cuti-page__stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.rc-stat {
+  background: var(--rc-bg-card);
+  border: 1px solid var(--rc-border);
+  border-radius: var(--rc-radius-md);
+  box-shadow: var(--rc-shadow-card);
+  padding: 14px 16px;
+}
+
+.rc-stat__label {
+  margin: 0 0 4px 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--rc-text-muted);
+}
+
+.rc-stat__count {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--rc-text-primary);
+}
+
+.rc-stat--proses .rc-stat__count { color: var(--rc-amber); }
+.rc-stat--disetujui .rc-stat__count { color: var(--rc-green); }
+.rc-stat--dikembalikan .rc-stat__count { color: var(--rc-orange); }
+.rc-stat--ditolak .rc-stat__count { color: var(--rc-rose); }
+
+/* ---------- Body card ---------- */
+.riwayat-cuti-page__body {
+  background: var(--rc-bg-card);
+  border-radius: var(--rc-radius-lg);
+  box-shadow: var(--rc-shadow-card);
+  border: 1px solid var(--rc-border);
+  padding: 18px 24px 24px 24px;
+}
+
+.rc-alert {
+  background: var(--rc-rose-bg);
+  color: var(--rc-rose);
+  border: 1px solid var(--rc-rose-border);
+  border-radius: var(--rc-radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+/* ---------- Toolbar (tabs + page size) ---------- */
+.rc-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.rc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rc-tab {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-bg-card);
+  color: var(--rc-text-secondary);
+  border-radius: var(--rc-radius-full);
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rc-tab:hover {
+  border-color: var(--rc-primary);
+  color: var(--rc-primary);
+}
+
+.rc-tab.is-active {
+  background: var(--rc-primary);
+  border-color: var(--rc-primary);
+  color: #ffffff;
+}
+
+.rc-tab__count {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.rc-pageSize {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rc-text-secondary);
+}
+
+.rc-pageSize__select {
+  padding: 7px 12px;
+  border-radius: var(--rc-radius-full);
+  border: 1px solid var(--rc-border);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rc-text-primary);
+  background: var(--rc-bg-card);
+  cursor: pointer;
+  outline: none;
+}
+
+.rc-pageSize__select:focus {
+  border-color: var(--rc-primary);
+  box-shadow: 0 0 0 3px var(--rc-primary-tint);
+}
+
+/* ---------- Table ---------- */
+.rc-empty {
+  padding: 48px 16px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--rc-text-muted);
+  background: var(--rc-bg-head);
+  border-radius: var(--rc-radius-md);
+}
+
+.rc-table {
+  width: 100%;
+  border: 1px solid var(--rc-border);
+  border-radius: var(--rc-radius-md);
+  overflow: hidden;
+}
+
+.rc-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--rc-border);
+}
+
+.rc-table--withEmployee .rc-row {
+  grid-template-columns: 1.2fr 1fr 1.6fr 0.9fr;
+}
+
+.rc-row:last-child {
+  border-bottom: none;
+}
+
+.rc-row--head {
+  background: var(--rc-bg-head);
+  padding: 12px 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rc-row__employee {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rc-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rc-row__employeeName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--rc-text-primary);
+}
+
+.rc-row__period {
+  font-size: 13px;
+  color: var(--rc-text-secondary);
+}
+
+.rc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: var(--rc-radius-full);
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.rc-badge--proses {
+  background: var(--rc-amber-bg);
+  color: var(--rc-amber);
+  border-color: var(--rc-amber-border);
+}
+
+.rc-badge--disetujui {
+  background: var(--rc-green-bg);
+  color: var(--rc-green);
+  border-color: var(--rc-green-border);
+}
+
+.rc-badge--dikembalikan {
+  background: var(--rc-orange-bg);
+  color: var(--rc-orange);
+  border-color: var(--rc-orange-border);
+}
+
+.rc-badge--ditolak {
+  background: var(--rc-rose-bg);
+  color: var(--rc-rose);
+  border-color: var(--rc-rose-border);
+}
+
+/* ---------- Pagination ---------- */
+.rc-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.rc-pagination__info {
+  font-size: 12.5px;
+  color: var(--rc-text-muted);
+}
+
+.rc-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rc-pagination__page {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rc-text-secondary);
+  white-space: nowrap;
+}
+
+.rc-pagination__btn {
+  border: 1px solid var(--rc-border);
+  background: var(--rc-bg-card);
+  color: var(--rc-text-primary);
+  border-radius: var(--rc-radius-md);
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rc-pagination__btn:hover:not(:disabled) {
+  border-color: var(--rc-primary);
+  color: var(--rc-primary);
+}
+
+.rc-pagination__btn--primary {
+  background: var(--rc-primary);
+  border-color: var(--rc-primary);
+  color: #ffffff;
+}
+
+.rc-pagination__btn--primary:hover:not(:disabled) {
+  background: #16294a;
+}
+
+.rc-pagination__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .riwayat-cuti-page__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rc-row,
+  .rc-table--withEmployee .rc-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .rc-row--head {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .riwayat-cuti-page__body {
+    padding: 16px;
+  }
+
+  .rc-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rc-pagination__controls {
+    justify-content: space-between;
+  }
+}
