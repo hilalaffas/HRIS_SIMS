@@ -1,0 +1,86 @@
+.leaveErrorModal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 20, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: leaveErrorModalFadeIn 0.18s ease;
+}
+
+@keyframes leaveErrorModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.leaveErrorModal__card {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.25);
+  padding: 28px 24px 24px;
+  text-align: center;
+  animation: leaveErrorModalPopIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes leaveErrorModalPopIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.leaveErrorModal__iconWrap {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaveErrorModal__icon {
+  width: 26px;
+  height: 26px;
+  stroke: #dc2626;
+}
+
+.leaveErrorModal__title {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.leaveErrorModal__text {
+  margin: 0 0 22px 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #4b5563;
+}
+
+.leaveErrorModal__btnOk {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #dc2626;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.leaveErrorModal__btnOk:hover {
+  background: #b91c1c;
+}
+
+.leaveErrorModal__btnOk:active {
+  transform: scale(0.98);
+}
