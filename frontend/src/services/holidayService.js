@@ -10,7 +10,9 @@ import { api } from './api';
  * HolidayResponse dari backend: { holidayId, name, date, description, isNational, createdBy, createdAt }
  * HolidayRequest ke backend:    { name, date, description, isNational }
  */
-
+export async function syncHolidays(year) {
+  return api.post(`/api/holidays/sync?year=${year}`);
+}
 /**
  * Ambil semua hari libur pada bulan tertentu.
  * month: 1-12 (LocalDate Java 1-indexed, BUKAN 0-indexed seperti Date.getMonth() di JS)
