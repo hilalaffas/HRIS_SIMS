@@ -17,7 +17,7 @@ import LeaveListHr from './components/LeaveListHr';
 import Toast from '../../components/Toast';
 // [UBAH] Data cuti karyawan sekarang diambil dari backend asli
 // (getAllLeaveRequestsForHr), bukan lagi dari mock allLeaveHistory.
-import { getAllLeaveRequestsForHr } from '../../services/CutiService';
+import { getAllLeaveRequestsForHr, getAllLeaveBalances } from '../../services/CutiService';
 import FormCuti from '../Cuti/approve/components/Form';
 import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService';
 import { getSystemLogs } from '../../services/logService'; 
@@ -102,7 +102,26 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     try {
       const response = await getKaryawanList();
       // Asumsi backend mengembalikan array of object di response.data atau response langsung
-      setKaryawanList(response.data || response || []);
+      const list = response.data || response || [];
+
+      // [BARU] Gabungkan Total sisa cuti (Tahunan + Lama) ke tiap karyawan,
+      // dipakai kolom SISA CUTI di TableKaryawan.jsx. Kalau gagal ambil
+      // balance, tabel tetap tampil pakai fallback manualLeaveBalance
+      // (lihat TableKaryawan.jsx) supaya tidak blank total.
+      let balanceByEmployeeId = new Map();
+      try {
+        const balanceResponse = await getAllLeaveBalances();
+        const balances = balanceResponse.data || balanceResponse || [];
+        balanceByEmployeeId = new Map(balances.map((b) => [b.employeeId, b]));
+      } catch (balanceError) {
+        console.error("Gagal menarik data sisa cuti:", balanceError);
+      }
+
+      const merged = list.map((emp) => ({
+        ...emp,
+        totalRemainingLeave: balanceByEmployeeId.get(emp.employeeId)?.totalRemainingLeave,
+      }));
+      setKaryawanList(merged);
     } catch (error) {
       console.error("Gagal menarik data karyawan:", error);
     }

@@ -109,6 +109,15 @@ public class LeaveController {
         return ResponseEntity.ok(cutiService.getLeaveBalanceByEmployeeId(employeeId));
     }
 
+    // [BARU] GET Total sisa cuti (Tahunan + Lama) SEMUA karyawan sekaligus
+    // dalam satu request, dipakai tabel Direktori Karyawan
+    // (TableKaryawan.jsx) supaya kolom SISA CUTI tidak perlu N request
+    // terpisah per baris.
+    @GetMapping("/balance/all")
+    public ResponseEntity<List<LeaveBalanceResponse>> getAllLeaveBalances() {
+        return ResponseEntity.ok(cutiService.getAllLeaveBalances());
+    }
+
     // GET cuti yang perlu diproses oleh role atasan yang sedang login
     @GetMapping("/approvals/my-task")
     public ResponseEntity<List<LeaveApprovalResponse>> getMyApprovalTasks(Authentication authentication) {

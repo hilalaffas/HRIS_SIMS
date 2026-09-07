@@ -62,7 +62,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
               <th>KARYAWAN</th>
               <th>ROLE AKSES</th>
               <th>JABATAN & DIVISI</th>
-              <th>SISA CUTI</th>
+              <th>TOTAL CUTI</th>
               <th>STATUS</th>
               <th>AKSI</th>
             </tr>
@@ -98,7 +98,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
                     <p className="emp-position">{emp.position || 'Staff'}</p>
                     <p className="emp-division">{emp.divisi?.namaDivisi || 'Umum'}</p>
                   </td>
-                  <td className="text-center font-bold text-green">{emp.manualLeaveBalance ?? 0}</td>
+                  <td className="text-center font-bold text-green">{emp.totalRemainingLeave ?? emp.manualLeaveBalance ?? 0}</td>
                   <td>
                     <span className={`badge-status ${!emp.isActive ? 'inactive' : ''}`}>
                       {emp.isActive ? 'AKTIF' : 'NONAKTIF'}

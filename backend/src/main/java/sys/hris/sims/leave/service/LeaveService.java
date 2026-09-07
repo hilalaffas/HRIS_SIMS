@@ -242,6 +242,17 @@ public class LeaveService {
         return getLeaveBalance(employee);
     }
 
+    // [BARU] Hitung Total sisa cuti (Tahunan + Lama) SEMUA karyawan
+    // sekaligus, dipakai endpoint /api/cuti/balance/all untuk tabel
+    // Direktori Karyawan. Reuse getLeaveBalance(Employee) yang sama persis
+    // dipakai /balance/me & /balance/{employeeId}, supaya 3-3nya selalu
+    // konsisten satu sama lain.
+    public List<LeaveBalanceResponse> getAllLeaveBalances() {
+        return karyawanRepository.findAll().stream()
+                .map(this::getLeaveBalance)
+                .toList();
+    }
+
     // [UBAH] Sekarang menghitung 3 hal: (1) Cuti Tahunan otomatis per-periode
     // seperti sebelumnya -- baru berhak 1 tahun setelah joinDate, refresh
     // tiap tahun ikut tanggal join. (2) Sisa Cuti (manual, dari HR) --

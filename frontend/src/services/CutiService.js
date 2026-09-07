@@ -46,6 +46,10 @@ export const getLeaveBalance = () => api.get('/api/cuti/balance/me');
 // tahunan karyawan lain -- bukan dirinya sendiri.
 export const getLeaveBalanceByEmployeeId = (employeeId) => api.get(`/api/cuti/balance/${employeeId}`);
 
+// [BARU] Total sisa cuti (Tahunan + Lama) SEMUA karyawan sekaligus,
+// dipakai TableKaryawan.jsx lewat Karyawan.jsx (fetchKaryawan).
+export const getAllLeaveBalances = () => api.get('/api/cuti/balance/all');
+
 // [UBAH] Tambah employeeId opsional -- dipakai form Cuti Susulan (HR pilih
 // approver ATAS NAMA karyawan lain, bukan dirinya sendiri). Pemanggilan lama
 // tanpa employeeId (mis. Ajukan Cuti normal) tetap jalan persis seperti sebelumnya,
