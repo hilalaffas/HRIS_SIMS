@@ -225,18 +225,24 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     }
   };
 
-  const handleSubmitEditModal = async (formData) => {
+  const handleSubmitEditModal = async (formData, successMessage) => {
     // Catatan: penyimpanan ke backend SUDAH dilakukan di dalam
     // ModalDetailKaryawan.jsx (sama seperti pola FormKaryawan.jsx untuk
     // tambah karyawan). Di sini kita cukup refetch dari server supaya
     // tabel selalu konsisten dengan data asli, termasuk divisi yang baru diubah.
+    // [UBAH] Modal sudah menutup dirinya sendiri lebih dulu (onClose() di
+    // ModalDetailKaryawan.jsx dipanggil sebelum onSave ini selesai), jadi
+    // toast sukses di bawah ini muncul di halaman utama -- bukan lagi
+    // menimpa header modal yang sudah tertutup.
     try {
       await fetchKaryawan();
       addLogActivity(user?.name || 'Admin HR', `mengupdate profil "${formData.namaLengkap}".`);
+      triggerToast(successMessage || `Data profil akun ${formData.namaLengkap} berhasil diperbarui.`, 'success');
       setEditTarget(null);
       setPendingResetRequestId(null); // [BARU]
     } catch (error) {
       console.error("Gagal me-refresh daftar karyawan:", error);
+      triggerToast('Data tersimpan, tapi gagal memuat ulang daftar karyawan. Coba refresh halaman.', 'error');
     }
   };
 

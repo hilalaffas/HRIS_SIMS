@@ -23,7 +23,9 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [notification, setNotification] = useState('');
+  // [UBAH] `notification` (toast sukses lokal di dalam modal) sudah tidak
+  // dipakai lagi -- lihat catatan di handleSubmit(). Toast sukses sekarang
+  // ditampilkan oleh parent (Karyawan.jsx) setelah modal ini ditutup.
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -240,30 +242,27 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
       return;
     }
 
-    setNotification(
-      resetRequestId && userPayload.password
-        ? `Data profil akun ${formData.namaLengkap} berhasil diperbarui. Permintaan reset sandi juga sudah ditandai selesai.`
-        : `Data profil akun ${formData.namaLengkap} berhasil diperbarui.`
-    );
+    // [UBAH] Sebelumnya notifikasi sukses ditampilkan DI DALAM modal (toast
+    // lokal yang menimpa header, lihat screenshot) lalu modal baru menutup
+    // setelah fetchKaryawan() di parent selesai (async, jadi ada jeda).
+    // Sekarang: begitu simpan sukses, modal langsung ditutup (onClose()),
+    // dan pesan suksesnya dilempar ke parent (Karyawan.jsx) lewat argumen
+    // kedua onSave() supaya ditampilkan sebagai toast di level halaman
+    // (komponen <Toast /> yang sudah ada), bukan lagi toast lokal di sini.
+    const successMessage = resetRequestId && userPayload.password
+      ? `Data profil akun ${formData.namaLengkap} berhasil diperbarui. Permintaan reset sandi juga sudah ditandai selesai.`
+      : `Data profil akun ${formData.namaLengkap} berhasil diperbarui.`;
+
     setFormData((prev) => ({ ...prev, password: '' }));
-    if (onSave) onSave(formData);
-    setTimeout(() => {
-      setNotification('');
-      // onClose(); // Hilangkan komentar ini jika ingin modal auto-close setelah save
-    }, 3000);
     setIsSubmitting(false);
+    if (onSave) onSave(formData, successMessage);
+    if (onClose) onClose();
   };
 
   return (
     <div className="modal-overlay_detail_karyawan">
       <div className="modal-container_detail_karyawan">
         
-        {notification && (
-          <div className="notification-toast_detail_karyawan">
-            ✅ {notification}
-          </div>
-        )}
-
         {errorMessage && (
           <div className="notification-toast_detail_karyawan" style={{ background: '#fee2e2', color: '#b91c1c' }}>
             ⚠️ {errorMessage}
