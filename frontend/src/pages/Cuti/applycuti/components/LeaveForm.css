@@ -349,3 +349,9 @@ button.mini-day-cell.weekend.outside-month {
 button.mini-day-cell.weekend:disabled {
   color: #cbd5e1 !important;
 }
+
+.mini-day-cell.holiday {
+  background-color: #fee2e2;
+  color: #dc2626;
+  font-weight: 700;
+}

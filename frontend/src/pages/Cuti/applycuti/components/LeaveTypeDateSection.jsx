@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './LeaveForm.css';
 
-// Fungsi bantu format tanggal untuk ditampilkan di input (dd/mm/yyyy)
 const formatDateDisplay = (dateStr) => {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
   return `${d}/${m}/${y}`;
 };
 
-// Bangun 35 sel tanggal (5 baris x 7 kolom) untuk 1 bulan tampilan kalender mini
 const generate35Days = (viewDate) => {
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -31,10 +29,6 @@ const generate35Days = (viewDate) => {
   return daysArray;
 };
 
-/**
- * Bagian: JENIS PERMOHONAN CUTI, DURASI SESI SETENGAH HARI, DARI/SAMPAI TANGGAL
- * (satu-satunya tempat logika kalender mini berada, dipakai oleh LeaveForm)
- */
 const LeaveTypeDateSection = ({
   jenisCuti, setJenisCuti,
   durasiSesi, setDurasiSesi,
@@ -44,7 +38,10 @@ const LeaveTypeDateSection = ({
   todayStr,
   leaveTypes = [],
   jumlahHariCuti = 0,
+  holidayDates,
 }) => {
+  const safeHolidayDates = holidayDates instanceof Set ? holidayDates : new Set();
+
   const [showDariCalendar, setShowDariCalendar] = useState(false);
   const [showSampaiCalendar, setShowSampaiCalendar] = useState(false);
 
@@ -55,12 +52,10 @@ const LeaveTypeDateSection = ({
   const dariRef = useRef(null);
   const sampaiRef = useRef(null);
 
-  // Normalisasi jenis cuti (huruf kecil, trim) supaya deteksi tidak sensitif terhadap variasi penulisan
   const normalizedLeaveType = String(jenisCuti || '').trim().toLowerCase();
   const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType);
   const isHalfDayLeave = normalizedLeaveType === 'cuti setengah hari';
 
-  // Saat DARI/SAMPAI TANGGAL berubah, sinkronkan bulan yang tampil di kalender mini
   useEffect(() => {
     if (startDate) {
       const dDate = new Date(startDate);
@@ -72,7 +67,6 @@ const LeaveTypeDateSection = ({
     }
   }, [startDate, endDate]);
 
-  // Saat jenis cuti "Setengah Hari", SAMPAI TANGGAL otomatis disamakan dengan DARI TANGGAL
   useEffect(() => {
     if (isHalfDayLeave && startDate && endDate !== startDate) {
       setEndDate(startDate);
@@ -118,13 +112,14 @@ const LeaveTypeDateSection = ({
             const isMelanggarBatasMax = maxDateStr && new Date(itemStr) > new Date(maxDateStr);
             const isDisabledDay = isMelanggarBatasMin || isMelanggarBatasMax;
             const isWeekendDay = (new Date(item.year, item.month, item.day).getDay() === 0 || new Date(item.year, item.month, item.day).getDay() === 6);
+            const isHolidayDay = safeHolidayDates.has(itemStr);
 
             return (
               <button
                 key={idx} type="button"
                 disabled={isDisabledDay}
                 onClick={() => onSelect(item)}
-                className={`mini-day-cell ${!item.isCurrentMonth ? 'outside-month' : ''} ${itemStr === selectedDateStr ? 'selected' : ''} ${itemStr === todayStr ? 'today' : ''} ${isWeekendDay ? 'weekend' : ''}`}
+                className={`mini-day-cell ${!item.isCurrentMonth ? 'outside-month' : ''} ${itemStr === selectedDateStr ? 'selected' : ''} ${itemStr === todayStr ? 'today' : ''} ${isWeekendDay ? 'weekend' : ''} ${isHolidayDay ? 'holiday' : ''}`}
               >
                 {item.day}
               </button>
@@ -175,7 +170,6 @@ const LeaveTypeDateSection = ({
           </div>
           {showSampaiCalendar && (() => {
             const batasMinSampaiStr = startDate;
-            // Untuk "Cuti Setengah Hari", SAMPAI TANGGAL dikunci hanya ke hari yang sama dengan DARI TANGGAL
             const batasMaxSampaiStr = isHalfDayLeave ? startDate : null;
 
             return renderMiniCalendar(

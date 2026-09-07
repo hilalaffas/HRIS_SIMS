@@ -19,13 +19,14 @@ const LeaveForm = ({
   handleSubmit,
   isSubmitting,
   jumlahHariCuti = 0,
+  holidayDates,
   canApplyCuti,
   todayStr,
   leaveTypes = [],
   approvers = { LEADER: [], SPV: [], MANAGER: [] },
   isSupervisor = false,
-  isEditing,     // KONTROL TOMBOL BATAL
-  onCancelEdit   // AKSI BATAL
+  isEditing,
+  onCancelEdit
 }) => {
   return (
     <div className="form-container">
@@ -49,6 +50,7 @@ const LeaveForm = ({
           todayStr={todayStr}
           leaveTypes={leaveTypes}
           jumlahHariCuti={jumlahHariCuti}
+          holidayDates={holidayDates}
         />
 
         <ApprovalFlowSection
@@ -66,7 +68,6 @@ const LeaveForm = ({
         />
 
         <div className="btn-group-right" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          {/* TOMBOL BATAL EDIT HANYA MUNCUL JIKA SEDANG MODE EDIT */}
           {isEditing && (
             <button
               type="button"
