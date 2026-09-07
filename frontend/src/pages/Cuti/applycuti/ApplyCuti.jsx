@@ -5,7 +5,7 @@ import LeaveForm from './components/LeaveForm';
 import { hariLiburNasional, hitungBatasMinTanggal } from '../../../utils/dateUtils'; // sesuaikan path file Anda
 import LeaveHistory from './components/LeaveHistory';
 import FormCuti from '../approve/components/Form';
-import NotifModal from '../../../components/NotifModal';
+import NotifModal from './components/NotifModal';
 import { getAllHolidays } from '../../../services/holidayService';
 import './ApplyCuti.css';
 
