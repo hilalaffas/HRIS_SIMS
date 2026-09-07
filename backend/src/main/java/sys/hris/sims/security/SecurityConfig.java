@@ -173,6 +173,20 @@ public class SecurityConfig {
                                 "/api/cuti/balance/me")
                         .authenticated()
 
+                        // [BARU] Total sisa cuti (Tahunan + Lama) SEMUA karyawan
+                        // sekaligus -- dipakai approver (Leader/SPV/Manager) di
+                        // halaman ApproveLeave untuk nampilin sisa cuti PEMOHON
+                        // per baris (bukan sisa cuti approver yang login), juga
+                        // dipakai HR di Direktori Karyawan (TableKaryawan.jsx).
+                        // HARUS ditaruh SEBELUM "/api/cuti/balance/*" di bawah,
+                        // karena "all" tetap satu segmen path dan otomatis ikut
+                        // cocok ke wildcard itu -- kalau tidak, request ini akan
+                        // ke-block jadi ADMIN_ROLES-only dan Leader/SPV/Manager
+                        // dapat 403 saat memuat halaman ApproveLeave.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/cuti/balance/all")
+                        .hasAnyRole(APPROVER_ROLES)
+
                         // [BARU] Sisa cuti tahunan karyawan LAIN (dipakai form
                         // Manajemen Data Pegawai) -- dibatasi ADMIN_ROLES saja,
                         // ditaruh SEBELUM catch-all "/api/cuti/**" di bawah
