@@ -5,7 +5,7 @@ import LeaveForm from './components/LeaveForm';
 import { hariLiburNasional, hitungBatasMinTanggal } from '../../../utils/dateUtils'; // sesuaikan path file Anda
 import LeaveHistory from './components/LeaveHistory';
 import FormCuti from '../approve/components/Form';
-import LeaveErrorModal from './components/LeaveErrorModal';
+import NotifModal from '../../../components/NotifModal';
 import { getAllHolidays } from '../../../services/holidayService';
 import './ApplyCuti.css';
 
@@ -202,12 +202,12 @@ const ApplyCuti = ({ user }) => {
     <div className="applycuti-summary-wrapper">
       <CutiSummaryCards balance={balance} />
     </div>
-    {/* [UBAH] Sebelumnya error/peringatan ditampilkan sebagai kotak inline
-        biasa (.empty-history-box) di atas formulir -- gampang tidak
-        disadari karena tidak menghalangi apa pun. Sekarang ditampilkan
-        sebagai popup modal (LeaveErrorModal) yang WAJIB ditutup lewat
-        tombol "OK", supaya user pasti sadar ada kesalahan. */}
-    <LeaveErrorModal message={error} onClose={() => setError('')} />
+    {/* [UBAH] Sebelumnya kotak inline (.empty-history-box) di atas formulir --
+        posisinya bisa "tenggelam" kalau formulir panjang, dan user harus
+        scroll ke atas untuk sadar ada kesalahan. Sekarang jadi popup
+        (NotifModal) yang selalu tampil di tengah layar dan WAJIB ditutup
+        lewat tombol "OK". */}
+    <NotifModal type="error" message={error} onClose={() => setError('')} />
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}

@@ -1,0 +1,106 @@
+.notifModal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 20, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: notifModalFadeIn 0.18s ease;
+}
+
+@keyframes notifModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.notifModal__card {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.25);
+  padding: 28px 24px 24px;
+  text-align: center;
+  animation: notifModalPopIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes notifModalPopIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notifModal__iconWrap {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifModal__icon svg {
+  width: 26px;
+  height: 26px;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* --- error --- */
+.notifModal__iconWrap--error { background: #fee2e2; }
+.notifModal__icon--error { color: #dc2626; }
+.notifModal__btnOk--error { background: #dc2626; }
+.notifModal__btnOk--error:hover { background: #b91c1c; }
+
+/* --- warning --- */
+.notifModal__iconWrap--warning { background: #fef3c7; }
+.notifModal__icon--warning { color: #d97706; }
+.notifModal__btnOk--warning { background: #d97706; }
+.notifModal__btnOk--warning:hover { background: #b45309; }
+
+/* --- success --- */
+.notifModal__iconWrap--success { background: #dcfce7; }
+.notifModal__icon--success { color: #009A66; }
+.notifModal__btnOk--success { background: #009A66; }
+.notifModal__btnOk--success:hover { background: #008256; }
+
+/* --- info --- */
+.notifModal__iconWrap--info { background: #dbeafe; }
+.notifModal__icon--info { color: #2563eb; }
+.notifModal__btnOk--info { background: #2563eb; }
+.notifModal__btnOk--info:hover { background: #1d4ed8; }
+
+.notifModal__title {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.notifModal__text {
+  margin: 0 0 22px 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #4b5563;
+  white-space: pre-line;
+}
+
+.notifModal__btnOk {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.notifModal__btnOk:active {
+  transform: scale(0.98);
+}
