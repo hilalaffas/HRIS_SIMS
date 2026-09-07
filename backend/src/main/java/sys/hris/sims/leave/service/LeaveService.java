@@ -278,8 +278,12 @@ public class LeaveService {
 
         // --- Sisa Cuti (manual): dihitung ulang dari SELURUH histori di atas,
         // TIDAK dibatasi periode tahunan (pool ini tidak refresh tiap tahun).
-        BigDecimal manualAllocated = BigDecimal.valueOf(
-                employee.getManualLeaveBalance() == null ? 0 : employee.getManualLeaveBalance());
+        // [UBAH] employee.getManualLeaveBalance() sekarang bertipe BigDecimal
+        // langsung (V24__change_manual_leave_balance_to_decimal.sql), jadi
+        // tidak perlu lagi dibungkus BigDecimal.valueOf(int).
+        BigDecimal manualAllocated = employee.getManualLeaveBalance() == null
+                ? BigDecimal.ZERO
+                : employee.getManualLeaveBalance();
         BigDecimal manualPoolRemaining = manualAllocated;
         Map<Long, BigDecimal> annualPortionByRequestId = new HashMap<>();
 

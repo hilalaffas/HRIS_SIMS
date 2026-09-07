@@ -1,5 +1,6 @@
 import React from 'react';
 import './ApproveSection.css';
+import { dayText } from '../../../../services/CutiService';
 
 /**
  * PerluDiprosesSection.jsx  ("bagianApproval")
@@ -12,8 +13,10 @@ import './ApproveSection.css';
  * (tidak mencolok), berdampingan dengan jumlah total permohonan.
  *
  * Props:
- *  - data: array permohonan cuti yang perlu diproses
- *  - sisaCuti: { totalHari, berlakuHingga }
+ *  - data: array permohonan cuti yang perlu diproses. Tiap item punya
+ *      karyawan.totalRemainingLeave -- Total Sisa Cuti (Tahunan + Lama)
+ *      milik KARYAWAN PEMOHON di baris itu (di-merge di ApproveLeave.jsx
+ *      dari /api/cuti/balance/all), BUKAN saldo milik approver yang login.
  *  - onRequestAction: (item, 'acc' | 'revisi' | 'tolak') => void
  *      Dipanggil saat tombol ACC/Revisi/Tolak diklik. TIDAK langsung
  *      mengubah status — hanya membuka ActionReasonModal di komponen
@@ -22,7 +25,7 @@ import './ApproveSection.css';
  *  - onOpenDetail: (item) => void
  * ------------------------------------------------------------------
  */
-const ApprovalSection = ({ data, sisaCuti, onRequestAction, onOpenDetail }) => {
+const ApprovalSection = ({ data, onRequestAction, onOpenDetail }) => {
   return (
     <div className="approvalSection">
       <div className="approvalSection__toolbar">
@@ -67,7 +70,12 @@ const ApprovalSection = ({ data, sisaCuti, onRequestAction, onOpenDetail }) => {
               </div>
 
               <div role="cell">
-                <span className="approvalSection__quota"> &nbsp;<strong>{sisaCuti.totalHari} hari</strong>
+                <span className="approvalSection__quota">
+                  {item.karyawan?.totalRemainingLeave != null ? (
+                    <strong>{dayText(item.karyawan.totalRemainingLeave)} hari</strong>
+                  ) : (
+                    <strong>-</strong>
+                  )}
                 </span>
               </div>
 

@@ -35,9 +35,13 @@ const normalizedLeaveDays = (item) => {
     : Number(item?.totalDays || 0);
 };
 
-const dayText = (value) => Number(value).toLocaleString('id-ID', {
+// [UBAH] Diekspor (sebelumnya private) supaya bisa dipakai ulang di
+// ApproveSection.jsx & ListSection.jsx untuk format angka "Sisa Cuti"
+// per-karyawan pemohon, yang sekarang bisa berupa desimal (mis. 1,5 hari)
+// sejak manual_leave_balance & remainingAnnualLeave mendukung BigDecimal.
+export const dayText = (value) => Number(value).toLocaleString('id-ID', {
   minimumFractionDigits: 0,
-  maximumFractionDigits: 1,
+  maximumFractionDigits: 2,
 });
 
 export const getLeaveBalance = () => api.get('/api/cuti/balance/me');

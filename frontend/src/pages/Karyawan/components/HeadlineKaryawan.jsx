@@ -34,7 +34,13 @@ const HeadlineKaryawan = ({ data = [] }) => {
       const nama = emp.fullName || '-';
       const role = emp.user?.roleId?.roleName || 'MEMBER';
       const divisi = emp.divisi?.namaDivisi || 'Umum';
-      const sisaCuti = emp.manualLeaveBalance ?? 0;
+      // [UBAH] Sebelumnya pakai emp.manualLeaveBalance (alokasi AWAL mentah
+      // yang diisi HR), sehingga angka di CSV beda dengan yang tampil di
+      // tabel Direktori Karyawan. Disamakan dengan pola fallback yang
+      // sudah benar di TableKaryawan.jsx: pakai totalRemainingLeave
+      // (Total Sisa Cuti Tahunan + Lama, hasil hitung backend) dulu,
+      // baru fallback ke manualLeaveBalance kalau belum berhasil dimuat.
+      const sisaCuti = emp.totalRemainingLeave ?? emp.manualLeaveBalance ?? 0;
       const email = emp.email || '-'; 
       const telepon = emp.phone || emp.noTelp || emp.telepon || '-'; 
       const status = emp.isActive ? 'AKTIF' : 'NONAKTIF';

@@ -5,6 +5,7 @@ import lombok.*;
 import sys.hris.sims.divisi.entity.Divisi;
 import sys.hris.sims.user.entity.User;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -69,7 +70,12 @@ public class Employee {
     // field dummy "Sisa Cuti Sakit"). @Builder.Default WAJIB ada supaya
     // Employee.builder().build() tanpa isi field ini tetap default ke 0,
     // bukan null -- soalnya kolomnya NOT NULL di database.
+    // [UBAH] Integer -> BigDecimal (V24__change_manual_leave_balance_to_decimal.sql)
+    // supaya HR bisa isi alokasi awal dengan angka desimal bebas (mis. 2,25),
+    // bukan cuma bilangan bulat. precision/scale WAJIB disamakan dengan
+    // NUMERIC(6,2) di migration, karena ddl-auto=validate akan menolak start
+    // up kalau definisi entity tidak cocok dengan kolom asli di database.
     @Builder.Default
-    @Column(name = "manual_leave_balance", nullable = false)
-    private Integer manualLeaveBalance = 0;
+    @Column(name = "manual_leave_balance", nullable = false, precision = 6, scale = 2)
+    private BigDecimal manualLeaveBalance = BigDecimal.ZERO;
 }

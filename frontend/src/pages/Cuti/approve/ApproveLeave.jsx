@@ -8,7 +8,7 @@ import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
 import ActionReasonModal from './components/ActionReasonModal';
-import { getApprovalDetail, getApprovalHistory, getLeaveBalance, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
+import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
 
 /**
  * ApproveLeaving.jsx
@@ -38,15 +38,47 @@ const ApproveLeaving = () => {
 
   const [pending, setPending] = useState([]);
   const [history, setHistory] = useState([]);
-  const [sisaCuti, setSisaCuti] = useState({ totalHari: 0 });
   const [error, setError] = useState('');
+
+  // [UBAH] Sebelumnya "Kuota Cuti"/"Sisa Cuti" di tabel Approval & List
+  // Cuti nampilin SATU angka global (saldo cuti tahunan milik APPROVER
+  // yang login), dipasang sama rata ke SEMUA baris walau beda karyawan
+  // pemohon -- makanya semua baris kelihatan sama padahal harusnya beda
+  // per pemohon. Sekarang tiap baris digabungkan (merge) dengan Total
+  // Sisa Cuti (Tahunan + Lama) milik KARYAWAN PEMOHON di baris itu,
+  // diambil dari /api/cuti/balance/all (sudah dipakai TableKaryawan.jsx).
+  //
+  // Catatan: endpoint approval (/api/cuti/approvals/my-task & /history)
+  // belum expose employeeId si pemohon, cuma employeeName -- jadi
+  // pencocokan sementara pakai NAMA LENGKAP. Kalau suatu saat ada 2
+  // karyawan dengan nama lengkap identik persis, pencocokan ini bisa
+  // salah pasang; solusi paling aman jangka panjang adalah menambahkan
+  // employeeId pemohon di LeaveApprovalResponse (backend).
+  const mergeSisaCutiPemohon = useCallback((items, balanceByName) => {
+    return items.map((item) => ({
+      ...item,
+      karyawan: {
+        ...item.karyawan,
+        totalRemainingLeave: balanceByName.get(item.karyawan?.nama)?.totalRemainingLeave,
+      },
+    }));
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
-      const [tasks, records, balance] = await Promise.all([getPendingApprovals(), getApprovalHistory(), getLeaveBalance()]);
-      setPending(tasks); setHistory(records); setSisaCuti({ totalHari: balance.remainingAnnualLeave ?? 0 }); setError('');
+      const [tasks, records, balances] = await Promise.all([
+        getPendingApprovals(),
+        getApprovalHistory(),
+        getAllLeaveBalances(),
+      ]);
+      const balanceByName = new Map(
+        (Array.isArray(balances) ? balances : []).map((b) => [b.employeeName, b])
+      );
+      setPending(mergeSisaCutiPemohon(tasks, balanceByName));
+      setHistory(mergeSisaCutiPemohon(records, balanceByName));
+      setError('');
     } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
-  }, []);
+  }, [mergeSisaCutiPemohon]);
   useEffect(() => { loadData(); }, [loadData]);
 
   // Permohonan yang sedang menunggu alasan dari approver.
@@ -134,12 +166,11 @@ const ApproveLeaving = () => {
         {activeTab === "proses" ? (
           <ApproveSection
             data={pending}
-            sisaCuti={sisaCuti}
             onRequestAction={handleRequestAction}
             onOpenDetail={handleOpenDetail}
           />
         ) : (
-          <ListCutiSection data={history} sisaCuti={sisaCuti} onOpenDetail={handleOpenDetail} />
+          <ListCutiSection data={history} onOpenDetail={handleOpenDetail} />
         )}
       </div>
       {/*Bagian popup detail riwayat (FormCuti)*/}

@@ -1,6 +1,7 @@
   import React, { useMemo, useState } from 'react';
   import './ListSection.css';
   import FilterStatusDropdown from './FilterStatusDropdown';
+  import { dayText } from '../../../../services/CutiService';
 
   /**
    * ListCutiSection.jsx
@@ -8,8 +9,10 @@
    * Sesuai gambar `listcuti.PNG` + `filterlistcuti.PNG`.
    *
    * Props:
-   *  - data: array seluruh riwayat permohonan cuti
-   *  - sisaCuti: objek sisa cuti global (jika ada)
+   *  - data: array seluruh riwayat permohonan cuti. Tiap item punya
+   *      karyawan.totalRemainingLeave -- Total Sisa Cuti (Tahunan + Lama)
+   *      milik KARYAWAN PEMOHON di baris itu (di-merge di ApproveLeave.jsx
+   *      dari /api/cuti/balance/all).
    *  - onOpenDetail: (item) => void  -> buka popup `popuplistcuti.PNG`
    * ------------------------------------------------------------------
    */
@@ -35,7 +38,7 @@
     DITOLAK: "Ditolak",
   };
 
-  const LeaveListSection = ({ data, sisaCuti, onOpenDetail }) => {
+  const LeaveListSection = ({ data, onOpenDetail }) => {
     const [statusFilter, setStatusFilter] = useState("ALL");
 
     const filteredData = useMemo(() => {
@@ -75,10 +78,6 @@
             </div>
 
             {filteredData.map((item) => {
-              // Mengambil kuota dari item (mock data Anda menggunakan nama 'KuotaCuti')
-              // Jika item tidak punya KuotaCuti, dia akan fallback ke prop global 'sisaCuti'
-              const infoCuti = item.KuotaCuti || sisaCuti;
-
               return (
                 <div className="leaveList__row" role="row" key={item.id}>
                   <div role="cell">
@@ -92,9 +91,9 @@
                   </div>
 
                   <div role="cell">
-                    {infoCuti ? (
+                    {item.karyawan?.totalRemainingLeave != null ? (
                       <span className="leaveList__quota">
-                        <strong>{infoCuti.totalHari} hari</strong>
+                        <strong>{dayText(item.karyawan.totalRemainingLeave)} hari</strong>
                       </span>
                     ) : (
                       <span className="leaveList__quota">-</span>

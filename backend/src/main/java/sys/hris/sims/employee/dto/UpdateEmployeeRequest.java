@@ -1,5 +1,7 @@
 package sys.hris.sims.employee.dto; // Sesuaikan package Anda
 
+import java.math.BigDecimal;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.Data;
@@ -25,5 +27,9 @@ public class UpdateEmployeeRequest {
     private String joinDate;      // Tanggal gabung, format yyyy-MM-dd (di-parse manual di controller)
 
     // [BARU] Sisa Cuti (manual, diisi HR) -- menggantikan field dummy "Sisa Cuti Sakit"
-    private Integer manualLeaveBalance;
+    // [UBAH] Integer -> BigDecimal supaya HR bisa isi alokasi awal dengan
+    // angka desimal bebas (mis. 2,25). Spring @ModelAttribute otomatis bisa
+    // bind String multipart form ("2.25") ke BigDecimal tanpa converter
+    // tambahan -- tidak perlu ubah apa pun di EmployeeController.java.
+    private BigDecimal manualLeaveBalance;
 }
