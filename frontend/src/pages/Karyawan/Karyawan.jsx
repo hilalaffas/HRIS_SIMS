@@ -18,12 +18,18 @@ import Toast from '../../components/Toast';
 // [UBAH] Data cuti karyawan sekarang diambil dari backend asli
 // (getAllLeaveRequestsForHr), bukan lagi dari mock allLeaveHistory.
 import { getAllLeaveRequestsForHr, getAllLeaveBalances } from '../../services/CutiService';
+
+// [BARU] Interval polling live-sync tabel Direktori Karyawan (lihat
+// useEffect fetchKaryawan di bawah) -- interval sama dengan RiwayatCuti.jsx
+// / LeaveHistory.jsx.
+const KARYAWAN_POLL_INTERVAL_MS = 15000;
 import FormCuti from '../Cuti/approve/components/Form';
 import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService';
 import { getSystemLogs } from '../../services/logService'; 
 
 
 const Karyawan = ({ user }) => {
+
     // 2. Tambahkan state untuk Log
     const [logList, setLogList] = useState([]);
 
@@ -55,6 +61,9 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
 
   const [karyawanList, setKaryawanList] = useState([]);
+  // [BARU] Timestamp sinkronisasi terakhir, dipakai TableKaryawan untuk
+  // indikator "Live · terakhir diperbarui ...".
+  const [karyawanSyncedAt, setKaryawanSyncedAt] = useState(null);
   // [UBAH] State data cuti HR — sekarang diisi dari backend asli (lihat
   // fetchRiwayatCuti), tidak lagi dari mock allLeaveHistory.
   const [riwayatCuti, setRiwayatCuti] = useState([]);
@@ -98,7 +107,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     setPendingResetRequestId(null);
   };
 
-  const fetchKaryawan = async () => {
+  const fetchKaryawan = async ({ silent = false } = {}) => {
     try {
       const response = await getKaryawanList();
       // Asumsi backend mengembalikan array of object di response.data atau response langsung
@@ -122,8 +131,14 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
         totalRemainingLeave: balanceByEmployeeId.get(emp.employeeId)?.totalRemainingLeave,
       }));
       setKaryawanList(merged);
+      // [BARU] Dicatat tiap fetch (termasuk polling silent) supaya
+      // TableKaryawan.jsx bisa menampilkan indikator "Live · terakhir
+      // diperbarui ...".
+      setKaryawanSyncedAt(new Date());
     } catch (error) {
-      console.error("Gagal menarik data karyawan:", error);
+      // Error polling background tidak perlu mengganggu user dengan apapun --
+      // data lama tetap tampil, dan fetch berikutnya akan mencoba lagi.
+      if (!silent) console.error("Gagal menarik data karyawan:", error);
     }
   };
 
@@ -157,6 +172,22 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   useEffect(() => {
     fetchKaryawan();
+
+    // [BARU] Live-sync tabel Direktori Karyawan: polling tiap 15 detik
+    // (interval sama dengan RiwayatCuti.jsx / LeaveHistory.jsx) + langsung
+    // sinkron begitu tab browser aktif kembali. Silent -- tidak ada
+    // spinner/log error yang mengganggu user saat sedang bekerja di tabel
+    // atau modal edit yang sedang terbuka.
+    const intervalId = window.setInterval(() => fetchKaryawan({ silent: true }), KARYAWAN_POLL_INTERVAL_MS);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchKaryawan({ silent: true });
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // [BARU] Ambil data cuti karyawan (termasuk hasil Cuti Susulan HR) dari
@@ -351,6 +382,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
               data={karyawanList}
               currentUserRole={currentUserRole}
               onEdit={handleOpenEdit}
+              lastSyncedAt={karyawanSyncedAt}
             />
           </div>
         )}

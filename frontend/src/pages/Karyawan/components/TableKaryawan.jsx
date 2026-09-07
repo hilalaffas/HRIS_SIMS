@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './TableKaryawan.css';
 
-const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
+// [BARU] Opsi jumlah data per halaman untuk pagination Direktori Karyawan.
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterJabatan, setFilterJabatan] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  // [BARU] State pagination.
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // 1. Ambil daftar jabatan yang unik dari database/props 'data' untuk dropdown dinamis
   //const uniqueJabatan = [...new Set(data.map(emp => emp.position).filter(Boolean))];
@@ -22,10 +28,46 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
     return matchSearch && matchJabatan;
   });
 
+  // [BARU] Reset ke halaman 1 setiap kali pencarian/filter berubah atau
+  // jumlah data berubah (mis. ada karyawan baru masuk dari polling live).
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterJabatan, data.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const pageData = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, safeCurrentPage, pageSize]);
+
+  const rangeStart = filteredData.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safeCurrentPage * pageSize, filteredData.length);
+
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="table-card">
       <div className="table-header-controls">
-        <h3>Direktori Aktif</h3>
+        <div className="table-header-titleRow">
+          <h3>Direktori Aktif</h3>
+          {/* [BARU] Indikator live-sync, mengikuti pola RiwayatCuti.jsx /
+              LeaveHistory.jsx. Hanya tampil kalau parent mengirim prop
+              lastSyncedAt. */}
+          {lastSyncedAt && (
+            <div className="table-sync">
+              <span className="table-sync__dot" aria-hidden="true"></span>
+              Live
+              <span className="table-sync__time">
+                &middot; diperbarui {lastSyncedAt.toLocaleTimeString('id-ID')}
+              </span>
+            </div>
+          )}
+        </div>
         <div className="filters">
           {/* 3. Dropdown Filter Dinamis */}
           <select 
@@ -40,6 +82,18 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
             <option value="Manager">Manager</option>
             <option value="HRD_Admin">HR Admin</option>
             <option value="HRD_Karyawan">HR Karyawan</option>
+          </select>
+
+          {/* [BARU] Dropdown jumlah data per halaman */}
+          <select
+            className="filter-select"
+            value={pageSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            aria-label="Jumlah data per halaman"
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>{size} / halaman</option>
+            ))}
           </select>
           
           <div className="search-box">
@@ -68,8 +122,8 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
             </tr>
           </thead>
           <tbody>
-            {/* 4. Render menggunakan filteredData di sini, BUKAN data.map */}
-            {filteredData.map((emp) => {
+            {/* 4. Render menggunakan pageData di sini (hasil filter + pagination) */}
+            {pageData.map((emp) => {
               const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://sims-backend-api-61je.onrender.com';
               const photoUrl = emp.photo
                 ? (emp.photo.startsWith('http') ? emp.photo : `${API_BASE_URL}/${emp.photo}`)
@@ -119,6 +173,37 @@ const TableKaryawan = ({ data, currentUserRole, onEdit }) => {
           </tbody>
         </table>
       </div>
+
+      {/* [BARU] Kontrol pagination, hanya tampil kalau ada data pada
+          filter/pencarian yang aktif saat ini. */}
+      {filteredData.length > 0 && (
+        <div className="table-pagination">
+          <span className="table-pagination__info">
+            Menampilkan {rangeStart}-{rangeEnd} dari {filteredData.length} karyawan
+          </span>
+          <div className="table-pagination__controls">
+            <button
+              type="button"
+              className="table-pagination__btn"
+              onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+              disabled={safeCurrentPage === 1}
+            >
+              Sebelumnya
+            </button>
+            <span className="table-pagination__page">
+              Halaman {safeCurrentPage} dari {totalPages}
+            </span>
+            <button
+              type="button"
+              className="table-pagination__btn table-pagination__btn--primary"
+              onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+              disabled={safeCurrentPage >= totalPages}
+            >
+              Berikutnya
+            </button>
+          </div>
+        </div>
+      )}
 
       {selectedPhoto && (
         <div className="photo-modal-overlay" onClick={() => setSelectedPhoto(null)}>

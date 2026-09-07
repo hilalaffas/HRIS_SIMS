@@ -426,7 +426,10 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
                 />
               </div>
               <div className="form-group_detail_karyawan green-bg-group_detail_karyawan">
-                <label>SISA CUTI</label>
+                {/* [UBAH] Label ditambah "(lama)" supaya jelas beda dengan
+                    "Sisa Cuti Tahunan" di sebelahnya -- field ini adalah
+                    alokasi/kuota tambahan lama yang diisi manual oleh HR. */}
+                <label>SISA CUTI (lama)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -437,22 +440,32 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
                 />
               </div>
             </div>
-            {/* [BARU] Total gabungan Sisa Cuti Tahunan + Sisa Cuti -- dihitung
-                backend (annualLeaveInfo.totalRemainingLeave), ini angka yang
-                sama yang tampil di Dashboard karyawan. */}
+            {/* [UBAH] Sebelumnya Total memakai angka statis dari
+                annualLeaveInfo.totalRemainingLeave (hasil hitung backend
+                SAAT MODAL DIBUKA). Nilai itu tidak pernah dihitung ulang
+                ketika HR mengetik angka baru di field "Sisa Cuti (lama)" di
+                atas, jadi Total tampak "nyangkut" di angka lama sampai modal
+                ditutup-buka lagi (bug yang dilaporkan). Sekarang Total
+                dihitung LANGSUNG dari formData (annualLeaveBalance +
+                manualLeaveBalance) supaya selalu ikut live setiap kali
+                salah satu field di atas berubah. */}
             <div className="form-group_detail_karyawan green-bg-group_detail_karyawan">
               <label>TOTAL SISA CUTI (TAHUNAN + LAMA)</label>
               <input
                 type="text"
-                value={isLoadingBalance ? 'Memuat...' : `${annualLeaveInfo?.totalRemainingLeave ?? formData.annualLeaveBalance} hari`}
+                value={
+                  isLoadingBalance
+                    ? 'Memuat...'
+                    : `${(Number(formData.annualLeaveBalance) || 0) + (Number(formData.manualLeaveBalance) || 0)} hari`
+                }
                 disabled
-                title="Sisa Cuti Tahunan + sisa Sisa Cuti (manual) yang belum terpakai. Saat karyawan mengajukan cuti, Sisa Cuti (manual) dipotong lebih dulu."
+                title="Sisa Cuti Tahunan + sisa Sisa Cuti (lama) yang belum terpakai. Saat karyawan mengajukan cuti, Sisa Cuti (lama) dipotong lebih dulu."
               />
             </div>
             <p style={{ fontSize: '12px', color: '#374151', background: '#f3f4f6', padding: '8px 12px', borderRadius: '6px', margin: '8px 0 0' }}>
               ℹ️ <strong>Sisa Cuti Tahunan</strong> dihitung otomatis: mulai berlaku 1 tahun setelah tanggal bergabung, dan
               refresh tiap tahun mengikuti tanggal bergabung tersebut -- field ini tidak bisa diketik manual.
-              <strong> Sisa Cuti</strong> di sebelahnya adalah alokasi awal (kuota tambahan) yang boleh diisi bebas oleh HR --
+              <strong> Sisa Cuti (lama)</strong> di sebelahnya adalah alokasi awal (kuota tambahan) yang boleh diisi bebas oleh HR --
               ini yang dipotong <strong>lebih dulu</strong> saat karyawan cuti, sebelum Cuti Tahunan.
               <strong> Total</strong> di bawah adalah gabungan sisa keduanya setelah dikurangi pemakaian.
             </p>
