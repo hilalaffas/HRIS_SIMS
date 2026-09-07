@@ -12,6 +12,11 @@ import lombok.Data;
 @AllArgsConstructor
 public class LeaveApprovalResponse {
     private Long leaveRequestId;
+    // [BARU] ID karyawan pemohon -- sebelumnya cuma ada employeeName (String).
+    // Ditambahkan supaya frontend (ApproveLeave.jsx) bisa mencocokkan data
+    // dari /api/cuti/balance/all dengan AMAN pakai ID unik, bukan nama
+    // lengkap yang berisiko tabrakan kalau ada 2 karyawan bernama sama.
+    private Long employeeId;
     private String employeeName;
     private String leaveType;
     private LocalDate startDate;

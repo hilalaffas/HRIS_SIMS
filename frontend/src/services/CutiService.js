@@ -203,7 +203,16 @@ export function mapApproval(item, employeeLookup = {}) {
 
   return {
     id: item.leaveRequestId || item.id,
-    karyawan: { nama: item.employeeName || item.employee?.fullName || 'Pemohon', kode: `CUTI-${item.leaveRequestId || item.id}`, jabatan: '-' },
+    karyawan: {
+      // [BARU] employeeId dari LeaveApprovalResponse.employeeId (backend) --
+      // dipakai ApproveLeave.jsx buat mencocokkan Total Sisa Cuti milik
+      // karyawan pemohon lewat ID, bukan nama lengkap (aman dari tabrakan
+      // nama kembar).
+      employeeId: item.employeeId ?? null,
+      nama: item.employeeName || item.employee?.fullName || 'Pemohon',
+      kode: `CUTI-${item.leaveRequestId || item.id}`,
+      jabatan: '-',
+    },
     jenisCuti: item.leaveType?.name || item.leaveType || 'Cuti',
     durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari)`,
     totalDays,

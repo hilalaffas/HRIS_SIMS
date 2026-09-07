@@ -542,6 +542,7 @@ public class LeaveService {
 
         return new LeaveApprovalResponse(
                 cuti.getLeaveRequestId(),
+                cuti.getEmployee().getEmployeeId(),
                 cuti.getEmployee().getFullName(),
                 cuti.getLeaveType().getName(),
                 cuti.getStartDate(),

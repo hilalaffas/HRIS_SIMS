@@ -48,18 +48,17 @@ const ApproveLeaving = () => {
   // Sisa Cuti (Tahunan + Lama) milik KARYAWAN PEMOHON di baris itu,
   // diambil dari /api/cuti/balance/all (sudah dipakai TableKaryawan.jsx).
   //
-  // Catatan: endpoint approval (/api/cuti/approvals/my-task & /history)
-  // belum expose employeeId si pemohon, cuma employeeName -- jadi
-  // pencocokan sementara pakai NAMA LENGKAP. Kalau suatu saat ada 2
-  // karyawan dengan nama lengkap identik persis, pencocokan ini bisa
-  // salah pasang; solusi paling aman jangka panjang adalah menambahkan
-  // employeeId pemohon di LeaveApprovalResponse (backend).
-  const mergeSisaCutiPemohon = useCallback((items, balanceByName) => {
+  // [UBAH - DIAMANKAN] Sebelumnya pencocokan sempat pakai NAMA LENGKAP
+  // karena LeaveApprovalResponse belum expose employeeId pemohon --
+  // berisiko salah pasang kalau ada 2 karyawan bernama identik persis.
+  // Sekarang backend (LeaveApprovalResponse.java + LeaveService.java)
+  // sudah menyertakan employeeId, jadi pencocokan pakai ID yang unik.
+  const mergeSisaCutiPemohon = useCallback((items, balanceByEmployeeId) => {
     return items.map((item) => ({
       ...item,
       karyawan: {
         ...item.karyawan,
-        totalRemainingLeave: balanceByName.get(item.karyawan?.nama)?.totalRemainingLeave,
+        totalRemainingLeave: balanceByEmployeeId.get(item.karyawan?.employeeId)?.totalRemainingLeave,
       },
     }));
   }, []);
@@ -71,11 +70,11 @@ const ApproveLeaving = () => {
         getApprovalHistory(),
         getAllLeaveBalances(),
       ]);
-      const balanceByName = new Map(
-        (Array.isArray(balances) ? balances : []).map((b) => [b.employeeName, b])
+      const balanceByEmployeeId = new Map(
+        (Array.isArray(balances) ? balances : []).map((b) => [b.employeeId, b])
       );
-      setPending(mergeSisaCutiPemohon(tasks, balanceByName));
-      setHistory(mergeSisaCutiPemohon(records, balanceByName));
+      setPending(mergeSisaCutiPemohon(tasks, balanceByEmployeeId));
+      setHistory(mergeSisaCutiPemohon(records, balanceByEmployeeId));
       setError('');
     } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
   }, [mergeSisaCutiPemohon]);
