@@ -256,25 +256,32 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     }
   };
 
-  const handleSubmitEditModal = async (formData, successMessage) => {
-    // Catatan: penyimpanan ke backend SUDAH dilakukan di dalam
-    // ModalDetailKaryawan.jsx (sama seperti pola FormKaryawan.jsx untuk
-    // tambah karyawan). Di sini kita cukup refetch dari server supaya
-    // tabel selalu konsisten dengan data asli, termasuk divisi yang baru diubah.
-    // [UBAH] Modal sudah menutup dirinya sendiri lebih dulu (onClose() di
-    // ModalDetailKaryawan.jsx dipanggil sebelum onSave ini selesai), jadi
-    // toast sukses di bawah ini muncul di halaman utama -- bukan lagi
-    // menimpa header modal yang sudah tertutup.
-    try {
-      await fetchKaryawan();
-      addLogActivity(user?.name || 'Admin HR', `mengupdate profil "${formData.namaLengkap}".`);
-      triggerToast(successMessage || `Data profil akun ${formData.namaLengkap} berhasil diperbarui.`, 'success');
-      setEditTarget(null);
-      setPendingResetRequestId(null); // [BARU]
-    } catch (error) {
-      console.error("Gagal me-refresh daftar karyawan:", error);
-      triggerToast('Data tersimpan, tapi gagal memuat ulang daftar karyawan. Coba refresh halaman.', 'error');
-    }
+  // [UBAH] Sebelumnya toast baru dipicu SETELAH await fetchKaryawan() +
+  // addLogActivity() selesai -- kalau ada apapun yang lambat/gagal di
+  // rangkaian itu (network lelet, race dengan polling live tabel setiap 15
+  // detik, dll), triggerToast() di ujung rangkaian itu bisa jadi telat atau
+  // tidak sempat kepanggil sama sekali, padahal modal sudah keburu tertutup
+  // duluan (onClose() di ModalDetailKaryawan.jsx dipanggil sinkron). Jadinya
+  // user cuma lihat modal close tanpa notifikasi apapun.
+  // Sekarang toast dipicu LANGSUNG (sinkron, tidak nunggu apapun) begitu
+  // handleSubmitEditModal ini dipanggil -- refetch tabel & log activity
+  // tetap jalan, tapi di background dan tidak lagi jadi syarat toast muncul.
+  const handleSubmitEditModal = (formData, successMessage) => {
+    triggerToast(successMessage || `Data profil akun ${formData.namaLengkap} berhasil diperbarui.`, 'success');
+    setEditTarget(null);
+    setPendingResetRequestId(null); // [BARU]
+
+    fetchKaryawan()
+      .then(() => {
+        addLogActivity(user?.name || 'Admin HR', `mengupdate profil "${formData.namaLengkap}".`);
+      })
+      .catch((error) => {
+        // Data karyawan SUDAH tersimpan di backend (itu terjadi di dalam
+        // ModalDetailKaryawan.jsx sebelum onSave ini dipanggil) -- yang
+        // gagal di sini cuma refetch tabelnya, jadi toast sukses di atas
+        // tetap valid. Polling live (setiap 15 detik) akan coba lagi.
+        console.error("Gagal me-refresh daftar karyawan:", error);
+      });
   };
 
   const handleRequestDelete = (item) => {
