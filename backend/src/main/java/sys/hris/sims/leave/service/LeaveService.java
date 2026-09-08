@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -253,22 +254,26 @@ public class LeaveService {
                 .toList();
     }
 
-    // [UBAH] Sekarang menghitung 3 hal: (1) Cuti Tahunan otomatis per-periode
-    // seperti sebelumnya -- baru berhak 1 tahun setelah joinDate, refresh
-    // tiap tahun ikut tanggal join. (2) Sisa Cuti (manual, dari HR) --
-    // dihitung ULANG dari histori seperti Cuti Tahunan, BUKAN saldo yang
-    // dikurangi langsung, supaya otomatis selalu benar walau ada cuti yang
-    // dibatalkan/dihapus. (3) Prioritas potongan: Sisa Cuti (manual) dipakai
-    // HABIS dulu sebelum Cuti Tahunan tersentuh -- berlaku utk semua jenis
-    // cuti yang deductsAnnualQuota = true (Cuti tahunan, Cuti Urgent, Cuti
-    // setengah hari).
+    // [UBAH] Saldo cuti tahunan menggunakan periode ANNIVERSARY berdasarkan
+    // tanggal masuk karyawan, bukan tahun kalender (1 Januari - 31 Desember).
+    //
+    // Aturan:
+    // 1. Cuti tahunan baru aktif setelah genap 1 tahun kerja.
+    // 2. Setiap anniversary, karyawan mendapat kuota dasar (umumnya 12 hari)
+    //    DIKURANGI defisit/kelebihan cuti dari periode tepat sebelumnya.
+    // 3. Bila pada periode berjalan cuti melebihi kuota yang tersedia,
+    //    remainingAnnualLeave boleh menjadi NEGATIF. Nilai negatif inilah
+    //    yang menjadi pengurang kuota pada anniversary berikutnya.
+    // 4. Sisa positif pada akhir periode TIDAK dibawa (reset kembali ke kuota
+    //    dasar pada anniversary berikutnya).
+    // 5. Sisa Cuti (manual/lama) tetap dipakai lebih dulu sebelum kuota tahunan.
     private LeaveBalanceResponse getLeaveBalance(Employee employee) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Jakarta"));
         LocalDate joinDate = employee.getJoinDate();
 
         // Semua cuti approved yang memotong kuota, diurutkan dari tanggal
-        // mulai paling awal -- urutan ini menentukan mana yang duluan
-        // "menghabiskan" Sisa Cuti (manual) sebelum jatuh ke Cuti Tahunan.
+        // mulai paling awal. Urutan ini menentukan mana yang menghabiskan
+        // Sisa Cuti (manual) lebih dahulu sebelum jatuh ke kuota tahunan.
         List<LeaveRequest> relevantApprovedLeaves = getCutiByKaryawan(employee.getEmployeeId()).stream()
                 .filter(cuti -> ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
                 .filter(cuti -> Boolean.TRUE.equals(cuti.getLeaveType().getDeductsAnnualQuota()))
@@ -276,11 +281,8 @@ public class LeaveService {
                         .thenComparing(LeaveRequest::getSubmittedAt, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
 
-        // --- Sisa Cuti (manual): dihitung ulang dari SELURUH histori di atas,
-        // TIDAK dibatasi periode tahunan (pool ini tidak refresh tiap tahun).
-        // [UBAH] employee.getManualLeaveBalance() sekarang bertipe BigDecimal
-        // langsung (V24__change_manual_leave_balance_to_decimal.sql), jadi
-        // tidak perlu lagi dibungkus BigDecimal.valueOf(int).
+        // --- Sisa Cuti (manual): dihitung ulang dari SELURUH histori.
+        // Pool ini memang tidak refresh tiap tahun.
         BigDecimal manualAllocated = employee.getManualLeaveBalance() == null
                 ? BigDecimal.ZERO
                 : employee.getManualLeaveBalance();
@@ -288,7 +290,7 @@ public class LeaveService {
         Map<Long, BigDecimal> annualPortionByRequestId = new HashMap<>();
 
         for (LeaveRequest cuti : relevantApprovedLeaves) {
-            BigDecimal totalDays = cuti.getTotalDays();
+            BigDecimal totalDays = cuti.getTotalDays() == null ? BigDecimal.ZERO : cuti.getTotalDays();
             BigDecimal fromManual = manualPoolRemaining.min(totalDays).max(BigDecimal.ZERO);
             BigDecimal fromAnnual = totalDays.subtract(fromManual);
             manualPoolRemaining = manualPoolRemaining.subtract(fromManual);
@@ -299,8 +301,8 @@ public class LeaveService {
         boolean belumBerhakCutiTahunan = joinDate == null || joinDate.plusYears(1).isAfter(today);
 
         if (belumBerhakCutiTahunan) {
-            // [BARU] Sisa Cuti (manual) tetap bisa dipakai walau karyawan
-            // belum genap 1 tahun kerja -- yang 0 hanya porsi Cuti Tahunan.
+            // Sisa Cuti manual tetap dapat digunakan walaupun masa kerja belum
+            // genap 1 tahun. Yang belum aktif hanya Cuti Tahunan.
             return LeaveBalanceResponse.builder()
                     .employeeId(employee.getEmployeeId())
                     .employeeName(employee.getFullName())
@@ -317,25 +319,37 @@ public class LeaveService {
 
         LeaveType annualLeave = leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan")
                 .orElse(null);
-        BigDecimal annualQuota = BigDecimal.valueOf(getAnnualQuota(employee, annualLeave));
+        BigDecimal baseAnnualQuota = BigDecimal.valueOf(getAnnualQuota(employee, annualLeave));
 
-        // Tentukan periode cuti tahunan yang SEDANG berjalan (anniversary-based).
-        // Contoh: join 15 Mar 2023 & hari ini 20 Jul 2026 -> tahunKerjaPenuh = 3,
-        // periodeMulai = 15 Mar 2026, periodeSelesai = 15 Mar 2027.
+        // Tentukan periode cuti tahunan yang sedang berjalan berdasarkan
+        // ANNIVERSARY tanggal masuk.
+        // Contoh join 15-03-2023, hari ini 20-07-2026:
+        // periode berjalan = 15-03-2026 s.d. 15-03-2027.
         long tahunKerjaPenuh = ChronoUnit.YEARS.between(joinDate, today);
         LocalDate periodeMulai = joinDate.plusYears(tahunKerjaPenuh);
         LocalDate periodeSelesai = periodeMulai.plusYears(1);
 
-        // [UBAH] usedAnnualLeave sekarang menjumlahkan "porsi tahunan" tiap
-        // cuti (annualPortionByRequestId), bukan totalDays mentah -- supaya
-        // hari yang sudah kepotong dari Sisa Cuti tidak ikut mengurangi
-        // Cuti Tahunan juga (mencegah dobel potong).
+        // Hitung kuota pembuka periode berjalan dengan membawa hanya DEFISIT
+        // dari periode sebelumnya. Dengan cara ini tidak perlu kolom saldo baru
+        // di database: defisit dapat direkonstruksi dari histori approved leave.
+        BigDecimal annualQuota = calculateCarryAdjustedAnnualQuota(
+                baseAnnualQuota,
+                joinDate,
+                periodeMulai,
+                relevantApprovedLeaves,
+                annualPortionByRequestId
+        );
+
+        // Pemakaian yang sudah masuk periode berjalan. Porsi yang sebelumnya
+        // dibayar oleh Sisa Cuti manual tidak ikut mengurangi Cuti Tahunan.
         BigDecimal usedAnnualLeave = relevantApprovedLeaves.stream()
                 .filter(cuti -> !cuti.getStartDate().isBefore(periodeMulai) && cuti.getStartDate().isBefore(periodeSelesai))
                 .map(cuti -> annualPortionByRequestId.getOrDefault(cuti.getLeaveRequestId(), BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal remainingAnnualLeave = annualQuota.subtract(usedAnnualLeave).max(BigDecimal.ZERO);
+        // PENTING: JANGAN di-clamp ke 0. Nilai minus adalah defisit tahun berjalan
+        // dan akan mengurangi kuota pada anniversary berikutnya.
+        BigDecimal remainingAnnualLeave = annualQuota.subtract(usedAnnualLeave);
 
         return LeaveBalanceResponse.builder()
                 .employeeId(employee.getEmployeeId())
@@ -350,6 +364,47 @@ public class LeaveService {
                 .totalRemainingLeave(remainingAnnualLeave.add(remainingManualLeave))
                 .build();
     }
+
+    /**
+     * Menghitung kuota pembuka periode berjalan dengan aturan carry-over defisit.
+     *
+     * Periode pertama dimulai saat karyawan genap 1 tahun. Untuk setiap periode
+     * historis sebelum periode aktif:
+     *   opening = baseQuota + previousDeficit
+     *   ending  = opening - annualUsage
+     *   nextDeficit = min(ending, 0)
+     *
+     * Sisa positif tidak dibawa. Hanya saldo negatif (kelebihan cuti) yang
+     * mengurangi kuota pada anniversary berikutnya.
+     */
+        private BigDecimal calculateCarryAdjustedAnnualQuota(
+            BigDecimal baseQuota,
+            LocalDate joinDate,
+            LocalDate currentPeriodStart,
+            List<LeaveRequest> approvedLeaves,
+            Map<Long, BigDecimal> annualPortionByRequestId) {
+
+            BigDecimal previousDeficit = BigDecimal.ZERO;
+            LocalDate periodStart = joinDate.plusYears(1);
+
+            while (periodStart.isBefore(currentPeriodStart)) {
+                LocalDate periodEnd = periodStart.plusYears(1);
+                final LocalDate periodStartFinal = periodStart; // <-- tambahan: salinan effectively final
+                BigDecimal openingQuota = baseQuota.add(previousDeficit);
+
+                BigDecimal usedInPeriod = approvedLeaves.stream()
+                        .filter(cuti -> !cuti.getStartDate().isBefore(periodStartFinal)
+                                && cuti.getStartDate().isBefore(periodEnd))
+                        .map(cuti -> annualPortionByRequestId.getOrDefault(cuti.getLeaveRequestId(), BigDecimal.ZERO))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal endingBalance = openingQuota.subtract(usedInPeriod);
+                previousDeficit = endingBalance.min(BigDecimal.ZERO);
+                periodStart = periodEnd;
+            }
+
+            return baseQuota.add(previousDeficit);
+        }
 
     public void deleteCuti(Long id) {
         LeaveRequest cuti = getCutiById(id);

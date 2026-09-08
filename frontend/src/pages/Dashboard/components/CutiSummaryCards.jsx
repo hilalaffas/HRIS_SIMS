@@ -37,6 +37,9 @@ export default function CutiSummaryCards({ balance }) {
   if (sisaManual > 0) {
     catatan += ` (termasuk ${sisaManual} hari cuti lama)`;
   }
+  if (Number(balance?.remainingAnnualLeave ?? 0) < 0) {
+    catatan += ` • Defisit cuti tahunan ${Math.abs(Number(balance.remainingAnnualLeave))} hari akan mengurangi kuota pada reset berikutnya`;
+  }
 
   return (
     <div className="cuti-card cuti-card--dark">
