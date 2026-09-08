@@ -145,8 +145,8 @@ const LeaveTypeDateSection = ({
         <div className="form-group">
           <label className="form-label">DURASI SESI SETENGAH HARI *</label>
           <select value={durasiSesi} onChange={(e) => setDurasiSesi(e.target.value)} className="form-control">
-            <option value="Setengah Hari (Pagi)">Setengah Hari (Pagi: 08.00 - 12.00)</option>
-            <option value="Setengah Hari (Siang)">Setengah Hari (Siang: 13.00 - 17.00)</option>
+            <option value="PAGI">Setengah Hari (Pagi: 08.00 - 12.00)</option>
+            <option value="SIANG">Setengah Hari (Siang: 13.00 - 17.00)</option>
           </select>
         </div>
       )}
@@ -186,6 +186,7 @@ const LeaveTypeDateSection = ({
 
       <div className="duration-info-alert">
         Durasi pengajuan: {jumlahHariCuti} Hari Kerja
+        {isHalfDayLeave && (durasiSesi === 'SIANG' ? ' • Sesi Siang (13.00 - 17.00)' : ' • Sesi Pagi (08.00 - 12.00)')}
       </div>
     </>
   );

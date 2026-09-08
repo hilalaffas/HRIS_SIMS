@@ -60,6 +60,12 @@ public class LeaveRequest {
     @Column(name = "total_days", nullable = false)
     private BigDecimal totalDays;
 
+    // [BARU] Sesi untuk Cuti setengah hari: "PAGI" atau "SIANG".
+    // NULL untuk jenis cuti lain. Diisi & divalidasi di
+    // LeaveService.calculateLeaveDays().
+    @Column(name = "session")
+    private String session;
+
     @Column(name = "submitted_at", nullable = false)
     private LocalDateTime submittedAt;
 

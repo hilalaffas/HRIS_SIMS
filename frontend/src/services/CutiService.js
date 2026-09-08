@@ -35,6 +35,27 @@ const normalizedLeaveDays = (item) => {
     : Number(item?.totalDays || 0);
 };
 
+// [BARU] Label sesi Cuti setengah hari. Kode "PAGI"/"SIANG" dikirim &
+// diterima dari backend (kolom leave_requests.session); label lengkap ini
+// yang ditampilkan ke user.
+export const SESSION_LABELS = {
+  PAGI: 'Sesi Pagi (08.00 - 12.00)',
+  SIANG: 'Sesi Siang (13.00 - 17.00)',
+};
+
+// [BARU] Label sesi untuk satu record, dipakai popup detail & dropdown edit.
+export const sessionLabel = (sessionCode) => SESSION_LABELS[String(sessionCode || '').trim().toUpperCase()] || '';
+
+// [BARU] Suffix " • Sesi Pagi (...)" yang disisipkan ke teks durasi
+// ("totalHari"/"durasi") supaya sesi otomatis tampil di mana pun durasi
+// itu dirender -- popup Detail Cuti (Form.jsx), Riwayat & Status Cuti
+// (LeaveHistory.jsx), dan daftar/detail approval (ListSection.jsx) --
+// tanpa perlu mengubah komponen tampilan satu per satu.
+const sessionSuffix = (item) => {
+  const label = sessionLabel(item?.session);
+  return label ? ` • ${label}` : '';
+};
+
 // [UBAH] Diekspor (sebelumnya private) supaya bisa dipakai ulang di
 // ApproveSection.jsx & ListSection.jsx untuk format angka "Sisa Cuti"
 // per-karyawan pemohon, yang sekarang bisa berupa desimal (mis. 1,5 hari)
@@ -73,6 +94,10 @@ export async function submitCuti(payload) {
     reason: payload.reason || payload.alasan,
     pendingWork: payload.pendingWork || payload.pekerjaanTertunda,
     coveredBy: payload.coveredBy || payload.coverOleh,
+    // [BARU] Sesi Cuti setengah hari ("PAGI"/"SIANG"). Backend yang
+    // memvalidasi & mengabaikan nilai ini untuk jenis cuti selain
+    // setengah hari.
+    session: payload.session || null,
     leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
     spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
     managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
@@ -90,6 +115,8 @@ export async function submitUrgentCuti(payload) {
     reason: payload.alasan || payload.reason,
     pendingWork: payload.pekerjaanTertunda || payload.pendingWork,
     coveredBy: payload.dicoverOleh || payload.coveredBy,
+    // [BARU] Sesi Cuti setengah hari, sama seperti submitCuti().
+    session: payload.session || null,
     leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
     spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
     managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
@@ -104,6 +131,8 @@ export const resubmitCuti = (id, payload) => api.put(`/api/cuti/${id}/resubmit`,
   reason: payload.reason || payload.alasan,
   pendingWork: payload.pendingWork || payload.pekerjaanTertunda,
   coveredBy: payload.coveredBy || payload.coverOleh,
+  // [BARU] Sesi Cuti setengah hari, sama seperti submitCuti().
+  session: payload.session || null,
   leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
   spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
   managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
@@ -119,9 +148,14 @@ export function mapMyLeave(item) {
     userName: item.employee?.fullName || item.employeeName,
     jenisCuti: item.leaveType?.name || 'Cuti',
     stringTanggal: rawTanggal.split('(')[0].trim(),
-    totalHari: `${dayText(totalDays)} Hari`,
+    // [UBAH] Sesi Pagi/Siang disisipkan di sini supaya otomatis tampil di
+    // Riwayat & Status Cuti (LeaveHistory.jsx) dan popup Detail Cuti.
+    totalHari: `${dayText(totalDays)} Hari${sessionSuffix(item)}`,
     totalDays,
     reportedTotalDays: Number(item.totalDays || 0),
+    // [BARU] Kode sesi mentah ("PAGI"/"SIANG"/null), dipakai handleEditKembali
+    // di ApplyCuti.jsx untuk mengisi ulang dropdown sesi saat cuti diedit.
+    session: item.session ?? null,
     status: statusLabel(status),
     statusChangedAt: item.returnedAt || item.approvedAt || item.submittedAt || null,
     rawDetail: { 
@@ -131,7 +165,9 @@ export function mapMyLeave(item) {
       reason: item.reason, 
       pendingWork: item.pendingWork, 
       coveredBy: item.coveredBy, 
-      reviewNote: item.reviewNote 
+      reviewNote: item.reviewNote,
+      // [BARU] Dibaca ulang oleh handleEditKembali (ApplyCuti.jsx).
+      session: item.session ?? null,
     },
   };
 }
@@ -214,8 +250,11 @@ export function mapApproval(item, employeeLookup = {}) {
       jabatan: '-',
     },
     jenisCuti: item.leaveType?.name || item.leaveType || 'Cuti',
-    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari)`,
+    // [UBAH] Sesi Pagi/Siang disisipkan di sini supaya otomatis tampil di
+    // popup Detail Cuti (Form.jsx -> "Durasi Kerja") & ListSection.jsx.
+    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari${sessionSuffix(item)})`,
     totalDays,
+    session: item.session ?? null,
     keterangan: item.reason || '-',
     pendingWork: item.pendingWork || '-',
     pekerjaanTertunda: item.pendingWork || '-',
@@ -268,7 +307,11 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     id: item.leaveRequestId,
     karyawan: { nama: item.employee?.fullName, kode: item.employee?.nikKaryawan || '-' },
     jenisCuti: item.leaveType?.name || 'Cuti',
-    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari)`,
+    // [UBAH] Sesi Pagi/Siang disisipkan di sini juga, supaya konsisten
+    // dengan mapApproval() saat popup Detail Cuti dibuka dari halaman
+    // Manajemen Karyawan (tab "Cuti Karyawan").
+    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari${sessionSuffix(item)})`,
+    session: item.session ?? null,
     statusBerkas: statusCode(status),
     keterangan: item.reason || '-',
     pekerjaanTertunda: item.pendingWork || '-',

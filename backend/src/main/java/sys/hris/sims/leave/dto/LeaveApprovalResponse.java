@@ -22,6 +22,10 @@ public class LeaveApprovalResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private BigDecimal totalDays;
+    // [BARU] Sesi Cuti setengah hari ("PAGI"/"SIANG"), NULL untuk jenis
+    // cuti lain. Dipakai frontend (CutiService.js) untuk menampilkan
+    // keterangan sesi di detail cuti & riwayat.
+    private String session;
     private String reason;
     private String pendingWork;
     private String coveredBy;

@@ -47,6 +47,9 @@ public class LeaveService {
     private static final String ROLE_LEADER = "LEADER";
     private static final String ROLE_SPV = "SPV";
     private static final String ROLE_MANAGER = "MANAGER";
+    // [BARU] Kode sesi yang valid untuk Cuti setengah hari.
+    private static final String SESSION_PAGI = "PAGI";
+    private static final String SESSION_SIANG = "SIANG";
 
     private final LeaveRepository cutiRepository;
     private final EmployeeRepository karyawanRepository;
@@ -434,6 +437,9 @@ public class LeaveService {
                 .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
         existingCuti.setStartDate(updatedCuti.getStartDate());
         existingCuti.setEndDate(updatedCuti.getEndDate());
+        // [BARU] Sesi (Pagi/Siang) ikut disalin sebelum dihitung ulang --
+        // calculateLeaveDays() yang akan memvalidasi & menormalisasinya.
+        existingCuti.setSession(updatedCuti.getSession());
         BigDecimal totalDays = calculateLeaveDays(existingCuti);
         if (totalDays.signum() <= 0) {
             throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
@@ -603,6 +609,7 @@ public class LeaveService {
                 cuti.getStartDate(),
                 cuti.getEndDate(),
                 cuti.getTotalDays(),
+                cuti.getSession(),
                 cuti.getReason(),
                 cuti.getPendingWork(),
                 cuti.getCoveredBy(),
@@ -681,10 +688,32 @@ public class LeaveService {
             if (!cuti.getStartDate().equals(cuti.getEndDate())) {
                 throw new RuntimeException("Cuti setengah hari hanya dapat diajukan untuk satu tanggal");
             }
+            // [BARU] Sesi (Pagi/Siang) wajib diisi & harus salah satu nilai valid.
+            String session = normalizeSession(cuti.getSession());
+            if (session == null) {
+                throw new RuntimeException("Sesi cuti setengah hari (Pagi/Siang) wajib dipilih");
+            }
+            cuti.setSession(session);
             return new BigDecimal("0.5");
         }
 
+        // [BARU] Jenis cuti selain setengah hari tidak boleh membawa sisa
+        // nilai sesi (mis. pindah jenis cuti saat resubmit).
+        cuti.setSession(null);
         return BigDecimal.valueOf(workingDays);
+    }
+
+    // [BARU] Menormalisasi input sesi dari frontend ("pagi", " Siang ", dst)
+    // menjadi kode baku "PAGI"/"SIANG". Mengembalikan null kalau tidak valid.
+    private String normalizeSession(String rawSession) {
+        if (rawSession == null) {
+            return null;
+        }
+        String trimmed = rawSession.trim().toUpperCase(Locale.ROOT);
+        if (SESSION_PAGI.equals(trimmed) || SESSION_SIANG.equals(trimmed)) {
+            return trimmed;
+        }
+        return null;
     }
 
     private String normalizeApproverRole(String roleName) {

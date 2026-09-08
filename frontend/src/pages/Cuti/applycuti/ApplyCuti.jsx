@@ -66,7 +66,7 @@ const ApplyCuti = ({ user }) => {
     jedaHariKerja,
     [...hariLiburNasional, ...holidayDates]
   );
-  const [durasiSesi, setDurasiSesi] = useState('Setengah Hari (Pagi)');
+  const [durasiSesi, setDurasiSesi] = useState('PAGI');
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [reason, setReason] = useState('');
@@ -169,6 +169,9 @@ const ApplyCuti = ({ user }) => {
     }
     setIsSubmitting(true);
     try {
+      // [BARU] Sesi (Pagi/Siang) hanya relevan & dikirim untuk Cuti Setengah
+      // Hari -- jenis cuti lain tetap mengirim session: null.
+      const isHalfDaySubmit = String(jenisCuti).trim().toLowerCase() === 'cuti setengah hari';
       const payload = { 
         leaveTypeId: type.leaveTypeId, 
         startDate, 
@@ -176,6 +179,7 @@ const ApplyCuti = ({ user }) => {
         reason, 
         pendingWork, 
         coveredBy,
+        session: isHalfDaySubmit ? durasiSesi : null,
         leaderEmployeeId: atasan || !leaderEmployeeId ? null : Number(leaderEmployeeId), 
         spvEmployeeId: atasan || !spvEmployeeId ? null : Number(spvEmployeeId), 
         managerEmployeeId: Number(managerEmployeeId) 
@@ -214,6 +218,8 @@ const ApplyCuti = ({ user }) => {
 
     const detail = item.rawDetail || {};
     setJenisCuti(detail.jenisCuti || item.jenisCuti);
+    // [BARU] Pulihkan sesi Pagi/Siang yang sebelumnya dipilih (kalau ada).
+    setDurasiSesi(detail.session || 'PAGI');
     setStartDate(detail.startDate || todayStr);
     setEndDate(detail.endDate || todayStr);
     setReason(detail.reason || '');
