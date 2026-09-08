@@ -257,8 +257,9 @@
 }
 
 .status-badge-list.dikembalikan {
-  background-color: #fee2e2;
+  background-color: #fffbeb;
   color: #a16207;
+  border: 1px solid #fbbf24;
 }
 
 .status-badge-btn.proses-pill {
