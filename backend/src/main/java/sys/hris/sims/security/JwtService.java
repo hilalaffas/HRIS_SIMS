@@ -1,15 +1,24 @@
 package sys.hris.sims.security;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Service;
-
 import java.security.Key;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+
 @Service
 public class JwtService {
-    private String secret = "12345678901234567890123456789012";
+    // [UBAH] Sebelumnya hardcoded di source code (bocor ke repo publik).
+    // Sekarang dibaca dari env var JWT_SECRET. Nilai setelah ':' HANYA
+    // fallback untuk development lokal -- production (Render) WAJIB
+    // set env var JWT_SECRET sendiri dengan nilai baru yang dirotasi.
+    @Value("${JWT_SECRET:local-dev-only-do-not-use-in-production-99d79c6f0315}")
+    private String secret;
+
     private Key getKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
