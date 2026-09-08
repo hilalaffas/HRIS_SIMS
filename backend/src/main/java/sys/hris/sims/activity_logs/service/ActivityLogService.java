@@ -20,6 +20,8 @@ public class ActivityLogService {
     public void log(String username, Long userId, String action,
                     String entity, Long entityId, String description,
                     HttpServletRequest request) {
+        String ipAddress = (request != null) ? request.getRemoteAddr() : "SYSTEM";
+
         ActivityLog log = ActivityLog.builder()
                 .username(username)
                 .userId(userId)
@@ -27,7 +29,7 @@ public class ActivityLogService {
                 .entity(entity)
                 .entityId(entityId)
                 .description(description)
-                .ipAddress(request.getRemoteAddr())
+                .ipAddress(ipAddress)
                 .build();
 
         activityLogRepository.save(log);
@@ -44,12 +46,8 @@ public class ActivityLogService {
     // Cron: 0 0 0 1 * * artinya setiap jam 00:00:00 di tanggal 1 setiap bulan
     @Scheduled(cron = "0 0 0 1 * *")
     public void cleanupOldLogs() {
-        // Hitung waktu 1 bulan yang lalu
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
-        
-        // Hapus data
         activityLogRepository.deleteLogsOlderThan(oneMonthAgo);
-        
         System.out.println("Log lama telah dibersihkan pada: " + LocalDateTime.now());
     }
 }
