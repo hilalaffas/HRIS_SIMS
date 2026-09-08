@@ -110,9 +110,11 @@ const LeaveTypeDateSection = ({
             const itemStr = `${item.year}-${String(item.month + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
             const isMelanggarBatasMin = minDateStr && new Date(itemStr) < new Date(minDateStr);
             const isMelanggarBatasMax = maxDateStr && new Date(itemStr) > new Date(maxDateStr);
-            const isDisabledDay = isMelanggarBatasMin || isMelanggarBatasMax;
             const isWeekendDay = (new Date(item.year, item.month, item.day).getDay() === 0 || new Date(item.year, item.month, item.day).getDay() === 6);
             const isHolidayDay = safeHolidayDates.has(itemStr);
+            // Cuti hanya dapat diajukan pada hari kerja. Ini mencegah tanggal
+            // yang terlihat dapat dipilih tetapi kemudian dihitung sebagai 0 hari.
+            const isDisabledDay = isMelanggarBatasMin || isMelanggarBatasMax || isWeekendDay || isHolidayDay;
 
             return (
               <button

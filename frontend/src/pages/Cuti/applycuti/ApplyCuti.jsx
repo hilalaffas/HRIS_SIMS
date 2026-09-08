@@ -59,7 +59,13 @@ const ApplyCuti = ({ user }) => {
   const [error, setError] = useState('');
   const [jenisCuti, setJenisCuti] = useState('');
   const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka', 'Cuti Setengah Hari'].includes(jenisCuti) ? 0 : 5;
-  const dinamisBatasMinStr = hitungBatasMinTanggal(jedaHariKerja, hariLiburNasional);
+  // Gunakan hari libur dari sistem yang sama dengan perhitungan durasi.
+  // Dengan begitu, tanggal minimum tidak akan jatuh pada hari libur lalu
+  // menghasilkan durasi 0 hari saat dipilih.
+  const dinamisBatasMinStr = hitungBatasMinTanggal(
+    jedaHariKerja,
+    [...hariLiburNasional, ...holidayDates]
+  );
   const [durasiSesi, setDurasiSesi] = useState('Setengah Hari (Pagi)');
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
