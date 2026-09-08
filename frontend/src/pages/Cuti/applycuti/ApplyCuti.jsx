@@ -16,6 +16,11 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 const isSupervisor = (role = '') => ['LEADER', 'SPV', 'MANAGER'].includes(
   String(role).trim().toUpperCase().replace(/^ROLE_/, '')
 );
+
+// Tanggal form selalu berbentuk YYYY-MM-DD. Membuatnya sebagai tanggal UTC
+// mencegah pergeseran tanggal karena zona waktu browser saat menghitung rentang.
+const parseIsoDate = (dateString) => new Date(`${dateString}T00:00:00Z`);
+
 const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti) => {
   if (!startDate || !endDate) return 0;
   if (startDate > endDate) return 0;
@@ -25,23 +30,13 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti) => {
     return 0.5;
   }
 
-  // Jika tanggal sama dan merupakan hari kerja normal
-  if (startDate === endDate) {
-    const tempDate = new Date(`${startDate}T00:00:00`);
-    const weekend = tempDate.getDay() === 0 || tempDate.getDay() === 6;
-    const key = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`;
-    
-    if (!weekend && !holidayDates.has(key)) {
-      return 1; // Terhitung 1 hari kerja jika di hari yang sama
-    }
-    return 0; // 0 jika ternyata memilih hari libur/weekend
-  }
-
-  // Perhitungan dinamis rentang tanggal yang berbeda
+  // Rentang inklusif: tanggal mulai DAN tanggal selesai masing-masing
+  // diperiksa. Contoh 15/09/2026 s.d. 16/09/2026 = 2 hari kerja.
   let total = 0;
-  for (const date = new Date(`${startDate}T00:00:00`); date <= new Date(`${endDate}T00:00:00`); date.setDate(date.getDate() + 1)) {
-    const weekend = date.getDay() === 0 || date.getDay() === 6;
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const end = parseIsoDate(endDate);
+  for (const date = parseIsoDate(startDate); date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
+    const weekend = date.getUTCDay() === 0 || date.getUTCDay() === 6;
+    const key = date.toISOString().slice(0, 10);
     if (!weekend && !holidayDates.has(key)) total++;
   }
   return total;
