@@ -216,15 +216,15 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
           {/* Alur Approval Menyamping */}
           <div className="form-cuti__grid form-cuti__grid--three">
             <div className="form-cuti__field">
-              <span className="form-cuti__label">App. Leader</span>
+              <span className="form-cuti__label">Leader</span>
               <span className="form-cuti__value">{leaderName}</span>
             </div>
             <div className="form-cuti__field">
-              <span className="form-cuti__label">App. SPV</span>
+              <span className="form-cuti__label">SPV</span>
               <span className="form-cuti__value">{spvName}</span>
             </div>
             <div className="form-cuti__field">
-              <span className="form-cuti__label">App. Manager</span>
+              <span className="form-cuti__label">Manager</span>
               <span className="form-cuti__value">{managerName}</span>
             </div>
           </div>
