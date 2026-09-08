@@ -212,13 +212,13 @@
 }
 
 .status-badge-btn.dikembalikan {
-  background-color: #fff7ed;
-  color: #c2410c;
-  border: 1px solid #fed7aa;
+  background-color: #fffbeb; /* Latar belakang krem/kuning pudar */
+  color: #a16207; /* Warna teks oranye kecokelatan gelap agar kontras */
+  border: 1px solid #fbbf24; /* Warna border kuning keemasan tegas */
 }
 
 .status-badge-btn.dikembalikan:hover {
-  background-color: #ffedd5;
+  background-color: #fef3c7; /* Warna latar sedikit lebih gelap saat di-hover */
 }
 
 .status-badge-btn.disetujuiacc {
@@ -258,7 +258,7 @@
 
 .status-badge-list.dikembalikan {
   background-color: #fee2e2;
-  color: #991b1b;
+  color: #a16207;
 }
 
 .status-badge-btn.proses-pill {
