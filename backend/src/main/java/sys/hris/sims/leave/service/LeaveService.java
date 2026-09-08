@@ -47,9 +47,10 @@ public class LeaveService {
     private static final String ROLE_LEADER = "LEADER";
     private static final String ROLE_SPV = "SPV";
     private static final String ROLE_MANAGER = "MANAGER";
-    // [BARU] Kode sesi yang valid untuk Cuti setengah hari.
-    private static final String SESSION_PAGI = "PAGI";
-    private static final String SESSION_SIANG = "SIANG";
+    // [BARU] Batas Cuti Melahirkan: Laki-laki (cuti pendamping) maksimal 2
+    // hari kalender, Perempuan maksimal 3 bulan dari tanggal mulai.
+    private static final int MATERNITY_MAX_DAYS_MALE = 2;
+    private static final int MATERNITY_MAX_MONTHS_FEMALE = 3;
 
     private final LeaveRepository cutiRepository;
     private final EmployeeRepository karyawanRepository;
@@ -113,6 +114,7 @@ public class LeaveService {
             throw new RuntimeException("Karyawan pemohon wajib diisi");
         }
 
+        validateCutiMelahirkanLimit(cuti, requester);
         ensureNoOverlap(requester, cuti);
 
         BigDecimal totalDays = calculateLeaveDays(cuti);
@@ -257,26 +259,24 @@ public class LeaveService {
                 .toList();
     }
 
-    // [UBAH] Saldo cuti tahunan menggunakan periode ANNIVERSARY berdasarkan
-    // tanggal masuk karyawan, bukan tahun kalender (1 Januari - 31 Desember).
-    //
-    // Aturan:
-    // 1. Cuti tahunan baru aktif setelah genap 1 tahun kerja.
-    // 2. Setiap anniversary, karyawan mendapat kuota dasar (umumnya 12 hari)
-    //    DIKURANGI defisit/kelebihan cuti dari periode tepat sebelumnya.
-    // 3. Bila pada periode berjalan cuti melebihi kuota yang tersedia,
-    //    remainingAnnualLeave boleh menjadi NEGATIF. Nilai negatif inilah
-    //    yang menjadi pengurang kuota pada anniversary berikutnya.
-    // 4. Sisa positif pada akhir periode TIDAK dibawa (reset kembali ke kuota
-    //    dasar pada anniversary berikutnya).
-    // 5. Sisa Cuti (manual/lama) tetap dipakai lebih dulu sebelum kuota tahunan.
+    // [UBAH] Sekarang menghitung 3 hal: (1) Cuti Tahunan otomatis per-periode
+    // ANNIVERSARY (bukan tahun kalender) -- baru berhak 1 tahun setelah
+    // joinDate, refresh tiap tahun ikut tanggal join, dan DEFISIT/kelebihan
+    // pemakaian di suatu periode dibawa (mengurangi kuota) ke periode
+    // berikutnya -- lihat calculateCarryAdjustedAnnualQuota(). (2) Sisa Cuti
+    // (manual, dari HR) -- dihitung ULANG dari histori seperti Cuti Tahunan,
+    // BUKAN saldo yang dikurangi langsung, supaya otomatis selalu benar walau
+    // ada cuti yang dibatalkan/dihapus. (3) Prioritas potongan: Sisa Cuti
+    // (manual) dipakai HABIS dulu sebelum Cuti Tahunan tersentuh -- berlaku
+    // utk semua jenis cuti yang deductsAnnualQuota = true (Cuti tahunan, Cuti
+    // Urgent, Cuti setengah hari).
     private LeaveBalanceResponse getLeaveBalance(Employee employee) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Jakarta"));
         LocalDate joinDate = employee.getJoinDate();
 
         // Semua cuti approved yang memotong kuota, diurutkan dari tanggal
-        // mulai paling awal. Urutan ini menentukan mana yang menghabiskan
-        // Sisa Cuti (manual) lebih dahulu sebelum jatuh ke kuota tahunan.
+        // mulai paling awal -- urutan ini menentukan mana yang duluan
+        // "menghabiskan" Sisa Cuti (manual) sebelum jatuh ke Cuti Tahunan.
         List<LeaveRequest> relevantApprovedLeaves = getCutiByKaryawan(employee.getEmployeeId()).stream()
                 .filter(cuti -> ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
                 .filter(cuti -> Boolean.TRUE.equals(cuti.getLeaveType().getDeductsAnnualQuota()))
@@ -284,8 +284,11 @@ public class LeaveService {
                         .thenComparing(LeaveRequest::getSubmittedAt, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
 
-        // --- Sisa Cuti (manual): dihitung ulang dari SELURUH histori.
-        // Pool ini memang tidak refresh tiap tahun.
+        // --- Sisa Cuti (manual): dihitung ulang dari SELURUH histori di atas,
+        // TIDAK dibatasi periode tahunan (pool ini tidak refresh tiap tahun).
+        // [UBAH] employee.getManualLeaveBalance() sekarang bertipe BigDecimal
+        // langsung (V24__change_manual_leave_balance_to_decimal.sql), jadi
+        // tidak perlu lagi dibungkus BigDecimal.valueOf(int).
         BigDecimal manualAllocated = employee.getManualLeaveBalance() == null
                 ? BigDecimal.ZERO
                 : employee.getManualLeaveBalance();
@@ -304,8 +307,8 @@ public class LeaveService {
         boolean belumBerhakCutiTahunan = joinDate == null || joinDate.plusYears(1).isAfter(today);
 
         if (belumBerhakCutiTahunan) {
-            // Sisa Cuti manual tetap dapat digunakan walaupun masa kerja belum
-            // genap 1 tahun. Yang belum aktif hanya Cuti Tahunan.
+            // [BARU] Sisa Cuti (manual) tetap bisa dipakai walau karyawan
+            // belum genap 1 tahun kerja -- yang 0 hanya porsi Cuti Tahunan.
             return LeaveBalanceResponse.builder()
                     .employeeId(employee.getEmployeeId())
                     .employeeName(employee.getFullName())
@@ -324,10 +327,9 @@ public class LeaveService {
                 .orElse(null);
         BigDecimal baseAnnualQuota = BigDecimal.valueOf(getAnnualQuota(employee, annualLeave));
 
-        // Tentukan periode cuti tahunan yang sedang berjalan berdasarkan
-        // ANNIVERSARY tanggal masuk.
-        // Contoh join 15-03-2023, hari ini 20-07-2026:
-        // periode berjalan = 15-03-2026 s.d. 15-03-2027.
+        // Tentukan periode cuti tahunan yang SEDANG berjalan (anniversary-based).
+        // Contoh: join 15 Mar 2023 & hari ini 20 Jul 2026 -> tahunKerjaPenuh = 3,
+        // periodeMulai = 15 Mar 2026, periodeSelesai = 15 Mar 2027.
         long tahunKerjaPenuh = ChronoUnit.YEARS.between(joinDate, today);
         LocalDate periodeMulai = joinDate.plusYears(tahunKerjaPenuh);
         LocalDate periodeSelesai = periodeMulai.plusYears(1);
@@ -343,8 +345,10 @@ public class LeaveService {
                 annualPortionByRequestId
         );
 
-        // Pemakaian yang sudah masuk periode berjalan. Porsi yang sebelumnya
-        // dibayar oleh Sisa Cuti manual tidak ikut mengurangi Cuti Tahunan.
+        // [UBAH] usedAnnualLeave sekarang menjumlahkan "porsi tahunan" tiap
+        // cuti (annualPortionByRequestId), bukan totalDays mentah -- supaya
+        // hari yang sudah kepotong dari Sisa Cuti tidak ikut mengurangi
+        // Cuti Tahunan juga (mencegah dobel potong).
         BigDecimal usedAnnualLeave = relevantApprovedLeaves.stream()
                 .filter(cuti -> !cuti.getStartDate().isBefore(periodeMulai) && cuti.getStartDate().isBefore(periodeSelesai))
                 .map(cuti -> annualPortionByRequestId.getOrDefault(cuti.getLeaveRequestId(), BigDecimal.ZERO))
@@ -380,34 +384,34 @@ public class LeaveService {
      * Sisa positif tidak dibawa. Hanya saldo negatif (kelebihan cuti) yang
      * mengurangi kuota pada anniversary berikutnya.
      */
-        private BigDecimal calculateCarryAdjustedAnnualQuota(
+    private BigDecimal calculateCarryAdjustedAnnualQuota(
             BigDecimal baseQuota,
             LocalDate joinDate,
             LocalDate currentPeriodStart,
             List<LeaveRequest> approvedLeaves,
             Map<Long, BigDecimal> annualPortionByRequestId) {
 
-            BigDecimal previousDeficit = BigDecimal.ZERO;
-            LocalDate periodStart = joinDate.plusYears(1);
+        BigDecimal previousDeficit = BigDecimal.ZERO;
+        LocalDate periodStart = joinDate.plusYears(1);
 
-            while (periodStart.isBefore(currentPeriodStart)) {
-                LocalDate periodEnd = periodStart.plusYears(1);
-                final LocalDate periodStartFinal = periodStart; // <-- tambahan: salinan effectively final
-                BigDecimal openingQuota = baseQuota.add(previousDeficit);
+        while (periodStart.isBefore(currentPeriodStart)) {
+            LocalDate periodEnd = periodStart.plusYears(1);
+            final LocalDate periodStartFinal = periodStart; // effectively final untuk lambda
+            BigDecimal openingQuota = baseQuota.add(previousDeficit);
 
-                BigDecimal usedInPeriod = approvedLeaves.stream()
-                        .filter(cuti -> !cuti.getStartDate().isBefore(periodStartFinal)
-                                && cuti.getStartDate().isBefore(periodEnd))
-                        .map(cuti -> annualPortionByRequestId.getOrDefault(cuti.getLeaveRequestId(), BigDecimal.ZERO))
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal usedInPeriod = approvedLeaves.stream()
+                    .filter(cuti -> !cuti.getStartDate().isBefore(periodStartFinal)
+                            && cuti.getStartDate().isBefore(periodEnd))
+                    .map(cuti -> annualPortionByRequestId.getOrDefault(cuti.getLeaveRequestId(), BigDecimal.ZERO))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                BigDecimal endingBalance = openingQuota.subtract(usedInPeriod);
-                previousDeficit = endingBalance.min(BigDecimal.ZERO);
-                periodStart = periodEnd;
-            }
-
-            return baseQuota.add(previousDeficit);
+            BigDecimal endingBalance = openingQuota.subtract(usedInPeriod);
+            previousDeficit = endingBalance.min(BigDecimal.ZERO);
+            periodStart = periodEnd;
         }
+
+        return baseQuota.add(previousDeficit);
+    }
 
     public void deleteCuti(Long id) {
         LeaveRequest cuti = getCutiById(id);
@@ -437,9 +441,7 @@ public class LeaveService {
                 .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
         existingCuti.setStartDate(updatedCuti.getStartDate());
         existingCuti.setEndDate(updatedCuti.getEndDate());
-        // [BARU] Sesi (Pagi/Siang) ikut disalin sebelum dihitung ulang --
-        // calculateLeaveDays() yang akan memvalidasi & menormalisasinya.
-        existingCuti.setSession(updatedCuti.getSession());
+        validateCutiMelahirkanLimit(existingCuti, requester);
         BigDecimal totalDays = calculateLeaveDays(existingCuti);
         if (totalDays.signum() <= 0) {
             throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
@@ -609,7 +611,6 @@ public class LeaveService {
                 cuti.getStartDate(),
                 cuti.getEndDate(),
                 cuti.getTotalDays(),
-                cuti.getSession(),
                 cuti.getReason(),
                 cuti.getPendingWork(),
                 cuti.getCoveredBy(),
@@ -677,43 +678,63 @@ public class LeaveService {
         return annualLeave.getQuotaMale();
     }
 
+    // [BARU] Validasi batas Cuti Melahirkan berdasarkan gender pemohon.
+    // Laki-laki (dianggap cuti pendamping melahirkan) dibatasi maksimal
+    // MATERNITY_MAX_DAYS_MALE hari kalender, sedangkan Perempuan dibatasi
+    // maksimal MATERNITY_MAX_MONTHS_FEMALE bulan dari tanggal mulai.
+    // Dicek berdasarkan nama jenis cuti (mengandung kata "melahirkan"),
+    // supaya tetap berlaku walau nama tepatnya "Cuti Melahirkan (Khusus)".
+    private void validateCutiMelahirkanLimit(LeaveRequest cuti, Employee requester) {
+        String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
+        if (leaveTypeName == null || !leaveTypeName.toLowerCase(Locale.ROOT).contains("melahirkan")) {
+            return;
+        }
+        if (cuti.getStartDate() == null || cuti.getEndDate() == null) {
+            return;
+        }
+
+        boolean isPerempuan = "F".equalsIgnoreCase(requester.getGender()) || "P".equalsIgnoreCase(requester.getGender());
+
+        if (isPerempuan) {
+            LocalDate batasMaxTanggal = cuti.getStartDate().plusMonths(MATERNITY_MAX_MONTHS_FEMALE);
+            if (cuti.getEndDate().isAfter(batasMaxTanggal)) {
+                throw new RuntimeException("Cuti melahirkan untuk karyawan perempuan maksimal "
+                        + MATERNITY_MAX_MONTHS_FEMALE + " bulan sejak tanggal mulai");
+            }
+        } else {
+            long totalHariKalender = ChronoUnit.DAYS.between(cuti.getStartDate(), cuti.getEndDate()) + 1;
+            if (totalHariKalender > MATERNITY_MAX_DAYS_MALE) {
+                throw new RuntimeException("Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal "
+                        + MATERNITY_MAX_DAYS_MALE + " hari");
+            }
+        }
+    }
+
     private BigDecimal calculateLeaveDays(LeaveRequest cuti) {
+        String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
+        String normalizedLeaveTypeName = leaveTypeName == null ? "" : leaveTypeName.toLowerCase(Locale.ROOT);
+
+        if ("cuti setengah hari".equals(normalizedLeaveTypeName)) {
+            if (!cuti.getStartDate().equals(cuti.getEndDate())) {
+                throw new RuntimeException("Cuti setengah hari hanya dapat diajukan untuk satu tanggal");
+            }
+            return new BigDecimal("0.5");
+        }
+
+        // [BARU] Cuti Melahirkan dihitung berdasarkan hari KALENDER, bukan
+        // hari kerja -- konsisten dengan batas 2 hari (laki-laki) / 3 bulan
+        // (perempuan) yang tidak boleh terpotong akhir pekan/hari libur.
+        if (normalizedLeaveTypeName.contains("melahirkan")) {
+            long totalHariKalender = ChronoUnit.DAYS.between(cuti.getStartDate(), cuti.getEndDate()) + 1;
+            return totalHariKalender > 0 ? BigDecimal.valueOf(totalHariKalender) : BigDecimal.ZERO;
+        }
+
         int workingDays = calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate());
         if (workingDays <= 0) {
             return BigDecimal.ZERO;
         }
 
-        String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
-        if ("Cuti setengah hari".equalsIgnoreCase(leaveTypeName)) {
-            if (!cuti.getStartDate().equals(cuti.getEndDate())) {
-                throw new RuntimeException("Cuti setengah hari hanya dapat diajukan untuk satu tanggal");
-            }
-            // [BARU] Sesi (Pagi/Siang) wajib diisi & harus salah satu nilai valid.
-            String session = normalizeSession(cuti.getSession());
-            if (session == null) {
-                throw new RuntimeException("Sesi cuti setengah hari (Pagi/Siang) wajib dipilih");
-            }
-            cuti.setSession(session);
-            return new BigDecimal("0.5");
-        }
-
-        // [BARU] Jenis cuti selain setengah hari tidak boleh membawa sisa
-        // nilai sesi (mis. pindah jenis cuti saat resubmit).
-        cuti.setSession(null);
         return BigDecimal.valueOf(workingDays);
-    }
-
-    // [BARU] Menormalisasi input sesi dari frontend ("pagi", " Siang ", dst)
-    // menjadi kode baku "PAGI"/"SIANG". Mengembalikan null kalau tidak valid.
-    private String normalizeSession(String rawSession) {
-        if (rawSession == null) {
-            return null;
-        }
-        String trimmed = rawSession.trim().toUpperCase(Locale.ROOT);
-        if (SESSION_PAGI.equals(trimmed) || SESSION_SIANG.equals(trimmed)) {
-            return trimmed;
-        }
-        return null;
     }
 
     private String normalizeApproverRole(String roleName) {

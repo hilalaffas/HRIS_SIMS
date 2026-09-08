@@ -25,6 +25,7 @@ const LeaveForm = ({
   leaveTypes = [],
   approvers = { LEADER: [], SPV: [], MANAGER: [] },
   isSupervisor = false,
+  isFemale = false,
   isEditing,
   onCancelEdit
 }) => {
@@ -51,6 +52,7 @@ const LeaveForm = ({
           leaveTypes={leaveTypes}
           jumlahHariCuti={jumlahHariCuti}
           holidayDates={holidayDates}
+          isFemale={isFemale}
         />
 
         <ApprovalFlowSection

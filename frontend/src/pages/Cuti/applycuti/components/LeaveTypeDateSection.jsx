@@ -7,6 +7,35 @@ const formatDateDisplay = (dateStr) => {
   return `${d}/${m}/${y}`;
 };
 
+// [BARU] Helper untuk batas Cuti Melahirkan.
+// [PERBAIKAN] Sebelumnya pakai d.toISOString().slice(0,10) -- ini BUG di
+// timezone yang lebih cepat dari UTC (mis. WIB/UTC+7): toISOString()
+// mengonversi ke UTC dulu, jadi tanggal lokal bisa "mundur" 1 hari
+// (mis. 22/09 lokal jadi 21/09 setelah dikonversi ke UTC). Sekarang format
+// manual dari komponen tanggal LOKAL, tanpa konversi timezone sama sekali.
+const toLocalDateStr = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+const addMonthsToDateStr = (dateStr, months) => {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return toLocalDateStr(d);
+};
+const addDaysToDateStr = (dateStr, days) => {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toLocalDateStr(d);
+};
+// Laki-laki (cuti pendamping melahirkan) maksimal 2 hari, Perempuan
+// maksimal 3 bulan sejak tanggal mulai.
+const MATERNITY_MAX_DAYS_MALE = 2;
+const MATERNITY_MAX_MONTHS_FEMALE = 3;
+
 const generate35Days = (viewDate) => {
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -39,6 +68,7 @@ const LeaveTypeDateSection = ({
   leaveTypes = [],
   jumlahHariCuti = 0,
   holidayDates,
+  isFemale = false,
 }) => {
   const safeHolidayDates = holidayDates instanceof Set ? holidayDates : new Set();
 
@@ -55,8 +85,25 @@ const LeaveTypeDateSection = ({
   const normalizedLeaveType = String(jenisCuti || '').trim().toLowerCase();
   const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType);
   const isHalfDayLeave = normalizedLeaveType === 'cuti setengah hari';
+  // [BARU] Deteksi Cuti Melahirkan tanpa terikat suffix nama persis
+  // (mis. "Cuti Melahirkan (Khusus)").
+  const isMelahirkan = normalizedLeaveType.includes('melahirkan');
+  const batasMaxMelahirkanStr = isMelahirkan && startDate
+    ? (isFemale ? addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE) : addDaysToDateStr(startDate, MATERNITY_MAX_DAYS_MALE - 1))
+    : null;
 
-  useEffect(() => {
+  // [UBAH] Sebelumnya 2 buah useEffect yang memanggil setState langsung di
+  // body-nya (kena warning eslint react-hooks/set-state-in-effect). Sekarang
+  // dipindah ke pola "adjust state during render" ala React docs: setState
+  // dipanggil langsung saat render, dijaga perbandingan key supaya cuma
+  // jalan sekali tiap kali nilai terkait benar-benar berubah (tidak infinite
+  // loop, tidak lewat useEffect).
+
+  // 1) Sinkronisasi bulan yang tampil di mini-calendar mengikuti startDate/endDate.
+  const viewDateSyncKey = `${startDate}|${endDate}`;
+  const [prevViewDateSyncKey, setPrevViewDateSyncKey] = useState(viewDateSyncKey);
+  if (viewDateSyncKey !== prevViewDateSyncKey) {
+    setPrevViewDateSyncKey(viewDateSyncKey);
     if (startDate) {
       const dDate = new Date(startDate);
       setDariViewDate(new Date(dDate.getFullYear(), dDate.getMonth(), 1));
@@ -65,13 +112,20 @@ const LeaveTypeDateSection = ({
       const sDate = new Date(endDate);
       setSampaiViewDate(new Date(sDate.getFullYear(), sDate.getMonth(), 1));
     }
-  }, [startDate, endDate]);
+  }
 
-  useEffect(() => {
+  // 2) Klem endDate: Cuti Setengah Hari harus sama dengan startDate; Cuti
+  // Melahirkan tidak boleh melewati batas (2 hari laki-laki / 3 bulan perempuan).
+  const endDateClampKey = `${isHalfDayLeave}|${startDate}|${isMelahirkan}|${batasMaxMelahirkanStr}`;
+  const [prevEndDateClampKey, setPrevEndDateClampKey] = useState(endDateClampKey);
+  if (endDateClampKey !== prevEndDateClampKey) {
+    setPrevEndDateClampKey(endDateClampKey);
     if (isHalfDayLeave && startDate && endDate !== startDate) {
       setEndDate(startDate);
+    } else if (isMelahirkan && batasMaxMelahirkanStr && endDate && endDate > batasMaxMelahirkanStr) {
+      setEndDate(batasMaxMelahirkanStr);
     }
-  }, [isHalfDayLeave, startDate]);
+  }
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -110,11 +164,9 @@ const LeaveTypeDateSection = ({
             const itemStr = `${item.year}-${String(item.month + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
             const isMelanggarBatasMin = minDateStr && new Date(itemStr) < new Date(minDateStr);
             const isMelanggarBatasMax = maxDateStr && new Date(itemStr) > new Date(maxDateStr);
+            const isDisabledDay = isMelanggarBatasMin || isMelanggarBatasMax;
             const isWeekendDay = (new Date(item.year, item.month, item.day).getDay() === 0 || new Date(item.year, item.month, item.day).getDay() === 6);
             const isHolidayDay = safeHolidayDates.has(itemStr);
-            // Cuti hanya dapat diajukan pada hari kerja. Ini mencegah tanggal
-            // yang terlihat dapat dipilih tetapi kemudian dihitung sebagai 0 hari.
-            const isDisabledDay = isMelanggarBatasMin || isMelanggarBatasMax || isWeekendDay || isHolidayDay;
 
             return (
               <button
@@ -145,8 +197,8 @@ const LeaveTypeDateSection = ({
         <div className="form-group">
           <label className="form-label">DURASI SESI SETENGAH HARI *</label>
           <select value={durasiSesi} onChange={(e) => setDurasiSesi(e.target.value)} className="form-control">
-            <option value="PAGI">Setengah Hari (Pagi: 08.00 - 12.00)</option>
-            <option value="SIANG">Setengah Hari (Siang: 13.00 - 17.00)</option>
+            <option value="Setengah Hari (Pagi)">Setengah Hari (Pagi: 08.00 - 12.00)</option>
+            <option value="Setengah Hari (Siang)">Setengah Hari (Siang: 13.00 - 17.00)</option>
           </select>
         </div>
       )}
@@ -172,7 +224,9 @@ const LeaveTypeDateSection = ({
           </div>
           {showSampaiCalendar && (() => {
             const batasMinSampaiStr = startDate;
-            const batasMaxSampaiStr = isHalfDayLeave ? startDate : null;
+            const batasMaxSampaiStr = isHalfDayLeave
+              ? startDate
+              : (isMelahirkan ? batasMaxMelahirkanStr : null);
 
             return renderMiniCalendar(
               sampaiViewDate, setSampaiViewDate, endDate,
@@ -184,9 +238,16 @@ const LeaveTypeDateSection = ({
         </div>
       </div>
 
+      {isMelahirkan && (
+        <div className="duration-info-alert" style={{ marginTop: '-6px' }}>
+          {isFemale
+            ? `Cuti melahirkan untuk karyawan perempuan maksimal ${MATERNITY_MAX_MONTHS_FEMALE} bulan sejak tanggal mulai.`
+            : `Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari.`}
+        </div>
+      )}
+
       <div className="duration-info-alert">
         Durasi pengajuan: {jumlahHariCuti} Hari Kerja
-        {isHalfDayLeave && (durasiSesi === 'SIANG' ? ' • Sesi Siang (13.00 - 17.00)' : ' • Sesi Pagi (08.00 - 12.00)')}
       </div>
     </>
   );

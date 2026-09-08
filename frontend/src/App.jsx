@@ -24,9 +24,10 @@ const AppContent = () => {
   useEffect(() => {
     const storedName = localStorage.getItem('user_name');
     const storedRole = localStorage.getItem('user_role');
+    const storedGender = localStorage.getItem('user_gender');
     const storedAvatarUrl = localStorage.getItem('user_avatar_url');
-    if (storedName && storedRole) {
-      setCurrentUser({ name: storedName, role: storedRole, avatar_url: storedAvatarUrl });
+    if (storedName && storedRole && storedGender) {
+      setCurrentUser({ name: storedName, role: storedRole,storedGender, avatar_url: storedAvatarUrl });
     }
   }, []);
 
@@ -91,10 +92,11 @@ const AppContent = () => {
     // dengan token dummy lagi.
     localStorage.setItem('user_name', userData.name);
     localStorage.setItem('user_role', userData.role);
+    localStorage.setItem('user_gender', userData.gender);
     localStorage.removeItem('user_avatar_url');
 
     // Update state agar aplikasi me-render ulang dengan data user baru
-    setCurrentUser({ name: userData.name, role: userData.role });
+    setCurrentUser({ name: userData.name, role: userData.role, gender:userData.gender });
 
     // [BARU] Token sudah tersimpan (dilakukan authService.loginUser() sebelum
     // fungsi ini dipanggil), jadi aman untuk langsung fetch profil lengkap di
@@ -123,6 +125,7 @@ const AppContent = () => {
     logoutUser();
     localStorage.removeItem('user_name');
     localStorage.removeItem('user_role');
+    localStorage.removeItem('user_gender');
     localStorage.removeItem('user_avatar_url');
     setCurrentUser({ name: 'Guest', role: 'Guest' });
     setIsLogoutModalOpen(false);

@@ -284,7 +284,13 @@ public class AuthController {
         // catat activity log
         activityLogService.log(user.getUsername(), user.getUserId(), "LOGIN", "users", user.getUserId(), "Berhasil login", httpRequest);
 
-        return ResponseEntity.ok(new LoginResponse(token, user.getUsername(), role));
+        return ResponseEntity.ok(new LoginResponse(
+                token,
+                user.getUsername(),
+                role,
+                employee != null ? employee.getGender() : null,
+                employee != null ? employee.getEmployeeId() : null
+        ));
     }
 
     @PutMapping("/change-password")

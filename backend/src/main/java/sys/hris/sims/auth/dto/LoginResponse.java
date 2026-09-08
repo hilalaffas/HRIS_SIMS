@@ -9,4 +9,6 @@ public class LoginResponse {
     private String token;
     private String username;
     private String role;
+    private String gender;      // <-- tambahan
+    private Long employeeId;    // <-- tambahan (opsional, tapi berguna)
 }

@@ -16,27 +16,65 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 const isSupervisor = (role = '') => ['LEADER', 'SPV', 'MANAGER'].includes(
   String(role).trim().toUpperCase().replace(/^ROLE_/, '')
 );
-
-// Tanggal form selalu berbentuk YYYY-MM-DD. Membuatnya sebagai tanggal UTC
-// mencegah pergeseran tanggal karena zona waktu browser saat menghitung rentang.
-const parseIsoDate = (dateString) => new Date(`${dateString}T00:00:00Z`);
-
+// [BARU] Deteksi gender pemohon (dipakai buat batasan Cuti Melahirkan).
+// Backend menyimpan gender sebagai 'L' (Laki-laki) atau 'P'/'F' (Perempuan).
+const isFemaleUser = (genderValue = '') => ['P', 'F', 'PEREMPUAN', 'FEMALE'].includes(
+  String(genderValue).trim().toUpperCase()
+);
+const addMonthsToDateStr = (dateStr, months) => {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  // [PERBAIKAN] Jangan pakai toISOString() -- itu konversi ke UTC dan bisa
+  // bikin tanggal mundur 1 hari di timezone yang lebih cepat dari UTC
+  // (mis. WIB/UTC+7). Format manual dari komponen tanggal LOKAL.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+// [BARU] Batas Cuti Melahirkan: Laki-laki (pendamping) maksimal 2 hari,
+// Perempuan maksimal 3 bulan sejak tanggal mulai.
+const MATERNITY_MAX_DAYS_MALE = 2;
+const MATERNITY_MAX_MONTHS_FEMALE = 3;
 const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti) => {
   if (!startDate || !endDate) return 0;
   if (startDate > endDate) return 0;
 
+  const normalizedJenisCuti = String(jenisCuti).toLowerCase();
+
   // Aturan Khusus: Jika Cuti Setengah Hari
-  if (String(jenisCuti).toLowerCase() === 'cuti setengah hari') {
+  if (normalizedJenisCuti === 'cuti setengah hari') {
     return 0.5;
   }
 
-  // Rentang inklusif: tanggal mulai DAN tanggal selesai masing-masing
-  // diperiksa. Contoh 15/09/2026 s.d. 16/09/2026 = 2 hari kerja.
+  // [BARU] Cuti Melahirkan dihitung berdasarkan hari KALENDER, bukan hari
+  // kerja -- karena batasnya (2 hari laki-laki / 3 bulan perempuan) memang
+  // berbasis kalender dan tidak boleh terpotong akhir pekan/hari libur.
+  if (normalizedJenisCuti.includes('melahirkan')) {
+    const diffDays = Math.round(
+      (new Date(`${endDate}T00:00:00`) - new Date(`${startDate}T00:00:00`)) / 86400000
+    ) + 1;
+    return diffDays > 0 ? diffDays : 0;
+  }
+
+  // Jika tanggal sama dan merupakan hari kerja normal
+  if (startDate === endDate) {
+    const tempDate = new Date(`${startDate}T00:00:00`);
+    const weekend = tempDate.getDay() === 0 || tempDate.getDay() === 6;
+    const key = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`;
+    
+    if (!weekend && !holidayDates.has(key)) {
+      return 1; // Terhitung 1 hari kerja jika di hari yang sama
+    }
+    return 0; // 0 jika ternyata memilih hari libur/weekend
+  }
+
+  // Perhitungan dinamis rentang tanggal yang berbeda
   let total = 0;
-  const end = parseIsoDate(endDate);
-  for (const date = parseIsoDate(startDate); date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
-    const weekend = date.getUTCDay() === 0 || date.getUTCDay() === 6;
-    const key = date.toISOString().slice(0, 10);
+  for (const date = new Date(`${startDate}T00:00:00`); date <= new Date(`${endDate}T00:00:00`); date.setDate(date.getDate() + 1)) {
+    const weekend = date.getDay() === 0 || date.getDay() === 6;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     if (!weekend && !holidayDates.has(key)) total++;
   }
   return total;
@@ -46,6 +84,8 @@ const ApplyCuti = ({ user }) => {
   const todayStr = isoToday();
   const userRole = user?.role || user?.jabatan || 'Karyawan';
   const atasan = isSupervisor(userRole);
+  // [BARU] Dipakai buat batasan Cuti Melahirkan (lihat isFemaleUser di atas).
+  const isFemale = isFemaleUser(user?.gender || user?.jenisKelamin);
   const [types, setTypes] = useState([]);
   const [approvers, setApprovers] = useState({ LEADER: [], SPV: [], MANAGER: [] });
   // [UBAH] Sekarang nyimpen objek balance lengkap (bukan cuma angka
@@ -59,14 +99,8 @@ const ApplyCuti = ({ user }) => {
   const [error, setError] = useState('');
   const [jenisCuti, setJenisCuti] = useState('');
   const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka', 'Cuti Setengah Hari'].includes(jenisCuti) ? 0 : 5;
-  // Gunakan hari libur dari sistem yang sama dengan perhitungan durasi.
-  // Dengan begitu, tanggal minimum tidak akan jatuh pada hari libur lalu
-  // menghasilkan durasi 0 hari saat dipilih.
-  const dinamisBatasMinStr = hitungBatasMinTanggal(
-    jedaHariKerja,
-    [...hariLiburNasional, ...holidayDates]
-  );
-  const [durasiSesi, setDurasiSesi] = useState('PAGI');
+  const dinamisBatasMinStr = hitungBatasMinTanggal(jedaHariKerja, hariLiburNasional);
+  const [durasiSesi, setDurasiSesi] = useState('Setengah Hari (Pagi)');
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [reason, setReason] = useState('');
@@ -162,6 +196,22 @@ const ApplyCuti = ({ user }) => {
       setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); 
       return;
     }
+    // [BARU] Validasi batas Cuti Melahirkan sesuai gender pemohon.
+    if (String(jenisCuti || '').toLowerCase().includes('melahirkan')) {
+      if (isFemale) {
+        const batasMaxTanggal = addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE);
+        if (endDate > batasMaxTanggal) {
+          setError(`Cuti melahirkan untuk karyawan perempuan maksimal ${MATERNITY_MAX_MONTHS_FEMALE} bulan sejak tanggal mulai.`);
+          return;
+        }
+      } else {
+        const totalHariKalender = Math.round((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
+        if (totalHariKalender > MATERNITY_MAX_DAYS_MALE) {
+          setError(`Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari.`);
+          return;
+        }
+      }
+    }
     const type = types.find(item => item.name === jenisCuti);
     if (!type || !managerEmployeeId || (!atasan && (!leaderEmployeeId || !spvEmployeeId))) {
       setError('Pilih seluruh approver yang wajib sebelum mengirim pengajuan.'); 
@@ -169,9 +219,6 @@ const ApplyCuti = ({ user }) => {
     }
     setIsSubmitting(true);
     try {
-      // [BARU] Sesi (Pagi/Siang) hanya relevan & dikirim untuk Cuti Setengah
-      // Hari -- jenis cuti lain tetap mengirim session: null.
-      const isHalfDaySubmit = String(jenisCuti).trim().toLowerCase() === 'cuti setengah hari';
       const payload = { 
         leaveTypeId: type.leaveTypeId, 
         startDate, 
@@ -179,7 +226,6 @@ const ApplyCuti = ({ user }) => {
         reason, 
         pendingWork, 
         coveredBy,
-        session: isHalfDaySubmit ? durasiSesi : null,
         leaderEmployeeId: atasan || !leaderEmployeeId ? null : Number(leaderEmployeeId), 
         spvEmployeeId: atasan || !spvEmployeeId ? null : Number(spvEmployeeId), 
         managerEmployeeId: Number(managerEmployeeId) 
@@ -218,8 +264,6 @@ const ApplyCuti = ({ user }) => {
 
     const detail = item.rawDetail || {};
     setJenisCuti(detail.jenisCuti || item.jenisCuti);
-    // [BARU] Pulihkan sesi Pagi/Siang yang sebelumnya dipilih (kalau ada).
-    setDurasiSesi(detail.session || 'PAGI');
     setStartDate(detail.startDate || todayStr);
     setEndDate(detail.endDate || todayStr);
     setReason(detail.reason || '');
@@ -251,7 +295,7 @@ const ApplyCuti = ({ user }) => {
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
-      leaveTypes={types} approvers={approvers} isSupervisor={atasan} canApplyCuti />
+      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
   <FormCuti

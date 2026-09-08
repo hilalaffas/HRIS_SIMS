@@ -5,7 +5,7 @@ const USER_KEY = 'sims_user';
 
 /**
  * Login ke backend asli lewat POST /api/auth/login.
- * Response backend (LoginResponse): { token, username, role }
+ * Response backend (LoginResponse): { token, username, role, gender, employeeId }
  *
  * CATATAN: backend saat ini belum mengembalikan nama lengkap user di response
  * login, jadi field `name` untuk sementara memakai `username`. Kalau nanti ada
@@ -24,6 +24,8 @@ export const loginUser = async (username, password) => {
   const userData = {
     username: data.username,
     role: data.role,
+    gender: data.gender,
+    employeeId: data.employeeId,
     name: data.username, // sementara, lihat catatan di atas
   };
 
