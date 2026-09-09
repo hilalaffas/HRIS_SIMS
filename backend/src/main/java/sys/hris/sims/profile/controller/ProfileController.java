@@ -77,7 +77,7 @@ public class ProfileController {
         String role = user.getRoleId() == null ? "" : user.getRoleId().getRoleName();
         return ProfileResponse.builder()
                 .namaLengkap(employee == null ? user.getUsername() : employee.getFullName())
-                .nikKaryawan(employee == null ? "-" : nullToDash(employee.getNikKaryawan()))
+                .nikKaryawan(employee == null || employee.getNikKaryawan() == null ? "-" : String.valueOf(employee.getNikKaryawan()))
                 .jabatan(role)
                 .alamatLengkap(employee == null ? "-" : nullToDash(employee.getAddress()))
                 .email(nullToDash(user.getEmail()))

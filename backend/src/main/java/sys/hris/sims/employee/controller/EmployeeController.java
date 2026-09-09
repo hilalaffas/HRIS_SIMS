@@ -200,7 +200,16 @@ public class EmployeeController {
         if (isNotBlank(request.getAddress())) employee.setAddress(request.getAddress());
         if (isNotBlank(request.getPhoneNumber())) employee.setPhoneNumber(request.getPhoneNumber());
         if (isNotBlank(request.getGender())) employee.setGender(request.getGender());
-        if (isNotBlank(request.getNikKaryawan())) employee.setNikKaryawan(request.getNikKaryawan());
+        // NIK Karyawan sekarang bigint di database, jadi perlu di-convert
+        // dari String (form) ke Long sebelum di-set ke entity.
+        if (isNotBlank(request.getNikKaryawan())) {
+            try {
+                employee.setNikKaryawan(Long.parseLong(request.getNikKaryawan().trim()));
+            } catch (NumberFormatException e) {
+                return ResponseEntity.status(400).body("NIK Karyawan harus berupa angka");
+            }
+        }
+
         if (isNotBlank(request.getEmergencyContactName())) employee.setEmergencyContactName(request.getEmergencyContactName());
         if (isNotBlank(request.getEmergencyContactPhone())) employee.setEmergencyContactPhone(request.getEmergencyContactPhone());
 

@@ -122,6 +122,17 @@ public class AuthController {
             }
         }
 
+        // Validasi NIK Karyawan (harus angka) SEBELUM user disimpan, supaya
+        // kalau NIK tidak valid, tidak ada User "nyangkut" tanpa Employee.
+        Long nikKaryawan = null;
+        if (isEmployeeProfileComplete(request) && !isBlank(request.getNikKaryawan())) {
+            try {
+                nikKaryawan = Long.parseLong(request.getNikKaryawan().trim());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.status(400).body("NIK Karyawan harus berupa angka");
+            }
+        }
+
         User user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -161,7 +172,7 @@ public class AuthController {
                     .gender(request.getGender())
                     .isActive(true)
                     // Field Baru:
-                    .nikKaryawan(request.getNikKaryawan())
+                    .nikKaryawan(nikKaryawan)
                     .emergencyContactName(request.getEmergencyContactName())
                     .emergencyContactPhone(request.getEmergencyContactPhone())
                     .emergencyContactRelationship(rel)

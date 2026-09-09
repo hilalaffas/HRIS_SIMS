@@ -45,7 +45,7 @@ public class Employee {
     private LocalDate joinDate;
 
     @Column(name = "nik_karyawan")
-    private String nikKaryawan;
+    private Long nikKaryawan;
 
     @Column(name = "position", length = 100)
     private String position;
