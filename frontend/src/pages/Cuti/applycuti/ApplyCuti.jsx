@@ -37,6 +37,20 @@ const addMonthsToDateStr = (dateStr, months) => {
 // Perempuan maksimal 3 bulan sejak tanggal mulai.
 const MATERNITY_MAX_DAYS_MALE = 2;
 const MATERNITY_MAX_MONTHS_FEMALE = 3;
+// [BARU] Konversi dua arah antara label dropdown "DURASI SESI SETENGAH
+// HARI" (LeaveTypeDateSection.jsx) dengan kode sesi mentah "PAGI"/"SIANG"
+// yang disimpan backend (leave_requests.session). Sebelumnya TIDAK ADA
+// konversi ini sama sekali -- durasiSesi cuma tersimpan di state lokal
+// lalu buntu, tidak pernah ikut terkirim ke payload submit/resubmit.
+const SESSION_CODE_BY_LABEL = {
+  'Setengah Hari (Pagi)': 'PAGI',
+  'Setengah Hari (Siang)': 'SIANG',
+};
+const SESSION_LABEL_BY_CODE = {
+  PAGI: 'Setengah Hari (Pagi)',
+  SIANG: 'Setengah Hari (Siang)',
+};
+const DEFAULT_SESSION_LABEL = 'Setengah Hari (Pagi)';
 const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti) => {
   if (!startDate || !endDate) return 0;
   if (startDate > endDate) return 0;
@@ -219,6 +233,10 @@ const ApplyCuti = ({ user }) => {
     }
     setIsSubmitting(true);
     try {
+      // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
+      // Hari -- jenis cuti lain selalu null, konsisten dengan komentar
+      // backend "diabaikan untuk jenis cuti selain setengah hari".
+      const isHalfDayLeave = String(jenisCuti || '').trim().toLowerCase() === 'cuti setengah hari';
       const payload = { 
         leaveTypeId: type.leaveTypeId, 
         startDate, 
@@ -226,6 +244,7 @@ const ApplyCuti = ({ user }) => {
         reason, 
         pendingWork, 
         coveredBy,
+        session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[durasiSesi] || 'PAGI') : null,
         leaderEmployeeId: atasan || !leaderEmployeeId ? null : Number(leaderEmployeeId), 
         spvEmployeeId: atasan || !spvEmployeeId ? null : Number(spvEmployeeId), 
         managerEmployeeId: Number(managerEmployeeId) 
@@ -264,6 +283,11 @@ const ApplyCuti = ({ user }) => {
 
     const detail = item.rawDetail || {};
     setJenisCuti(detail.jenisCuti || item.jenisCuti);
+    // [BARU] Kembalikan dropdown "DURASI SESI SETENGAH HARI" ke pilihan
+    // semula (Pagi/Siang) dari kode sesi yang tersimpan -- sebelumnya baris
+    // ini tidak ada sama sekali, jadi dropdown selalu reset ke default
+    // "Pagi" walau pengajuan aslinya sesi "Siang".
+    setDurasiSesi(SESSION_LABEL_BY_CODE[detail.session] || DEFAULT_SESSION_LABEL);
     setStartDate(detail.startDate || todayStr);
     setEndDate(detail.endDate || todayStr);
     setReason(detail.reason || '');

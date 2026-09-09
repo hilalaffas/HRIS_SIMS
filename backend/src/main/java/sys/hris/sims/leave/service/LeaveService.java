@@ -480,6 +480,10 @@ public class LeaveService {
             throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
         }
         existingCuti.setTotalDays(totalDays);
+        // [BARU] Sebelumnya TIDAK ada baris ini -- session lama tidak pernah
+        // ter-update saat resubmit, karena method ini copy field satu per
+        // satu (bukan save entity utuh seperti createCuti()).
+        existingCuti.setSession(updatedCuti.getSession());
         existingCuti.setReason(updatedCuti.getReason());
         existingCuti.setPendingWork(updatedCuti.getPendingWork());
         existingCuti.setCoveredBy(updatedCuti.getCoveredBy());
