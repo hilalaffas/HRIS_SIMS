@@ -168,6 +168,15 @@ export function mapMyLeave(item) {
       reviewNote: item.reviewNote,
       // [BARU] Dibaca ulang oleh handleEditKembali (ApplyCuti.jsx).
       session: item.session ?? null,
+      // [BARU] ID approver yang dipilih di pengajuan ASLI -- sebelumnya
+      // TIDAK diteruskan ke sini, jadi handleEditKembali() selalu me-reset
+      // ketiga dropdown approver ke kosong ('') saat edit, memaksa user
+      // memilih ulang leader/SPV/manager dari nol walau datanya sebenarnya
+      // sudah ada. Sekarang diteruskan apa adanya supaya bisa diisi ulang
+      // otomatis ke pilihan semula.
+      leaderEmployeeId: item.leaderEmployeeId ?? null,
+      spvEmployeeId: item.spvEmployeeId ?? null,
+      managerEmployeeId: item.managerEmployeeId ?? null,
     },
   };
 }

@@ -323,11 +323,19 @@ const ApplyCuti = ({ user }) => {
     setReason(detail.reason || '');
     setPendingWork(detail.pendingWork || '');
     setCoveredBy(detail.coveredBy || '');
-    setLeaderEmployeeId('');
-    setSpvEmployeeId('');
-    setManagerEmployeeId('');
+    // [UBAH] Sebelumnya SELALU direset ke '' (kosong), memaksa user memilih
+    // ulang ketiga approver dari nol setiap kali edit -- padahal datanya
+    // (leaderEmployeeId/spvEmployeeId/managerEmployeeId) sudah tersimpan di
+    // pengajuan asli (lihat rawDetail di CutiService.js -> mapMyLeave).
+    // Sekarang diisi ulang otomatis ke pilihan semula; user tinggal ganti
+    // kalau memang perlu approver yang berbeda.
+    setLeaderEmployeeId(detail.leaderEmployeeId ? String(detail.leaderEmployeeId) : '');
+    setSpvEmployeeId(detail.spvEmployeeId ? String(detail.spvEmployeeId) : '');
+    setManagerEmployeeId(detail.managerEmployeeId ? String(detail.managerEmployeeId) : '');
     setEditingId(id);
-    if (showReminder) setError('Lengkapi kembali approver, lalu simpan perbaikan cuti Anda.');
+    // [UBAH] Pesan disesuaikan -- approver sekarang sudah terisi otomatis,
+    // jadi tidak lagi menyuruh user "lengkapi kembali approver".
+    if (showReminder) setError('Data pengajuan sebelumnya sudah dimuat ulang (termasuk approver). Periksa kembali, lalu simpan perbaikan cuti Anda.');
     if (scrollToForm) formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
