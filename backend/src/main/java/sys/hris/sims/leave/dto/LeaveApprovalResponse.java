@@ -22,6 +22,15 @@ public class LeaveApprovalResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private BigDecimal totalDays;
+    // [BARU] Sesi untuk Cuti setengah hari ("PAGI"/"SIANG"), NULL untuk jenis
+    // cuti lainnya. Sebelumnya field ini TIDAK ada di DTO ini, sehingga
+    // popup Detail Cuti (LeaveDetailModal.jsx) & halaman Approval Cuti
+    // (ApproveLeave.jsx/Form.jsx/ListSection.jsx) tidak pernah menampilkan
+    // keterangan "Sesi Pagi/Siang" walau kolom `session` sudah ada & terisi
+    // di database sejak V25. Riwayat & Status Cuti (LeaveHistory.jsx) tidak
+    // kena bug ini karena sumber datanya (/api/cuti/me) mengembalikan entity
+    // LeaveRequest apa adanya, bukan lewat DTO ini.
+    private String session;
     private String reason;
     private String pendingWork;
     private String coveredBy;

@@ -644,6 +644,10 @@ public class LeaveService {
                 cuti.getStartDate(),
                 cuti.getEndDate(),
                 cuti.getTotalDays(),
+                // [BARU] Diteruskan ke LeaveApprovalResponse supaya frontend
+                // (LeaveDetailModal.jsx, Form.jsx approval) bisa menampilkan
+                // keterangan Sesi Pagi/Siang untuk Cuti setengah hari.
+                cuti.getSession(),
                 cuti.getReason(),
                 cuti.getPendingWork(),
                 cuti.getCoveredBy(),
