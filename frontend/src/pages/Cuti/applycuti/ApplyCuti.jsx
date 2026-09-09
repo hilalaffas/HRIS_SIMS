@@ -133,6 +133,10 @@ const ApplyCuti = ({ user }) => {
   const [managerEmployeeId, setManagerEmployeeId] = useState('');
   const [filterStatus, setFilterStatus] = useState('Semua Berkas');
   const [selectedDetail, setSelectedDetail] = useState(null);
+  // [BARU] Menandai apakah popup detail (FormCuti) sedang dalam MODE EDIT
+  // (form edit dirender di dalam modal yang sama) vs MODE LIHAT (read-only).
+  // Lihat handleEditInModal/handleCancelModalEdit/handleModalEditSubmit.
+  const [isModalEditing, setIsModalEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const jumlahHariCuti = countWorkingDays(startDate, endDate, holidayDates, jenisCuti, isFemale);
@@ -216,7 +220,7 @@ const ApplyCuti = ({ user }) => {
     event.preventDefault();
     if (new Date(startDate) < new Date(dinamisBatasMinStr) || new Date(endDate) < new Date(startDate)) {
       setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); 
-      return;
+      return false;
     }
     // [UBAH] Validasi batas cuti khusus sesuai kebijakan (Melahirkan &
     // Meninggal). Laki-laki (pendamping melahirkan) sekarang divalidasi
@@ -226,12 +230,12 @@ const ApplyCuti = ({ user }) => {
         const batasMaxTanggal = addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE);
         if (endDate > batasMaxTanggal) {
           setError(`Cuti melahirkan untuk karyawan perempuan maksimal ${MATERNITY_MAX_MONTHS_FEMALE} bulan sejak tanggal mulai.`);
-          return;
+          return false;
         }
       } else {
         if (jumlahHariCuti > MATERNITY_MAX_DAYS_MALE) {
           setError(`Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari kerja.`);
-          return;
+          return false;
         }
       }
     }
@@ -240,13 +244,13 @@ const ApplyCuti = ({ user }) => {
     if (isBereavementLeave(jenisCuti)) {
       if (jumlahHariCuti > BEREAVEMENT_MAX_DAYS) {
         setError(`Cuti meninggal maksimal ${BEREAVEMENT_MAX_DAYS} hari kerja.`);
-        return;
+        return false;
       }
     }
     const type = types.find(item => item.name === jenisCuti);
     if (!type || !managerEmployeeId || (!atasan && (!leaderEmployeeId || !spvEmployeeId))) {
       setError('Pilih seluruh approver yang wajib sebelum mengirim pengajuan.'); 
-      return;
+      return false;
     }
     setIsSubmitting(true);
     try {
@@ -275,9 +279,11 @@ const ApplyCuti = ({ user }) => {
       setReason(''); setPendingWork(''); setCoveredBy(''); setLeaderEmployeeId(''); setSpvEmployeeId(''); setManagerEmployeeId(''); setEditingId(null);
       await load(); 
       alert(editingId ? 'Perbaikan cuti berhasil diajukan kembali.' : 'Pengajuan cuti berhasil dikirim.');
+      return true;
     } catch (err) {
         console.error(err);
         setError(err.response?.data?.message ||err.message ||"Gagal");
+        return false;
     } finally { 
           setIsSubmitting(false); 
         }
@@ -294,7 +300,14 @@ const ApplyCuti = ({ user }) => {
     catch (err) { setError(err.message || 'Gagal memuat detail cuti.'); }
   };
 
-  const handleEditKembali = (id) => {
+  // [UBAH] Sekarang menerima parameter opsional ke-2 `{ scrollToForm,
+  // showReminder }`, default keduanya TRUE -- artinya dipanggil tanpa opsi
+  // (seperti tombol "Edit" di LeaveHistory.jsx) perilakunya PERSIS SAMA
+  // seperti sebelumnya (scroll ke form atas + tampilkan reminder approver).
+  // Dipakai dengan opsi FALSE oleh handleEditInModal (edit di dalam popup
+  // detail), karena di situ tidak perlu scroll (modal sudah di layar) dan
+  // reminder cukup terlihat dari kolom approver yang kosong di form.
+  const handleEditKembali = (id, { scrollToForm = true, showReminder = true } = {}) => {
     const item = history.find((record) => record.id === id);
     if (!item || item.status !== 'Dikembalikan') return;
 
@@ -314,13 +327,54 @@ const ApplyCuti = ({ user }) => {
     setSpvEmployeeId('');
     setManagerEmployeeId('');
     setEditingId(id);
-    setError('Lengkapi kembali approver, lalu simpan perbaikan cuti Anda.');
-    formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (showReminder) setError('Lengkapi kembali approver, lalu simpan perbaikan cuti Anda.');
+    if (scrollToForm) formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setError('');
+  };
+
+  // [BARU] Dipanggil dari tombol "Edit Berkas" DI DALAM popup detail
+  // (FormCuti). Beda dengan tombol "Edit" di List Riwayat: TIDAK menutup
+  // modal & TIDAK scroll ke form atas -- modal yang sama langsung berpindah
+  // ke mode edit (lihat prop `editForm` di render FormCuti di bawah).
+  const handleEditInModal = () => {
+    if (!selectedDetail?.id) return;
+    handleEditKembali(selectedDetail.id, { scrollToForm: false, showReminder: false });
+    setIsModalEditing(true);
+  };
+
+  // [BARU] Tombol "Batal Edit" saat mode edit di dalam modal -- kembali ke
+  // tampilan lihat detail (read-only) pada modal yang sama, TANPA menutupnya.
+  const handleCancelModalEdit = () => {
+    cancelEdit();
+    setIsModalEditing(false);
+  };
+
+  // [BARU] Menutup popup detail sepenuhnya (klik X / klik area luar / tombol
+  // "Tutup Detail"). Kalau ditutup saat masih dalam mode edit, batalkan dulu
+  // proses editnya (reset editingId) supaya form di halaman utama tidak
+  // "nyangkut" dalam status edit yang tidak terlihat oleh user.
+  const handleCloseDetailModal = () => {
+    if (isModalEditing) cancelEdit();
+    setIsModalEditing(false);
+    setSelectedDetail(null);
+  };
+
+  // [BARU] Submit KHUSUS untuk form edit di dalam modal. Memanggil
+  // handleSubmit yang sama persis dipakai form utama (jadi semua validasi &
+  // logika pengiriman tetap satu sumber kebenaran) -- modal baru ditutup &
+  // kembali ke mode lihat detail JIKA submit-nya berhasil. Kalau gagal
+  // (validasi/error server), modal TETAP di mode edit supaya user bisa
+  // langsung perbaiki, dan pesan errornya tetap tampil lewat NotifModal.
+  const handleModalEditSubmit = async (event) => {
+    const success = await handleSubmit(event);
+    if (success) {
+      setIsModalEditing(false);
+      setSelectedDetail(null);
+    }
   };
 
   return <div className="form-wrapper" ref={formTopRef}>
@@ -341,8 +395,20 @@ const ApplyCuti = ({ user }) => {
     {selectedDetail && (
   <FormCuti
     data={selectedDetail}
-    onClose={() => setSelectedDetail(null)} 
-    onEdit={selectedDetail.statusBerkas === 'DIKEMBALIKAN' ? () => handleEditKembali(selectedDetail.id) : null}
+    onClose={handleCloseDetailModal}
+    onEdit={selectedDetail.statusBerkas === 'DIKEMBALIKAN' ? handleEditInModal : null}
+    // [BARU] Saat isModalEditing aktif, modal dikasih <LeaveForm> yang SAMA
+    // persis komponennya dengan form pengajuan di halaman utama -- jadi
+    // kalender, dropdown sesi Pagi/Siang, pemilihan approver, & validasi
+    // semuanya otomatis ikut, tidak perlu ditulis ulang. hideHeader supaya
+    // tidak dobel dengan header modal ("Edit Berkas Cuti").
+    editForm={isModalEditing ? (
+      <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
+        reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
+        pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
+        isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true }}
+        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} canApplyCuti />
+    ) : null}
   />
 )}
   </div>;

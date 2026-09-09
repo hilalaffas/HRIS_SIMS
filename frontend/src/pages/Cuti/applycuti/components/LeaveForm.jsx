@@ -27,19 +27,27 @@ const LeaveForm = ({
   isSupervisor = false,
   isFemale = false,
   isEditing,
-  onCancelEdit
+  onCancelEdit,
+  // [BARU] Sembunyikan header hijau "Formulir Pengajuan Cuti" -- dipakai saat
+  // komponen ini dirender ULANG di dalam modal detail (FormCuti.jsx, lihat
+  // prop `editForm`), supaya tidak tampil dua header bertumpuk (header modal
+  // "Edit Berkas Cuti" + header form ini). Default false, jadi tampilan form
+  // di halaman utama (ApplyCuti.jsx) TIDAK berubah sama sekali.
+  hideHeader = false
 }) => {
   return (
     <div className="form-container">
-      <div className="form-header">
-        <div className="form-header-icon-title">
-          <i className="fa-regular fa-calendar-plus header-form-icon"></i>
-          <div>
-            <h3 className="form-title">Formulir Pengajuan Cuti</h3>
-            <p className="form-instruction">Permohonan akan diproses secara berjenjang oleh atasan Anda.</p>
+      {!hideHeader && (
+        <div className="form-header">
+          <div className="form-header-icon-title">
+            <i className="fa-regular fa-calendar-plus header-form-icon"></i>
+            <div>
+              <h3 className="form-title">Formulir Pengajuan Cuti</h3>
+              <p className="form-instruction">Permohonan akan diproses secara berjenjang oleh atasan Anda.</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <form onSubmit={handleSubmit} className="form-body">
         <LeaveTypeDateSection

@@ -37,6 +37,21 @@
 .form-cuti__close:hover { color: #fff; }
 
 .form-cuti__body { overflow-y: auto; padding: 32px; }
+
+/* [BARU] Mode edit-di-dalam-modal (lihat prop `editForm` di Form.jsx) --
+   LeaveForm.jsx aslinya didesain untuk halaman penuh (padding 50px + kartu
+   putih dgn shadow sendiri). Di sini modal SUDAH jadi bingkai kartunya
+   sendiri, jadi padding & shadow bawaan LeaveForm dilucuti supaya tidak
+   dobel/kartu-di-dalam-kartu. Style dasar LeaveForm.css TIDAK disentuh,
+   jadi form di halaman utama ApplyCuti.jsx tetap sama persis. */
+.form-cuti__body--edit { padding: 24px 32px; }
+.form-cuti__body--edit .form-container { box-shadow: none; border-radius: 0; }
+.form-cuti__body--edit .form-body { padding: 0; }
+.form-cuti__body--edit .btn-group-right { margin-top: 24px; }
+
+@media (max-width: 640px) {
+  .form-cuti__body--edit { padding: 20px; }
+}
 .form-cuti__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 38px; }
 .form-cuti__grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .form-cuti__field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
