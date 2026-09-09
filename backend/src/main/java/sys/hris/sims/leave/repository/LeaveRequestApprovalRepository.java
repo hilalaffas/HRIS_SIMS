@@ -22,4 +22,11 @@ public interface LeaveRequestApprovalRepository extends JpaRepository<LeaveReque
     List<LeaveRequestApproval> findByApproverEmployee_EmployeeIdAndAction(Long employeeId, String action);
 
     Optional<LeaveRequestApproval> findByLeaveRequest_LeaveRequestIdAndApproverEmployee_EmployeeId(Long leaveRequestId, Long employeeId);
+
+    // [BARU] Dipakai notifikasi lonceng karyawan (LeaveService.getMyApprovalStepUpdates):
+    // approval milik SATU karyawan pemohon (leaveRequest.employee), yang aksinya
+    // sudah tertentu (mis. APPROVED), TAPI status berkas induknya (leaveRequest.status)
+    // masih tertentu juga (mis. PENDING) -- artinya approver lain masih perlu bertindak.
+    List<LeaveRequestApproval> findByLeaveRequest_Employee_EmployeeIdAndActionAndLeaveRequest_Status_StatusNameOrderByActedAtDesc(
+            Long employeeId, String action, String statusName);
 }

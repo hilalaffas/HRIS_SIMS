@@ -199,6 +199,16 @@ public class SecurityConfig {
                                 "/api/cuti/me")
                         .authenticated()
 
+                        // [BARU] Notifikasi progres approval per-tahap (lonceng Navbar.jsx) --
+                        // HARUS authenticated() biasa (BUKAN APPROVER_ROLES), karena yang
+                        // mengakses endpoint ini justru KARYAWAN pemohon cuti, bukan
+                        // approver-nya. Ditaruh SEBELUM catch-all "/api/cuti/**" di bawah
+                        // (yang membatasi hanya ADMIN/LEADER/SPV/MANAGER) supaya role
+                        // Member/karyawan biasa tidak ikut ke-block 403.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/cuti/me/approval-updates")
+                        .authenticated()
+
                         // Detail berkas milik pemohon harus dapat dibuka oleh role MEMBER/KARYAWAN.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/cuti/*/detail")

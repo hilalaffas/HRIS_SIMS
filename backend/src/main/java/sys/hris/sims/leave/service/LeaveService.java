@@ -25,6 +25,7 @@ import sys.hris.sims.holiday.repository.HolidayRepository;
 import sys.hris.sims.leave.dto.LeaveApprovalLogResponse;
 import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
+import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.entity.LeaveRequestApproval;
 import sys.hris.sims.leave.repository.LeaveRepository;
@@ -82,6 +83,38 @@ public class LeaveService {
             throw new RuntimeException("Anda tidak memiliki akses ke detail cuti ini");
         }
         return toApprovalResponse(cuti, null);
+    }
+
+    // [BARU] Notifikasi lonceng utk karyawan pemohon: daftar tahap approval
+    // (Leader/SPV/Manager) pada cuti MILIK SENDIRI yang SUDAH di-ACC salah
+    // satu approver, tapi berkas secara keseluruhan masih PENDING (approver
+    // lain belum bertindak). Dipakai Navbar.jsx supaya karyawan tahu progress
+    // approval cuti mereka per tahap -- bukan cuma menunggu status akhir.
+    // Begitu berkas final (APPROVED/REJECTED/RETURNED), baris terkait otomatis
+    // tidak ikut lagi karena filter status masih PENDING di bawah ini.
+    //
+    // CATATAN: Sengaja mencakup SEMUA role approver (Leader/SPV/Manager) yang
+    // approve -- bukan cuma Leader -- supaya karyawan tetap mendapat kabar di
+    // tiap tahap. Untuk membatasi HANYA notifikasi saat Leader approve, tambahkan
+    // filter role di .stream() di bawah, contoh:
+    //   .filter(approval -> ROLE_LEADER.equals(approval.getApproverRole()))
+    public List<LeaveStepNotificationResponse> getMyApprovalStepUpdates(String username) {
+        Employee me = getEmployeeByUsername(username);
+
+        return approvalRepository
+                .findByLeaveRequest_Employee_EmployeeIdAndActionAndLeaveRequest_Status_StatusNameOrderByActedAtDesc(
+                        me.getEmployeeId(), ACTION_APPROVED, ACTION_PENDING)
+                .stream()
+                .map(approval -> new LeaveStepNotificationResponse(
+                        approval.getLeaveRequest().getLeaveRequestId(),
+                        approval.getApprovalId(),
+                        approval.getApproverRole(),
+                        approval.getApproverEmployee() != null ? approval.getApproverEmployee().getFullName() : "-",
+                        approval.getLeaveRequest().getLeaveType().getName(),
+                        approval.getLeaveRequest().getStartDate(),
+                        approval.getLeaveRequest().getEndDate(),
+                        approval.getActedAt()))
+                .toList();
     }
 
     public List<LeaveRequest> getCalendarLeaves(int year) {

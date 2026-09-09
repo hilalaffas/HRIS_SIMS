@@ -22,6 +22,7 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.leave.dto.LeaveActionRequest;
 import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
+import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.service.LeaveService;
 import sys.hris.sims.user.entity.User;
@@ -54,6 +55,16 @@ public class LeaveController {
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_MY_CUTI", "leave_requests", employee.getEmployeeId(), "Melihat riwayat cuti sendiri", httpRequest);
 
         return ResponseEntity.ok(cutiService.getCutiByKaryawan(employee.getEmployeeId()));
+    }
+
+    // [BARU] GET progres approval per-tahap milik user yang sedang login --
+    // dipakai lonceng notifikasi (Navbar.jsx) supaya karyawan tahu begitu SALAH
+    // SATU approver (Leader/SPV/Manager) sudah ACC, walau berkas belum final.
+    // Tidak dicatat ke activity log (endpoint ini di-poll otomatis tiap 30 detik
+    // oleh Navbar.jsx, jadi akan membanjiri activity log kalau ikut dicatat).
+    @GetMapping("/me/approval-updates")
+    public ResponseEntity<List<LeaveStepNotificationResponse>> getMyApprovalStepUpdates(Authentication authentication) {
+        return ResponseEntity.ok(cutiService.getMyApprovalStepUpdates(authentication.getName()));
     }
 
     // GET semua cuti

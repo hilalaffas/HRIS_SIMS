@@ -179,6 +179,13 @@ export async function getRiwayatByUser() {
 
 export const getMyLeaveDetail = (id) => api.get(`/api/cuti/${id}/detail`);
 
+// [BARU] Progres approval per-tahap milik user yang sedang login -- dipakai
+// lonceng notifikasi Navbar.jsx supaya karyawan tahu begitu SALAH SATU
+// approver (Leader/SPV/Manager) sudah ACC, walau berkas belum final/lengkap
+// (masih menunggu approver lain). Begitu berkas final, baris terkait otomatis
+// tidak ikut lagi (lihat LeaveService.getMyApprovalStepUpdates di backend).
+export const getMyApprovalUpdates = () => api.get('/api/cuti/me/approval-updates');
+
 export async function getTeamLeaveByYear(year) {
   const requests = await api.get(`/api/cuti/calendar?year=${year}`);
   const result = {};

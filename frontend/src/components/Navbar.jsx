@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getRiwayatByUser, getPendingApprovals } from '../services/CutiService'; // TAMBAHAN: Mengambil fungsi hit database service yang sama dengan ApplyCuti
+import { getRiwayatByUser, getPendingApprovals, getMyApprovalUpdates } from '../services/CutiService'; // TAMBAHAN: Mengambil fungsi hit database service yang sama dengan ApplyCuti
 // [BARU] Untuk notifikasi permintaan reset sandi (lonceng HR Admin/Super Admin)
 import { getPendingResetRequests } from '../services/passwordResetService';
 import { getAnnouncements } from '../services/announcementService';
@@ -9,6 +9,15 @@ import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
 import NotifPasswordResetModal from './NotifPasswordResetModal';
 import NotifLeaveApprovalModal from './NotifLeaveApprovalModal'; // [BARU]
 import './Navbar.css'; 
+
+// [BARU] Label tampilan untuk role approver di teks notifikasi "step-approved"
+// (mis. "Leader Budi telah menyetujui..."). Dibuat di luar komponen supaya
+// tidak dibuat ulang tiap render.
+const APPROVER_ROLE_LABELS = {
+  LEADER: 'Leader',
+  SPV: 'SPV',
+  MANAGER: 'Manager',
+};
 
 // Tambahkan parameter object user untuk mengambil id data dari database/API
 export default function Navbar({ toggleSidebar, user }) {
@@ -84,11 +93,19 @@ export default function Navbar({ toggleSidebar, user }) {
     let isMounted = true;
 
     const fetchNotificationFromDB = async () => {
-      try {
-        // Ambil data riwayat cuti dari API/Database
-        const rawData = await getRiwayatByUser();
+      // [UBAH] Sebelumnya: satu try/catch membungkus satu await getRiwayatByUser().
+      // Sekarang pakai Promise.allSettled utk 2 sumber sekaligus (pola yang sama
+      // dengan useEffect Pengumuman/Hari Libur di bawah), supaya kalau salah satu
+      // endpoint gagal, notifikasi dari sumber yang lain TETAP tampil.
+      const [riwayatResult, stepUpdatesResult] = await Promise.allSettled([
+        getRiwayatByUser(),
+        getMyApprovalUpdates(), // [BARU] Progres approval per-tahap (Leader/SPV/Manager sudah ACC)
+      ]);
 
-        const mappedNotifications = [];
+      const mappedNotifications = [];
+
+      if (riwayatResult.status === 'fulfilled') {
+        const rawData = riwayatResult.value;
 
         (rawData || []).forEach((item) => {
           const statusBerkas = item.status ? item.status.toLowerCase() : 'proses';
@@ -141,11 +158,38 @@ export default function Navbar({ toggleSidebar, user }) {
             });
           }
         });
-
-        if (isMounted) setNotifications(mappedNotifications);
-      } catch (error) {
-        console.error("Gagal memuat data notifikasi dari API:", error);
+      } else {
+        console.error("Gagal memuat riwayat cuti untuk notifikasi:", riwayatResult.reason);
       }
+
+      // [BARU] Notifikasi "salah satu approver sudah ACC tahapannya" -- lihat
+      // LeaveService.getMyApprovalStepUpdates() di backend. Beda dengan notifikasi
+      // "approved" di atas (itu untuk status FINAL, sesudah SEMUA approver ACC),
+      // ini muncul begitu SATU approver (mis. Leader) ACC walau berkas belum
+      // tuntas. Otomatis berhenti muncul sendiri begitu berkas sudah final.
+      if (stepUpdatesResult.status === 'fulfilled') {
+        (stepUpdatesResult.value || []).forEach((update) => {
+          const roleLabel = APPROVER_ROLE_LABELS[update.approverRole] || update.approverRole;
+          mappedNotifications.push({
+            id: `step-${update.approvalId}`,
+            text: (
+              <>
+                Pengajuan <strong>{update.leaveType}</strong> Anda telah disetujui oleh{' '}
+                <strong>{roleLabel} {update.approverName}</strong>.
+              </>
+            ),
+            date: update.actedAt
+              ? new Date(update.actedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+              : '-',
+            timestamp: update.actedAt,
+            type: 'step-approved',
+          });
+        });
+      } else {
+        console.error("Gagal memuat progres approval untuk notifikasi:", stepUpdatesResult.reason);
+      }
+
+      if (isMounted) setNotifications(mappedNotifications);
     };
 
     fetchNotificationFromDB();
@@ -459,6 +503,15 @@ export default function Navbar({ toggleSidebar, user }) {
                           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="icon-svg-approved">
                             <circle cx="12" cy="12" r="10" stroke="#10b981" strokeWidth="2" fill="none"/>
                             <path d="M8 12l3 3 5-5" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                        {/* [BARU] Ikon notifikasi "1 approver sudah ACC, berkas belum final" --
+                            sengaja warna teal (beda dari hijau 'approved' di atas) supaya
+                            karyawan bisa membedakan progres per-tahap vs status akhir. */}
+                        {notif.type === 'step-approved' && (
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="icon-svg-step-approved">
+                            <circle cx="12" cy="12" r="10" stroke="#14b8a6" strokeWidth="2" fill="none"/>
+                            <path d="M8 12l3 3 5-5" stroke="#14b8a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         )}
                         {notif.type === 'rejected' && (
