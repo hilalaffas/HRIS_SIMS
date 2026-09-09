@@ -1,119 +1,113 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Clock3,
+  Coffee,
+  Crosshair,
+  FileText,
+  History,
+  LoaderCircle,
+  LogIn,
+  LogOut,
+  MapPin,
+  Navigation,
+  RefreshCw,
+  ShieldCheck,
+  Smartphone,
+  UserRound,
+  Wifi,
+} from 'lucide-react';
 
-const attendanceData = [
-  { id: 'A001', name: 'Andi Saputra', dept: 'Engineering', date: '22 Jun 2026', in: '08:02', out: '17:10', status: 'Hadir', initials: 'AS', avatarColor: 'bg-cyan-500', deptColor: 'text-blue-600 bg-blue-50' },
-  { id: 'A002', name: 'Dewi Lestari', dept: 'Marketing', date: '22 Jun 2026', in: '08:45', out: '17:30', status: 'Terlambat', initials: 'DL', avatarColor: 'bg-purple-600', deptColor: 'text-pink-600 bg-pink-50' },
-  { id: 'A003', name: 'Budi Hartono', dept: 'Finance', date: '22 Jun 2026', in: '07:58', out: '17:00', status: 'Hadir', initials: 'BH', avatarColor: 'bg-indigo-500', deptColor: 'text-emerald-600 bg-emerald-50' },
-  { id: 'A004', name: 'Sari Indah', dept: 'HR', date: '22 Jun 2026', in: '-', out: '-', status: 'Izin', initials: 'SI', avatarColor: 'bg-indigo-600', deptColor: 'text-yellow-600 bg-yellow-50' },
-  { id: 'A005', name: 'Reza Firmansyah', dept: 'Engineering', date: '22 Jun 2026', in: '08:05', out: '18:20', status: 'Hadir', initials: 'RF', avatarColor: 'bg-emerald-500', deptColor: 'text-blue-600 bg-blue-50' },
-  { id: 'A006', name: 'Nina Oktavia', dept: 'Design', date: '22 Jun 2026', in: '09:15', out: '17:45', status: 'Terlambat', initials: 'NO', avatarColor: 'bg-pink-500', deptColor: 'text-purple-600 bg-purple-50' },
-  { id: 'A007', name: 'Fajar Nugroho', dept: 'Operations', date: '22 Jun 2026', in: '-', out: '-', status: 'Alfa', initials: 'FN', avatarColor: 'bg-cyan-500', deptColor: 'text-cyan-600 bg-cyan-50' },
-  { id: 'A008', name: 'Laila Putri', dept: 'Marketing', date: '22 Jun 2026', in: '07:55', out: '17:00', status: 'Hadir', initials: 'LP', avatarColor: 'bg-indigo-500', deptColor: 'text-pink-600 bg-pink-50' },
+const schedule = [
+  { day: 'Sen', date: '21', label: 'Kemarin', state: 'done', in: '08:01', out: '17:04' },
+  { day: 'Sel', date: '22', label: 'Hari ini', state: 'active', in: '08:12', out: '-' },
+  { day: 'Rab', date: '23', label: 'Besok', state: 'future', in: '-', out: '-' },
+  { day: 'Kam', date: '24', label: '', state: 'future', in: '-', out: '-' },
+  { day: 'Jum', date: '25', label: '', state: 'future', in: '-', out: '-' },
 ];
 
-const filters = ['Semua', 'Hadir', 'Terlambat', 'Izin', 'Alfa'];
+const history = [
+  { date: '21 Jun 2026', day: 'Senin', in: '08:01', out: '17:04', total: '8j 03m', status: 'Hadir' },
+  { date: '20 Jun 2026', day: 'Sabtu', in: '08:15', out: '12:30', total: '4j 15m', status: 'Hadir' },
+  { date: '19 Jun 2026', day: 'Jumat', in: '08:42', out: '17:10', total: '7j 28m', status: 'Terlambat' },
+  { date: '18 Jun 2026', day: 'Kamis', in: '08:04', out: '17:00', total: '7j 56m', status: 'Hadir' },
+];
 
 export default function Absensi() {
-  const [activeFilter, setActiveFilter] = useState('Semua');
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [locationReady, setLocationReady] = useState(true);
+  const [activeTab, setActiveTab] = useState('hari-ini');
+  const [time, setTime] = useState(new Date());
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'Hadir': return 'text-emerald-500 bg-emerald-50 border-emerald-100';
-      case 'Terlambat': return 'text-amber-500 bg-amber-50 border-amber-100';
-      case 'Izin': return 'text-blue-500 bg-blue-50 border-blue-100';
-      case 'Alfa': return 'text-rose-500 bg-rose-50 border-rose-100';
-      default: return 'text-gray-500 bg-gray-50 border-gray-100';
-    }
+  useEffect(() => {
+    const interval = window.setInterval(() => setTime(new Date()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const formattedTime = time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const formattedDate = time.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const currentAttendance = useMemo(() => schedule.find((item) => item.state === 'active'), []);
+
+  const refreshLocation = () => {
+    setIsLoadingLocation(true);
+    window.setTimeout(() => {
+      setLocationReady(true);
+      setIsLoadingLocation(false);
+    }, 900);
+  };
+
+  const handleAttendance = () => {
+    if (!locationReady) return;
+    setIsCheckedIn((value) => !value);
   };
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-1">Absensi Karyawan</h2>
-          <p className="text-sm text-gray-500">Rekap kehadiran harian seluruh karyawan</p>
-        </div>
-        <button className="bg-[#1e345e] hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-          <i className="fa-solid fa-plus"></i> Tambah Absensi
-        </button>
-      </div>
+    <div className="min-h-full bg-[#f6f8fb] px-4 py-5 text-[#15223b] sm:px-6 lg:px-8 lg:py-7">
+      <div className="mx-auto max-w-[1480px]">
+        <header className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[#71809a]"><span className="size-2 rounded-full bg-[#19b887]" /> Ruang Karyawan <span className="text-[#c1c9d6">/</span> Absensi</div>
+            <h1 className="text-3xl font-bold tracking-[-0.04em] text-[#15223b] sm:text-4xl">Absensi hari ini</h1>
+            <p className="mt-2 text-sm text-[#71809a]">Catat kehadiranmu dengan aman menggunakan lokasi GPS.</p>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-[#e4e9f0] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(39,57,84,0.04)]">
+            <div className="flex size-10 items-center justify-center rounded-full bg-[#edf8f4] text-[#16a477]"><UserRound size={19} /></div>
+            <div><p className="text-sm font-semibold">Andi Saputra</p><p className="text-xs text-[#8490a4]">Product Engineering</p></div>
+          </div>
+        </header>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="relative">
-          <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
-          <input 
-            type="text" 
-            placeholder="Cari karyawan..." 
-            className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {filters.map(filter => (
-            <button 
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                activeFilter === filter 
-                  ? 'bg-[#1e345e] text-white font-medium' 
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-      </div>
+        <section className="mb-6 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-[#e4e9f0] bg-white p-5 shadow-[0_8px_24px_rgba(39,57,84,0.04)]"><div className="mb-4 flex items-center justify-between"><p className="text-sm text-[#71809a]">Jam kerja bulan ini</p><Clock3 className="text-[#71809a]" size={18} /></div><p className="text-2xl font-bold">142<span className="ml-1 text-sm font-medium text-[#8490a4]">jam</span></p><p className="mt-2 text-xs text-[#16a477]">↑ 4,8% dari bulan lalu</p></div>
+          <div className="rounded-2xl border border-[#e4e9f0] bg-white p-5 shadow-[0_8px_24px_rgba(39,57,84,0.04)]"><div className="mb-4 flex items-center justify-between"><p className="text-sm text-[#71809a]">Kehadiran bulan ini</p><Check className="text-[#16a477]" size={18} /></div><p className="text-2xl font-bold">18<span className="ml-1 text-sm font-medium text-[#8490a4]">/ 20 hari</span></p><p className="mt-2 text-xs text-[#16a477]">90% tingkat kehadiran</p></div>
+          <div className="rounded-2xl border border-[#e4e9f0] bg-white p-5 shadow-[0_8px_24px_rgba(39,57,84,0.04)]"><div className="mb-4 flex items-center justify-between"><p className="text-sm text-[#71809a]">Status hari ini</p><ShieldCheck className="text-[#16a477]" size={18} /></div><p className="text-2xl font-bold">{isCheckedIn ? 'Sedang kerja' : 'Belum absen'}</p><p className="mt-2 text-xs text-[#71809a]">{isCheckedIn ? 'Masuk tercatat pukul ' + formattedTime : 'Jangan lupa catat kehadiranmu'}</p></div>
+        </section>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="text-[11px] uppercase text-gray-500 font-bold border-b border-gray-200">
-              <th className="px-6 py-4 font-semibold">#</th>
-              <th className="px-6 py-4 font-semibold">KARYAWAN</th>
-              <th className="px-6 py-4 font-semibold">DEPARTEMEN</th>
-              <th className="px-6 py-4 font-semibold">TANGGAL</th>
-              <th className="px-6 py-4 font-semibold">MASUK</th>
-              <th className="px-6 py-4 font-semibold">KELUAR</th>
-              <th className="px-6 py-4 font-semibold">STATUS</th>
-            </tr>
-          </thead>
-          <tbody className="text-sm">
-            {attendanceData.map((data) => (
-              <tr key={data.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 text-xs text-gray-400">{data.id}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full ${data.avatarColor} text-white flex items-center justify-center text-[10px] font-bold`}>
-                      {data.initials}
-                    </div>
-                    <div className="font-semibold text-gray-800 text-sm">{data.name}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${data.deptColor}`}>
-                    {data.dept}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-xs text-gray-500">{data.date}</td>
-                <td className="px-6 py-4 text-xs font-medium text-gray-600">
-                  <span className="text-emerald-500 mr-1">→</span> {data.in}
-                </td>
-                <td className="px-6 py-4 text-xs font-medium text-gray-600">
-                  <span className="text-rose-500 mr-1">←</span> {data.out}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded text-[10px] font-bold border ${getStatusColor(data.status)}`}>
-                    {data.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(350px,0.9fr)]">
+          <section className="overflow-hidden rounded-3xl border border-[#e4e9f0] bg-white shadow-[0_10px_30px_rgba(39,57,84,0.05)]">
+            <div className="flex flex-col gap-3 border-b border-[#edf0f4] p-6 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Catat kehadiran</h2><p className="mt-1 text-sm text-[#8490a4]">{formattedDate}</p></div><div className="flex items-center gap-2 rounded-full bg-[#edf8f4] px-3 py-1.5 text-xs font-semibold text-[#159b72]"><Wifi size={14} /> GPS aktif</div></div>
+            <div className="p-6">
+              <div className="relative min-h-[230px] overflow-hidden rounded-2xl border border-[#dbe7e5] bg-[#eaf4f1]">
+                <div className="absolute inset-0 opacity-50" style={{ backgroundImage: 'linear-gradient(#c5ddd7 1px, transparent 1px), linear-gradient(90deg, #c5ddd7 1px, transparent 1px)', backgroundSize: '38px 38px', transform: 'rotate(-5deg) scale(1.1)' }} />
+                <div className="absolute left-[10%] top-[16%] h-24 w-2/5 rounded-[50%] border-2 border-[#b6d5ce] bg-[#d9ece6]" /><div className="absolute bottom-[14%] right-[6%] h-28 w-2/3 rounded-[50%] border-2 border-[#b6d5ce] bg-[#d9ece6]" />
+                <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"><div className="relative flex size-14 items-center justify-center rounded-full border-4 border-white bg-[#19b887] text-white shadow-[0_5px_14px_rgba(25,184,135,0.35)]"><MapPin size={25} fill="currentColor" /></div><div className="mt-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#283752] shadow-sm">Lokasi kamu</div></div>
+                <div className="absolute bottom-4 left-4 rounded-xl border border-white/80 bg-white/90 px-3 py-2 text-xs shadow-sm"><p className="font-semibold text-[#283752]">Kantor SIMS</p><p className="mt-0.5 text-[#8490a4]">Jl. Sudirman No. 25, Jakarta</p></div>
+                <button onClick={refreshLocation} aria-label="Perbarui lokasi" className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-xl border border-[#e4e9f0] bg-white text-[#71809a] shadow-sm transition hover:text-[#19a879]">{isLoadingLocation ? <LoaderCircle className="animate-spin" size={16} /> : <RefreshCw size={16} />}</button>
+              </div>
+              <div className="mt-5 flex flex-col gap-4 rounded-2xl bg-[#f8fafb] p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><div className="mt-0.5 flex size-9 items-center justify-center rounded-xl bg-[#e5f6f0] text-[#18a879]"><Crosshair size={18} /></div><div><p className="text-sm font-semibold">Lokasi terverifikasi</p><p className="mt-1 text-xs text-[#8490a4]">Akurasi lokasi ± 8 meter · Diperbarui baru saja</p></div></div><span className="text-xs font-semibold text-[#16a477]">Dalam radius kantor</span></div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2"><button onClick={handleAttendance} disabled={!locationReady || isLoadingLocation} className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${isCheckedIn ? 'bg-[#ee765d] hover:bg-[#dc634b]' : 'bg-[#1b9e79] hover:bg-[#168867]'}`}>{isCheckedIn ? <LogOut size={18} /> : <LogIn size={18} />}{isCheckedIn ? 'Absen keluar' : 'Absen masuk'}</button><button onClick={() => setLocationReady((value) => !value)} className="flex items-center justify-center gap-2 rounded-xl border border-[#dfe5ec] bg-white px-4 py-3.5 text-sm font-semibold text-[#52627d] transition hover:border-[#aebdca]"><Smartphone size={18} /> {locationReady ? 'Ubah perangkat' : 'Aktifkan GPS'}</button></div>
+              <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-[#8490a4]"><ShieldCheck size={14} className="text-[#19b887]" /> Data lokasi dienkripsi dan hanya digunakan untuk validasi absensi.</p>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-[#e4e9f0] bg-white p-6 shadow-[0_10px_30px_rgba(39,57,84,0.05)]"><div className="mb-5 flex items-center justify-between"><div><h2 className="text-lg font-bold">Jadwal minggu ini</h2><p className="mt-1 text-sm text-[#8490a4]">Ringkasan kehadiranmu</p></div><CalendarDays size={20} className="text-[#8490a4]" /></div><div className="mb-5 grid grid-cols-5 gap-2">{schedule.map((item) => <button key={item.date} onClick={() => setActiveTab(item.state === 'active' ? 'hari-ini' : item.date)} className={`rounded-xl border px-1 py-3 text-center transition ${item.state === 'active' ? 'border-[#19b887] bg-[#edf8f4]' : 'border-[#edf0f4] bg-white hover:border-[#cbd8df]'}`}><p className="text-[11px] font-semibold text-[#8490a4]">{item.day}</p><p className={`my-1 text-lg font-bold ${item.state === 'active' ? 'text-[#159b72]' : 'text-[#34425d]'}`}>{item.date}</p><span className={`mx-auto block size-1.5 rounded-full ${item.state === 'done' ? 'bg-[#19b887]' : item.state === 'active' ? 'bg-[#f1ae44]' : 'bg-[#dce2e8]'}`} /></button>)}</div><div className="flex flex-col gap-3"><div className="flex items-center justify-between border-b border-[#edf0f4] pb-3 text-sm"><span className="text-[#71809a]">Jam masuk</span><span className="font-semibold">{isCheckedIn ? formattedTime : currentAttendance.in}</span></div><div className="flex items-center justify-between border-b border-[#edf0f4] pb-3 text-sm"><span className="text-[#71809a]">Jam pulang</span><span className="font-semibold text-[#8490a4]">{isCheckedIn ? 'Belum tercatat' : currentAttendance.out}</span></div><div className="flex items-center justify-between text-sm"><span className="text-[#71809a]">Durasi kerja</span><span className="font-semibold text-[#159b72]">{isCheckedIn ? 'Berjalan' : '—'}</span></div></div><div className="mt-6 rounded-2xl border border-[#f3e4c6] bg-[#fffbf2] p-4"><div className="flex items-start gap-3"><Coffee size={17} className="mt-0.5 text-[#d99c35]" /><div><p className="text-sm font-semibold text-[#755923]">Jam kerja fleksibel</p><p className="mt-1 text-xs leading-5 text-[#9b7b42]">Batas keterlambatan hari ini pukul 08:30. Pastikan GPS aktif saat melakukan absensi.</p></div></div></div></section>
+        </div>
+
+        <section className="mt-6 rounded-3xl border border-[#e4e9f0] bg-white shadow-[0_10px_30px_rgba(39,57,84,0.05)]"><div className="flex flex-col gap-3 border-b border-[#edf0f4] p-6 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-xl bg-[#edf2fb] text-[#4567a7]"><History size={19} /></div><div><h2 className="text-lg font-bold">Riwayat absensi</h2><p className="mt-1 text-sm text-[#8490a4]">Aktivitas absensi terbaru</p></div></div><button className="flex items-center gap-2 text-sm font-semibold text-[#4567a7] hover:text-[#294d91]">Lihat semua <ChevronRight size={16} /></button></div><div className="divide-y divide-[#edf0f4]">{history.map((item) => <div key={item.date} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><div className="flex size-10 items-center justify-center rounded-xl bg-[#f4f6f9] text-[#8490a4]"><FileText size={17} /></div><div><p className="text-sm font-semibold">{item.day}, {item.date}</p><p className="mt-1 text-xs text-[#8490a4]">{item.in} — {item.out} · {item.total}</p></div></div><span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'Terlambat' ? 'bg-[#fff5df] text-[#b27a1a]' : 'bg-[#eaf8f2] text-[#159b72]'}`}>{item.status}</span></div>)}</div></section>
+        <div className="mt-5 flex items-center justify-between px-1 text-xs text-[#9aa5b7]"><span>Terakhir disinkronkan: baru saja</span><span className="hidden items-center gap-1 sm:flex"><Navigation size={13} /> SIMS HRIS</span></div>
       </div>
     </div>
   );
-} 
+}
