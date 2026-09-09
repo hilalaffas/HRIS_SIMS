@@ -51,7 +51,11 @@ const SESSION_LABEL_BY_CODE = {
   SIANG: 'Setengah Hari (Siang)',
 };
 const DEFAULT_SESSION_LABEL = 'Setengah Hari (Pagi)';
-const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti) => {
+// [BARU] Batas Cuti Meninggal: maksimal 2 hari kerja (lihat handleSubmit &
+// LeaveTypeDateSection.jsx untuk validasi tanggal + info alert-nya).
+const BEREAVEMENT_MAX_DAYS = 2;
+const isBereavementLeave = (leaveType = '') => String(leaveType).trim().toLowerCase().includes('meninggal');
+const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false) => {
   if (!startDate || !endDate) return 0;
   if (startDate > endDate) return 0;
 
@@ -62,10 +66,11 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti) => {
     return 0.5;
   }
 
-  // [BARU] Cuti Melahirkan dihitung berdasarkan hari KALENDER, bukan hari
-  // kerja -- karena batasnya (2 hari laki-laki / 3 bulan perempuan) memang
-  // berbasis kalender dan tidak boleh terpotong akhir pekan/hari libur.
-  if (normalizedJenisCuti.includes('melahirkan')) {
+  // [UBAH] Cuti Melahirkan PEREMPUAN tetap hari KALENDER (kontinu, batas 3
+  // bulan tidak boleh terpotong akhir pekan/hari libur). Cuti Melahirkan
+  // LAKI-LAKI (pendamping) sekarang ikut hari KERJA seperti jenis cuti lain
+  // -- konsisten dengan perubahan batas di LeaveService.java (backend).
+  if (normalizedJenisCuti.includes('melahirkan') && isFemale) {
     const diffDays = Math.round(
       (new Date(`${endDate}T00:00:00`) - new Date(`${startDate}T00:00:00`)) / 86400000
     ) + 1;
@@ -112,7 +117,10 @@ const ApplyCuti = ({ user }) => {
   const [historySyncedAt, setHistorySyncedAt] = useState(null);
   const [error, setError] = useState('');
   const [jenisCuti, setJenisCuti] = useState('');
-  const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka', 'Cuti Setengah Hari'].includes(jenisCuti) ? 0 : 5;
+  // [UBAH] Cuti Meninggal ikut dibebaskan dari jeda H-5 (bisa diajukan
+  // kapan saja), dicek pakai isBereavementLeave() supaya tetap berlaku
+  // walau nama tepatnya berbeda suffix.
+  const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka', 'Cuti Setengah Hari'].includes(jenisCuti) || isBereavementLeave(jenisCuti) ? 0 : 5;
   const dinamisBatasMinStr = hitungBatasMinTanggal(jedaHariKerja, hariLiburNasional);
   const [durasiSesi, setDurasiSesi] = useState('Setengah Hari (Pagi)');
   const [startDate, setStartDate] = useState(todayStr);
@@ -127,7 +135,7 @@ const ApplyCuti = ({ user }) => {
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const jumlahHariCuti = countWorkingDays(startDate, endDate, holidayDates, jenisCuti);
+  const jumlahHariCuti = countWorkingDays(startDate, endDate, holidayDates, jenisCuti, isFemale);
   const formTopRef = useRef(null);
 
   // Gabungan semua approver (LEADER, SPV, MANAGER) menjadi map { employeeId: fullName }
@@ -210,7 +218,9 @@ const ApplyCuti = ({ user }) => {
       setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); 
       return;
     }
-    // [BARU] Validasi batas Cuti Melahirkan sesuai gender pemohon.
+    // [UBAH] Validasi batas cuti khusus sesuai kebijakan (Melahirkan &
+    // Meninggal). Laki-laki (pendamping melahirkan) sekarang divalidasi
+    // pakai jumlahHariCuti (hari kerja), konsisten dengan backend.
     if (String(jenisCuti || '').toLowerCase().includes('melahirkan')) {
       if (isFemale) {
         const batasMaxTanggal = addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE);
@@ -219,11 +229,18 @@ const ApplyCuti = ({ user }) => {
           return;
         }
       } else {
-        const totalHariKalender = Math.round((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
-        if (totalHariKalender > MATERNITY_MAX_DAYS_MALE) {
-          setError(`Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari.`);
+        if (jumlahHariCuti > MATERNITY_MAX_DAYS_MALE) {
+          setError(`Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari kerja.`);
           return;
         }
+      }
+    }
+    // [BARU] Validasi batas Cuti Meninggal (maksimal BEREAVEMENT_MAX_DAYS
+    // hari kerja).
+    if (isBereavementLeave(jenisCuti)) {
+      if (jumlahHariCuti > BEREAVEMENT_MAX_DAYS) {
+        setError(`Cuti meninggal maksimal ${BEREAVEMENT_MAX_DAYS} hari kerja.`);
+        return;
       }
     }
     const type = types.find(item => item.name === jenisCuti);

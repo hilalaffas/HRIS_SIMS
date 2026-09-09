@@ -25,16 +25,23 @@ const addMonthsToDateStr = (dateStr, months) => {
   d.setMonth(d.getMonth() + months);
   return toLocalDateStr(d);
 };
-const addDaysToDateStr = (dateStr, days) => {
+const addWorkingDaysToDateStr = (dateStr, workingDays, holidayDates) => {
   if (!dateStr) return null;
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return toLocalDateStr(d);
+  const date = new Date(`${dateStr}T00:00:00`);
+  let countedDays = 0;
+  while (countedDays < workingDays) {
+    const dateStr = toLocalDateStr(date);
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    if (!isWeekend && !holidayDates.has(dateStr)) countedDays++;
+    if (countedDays < workingDays) date.setDate(date.getDate() + 1);
+  }
+  return toLocalDateStr(date);
 };
 // Laki-laki (cuti pendamping melahirkan) maksimal 2 hari, Perempuan
 // maksimal 3 bulan sejak tanggal mulai.
 const MATERNITY_MAX_DAYS_MALE = 2;
 const MATERNITY_MAX_MONTHS_FEMALE = 3;
+const BEREAVEMENT_MAX_DAYS = 2;
 
 const generate35Days = (viewDate) => {
   const year = viewDate.getFullYear();
@@ -83,13 +90,19 @@ const LeaveTypeDateSection = ({
   const sampaiRef = useRef(null);
 
   const normalizedLeaveType = String(jenisCuti || '').trim().toLowerCase();
-  const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType);
+  const isCutiMeninggal = normalizedLeaveType.includes('meninggal');
+  const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType) || isCutiMeninggal;
   const isHalfDayLeave = normalizedLeaveType === 'cuti setengah hari';
   // [BARU] Deteksi Cuti Melahirkan tanpa terikat suffix nama persis
   // (mis. "Cuti Melahirkan (Khusus)").
   const isMelahirkan = normalizedLeaveType.includes('melahirkan');
   const batasMaxMelahirkanStr = isMelahirkan && startDate
-    ? (isFemale ? addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE) : addDaysToDateStr(startDate, MATERNITY_MAX_DAYS_MALE - 1))
+    ? (isFemale
+      ? addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE)
+      : addWorkingDaysToDateStr(startDate, MATERNITY_MAX_DAYS_MALE, safeHolidayDates))
+    : null;
+  const batasMaxMeninggalStr = isCutiMeninggal && startDate
+    ? addWorkingDaysToDateStr(startDate, BEREAVEMENT_MAX_DAYS, safeHolidayDates)
     : null;
 
   // [UBAH] Sebelumnya 2 buah useEffect yang memanggil setState langsung di
@@ -115,8 +128,8 @@ const LeaveTypeDateSection = ({
   }
 
   // 2) Klem endDate: Cuti Setengah Hari harus sama dengan startDate; Cuti
-  // Melahirkan tidak boleh melewati batas (2 hari laki-laki / 3 bulan perempuan).
-  const endDateClampKey = `${isHalfDayLeave}|${startDate}|${isMelahirkan}|${batasMaxMelahirkanStr}`;
+  // Melahirkan maupun meninggal tidak boleh melewati batas kebijakannya.
+  const endDateClampKey = `${isHalfDayLeave}|${startDate}|${isMelahirkan}|${batasMaxMelahirkanStr}|${isCutiMeninggal}|${batasMaxMeninggalStr}`;
   const [prevEndDateClampKey, setPrevEndDateClampKey] = useState(endDateClampKey);
   if (endDateClampKey !== prevEndDateClampKey) {
     setPrevEndDateClampKey(endDateClampKey);
@@ -124,6 +137,8 @@ const LeaveTypeDateSection = ({
       setEndDate(startDate);
     } else if (isMelahirkan && batasMaxMelahirkanStr && endDate && endDate > batasMaxMelahirkanStr) {
       setEndDate(batasMaxMelahirkanStr);
+    } else if (isCutiMeninggal && batasMaxMeninggalStr && endDate && endDate > batasMaxMeninggalStr) {
+      setEndDate(batasMaxMeninggalStr);
     }
   }
 
@@ -226,7 +241,7 @@ const LeaveTypeDateSection = ({
             const batasMinSampaiStr = startDate;
             const batasMaxSampaiStr = isHalfDayLeave
               ? startDate
-              : (isMelahirkan ? batasMaxMelahirkanStr : null);
+              : (isMelahirkan ? batasMaxMelahirkanStr : (isCutiMeninggal ? batasMaxMeninggalStr : null));
 
             return renderMiniCalendar(
               sampaiViewDate, setSampaiViewDate, endDate,
@@ -242,12 +257,18 @@ const LeaveTypeDateSection = ({
         <div className="duration-info-alert" style={{ marginTop: '-6px' }}>
           {isFemale
             ? `Cuti melahirkan untuk karyawan perempuan maksimal ${MATERNITY_MAX_MONTHS_FEMALE} bulan sejak tanggal mulai.`
-            : `Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari.`}
+            : `Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari kerja. Tanggal merah dan akhir pekan tidak dihitung.`}
+        </div>
+      )}
+
+      {isCutiMeninggal && (
+        <div className="duration-info-alert" style={{ marginTop: '-6px' }}>
+          Cuti meninggal dapat diajukan kapan saja, maksimal {BEREAVEMENT_MAX_DAYS} hari kerja. Tanggal merah dan akhir pekan tidak dihitung, serta tidak memotong cuti tahunan.
         </div>
       )}
 
       <div className="duration-info-alert">
-        Durasi pengajuan: {jumlahHariCuti} Hari Kerja
+        Durasi pengajuan: {jumlahHariCuti} {isMelahirkan && isFemale ? 'Hari' : 'Hari Kerja'}
       </div>
     </>
   );
