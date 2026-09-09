@@ -52,8 +52,9 @@ public class LeaveService {
     // hari kalender, Perempuan maksimal 3 bulan dari tanggal mulai.
     private static final int MATERNITY_MAX_DAYS_MALE = 2;
     private static final int MATERNITY_MAX_MONTHS_FEMALE = 3;
-    // [BARU] Batas Cuti Nikah: maksimal 3 hari kalender, sama untuk semua gender.
-    private static final int MARRIAGE_MAX_DAYS = 3;
+    // [BARU] Batas Cuti Meninggal: maksimal 2 hari kerja, tanggal merah dan
+    // akhir pekan tidak dihitung (lihat validateSpecialLeaveLimits()).
+    private static final int BEREAVEMENT_MAX_DAYS = 2;
 
     private final LeaveRepository cutiRepository;
     private final EmployeeRepository karyawanRepository;
@@ -149,8 +150,7 @@ public class LeaveService {
             throw new RuntimeException("Karyawan pemohon wajib diisi");
         }
 
-        validateCutiMelahirkanLimit(cuti, requester);
-        validateCutiNikahLimit(cuti);
+        validateSpecialLeaveLimits(cuti, requester);
         ensureNoOverlap(requester, cuti);
 
         BigDecimal totalDays = calculateLeaveDays(cuti);
@@ -180,6 +180,11 @@ public class LeaveService {
         Employee hrActor = getEmployeeByUsername(hrUsername);
 
         cuti.setEmployee(targetEmployee);
+        // [BARU] Sebelumnya alur Cuti Susulan/Darurat (HR input) TIDAK
+        // divalidasi batas Cuti Meninggal/Melahirkan sama sekali -- HR bisa
+        // input cuti meninggal 10 hari tanpa ditolak. Sekarang disamakan
+        // dengan alur pengajuan mandiri karyawan.
+        validateSpecialLeaveLimits(cuti, targetEmployee);
         ensureNoOverlap(targetEmployee, cuti);
 
         BigDecimal totalDays = calculateLeaveDays(cuti);
@@ -477,8 +482,7 @@ public class LeaveService {
                 .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
         existingCuti.setStartDate(updatedCuti.getStartDate());
         existingCuti.setEndDate(updatedCuti.getEndDate());
-        validateCutiMelahirkanLimit(existingCuti, requester);
-        validateCutiNikahLimit(existingCuti);
+        validateSpecialLeaveLimits(existingCuti, requester);
         BigDecimal totalDays = calculateLeaveDays(existingCuti);
         if (totalDays.signum() <= 0) {
             throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
@@ -723,19 +727,35 @@ public class LeaveService {
         return annualLeave.getQuotaMale();
     }
 
-    // [BARU] Validasi batas Cuti Melahirkan berdasarkan gender pemohon.
+    // [UBAH] Sebelumnya validateCutiMelahirkanLimit() -- HANYA menangani Cuti
+    // Melahirkan. Sekarang jadi validateSpecialLeaveLimits() dan menambahkan
+    // penanganan Cuti Meninggal (maksimal BEREAVEMENT_MAX_DAYS hari KERJA,
+    // tanggal merah/akhir pekan tidak dihitung). Nama & seluruh pemanggilnya
+    // (createCuti/createUrgentCuti/resubmitCuti) ikut disesuaikan.
     // Laki-laki (dianggap cuti pendamping melahirkan) dibatasi maksimal
-    // MATERNITY_MAX_DAYS_MALE HARI KERJA (Sabtu/Minggu & tanggal merah tidak
-    // dihitung), sedangkan Perempuan dibatasi maksimal
-    // MATERNITY_MAX_MONTHS_FEMALE bulan KALENDER dari tanggal mulai.
-    // Dicek berdasarkan nama jenis cuti (mengandung kata "melahirkan"),
-    // supaya tetap berlaku walau nama tepatnya "Cuti Melahirkan (Khusus)".
-    private void validateCutiMelahirkanLimit(LeaveRequest cuti, Employee requester) {
+    // MATERNITY_MAX_DAYS_MALE hari KERJA (sebelumnya hari kalender -- lihat
+    // catatan di calculateLeaveDays()), sedangkan Perempuan dibatasi maksimal
+    // MATERNITY_MAX_MONTHS_FEMALE bulan dari tanggal mulai.
+    // Dicek berdasarkan nama jenis cuti (mengandung kata "melahirkan"/
+    // "meninggal"), supaya tetap berlaku walau nama tepatnya mis. "Cuti
+    // Melahirkan (Khusus)".
+    private void validateSpecialLeaveLimits(LeaveRequest cuti, Employee requester) {
         String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
-        if (leaveTypeName == null || !leaveTypeName.toLowerCase(Locale.ROOT).contains("melahirkan")) {
+        String normalizedLeaveTypeName = leaveTypeName == null ? "" : leaveTypeName.toLowerCase(Locale.ROOT);
+        if (cuti.getStartDate() == null || cuti.getEndDate() == null) {
             return;
         }
-        if (cuti.getStartDate() == null || cuti.getEndDate() == null) {
+
+        // [BARU] Cuti Meninggal: maksimal BEREAVEMENT_MAX_DAYS hari kerja.
+        if (normalizedLeaveTypeName.contains("meninggal")) {
+            int totalHariKerja = calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate());
+            if (totalHariKerja > BEREAVEMENT_MAX_DAYS) {
+                throw new RuntimeException("Cuti meninggal maksimal " + BEREAVEMENT_MAX_DAYS + " hari kerja");
+            }
+            return;
+        }
+
+        if (!normalizedLeaveTypeName.contains("melahirkan")) {
             return;
         }
 
@@ -748,34 +768,15 @@ public class LeaveService {
                         + MATERNITY_MAX_MONTHS_FEMALE + " bulan sejak tanggal mulai");
             }
         } else {
-            // [UBAH] Sebelumnya dihitung hari KALENDER. Sekarang hari KERJA --
-            // Sabtu/Minggu & tanggal merah libur nasional tidak dihitung.
+            // [UBAH] Sebelumnya hari KALENDER (ChronoUnit.DAYS). Sekarang
+            // hari KERJA (calculateWorkingDays), konsisten dengan
+            // calculateLeaveDays() supaya pesan error & total hari yang
+            // benar-benar terpotong dari saldo selalu sinkron.
             int totalHariKerja = calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate());
             if (totalHariKerja > MATERNITY_MAX_DAYS_MALE) {
                 throw new RuntimeException("Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal "
                         + MATERNITY_MAX_DAYS_MALE + " hari kerja");
             }
-        }
-    }
-
-    // [BARU] Validasi batas Cuti Nikah: maksimal MARRIAGE_MAX_DAYS HARI
-    // KERJA (Sabtu/Minggu & tanggal merah tidak dihitung), sama untuk semua
-    // gender. Dicek berdasarkan nama jenis cuti mengandung kata "nikah"
-    // (mis. "Cuti Nikah", "Cuti Menikah").
-    private void validateCutiNikahLimit(LeaveRequest cuti) {
-        String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
-        if (leaveTypeName == null || !leaveTypeName.toLowerCase(Locale.ROOT).contains("nikah")) {
-            return;
-        }
-        if (cuti.getStartDate() == null || cuti.getEndDate() == null) {
-            return;
-        }
-
-        // [UBAH] Sebelumnya dihitung hari KALENDER. Sekarang hari KERJA --
-        // Sabtu/Minggu & tanggal merah libur nasional tidak dihitung.
-        int totalHariKerja = calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate());
-        if (totalHariKerja > MARRIAGE_MAX_DAYS) {
-            throw new RuntimeException("Cuti nikah maksimal " + MARRIAGE_MAX_DAYS + " hari kerja");
         }
     }
 
@@ -791,18 +792,18 @@ public class LeaveService {
         }
 
         // [UBAH] Cuti Melahirkan PEREMPUAN tetap dihitung hari KALENDER
-        // (batasnya 3 bulan, weekend/libur tidak relevan). Untuk laki-laki
-        // (pendamping) & Cuti Nikah, sekarang dihitung hari KERJA (skip
-        // Sabtu/Minggu & tanggal merah) -- lanjut ke logic default di bawah,
-        // sama seperti jenis cuti lainnya.
-        if (normalizedLeaveTypeName.contains("melahirkan")) {
-            Employee employee = cuti.getEmployee();
-            boolean isPerempuan = employee != null
-                    && ("F".equalsIgnoreCase(employee.getGender()) || "P".equalsIgnoreCase(employee.getGender()));
-            if (isPerempuan) {
-                long totalHariKalender = ChronoUnit.DAYS.between(cuti.getStartDate(), cuti.getEndDate()) + 1;
-                return totalHariKalender > 0 ? BigDecimal.valueOf(totalHariKalender) : BigDecimal.ZERO;
-            }
+        // (konsisten dengan batas 3 bulan yang tidak boleh terpotong akhir
+        // pekan/hari libur). Cuti Melahirkan LAKI-LAKI (pendamping) sekarang
+        // ikut hari KERJA seperti jenis cuti lain -- sebelumnya sama-sama
+        // hari kalender, padahal batasnya (MATERNITY_MAX_DAYS_MALE) sudah
+        // diubah jadi hari kerja di validateSpecialLeaveLimits().
+        boolean isMelahirkan = normalizedLeaveTypeName.contains("melahirkan");
+        boolean isPemohonPerempuan = cuti.getEmployee() != null
+                && ("F".equalsIgnoreCase(cuti.getEmployee().getGender())
+                        || "P".equalsIgnoreCase(cuti.getEmployee().getGender()));
+        if (isMelahirkan && isPemohonPerempuan) {
+            long totalHariKalender = ChronoUnit.DAYS.between(cuti.getStartDate(), cuti.getEndDate()) + 1;
+            return totalHariKalender > 0 ? BigDecimal.valueOf(totalHariKalender) : BigDecimal.ZERO;
         }
 
         int workingDays = calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate());

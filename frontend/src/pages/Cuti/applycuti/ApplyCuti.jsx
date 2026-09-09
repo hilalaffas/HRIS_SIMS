@@ -37,8 +37,6 @@ const addMonthsToDateStr = (dateStr, months) => {
 // Perempuan maksimal 3 bulan sejak tanggal mulai.
 const MATERNITY_MAX_DAYS_MALE = 2;
 const MATERNITY_MAX_MONTHS_FEMALE = 3;
-// [BARU] Batas Cuti Nikah: maksimal 3 hari kalender, sama untuk semua gender.
-const MARRIAGE_MAX_DAYS = 3;
 // [BARU] Konversi dua arah antara label dropdown "DURASI SESI SETENGAH
 // HARI" (LeaveTypeDateSection.jsx) dengan kode sesi mentah "PAGI"/"SIANG"
 // yang disimpan backend (leave_requests.session). Sebelumnya TIDAK ADA
@@ -53,26 +51,11 @@ const SESSION_LABEL_BY_CODE = {
   SIANG: 'Setengah Hari (Siang)',
 };
 const DEFAULT_SESSION_LABEL = 'Setengah Hari (Pagi)';
-// [BARU] Diekstrak dari logic hari-kerja umum di bawah, supaya bisa dipakai
-// ulang untuk validasi batas Cuti Melahirkan (laki-laki) & Cuti Nikah, yang
-// sekarang dihitung hari KERJA (skip Sabtu/Minggu & tanggal merah), bukan
-// hari kalender lagi.
-const countPlainWorkingDays = (startDate, endDate, holidayDates) => {
-  if (startDate === endDate) {
-    const tempDate = new Date(`${startDate}T00:00:00`);
-    const weekend = tempDate.getDay() === 0 || tempDate.getDay() === 6;
-    const key = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`;
-    return (!weekend && !holidayDates.has(key)) ? 1 : 0;
-  }
-  let total = 0;
-  for (const date = new Date(`${startDate}T00:00:00`); date <= new Date(`${endDate}T00:00:00`); date.setDate(date.getDate() + 1)) {
-    const weekend = date.getDay() === 0 || date.getDay() === 6;
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    if (!weekend && !holidayDates.has(key)) total++;
-  }
-  return total;
-};
-const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale) => {
+// [BARU] Batas Cuti Meninggal: maksimal 2 hari kerja (lihat handleSubmit &
+// LeaveTypeDateSection.jsx untuk validasi tanggal + info alert-nya).
+const BEREAVEMENT_MAX_DAYS = 2;
+const isBereavementLeave = (leaveType = '') => String(leaveType).trim().toLowerCase().includes('meninggal');
+const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false) => {
   if (!startDate || !endDate) return 0;
   if (startDate > endDate) return 0;
 
@@ -83,10 +66,10 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale)
     return 0.5;
   }
 
-  // [UBAH] Cuti Melahirkan PEREMPUAN tetap dihitung hari KALENDER (batasnya
-  // 3 bulan, weekend/libur tidak relevan). Untuk laki-laki (pendamping) &
-  // Cuti Nikah, sekarang dihitung hari KERJA (skip Sabtu/Minggu & tanggal
-  // merah) -- lanjut ke logic umum di bawah, sama seperti jenis cuti lain.
+  // [UBAH] Cuti Melahirkan PEREMPUAN tetap hari KALENDER (kontinu, batas 3
+  // bulan tidak boleh terpotong akhir pekan/hari libur). Cuti Melahirkan
+  // LAKI-LAKI (pendamping) sekarang ikut hari KERJA seperti jenis cuti lain
+  // -- konsisten dengan perubahan batas di LeaveService.java (backend).
   if (normalizedJenisCuti.includes('melahirkan') && isFemale) {
     const diffDays = Math.round(
       (new Date(`${endDate}T00:00:00`) - new Date(`${startDate}T00:00:00`)) / 86400000
@@ -134,7 +117,10 @@ const ApplyCuti = ({ user }) => {
   const [historySyncedAt, setHistorySyncedAt] = useState(null);
   const [error, setError] = useState('');
   const [jenisCuti, setJenisCuti] = useState('');
-  const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka', 'Cuti Setengah Hari'].includes(jenisCuti) ? 0 : 5;
+  // [UBAH] Cuti Meninggal ikut dibebaskan dari jeda H-5 (bisa diajukan
+  // kapan saja), dicek pakai isBereavementLeave() supaya tetap berlaku
+  // walau nama tepatnya berbeda suffix.
+  const jedaHariKerja = ['Cuti Urgent', 'Cuti Berduka', 'Cuti Setengah Hari'].includes(jenisCuti) || isBereavementLeave(jenisCuti) ? 0 : 5;
   const dinamisBatasMinStr = hitungBatasMinTanggal(jedaHariKerja, hariLiburNasional);
   const [durasiSesi, setDurasiSesi] = useState('Setengah Hari (Pagi)');
   const [startDate, setStartDate] = useState(todayStr);
@@ -147,6 +133,10 @@ const ApplyCuti = ({ user }) => {
   const [managerEmployeeId, setManagerEmployeeId] = useState('');
   const [filterStatus, setFilterStatus] = useState('Semua Berkas');
   const [selectedDetail, setSelectedDetail] = useState(null);
+  // [BARU] Menandai apakah popup detail (FormCuti) sedang dalam MODE EDIT
+  // (form edit dirender di dalam modal yang sama) vs MODE LIHAT (read-only).
+  // Lihat handleEditInModal/handleCancelModalEdit/handleModalEditSubmit.
+  const [isModalEditing, setIsModalEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const jumlahHariCuti = countWorkingDays(startDate, endDate, holidayDates, jenisCuti, isFemale);
@@ -230,40 +220,37 @@ const ApplyCuti = ({ user }) => {
     event.preventDefault();
     if (new Date(startDate) < new Date(dinamisBatasMinStr) || new Date(endDate) < new Date(startDate)) {
       setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); 
-      return;
+      return false;
     }
-    // [BARU] Validasi batas Cuti Melahirkan sesuai gender pemohon.
+    // [UBAH] Validasi batas cuti khusus sesuai kebijakan (Melahirkan &
+    // Meninggal). Laki-laki (pendamping melahirkan) sekarang divalidasi
+    // pakai jumlahHariCuti (hari kerja), konsisten dengan backend.
     if (String(jenisCuti || '').toLowerCase().includes('melahirkan')) {
       if (isFemale) {
         const batasMaxTanggal = addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE);
         if (endDate > batasMaxTanggal) {
           setError(`Cuti melahirkan untuk karyawan perempuan maksimal ${MATERNITY_MAX_MONTHS_FEMALE} bulan sejak tanggal mulai.`);
-          return;
+          return false;
         }
       } else {
-        // [UBAH] Sebelumnya dihitung hari KALENDER. Sekarang hari KERJA --
-        // Sabtu/Minggu & tanggal merah libur nasional tidak dihitung.
-        const totalHariKerja = countPlainWorkingDays(startDate, endDate, holidayDates);
-        if (totalHariKerja > MATERNITY_MAX_DAYS_MALE) {
+        if (jumlahHariCuti > MATERNITY_MAX_DAYS_MALE) {
           setError(`Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari kerja.`);
-          return;
+          return false;
         }
       }
     }
-    // [BARU] Validasi batas Cuti Nikah (flat, tidak tergantung gender).
-    if (String(jenisCuti || '').toLowerCase().includes('nikah')) {
-      // [UBAH] Sebelumnya dihitung hari KALENDER. Sekarang hari KERJA --
-      // Sabtu/Minggu & tanggal merah libur nasional tidak dihitung.
-      const totalHariKerja = countPlainWorkingDays(startDate, endDate, holidayDates);
-      if (totalHariKerja > MARRIAGE_MAX_DAYS) {
-        setError(`Cuti nikah maksimal ${MARRIAGE_MAX_DAYS} hari kerja.`);
-        return;
+    // [BARU] Validasi batas Cuti Meninggal (maksimal BEREAVEMENT_MAX_DAYS
+    // hari kerja).
+    if (isBereavementLeave(jenisCuti)) {
+      if (jumlahHariCuti > BEREAVEMENT_MAX_DAYS) {
+        setError(`Cuti meninggal maksimal ${BEREAVEMENT_MAX_DAYS} hari kerja.`);
+        return false;
       }
     }
     const type = types.find(item => item.name === jenisCuti);
     if (!type || !managerEmployeeId || (!atasan && (!leaderEmployeeId || !spvEmployeeId))) {
       setError('Pilih seluruh approver yang wajib sebelum mengirim pengajuan.'); 
-      return;
+      return false;
     }
     setIsSubmitting(true);
     try {
@@ -292,9 +279,11 @@ const ApplyCuti = ({ user }) => {
       setReason(''); setPendingWork(''); setCoveredBy(''); setLeaderEmployeeId(''); setSpvEmployeeId(''); setManagerEmployeeId(''); setEditingId(null);
       await load(); 
       alert(editingId ? 'Perbaikan cuti berhasil diajukan kembali.' : 'Pengajuan cuti berhasil dikirim.');
+      return true;
     } catch (err) {
         console.error(err);
         setError(err.response?.data?.message ||err.message ||"Gagal");
+        return false;
     } finally { 
           setIsSubmitting(false); 
         }
@@ -311,7 +300,14 @@ const ApplyCuti = ({ user }) => {
     catch (err) { setError(err.message || 'Gagal memuat detail cuti.'); }
   };
 
-  const handleEditKembali = (id) => {
+  // [UBAH] Sekarang menerima parameter opsional ke-2 `{ scrollToForm,
+  // showReminder }`, default keduanya TRUE -- artinya dipanggil tanpa opsi
+  // (seperti tombol "Edit" di LeaveHistory.jsx) perilakunya PERSIS SAMA
+  // seperti sebelumnya (scroll ke form atas + tampilkan reminder approver).
+  // Dipakai dengan opsi FALSE oleh handleEditInModal (edit di dalam popup
+  // detail), karena di situ tidak perlu scroll (modal sudah di layar) dan
+  // reminder cukup terlihat dari kolom approver yang kosong di form.
+  const handleEditKembali = (id, { scrollToForm = true, showReminder = true } = {}) => {
     const item = history.find((record) => record.id === id);
     if (!item || item.status !== 'Dikembalikan') return;
 
@@ -327,17 +323,66 @@ const ApplyCuti = ({ user }) => {
     setReason(detail.reason || '');
     setPendingWork(detail.pendingWork || '');
     setCoveredBy(detail.coveredBy || '');
-    setLeaderEmployeeId('');
-    setSpvEmployeeId('');
-    setManagerEmployeeId('');
+    // [UBAH] Sebelumnya SELALU direset ke '' (kosong), memaksa user memilih
+    // ulang ketiga approver dari nol setiap kali edit -- padahal datanya
+    // (leaderEmployeeId/spvEmployeeId/managerEmployeeId) sudah tersimpan di
+    // pengajuan asli (lihat rawDetail di CutiService.js -> mapMyLeave).
+    // Sekarang diisi ulang otomatis ke pilihan semula; user tinggal ganti
+    // kalau memang perlu approver yang berbeda.
+    setLeaderEmployeeId(detail.leaderEmployeeId ? String(detail.leaderEmployeeId) : '');
+    setSpvEmployeeId(detail.spvEmployeeId ? String(detail.spvEmployeeId) : '');
+    setManagerEmployeeId(detail.managerEmployeeId ? String(detail.managerEmployeeId) : '');
     setEditingId(id);
-    setError('Lengkapi kembali approver, lalu simpan perbaikan cuti Anda.');
-    formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // [UBAH] Pesan disesuaikan -- approver sekarang sudah terisi otomatis,
+    // jadi tidak lagi menyuruh user "lengkapi kembali approver".
+    if (showReminder) setError('Data pengajuan sebelumnya sudah dimuat ulang (termasuk approver). Periksa kembali, lalu simpan perbaikan cuti Anda.');
+    if (scrollToForm) formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setError('');
+  };
+
+  // [BARU] Dipanggil dari tombol "Edit Berkas" DI DALAM popup detail
+  // (FormCuti). Beda dengan tombol "Edit" di List Riwayat: TIDAK menutup
+  // modal & TIDAK scroll ke form atas -- modal yang sama langsung berpindah
+  // ke mode edit (lihat prop `editForm` di render FormCuti di bawah).
+  const handleEditInModal = () => {
+    if (!selectedDetail?.id) return;
+    handleEditKembali(selectedDetail.id, { scrollToForm: false, showReminder: false });
+    setIsModalEditing(true);
+  };
+
+  // [BARU] Tombol "Batal Edit" saat mode edit di dalam modal -- kembali ke
+  // tampilan lihat detail (read-only) pada modal yang sama, TANPA menutupnya.
+  const handleCancelModalEdit = () => {
+    cancelEdit();
+    setIsModalEditing(false);
+  };
+
+  // [BARU] Menutup popup detail sepenuhnya (klik X / klik area luar / tombol
+  // "Tutup Detail"). Kalau ditutup saat masih dalam mode edit, batalkan dulu
+  // proses editnya (reset editingId) supaya form di halaman utama tidak
+  // "nyangkut" dalam status edit yang tidak terlihat oleh user.
+  const handleCloseDetailModal = () => {
+    if (isModalEditing) cancelEdit();
+    setIsModalEditing(false);
+    setSelectedDetail(null);
+  };
+
+  // [BARU] Submit KHUSUS untuk form edit di dalam modal. Memanggil
+  // handleSubmit yang sama persis dipakai form utama (jadi semua validasi &
+  // logika pengiriman tetap satu sumber kebenaran) -- modal baru ditutup &
+  // kembali ke mode lihat detail JIKA submit-nya berhasil. Kalau gagal
+  // (validasi/error server), modal TETAP di mode edit supaya user bisa
+  // langsung perbaiki, dan pesan errornya tetap tampil lewat NotifModal.
+  const handleModalEditSubmit = async (event) => {
+    const success = await handleSubmit(event);
+    if (success) {
+      setIsModalEditing(false);
+      setSelectedDetail(null);
+    }
   };
 
   return <div className="form-wrapper" ref={formTopRef}>
@@ -353,13 +398,25 @@ const ApplyCuti = ({ user }) => {
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
-      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} canApplyCuti />
+      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
   <FormCuti
     data={selectedDetail}
-    onClose={() => setSelectedDetail(null)} 
-    onEdit={selectedDetail.statusBerkas === 'DIKEMBALIKAN' ? () => handleEditKembali(selectedDetail.id) : null}
+    onClose={handleCloseDetailModal}
+    onEdit={selectedDetail.statusBerkas === 'DIKEMBALIKAN' ? handleEditInModal : null}
+    // [BARU] Saat isModalEditing aktif, modal dikasih <LeaveForm> yang SAMA
+    // persis komponennya dengan form pengajuan di halaman utama -- jadi
+    // kalender, dropdown sesi Pagi/Siang, pemilihan approver, & validasi
+    // semuanya otomatis ikut, tidak perlu ditulis ulang. hideHeader supaya
+    // tidak dobel dengan header modal ("Edit Berkas Cuti").
+    editForm={isModalEditing ? (
+      <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
+        reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
+        pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
+        isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true }}
+        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} canApplyCuti />
+    ) : null}
   />
 )}
   </div>;
