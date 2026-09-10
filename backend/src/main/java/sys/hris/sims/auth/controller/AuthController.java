@@ -122,17 +122,10 @@ public class AuthController {
             }
         }
 
-        // Validasi NIK Karyawan (harus angka) SEBELUM user disimpan, supaya
-        // kalau NIK tidak valid, tidak ada User "nyangkut" tanpa Employee.
-        Long nikKaryawan = null;
-        if (isEmployeeProfileComplete(request) && !isBlank(request.getNikKaryawan())) {
-            try {
-                nikKaryawan = Long.parseLong(request.getNikKaryawan().trim());
-            } catch (NumberFormatException e) {
-                return ResponseEntity.status(400).body("NIK Karyawan harus berupa angka");
-            }
-        }
-
+        // [UBAH V30] NIK Karyawan TIDAK divalidasi/diinput manual lagi di sini.
+        // Kode NIK (format SYS-{tahun masuk}-{4 digit urut}) sekarang otomatis
+        // dibuat oleh trigger database saat baris employees baru disimpan
+        // (lihat V30__auto_generate_nik_karyawan_code.sql).
         User user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -171,8 +164,8 @@ public class AuthController {
                     .phoneNumber(request.getPhoneNumber())
                     .gender(request.getGender())
                     .isActive(true)
-                    // Field Baru:
-                    .nikKaryawan(nikKaryawan)
+                    // [UBAH V30] nikKaryawan TIDAK di-set dari sini lagi --
+                    // otomatis terisi oleh trigger database saat INSERT.
                     .emergencyContactName(request.getEmergencyContactName())
                     .emergencyContactPhone(request.getEmergencyContactPhone())
                     .emergencyContactRelationship(rel)

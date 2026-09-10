@@ -21,7 +21,7 @@ const POSITION_ROLE_ID_MAP = {
 };
 
 const getInitialFormData = (canManageRole) => ({
-  fullName: '', nik: '', joinDate: '', divisiId: '',
+  fullName: '', joinDate: '', divisiId: '',
   position: canManageRole ? '' : 'Staff',
   address: '', email: '', phone: '',
   emergencyContact: '', emergencyRelation: '', emergencyPhone: '',
@@ -107,7 +107,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
     e.preventDefault();
     
     // Validasi Field Wajib
-    if (!formData.fullName || !formData.nik || !formData.username || !formData.password || !formData.divisiId) {
+    if (!formData.fullName || !formData.username || !formData.password || !formData.divisiId) {
       triggerToast('Harap lengkapi field yang bertanda bintang (*)', 'error');
       return;
     }
@@ -128,7 +128,6 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
     data.append('fullName', formData.fullName);
     data.append('address', formData.address);
     data.append('phoneNumber', formData.phone);
-    data.append('nikKaryawan', formData.nik);
     data.append('roleId', mappedRoleId);
     data.append('divisiId', formData.divisiId);
     data.append('emergencyContactPhone', formData.emergencyPhone);
@@ -193,15 +192,12 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
               <option value="P">Perempuan</option>
             </select>
           </div>
-          <div className="grid-2-col_formkaryawan">
-            <div className="input-group_formkaryawan">
-              <label>NIK KARYAWAN *</label>
-              <input type="text" name="nik" onChange={handleInputChange} required />
-            </div>
-            <div className="input-group_formkaryawan">
-              <label>TANGGAL MASUK</label>
-              <input type="date" name="joinDate" onChange={handleInputChange} />
-            </div>
+          <div className="input-group_formkaryawan">
+            <label>TANGGAL MASUK</label>
+            <input type="date" name="joinDate" onChange={handleInputChange} />
+            <small className="hint-text_formkaryawan">
+              NIK karyawan akan dibuat otomatis (format SYS-tahun masuk-nomor urut) setelah data disimpan.
+            </small>
           </div>
           <div className="grid-2-col_formkaryawan">
             <div className="input-group_formkaryawan">

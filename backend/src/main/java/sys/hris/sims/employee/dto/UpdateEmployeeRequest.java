@@ -12,7 +12,6 @@ public class UpdateEmployeeRequest {
     private String address;
     private String phoneNumber;
     private String gender;
-    private String nikKaryawan;
     private Long divisiId;
     private String emergencyContactName;
     private String emergencyContactPhone;

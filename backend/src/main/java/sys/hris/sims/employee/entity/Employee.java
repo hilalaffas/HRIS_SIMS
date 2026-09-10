@@ -44,8 +44,13 @@ public class Employee {
     @Column(name = "join_date")
     private LocalDate joinDate;
 
-    @Column(name = "nik_karyawan")
-    private Long nikKaryawan;
+    // [UBAH V30] Long -> String, dan insertable/updatable = false.
+    // NIK sekarang otomatis dibuat oleh trigger di database (format
+    // SYS-{tahun masuk}-{4 digit urut}, lihat V30__auto_generate_nik_karyawan_code.sql)
+    // saat baris baru di-INSERT, jadi tidak boleh lagi diisi/diubah manual
+    // dari sisi aplikasi (Java hanya baca nilainya, tidak pernah menulis).
+    @Column(name = "nik_karyawan", insertable = false, updatable = false)
+    private String nikKaryawan;
 
     @Column(name = "position", length = 100)
     private String position;

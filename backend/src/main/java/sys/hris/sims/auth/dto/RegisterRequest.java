@@ -20,7 +20,6 @@ public class RegisterRequest {
     private String phoneNumber;
     private String gender;
 
-    private String nikKaryawan;
     private MultipartFile photo;
     private String emergencyContactName;
     private String emergencyContactPhone;

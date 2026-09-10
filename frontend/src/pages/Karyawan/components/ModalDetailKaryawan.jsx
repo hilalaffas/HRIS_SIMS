@@ -165,8 +165,8 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
       setErrorMessage('ID akun user tidak ditemukan, coba tutup dan buka lagi modal ini.');
       return;
     }
-    if (!formData.namaLengkap.trim() || !formData.nik.trim() || !formData.username.trim()) {
-      setErrorMessage('Nama Lengkap, NIK, dan Username wajib diisi.');
+    if (!formData.namaLengkap.trim() || !formData.username.trim()) {
+      setErrorMessage('Nama Lengkap dan Username wajib diisi.');
       return;
     }
     if (!formData.divisiId) {
@@ -181,7 +181,6 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
     employeeForm.append('fullName', formData.namaLengkap);
     employeeForm.append('address', formData.alamat);
     employeeForm.append('phoneNumber', formData.telp);
-    employeeForm.append('nikKaryawan', formData.nik);
     employeeForm.append('divisiId', formData.divisiId);
     employeeForm.append('emergencyContactName', formData.namaDarurat);
     employeeForm.append('emergencyContactPhone', formData.telpDarurat);
@@ -299,8 +298,8 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
             </div>
             <div className="form-grid_detail_karyawan">
               <div className="form-group_detail_karyawan">
-                <label>NIK / ID KARYAWAN *</label>
-                <input type="text" name="nik" value={formData.nik} onChange={handleInputChange} />
+                <label>NIK / ID KARYAWAN</label>
+                <input type="text" name="nik" value={formData.nik} readOnly disabled title="NIK dibuat otomatis saat pendaftaran dan tidak dapat diubah" />
               </div>
               <div className="form-group_detail_karyawan">
                 <label>JABATAN / POSISI</label>

@@ -200,16 +200,10 @@ public class EmployeeController {
         if (isNotBlank(request.getAddress())) employee.setAddress(request.getAddress());
         if (isNotBlank(request.getPhoneNumber())) employee.setPhoneNumber(request.getPhoneNumber());
         if (isNotBlank(request.getGender())) employee.setGender(request.getGender());
-        // NIK Karyawan sekarang bigint di database, jadi perlu di-convert
-        // dari String (form) ke Long sebelum di-set ke entity.
-        if (isNotBlank(request.getNikKaryawan())) {
-            try {
-                employee.setNikKaryawan(Long.parseLong(request.getNikKaryawan().trim()));
-            } catch (NumberFormatException e) {
-                return ResponseEntity.status(400).body("NIK Karyawan harus berupa angka");
-            }
-        }
-
+        // [UBAH V30] NIK Karyawan TIDAK BISA diedit lagi -- otomatis dibuat
+        // oleh trigger database saat karyawan pertama kali didaftarkan
+        // (format SYS-{tahun masuk}-{4 digit urut}), jadi tidak ada lagi
+        // proses set/update nikKaryawan di sini.
         if (isNotBlank(request.getEmergencyContactName())) employee.setEmergencyContactName(request.getEmergencyContactName());
         if (isNotBlank(request.getEmergencyContactPhone())) employee.setEmergencyContactPhone(request.getEmergencyContactPhone());
 
