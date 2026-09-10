@@ -60,6 +60,13 @@ public class LeaveRequest {
     @Column(name = "total_days", nullable = false)
     private BigDecimal totalDays;
 
+    // Jumlah hari dari pengajuan ini yang benar-benar memakai Sisa Cuti
+    // (lama/manual). Nilai ini disimpan saat pengajuan menjadi APPROVED agar
+    // histori lama tidak dihitung ulang ketika HR mengisi/mengubah saldo manual.
+    @Column(name = "manual_leave_days", nullable = false, precision = 6, scale = 2)
+    @Builder.Default
+    private BigDecimal manualLeaveDays = BigDecimal.ZERO;
+
     // [BARU] Sesi untuk Cuti setengah hari: "PAGI" atau "SIANG".
     // NULL untuk jenis cuti lain. Diisi & divalidasi di
     // LeaveService.calculateLeaveDays().

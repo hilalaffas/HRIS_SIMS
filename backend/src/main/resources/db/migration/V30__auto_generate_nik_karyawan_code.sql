@@ -8,7 +8,7 @@
 -- ============================================================
 -- BAGIAN 1: Pindahkan nomor urut yang sekarang ada di
 -- nik_karyawan (bigint, hasil V28/V29) ke kolom baru nik_urut.
--- Kolom nik_urut inilah yang jadi "sumber angka" permanen,
+-- Kolom nik_urut inilah yang jadi "sumber angka" permanen,git 
 -- supaya nik_karyawan bisa diubah jadi TEXT untuk menyimpan
 -- kode lengkap (SYS-YYYY-NNNN).
 -- ============================================================
