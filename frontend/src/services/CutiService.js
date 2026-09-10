@@ -168,15 +168,15 @@ export function mapMyLeave(item) {
       reviewNote: item.reviewNote,
       // [BARU] Dibaca ulang oleh handleEditKembali (ApplyCuti.jsx).
       session: item.session ?? null,
-      // [BARU] ID approver yang dipilih di pengajuan ASLI -- sebelumnya
-      // TIDAK diteruskan ke sini, jadi handleEditKembali() selalu me-reset
-      // ketiga dropdown approver ke kosong ('') saat edit, memaksa user
-      // memilih ulang leader/SPV/manager dari nol walau datanya sebenarnya
-      // sudah ada. Sekarang diteruskan apa adanya supaya bisa diisi ulang
-      // otomatis ke pilihan semula.
-      leaderEmployeeId: item.leaderEmployeeId ?? null,
-      spvEmployeeId: item.spvEmployeeId ?? null,
-      managerEmployeeId: item.managerEmployeeId ?? null,
+      // [CATATAN] Sengaja TIDAK menyertakan leaderEmployeeId/spvEmployeeId/
+      // managerEmployeeId di sini. Field itu ADA di response /api/cuti/me
+      // (raw entity LeaveRequest), TAPI di backend ditandai @Transient --
+      // artinya selalu null saat entity dibaca ulang dari database (field
+      // itu cuma dipakai satu arah waktu SUBMIT). ID approver yang BENAR
+      // tersimpan di tabel terpisah (leave_request_approvals) & baru bisa
+      // didapat lewat endpoint detail /api/cuti/{id}/detail
+      // (LeaveApprovalResponse.leaderEmployeeId dst). Lihat handleEditKembali
+      // di ApplyCuti.jsx -- fetch ulang khusus ke endpoint itu untuk approver.
     },
   };
 }

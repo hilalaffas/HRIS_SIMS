@@ -319,36 +319,63 @@ const ApplyCuti = ({ user }) => {
   // Dipakai dengan opsi FALSE oleh handleEditInModal (edit di dalam popup
   // detail), karena di situ tidak perlu scroll (modal sudah di layar) dan
   // reminder cukup terlihat dari kolom approver yang kosong di form.
-  const handleEditKembali = (id, { scrollToForm = true, showReminder = true } = {}) => {
+  // [UBAH] Sekarang menerima parameter opsional ke-2 `{ scrollToForm,
+  // showReminder }`, default keduanya TRUE -- artinya dipanggil tanpa opsi
+  // (seperti tombol "Edit" di LeaveHistory.jsx) perilakunya PERSIS SAMA
+  // seperti sebelumnya (scroll ke form atas + tampilkan reminder approver).
+  // Dipakai dengan opsi FALSE oleh handleEditInModal (edit di dalam popup
+  // detail), karena di situ tidak perlu scroll (modal sudah di layar) dan
+  // reminder cukup terlihat dari kolom approver yang kosong di form.
+  //
+  // [UBAH] Sekarang ASYNC. Field selain approver diisi INSTAN dari data
+  // list (item.rawDetail, tanpa nunggu network -- sama seperti sebelumnya).
+  // Approver (Leader/SPV/Manager) HARUS di-fetch ulang lewat endpoint detail
+  // (/api/cuti/{id}/detail), karena leaderEmployeeId/spvEmployeeId/
+  // managerEmployeeId di response /api/cuti/me SELALU null (field itu
+  // ditandai @Transient di backend -- LeaveRequest.java -- jadi tidak
+  // pernah terbaca ulang dari database, cuma dipakai satu arah waktu
+  // SUBMIT). ID approver yang benar tersimpan di tabel terpisah
+  // (leave_request_approvals) dan baru terekspos lewat
+  // LeaveApprovalResponse.leaderEmployeeId/spvEmployeeId/managerEmployeeId.
+  const handleEditKembali = async (id, { scrollToForm = true, showReminder = true } = {}) => {
     const item = history.find((record) => record.id === id);
     if (!item || item.status !== 'Dikembalikan') return;
 
-    const detail = item.rawDetail || {};
-    setJenisCuti(detail.jenisCuti || item.jenisCuti);
+    // Tahap 1 (instan): isi field yang sudah tersedia di data list, supaya
+    // form langsung terlihat terisi tanpa menunggu network.
+    const listSnapshot = item.rawDetail || {};
+    setJenisCuti(listSnapshot.jenisCuti || item.jenisCuti);
     // [BARU] Kembalikan dropdown "DURASI SESI SETENGAH HARI" ke pilihan
     // semula (Pagi/Siang) dari kode sesi yang tersimpan -- sebelumnya baris
     // ini tidak ada sama sekali, jadi dropdown selalu reset ke default
     // "Pagi" walau pengajuan aslinya sesi "Siang".
-    setDurasiSesi(SESSION_LABEL_BY_CODE[detail.session] || DEFAULT_SESSION_LABEL);
-    setStartDate(detail.startDate || todayStr);
-    setEndDate(detail.endDate || todayStr);
-    setReason(detail.reason || '');
-    setPendingWork(detail.pendingWork || '');
-    setCoveredBy(detail.coveredBy || '');
-    // [UBAH] Sebelumnya SELALU direset ke '' (kosong), memaksa user memilih
-    // ulang ketiga approver dari nol setiap kali edit -- padahal datanya
-    // (leaderEmployeeId/spvEmployeeId/managerEmployeeId) sudah tersimpan di
-    // pengajuan asli (lihat rawDetail di CutiService.js -> mapMyLeave).
-    // Sekarang diisi ulang otomatis ke pilihan semula; user tinggal ganti
-    // kalau memang perlu approver yang berbeda.
-    setLeaderEmployeeId(detail.leaderEmployeeId ? String(detail.leaderEmployeeId) : '');
-    setSpvEmployeeId(detail.spvEmployeeId ? String(detail.spvEmployeeId) : '');
-    setManagerEmployeeId(detail.managerEmployeeId ? String(detail.managerEmployeeId) : '');
+    setDurasiSesi(SESSION_LABEL_BY_CODE[listSnapshot.session] || DEFAULT_SESSION_LABEL);
+    setStartDate(listSnapshot.startDate || todayStr);
+    setEndDate(listSnapshot.endDate || todayStr);
+    setReason(listSnapshot.reason || '');
+    setPendingWork(listSnapshot.pendingWork || '');
+    setCoveredBy(listSnapshot.coveredBy || '');
     setEditingId(id);
-    // [UBAH] Pesan disesuaikan -- approver sekarang sudah terisi otomatis,
-    // jadi tidak lagi menyuruh user "lengkapi kembali approver".
-    if (showReminder) setError('Data pengajuan sebelumnya sudah dimuat ulang (termasuk approver). Periksa kembali, lalu simpan perbaikan cuti Anda.');
     if (scrollToForm) formTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Tahap 2 (fetch): isi ulang 3 dropdown approver dari endpoint detail
+    // yang punya ID approver sesungguhnya. Dipisah dari Tahap 1 supaya form
+    // tetap responsif -- approver menyusul begitu fetch selesai.
+    try {
+      const detail = await getMyLeaveDetail(id);
+      setLeaderEmployeeId(detail.leaderEmployeeId ? String(detail.leaderEmployeeId) : '');
+      setSpvEmployeeId(detail.spvEmployeeId ? String(detail.spvEmployeeId) : '');
+      setManagerEmployeeId(detail.managerEmployeeId ? String(detail.managerEmployeeId) : '');
+      if (showReminder) setError('Data pengajuan sebelumnya sudah dimuat ulang (termasuk approver). Periksa kembali, lalu simpan perbaikan cuti Anda.');
+    } catch (err) {
+      // Fallback kalau fetch detail gagal (mis. koneksi terputus) -- approver
+      // tetap kosong (memang tidak tersedia dari sumber lain) & reminder
+      // dikembalikan ke pesan lama supaya user tahu harus memilih manual.
+      setLeaderEmployeeId('');
+      setSpvEmployeeId('');
+      setManagerEmployeeId('');
+      if (showReminder) setError('Lengkapi kembali approver, lalu simpan perbaikan cuti Anda.');
+    }
   };
 
   const cancelEdit = () => {
