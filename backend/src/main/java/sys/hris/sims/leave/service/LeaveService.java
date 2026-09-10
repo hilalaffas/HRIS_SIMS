@@ -159,7 +159,7 @@ public class LeaveService {
 
         BigDecimal totalDays = calculateLeaveDays(cuti);
         if (totalDays.signum() <= 0) {
-            throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
+            throw new RuntimeException(getInvalidLeaveDurationMessage(cuti));
         }
 
         cuti.setTotalDays(totalDays);
@@ -198,7 +198,7 @@ public class LeaveService {
 
         BigDecimal totalDays = calculateLeaveDays(cuti);
         if (totalDays.signum() <= 0) {
-            throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
+            throw new RuntimeException(getInvalidLeaveDurationMessage(cuti));
         }
 
         cuti.setTotalDays(totalDays);
@@ -558,7 +558,7 @@ public class LeaveService {
         validateCutiMeninggalLimit(existingCuti);
         BigDecimal totalDays = calculateLeaveDays(existingCuti);
         if (totalDays.signum() <= 0) {
-            throw new RuntimeException("Rentang cuti harus memiliki minimal satu hari kerja");
+            throw new RuntimeException(getInvalidLeaveDurationMessage(existingCuti));
         }
         existingCuti.setTotalDays(totalDays);
         // [BARU] Sebelumnya TIDAK ada baris ini -- session lama tidak pernah
@@ -886,6 +886,19 @@ public class LeaveService {
         }
     }
 
+    private String getInvalidLeaveDurationMessage(LeaveRequest cuti) {
+        String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
+        String normalizedLeaveTypeName = leaveTypeName == null
+                ? ""
+                : leaveTypeName.trim().toLowerCase(Locale.ROOT);
+
+        if ("cuti setengah hari".equals(normalizedLeaveTypeName)) {
+            return "Rentang cuti harus memiliki minimal setengah hari kerja";
+        }
+
+        return "Rentang cuti harus memiliki minimal satu hari kerja";
+    }
+
     private BigDecimal calculateLeaveDays(LeaveRequest cuti) {
         String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
         String normalizedLeaveTypeName = leaveTypeName == null ? "" : leaveTypeName.toLowerCase(Locale.ROOT);
@@ -894,7 +907,13 @@ public class LeaveService {
             if (!cuti.getStartDate().equals(cuti.getEndDate())) {
                 throw new RuntimeException("Cuti setengah hari hanya dapat diajukan untuk satu tanggal");
             }
-            return new BigDecimal("0.5");
+            // Setengah hari hanya memiliki nilai 0,5 jika tanggalnya memang
+            // hari kerja. Sabtu/Minggu dan tanggal merah menghasilkan 0 hari
+            // kerja, sehingga validasi akan menolak pengajuan dengan pesan
+            // minimal setengah hari kerja.
+            return calculateWorkingDays(cuti.getStartDate(), cuti.getEndDate()) > 0
+                    ? new BigDecimal("0.5")
+                    : BigDecimal.ZERO;
         }
 
         // [UBAH] Cuti Melahirkan PEREMPUAN tetap dihitung hari KALENDER

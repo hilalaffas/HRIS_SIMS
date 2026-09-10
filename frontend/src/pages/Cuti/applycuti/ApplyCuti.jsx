@@ -65,9 +65,14 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale 
 
   const normalizedJenisCuti = String(jenisCuti).toLowerCase();
 
-  // Aturan Khusus: Jika Cuti Setengah Hari
+  // Aturan Khusus: Jika Cuti Setengah Hari, hanya dihitung 0,5 hari
+  // bila tanggal yang dipilih adalah hari kerja. Sabtu/Minggu dan tanggal
+  // merah tetap bernilai 0 hari kerja.
   if (normalizedJenisCuti === 'cuti setengah hari') {
-    return 0.5;
+    const tempDate = new Date(`${startDate}T00:00:00`);
+    const weekend = tempDate.getDay() === 0 || tempDate.getDay() === 6;
+    const key = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`;
+    return !weekend && !holidayDates.has(key) ? 0.5 : 0;
   }
 
   // [UBAH] Cuti Melahirkan PEREMPUAN tetap hari KALENDER (kontinu, batas 3
@@ -226,6 +231,15 @@ const ApplyCuti = ({ user }) => {
       setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); 
       return false;
     }
+
+    // Cuti Setengah Hari tetap harus jatuh pada hari kerja. Pada Sabtu,
+    // Minggu, atau tanggal merah, durasi ditampilkan sebagai 0 hari kerja
+    // dan pengajuan ditolak dengan pesan minimal setengah hari kerja.
+    const isHalfDayLeave = String(jenisCuti || '').trim().toLowerCase() === 'cuti setengah hari';
+    if (isHalfDayLeave && jumlahHariCuti <= 0) {
+      setError('Rentang cuti harus memiliki minimal setengah hari kerja');
+      return false;
+    }
     // [UBAH] Validasi batas cuti khusus sesuai kebijakan (Melahirkan &
     // Meninggal). Laki-laki (pendamping melahirkan) sekarang divalidasi
     // pakai jumlahHariCuti (hari kerja), konsisten dengan backend.
@@ -269,7 +283,6 @@ const ApplyCuti = ({ user }) => {
       // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
       // Hari -- jenis cuti lain selalu null, konsisten dengan komentar
       // backend "diabaikan untuk jenis cuti selain setengah hari".
-      const isHalfDayLeave = String(jenisCuti || '').trim().toLowerCase() === 'cuti setengah hari';
       const payload = { 
         leaveTypeId: type.leaveTypeId, 
         startDate, 
