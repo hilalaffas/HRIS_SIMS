@@ -54,6 +54,10 @@ const DEFAULT_SESSION_LABEL = 'Setengah Hari (Pagi)';
 // [BARU] Batas Cuti Meninggal: maksimal 2 hari kerja (lihat handleSubmit &
 // LeaveTypeDateSection.jsx untuk validasi tanggal + info alert-nya).
 const BEREAVEMENT_MAX_DAYS = 2;
+// [BARU] Batas Cuti Nikah: maksimal 3 hari kerja, sama untuk semua gender
+// (lihat handleSubmit & LeaveTypeDateSection.jsx untuk validasi tanggal +
+// info alert-nya).
+const MARRIAGE_MAX_DAYS = 3;
 const isBereavementLeave = (leaveType = '') => String(leaveType).trim().toLowerCase().includes('meninggal');
 const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false) => {
   if (!startDate || !endDate) return 0;
@@ -247,6 +251,14 @@ const ApplyCuti = ({ user }) => {
         return false;
       }
     }
+    // [BARU] Validasi batas Cuti Nikah (maksimal MARRIAGE_MAX_DAYS hari
+    // kerja, sama untuk semua gender).
+    if (String(jenisCuti || '').toLowerCase().includes('nikah')) {
+      if (jumlahHariCuti > MARRIAGE_MAX_DAYS) {
+        setError(`Cuti nikah maksimal ${MARRIAGE_MAX_DAYS} hari kerja.`);
+        return false;
+      }
+    }
     const type = types.find(item => item.name === jenisCuti);
     if (!type || !managerEmployeeId || (!atasan && (!leaderEmployeeId || !spvEmployeeId))) {
       setError('Pilih seluruh approver yang wajib sebelum mengirim pengajuan.'); 
@@ -398,7 +410,7 @@ const ApplyCuti = ({ user }) => {
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
-      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} canApplyCuti />
+      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
   <FormCuti
@@ -415,7 +427,7 @@ const ApplyCuti = ({ user }) => {
         reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
         pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
         isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true }}
-        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} canApplyCuti />
+        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} canApplyCuti />
     ) : null}
   />
 )}
