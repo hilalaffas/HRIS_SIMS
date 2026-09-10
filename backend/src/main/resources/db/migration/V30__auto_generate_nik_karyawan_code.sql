@@ -34,7 +34,19 @@ SELECT setval(
 -- BAGIAN 2: Ubah nik_karyawan jadi TEXT (nampung kode lengkap),
 -- lepas default lama (nextval) yang sekarang sudah pindah ke
 -- nik_urut.
+--
+-- [FIX] nik_karyawan_formatted (generated column dari V28) masih
+-- GENERATED ALWAYS AS (LPAD(nik_karyawan::text, ...)) -- artinya
+-- dia masih "nempel"/bergantung ke nik_karyawan. Postgres tidak
+-- mengizinkan ALTER COLUMN ... TYPE selama masih ada generated
+-- column yang bergantung padanya (makanya migrasi sebelumnya
+-- gagal dengan error "cannot alter type of a column used by a
+-- generated column"). Jadi kolom generated lama ini WAJIB di-drop
+-- dulu di sini, baru nanti dibuat ulang (versi baru, berbasis
+-- nik_urut) di Bagian 4.
 -- ============================================================
+
+ALTER TABLE employees DROP COLUMN IF EXISTS nik_karyawan_formatted;
 
 ALTER TABLE employees ALTER COLUMN nik_karyawan DROP DEFAULT;
 ALTER TABLE employees ALTER COLUMN nik_karyawan TYPE TEXT USING nik_karyawan::text;
@@ -57,12 +69,12 @@ ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_nik_karyawan_key;
 ALTER TABLE employees ADD CONSTRAINT employees_nik_karyawan_key UNIQUE (nik_karyawan);
 
 -- ============================================================
--- BAGIAN 4: Ganti kolom generated nik_karyawan_formatted supaya
--- ambil dari nik_urut (bukan nik_karyawan lagi, karena sekarang
--- isinya teks kode lengkap bukan angka murni).
+-- BAGIAN 4: Buat ulang kolom generated nik_karyawan_formatted
+-- (sudah di-drop di Bagian 2), kali ini ambil dari nik_urut
+-- (bukan nik_karyawan lagi, karena sekarang isinya teks kode
+-- lengkap "SYS-YYYY-NNNN", bukan angka murni).
 -- ============================================================
 
-ALTER TABLE employees DROP COLUMN IF EXISTS nik_karyawan_formatted;
 ALTER TABLE employees
 ADD COLUMN nik_karyawan_formatted text
 GENERATED ALWAYS AS (LPAD(nik_urut::text, 4, '0')) STORED;
