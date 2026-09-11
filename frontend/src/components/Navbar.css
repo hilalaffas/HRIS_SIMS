@@ -42,7 +42,7 @@
 .navbar-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #2A6B4F;
+  color: var(--color-primary);
   letter-spacing: 0.025em;
   margin: 0;
 }
@@ -108,7 +108,7 @@
 }
 
 .btn-notification:hover {
-  color: #2A6B4F;
+  color: var(--color-primary);
 }
 
 @keyframes notifBadgePulse {
@@ -296,7 +296,7 @@
 }
 
 .btn-hamburger:hover {
-  color: #2A6B4F; /* Efek hover warna hijau tema saat disentuh */
+  color: var(--color-primary); /* Efek hover warna hijau tema saat disentuh */
 }
 
 /* Khusus saat diakses lewat Handphone (Layar Maksimal 768px) */

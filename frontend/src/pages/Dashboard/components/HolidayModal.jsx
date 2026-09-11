@@ -56,7 +56,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="bg-[#0A4D44] px-6 py-4 flex items-center justify-between">
+        <div className="bg-[var(--color-primary)] px-6 py-4 flex items-center justify-between">
           <h3 className="text-white font-bold text-base">
             {isEditMode ? 'Edit Hari Libur' : 'Jadwalkan Hari Libur'}
           </h3>
@@ -75,7 +75,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
               type="date"
               value={tanggal}
               onChange={(e) => setTanggal(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#0A4D44]"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
               required
             />
           </div>
@@ -89,7 +89,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
               value={nama}
               onChange={(e) => setNama(e.target.value)}
               placeholder="Contoh: Tahun Baru Masehi"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#0A4D44]"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
               required
             />
           </div>
@@ -99,7 +99,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
               type="checkbox"
               checked={isNational}
               onChange={(e) => setIsNational(e.target.checked)}
-              className="w-4 h-4 accent-[#0A4D44]"
+              className="w-4 h-4 accent-[var(--color-primary)]"
             />
             <span className="text-xs text-gray-600">
               Tandai sebagai hari libur nasional (bukan libur tambahan perusahaan)
@@ -117,7 +117,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-lg bg-[#0A4D44] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+              className="px-5 py-2 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60"
             >
               {isSubmitting ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Simpan Libur'}
             </button>

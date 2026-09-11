@@ -28,7 +28,7 @@
 
 .history-header-icon {
   font-size: 18px;
-  color: #2d6a4f;
+  color: var(--color-primary);
 }
 
 .history-title {
@@ -57,7 +57,7 @@
 .filter-dropdown {
   padding: 8px 16px;
   border-radius: 20px;
-  border: 2px solid #2d6a4f;
+  border: 2px solid var(--color-primary);
   font-size: 13px;
   font-weight: 600;
   color: #1e293b;
@@ -380,8 +380,8 @@
 }
 
 .history-pagination__btn--primary {
-  background-color: #2d6a4f;
-  border-color: #2d6a4f;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   color: #ffffff;
 }
 

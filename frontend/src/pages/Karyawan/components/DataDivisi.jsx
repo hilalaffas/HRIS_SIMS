@@ -123,7 +123,7 @@ const DataDivisi = ({ karyawanList }) => {
         <div className="header-info_data_divisi">
           <div className="title-wrapper_data_divisi">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="icon_data_divisi">
-              <path d="M17 17.5C17 18.8807 15.8807 20 14.5 20C13.1193 20 12 18.8807 12 17.5C12 16.1193 13.1193 15 14.5 15C15.8807 15 17 16.1193 17 17.5ZM17 17.5H22M12 17.5H7M10 6.5C10 7.88071 8.88071 9 7.5 9C6.11929 9 5 7.88071 5 6.5C5 5.11929 6.11929 4 7.5 4C8.88071 4 10 5.11929 10 6.5ZM10 6.5H19M7.5 9V15M7.5 15C8.88071 15 10 16.1193 10 17.5C10 18.8807 8.88071 20 7.5 20C6.11929 20 5 18.8807 5 17.5C5 16.1193 6.11929 15 7.5 15Z" stroke="#124a35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M17 17.5C17 18.8807 15.8807 20 14.5 20C13.1193 20 12 18.8807 12 17.5C12 16.1193 13.1193 15 14.5 15C15.8807 15 17 16.1193 17 17.5ZM17 17.5H22M12 17.5H7M10 6.5C10 7.88071 8.88071 9 7.5 9C6.11929 9 5 7.88071 5 6.5C5 5.11929 6.11929 4 7.5 4C8.88071 4 10 5.11929 10 6.5ZM10 6.5H19M7.5 9V15M7.5 15C8.88071 15 10 16.1193 10 17.5C10 18.8807 8.88071 20 7.5 20C6.11929 20 5 18.8807 5 17.5C5 16.1193 6.11929 15 7.5 15Z" stroke="#124231" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <h2>Manajemen Divisi</h2>
           </div>

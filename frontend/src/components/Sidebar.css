@@ -3,7 +3,7 @@
    ========================================== */
 .sidebar-container {
   width: 16rem; /* w-64 */
-  background-color: #2d6a4f; /* Diubah ke warna hijau gelap pekat sesuai gambar */
+  background-color: var(--color-primary); /* Diubah ke warna hijau gelap pekat sesuai gambar */
   color: #ffffff; 
   display: none; 
   flex-direction: column;

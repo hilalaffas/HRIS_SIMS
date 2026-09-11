@@ -149,8 +149,8 @@
 
 .action-reason__textarea:focus {
   outline: none;
-  border-color: var(--alv-primary, #123d2f);
-  box-shadow: 0 0 0 3px var(--alv-primary-tint, #e9f3ef);
+  border-color: var(--alv-primary, var(--color-primary));
+  box-shadow: 0 0 0 3px var(--alv-primary-tint, var(--color-primary-tint));
 }
 
 .action-reason__helper {

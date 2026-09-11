@@ -47,9 +47,9 @@ const FormCuti = ({ data, onClose, onEdit = null, editForm = null }) => {
               </div>
               <div className="form-cuti__divider form-cuti__divider--grid" />
               <div className="form-cuti__grid form-cuti__grid--three">
-                <InfoField label="App. Leader" value={data.approvalChain?.leader} />
-                <InfoField label="App. SPV" value={data.approvalChain?.spv} />
-                <InfoField label="App. Manager" value={data.approvalChain?.manager} />
+                <InfoField label="Leader" value={data.approvalChain?.leader} />
+                <InfoField label="SPV" value={data.approvalChain?.spv} />
+                <InfoField label="Manager" value={data.approvalChain?.manager} />
               </div>
               <DetailSection label="Alasan Keterangan" value={data.keterangan} />
               <DetailSection label="Pekerjaan Tertunda" value={data.pekerjaanTertunda} tone="warning" italic />

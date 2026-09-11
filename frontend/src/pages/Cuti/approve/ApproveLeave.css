@@ -11,9 +11,9 @@
 
 .approve-leaving-page {
   /* Warna utama (hijau tua) - dipakai di modal header, card, tombol utama */
-  --alv-primary: #123d2f;
-  --alv-primary-soft: #1b4d3e;
-  --alv-primary-tint: #e9f3ef;
+  --alv-primary: var(--color-primary);
+  --alv-primary-soft: var(--color-primary-soft);
+  --alv-primary-tint: var(--color-primary-tint);
 
   /* Status: Disetujui / ACC */
   --alv-green: #059669;

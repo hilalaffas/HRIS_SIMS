@@ -11,7 +11,7 @@
 }
 
 .form-header {
-  background-color: #0f4c3a;
+  background-color: var(--color-primary); /* disamakan dgn brand green, sebelumnya #0f4c3a */
   color: #ffffff;
   padding: 24px;
 }
@@ -88,10 +88,12 @@
   background-color: #fff;
   outline: none;
   transition: border-color 0.2s;
+  accent-color: var(--color-primary); /* browser modern akan pakai warna ini utk highlight opsi terpilih pada <select> native */
 }
 
 .form-control:focus {
-  border-color: #2d6a4f;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-tint); /* ring focus konsisten dgn warna brand, bukan biru default */
 }
 
 .text-input-flat {
@@ -189,7 +191,7 @@
   font-size: 14px;
   cursor: pointer;
   font-weight: bold;
-  background-color: #039424; /* Warna Gelap Pekat Sesuai Tombol Gambar */
+  background-color: var(--color-primary); /* disamakan dengan warna brand */
   color: #ffffff;
   border: none;
   transition: all 0.2s ease;
@@ -197,7 +199,7 @@
 }
 
 .btn-submit-dark:hover:not(:disabled) {
-  background-color: #0f172a;
+  background-color: var(--color-primary-hover); /* sebelumnya navy #0f172a, sekarang shade lebih gelap dari warna yang sama */
 }
 
 .btn-submit-dark:disabled {
@@ -314,14 +316,14 @@ button.mini-day-cell.weekend {
 }
 
 .mini-day-cell.selected {
-  background: #2d6a4f !important;
+  background: var(--color-primary) !important;
   color: #ffffff !important;
   font-weight: bold;
 }
 
 .mini-day-cell.today {
-  border: 1px solid #2d6a4f;
-  color: #2d6a4f;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
 }
 
 .mini-day-cell.outside-month {

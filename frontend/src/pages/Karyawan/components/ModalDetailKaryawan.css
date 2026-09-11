@@ -62,7 +62,7 @@
    4. HEADER
    ========================================= */
 .modal-header_detail_karyawan {
-  background-color: #124a35; 
+  background-color: var(--color-primary); 
   color: #ffffff;
   padding: 20px 24px;
   display: flex;
@@ -182,7 +182,7 @@
 .form-group_detail_karyawan select:focus,
 .form-group_detail_karyawan textarea:focus {
   outline: none;
-  border-color: #124a35;
+  border-color: var(--color-primary);
 }
 
 /* SPESIFIK STYLING (Merah & Hijau) */
@@ -196,7 +196,7 @@
 }
 
 .success-group_detail_karyawan label {
-  color: #124a35;
+  color: var(--color-primary);
 }
 .success-group_detail_karyawan select {
   color: #047857;
@@ -204,7 +204,7 @@
 }
 
 .green-bg-group_detail_karyawan label {
-  color: #124a35;
+  color: var(--color-primary);
 }
 .green-bg-group_detail_karyawan input {
   background-color: #ecfdf5;
@@ -283,7 +283,7 @@
 
 .btn-save_detail_karyawan {
   padding: 10px 24px;
-  background-color: #124a35;
+  background-color: var(--color-primary);
   border: none;
   border-radius: 6px;
   color: #ffffff;

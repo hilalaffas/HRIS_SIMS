@@ -12,9 +12,9 @@
  */
 
 .karyawan-page {
-  --kry-primary: #123d2f;
-  --kry-primary-soft: #1b4d3e;
-  --kry-primary-tint: #e9f3ef;
+  --kry-primary: var(--color-primary);
+  --kry-primary-soft: var(--color-primary-soft);
+  --kry-primary-tint: var(--color-primary-tint);
 
   /* Status: Aktif */
   --kry-green: #059669;

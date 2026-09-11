@@ -226,6 +226,7 @@ const LeaveTypeDateSection = ({
       <div className="form-group">
         <label className="form-label">JENIS PERMOHONAN CUTI</label>
         <select value={jenisCuti} onChange={(e) => setJenisCuti(e.target.value)} className="form-control">
+          <option value="" disabled>Pilih Jenis Cuti</option>
           {leaveTypes.map(type => <option key={type.leaveTypeId} value={type.name}>{type.name}</option>)}
         </select>
       </div>

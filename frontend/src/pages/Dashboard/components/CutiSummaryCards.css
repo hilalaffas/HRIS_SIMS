@@ -13,7 +13,7 @@
 
 /* Card gelap (hijau tua) - Sisa Cuti Tahunan */
 .cuti-card--dark {
-  background-color: #14532d; /* hijau tua */
+  background-color: var(--color-primary); /* disamakan dgn brand green, sebelumnya #14532d */
   color: #ffffff;
 }
 

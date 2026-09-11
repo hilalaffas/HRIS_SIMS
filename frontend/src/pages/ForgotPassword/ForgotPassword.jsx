@@ -55,7 +55,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A4D44] flex items-center justify-center p-4 font-sans relative">
+    <div className="min-h-screen bg-[var(--color-primary)] flex items-center justify-center p-4 font-sans relative">
 
       {/* Toast notifikasi error, pojok kanan bawah */}
       {toast.show && (
@@ -143,7 +143,7 @@ const ForgotPassword = () => {
             <div className="border-t border-gray-200 mt-8 pt-5 text-center">
               <Link
                 to="/login"
-                className="text-[13px] font-bold text-gray-500 hover:text-[#0A4D44]"
+                className="text-[13px] font-bold text-gray-500 hover:text-[var(--color-primary)]"
               >
                 &larr; Kembali ke Login
               </Link>
@@ -152,7 +152,7 @@ const ForgotPassword = () => {
         ) : (
           <div className="text-center">
             <div className="w-16 h-16 bg-[#d1fae5] rounded-full mx-auto flex items-center justify-center mb-5">
-              <svg className="w-8 h-8 text-[#0A4D44]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8 text-[var(--color-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path>
               </svg>
             </div>

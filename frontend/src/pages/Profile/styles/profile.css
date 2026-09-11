@@ -24,7 +24,7 @@
 
 /* Tombol Edit Data Profil */
 .btn-edit-data {
-  background-color: #2d6a4f;
+  background-color: var(--color-primary);
   color: #ffffff;
   border: none;
   padding: 10px 24px;        
@@ -146,7 +146,7 @@
   position: absolute;        /* Dicabut dari alur flex normal */
   right: 0;                  /* Dikunci tepat di ujung kanan kontainer */
   top: 70px;                 /* Diturunkan sedikit agar tidak menabrak garis banner, tetap di atas nama/NIK */
-  background-color: #2d6a4f;
+  background-color: var(--color-primary);
   color: #ffffff;
   border: none;
   padding: 10px 20px;
@@ -175,7 +175,7 @@
 .section-title {
   font-size: 12px;
   text-transform: uppercase;
-  color: #2d6a4f;
+  color: var(--color-primary);
   font-weight: 700;
   margin-bottom: 24px;
 }
@@ -229,7 +229,7 @@
 }
 
 .form-input-profile:focus {
-  border-color: #2d6a4f;
+  border-color: var(--color-primary);
 }
 
 /* Tombol Aksi Simpan & Batal */
@@ -243,7 +243,7 @@
 }
 
 .btn-profile-save {
-  background-color: #2d6a4f;
+  background-color: var(--color-primary);
   color: white;
   border: none;
   padding: 10px 24px;
@@ -476,7 +476,7 @@
 }
 
 .password-toggle-btn:hover {
-  color: #2d6a4f;
+  color: var(--color-primary);
 }
 
 /* Baris gabungan "Nomor Telepon Darurat" + "Hubungan" di form edit —

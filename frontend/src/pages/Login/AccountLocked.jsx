@@ -3,8 +3,8 @@ import React from 'react';
 
 const AccountLocked = ({ onBack }) => {
   return (
-    <div className="min-h-screen bg-[#0A4D44] flex items-center justify-center p-4 font-sans">
-      <div className="bg-white rounded-[24px] w-full max-w-[400px] p-8 shadow-2xl border-4 border-[#0A4D44] text-center">
+    <div className="min-h-screen bg-[var(--color-primary)] flex items-center justify-center p-4 font-sans">
+      <div className="bg-white rounded-[24px] w-full max-w-[400px] p-8 shadow-2xl border-4 border-[var(--color-primary)] text-center">
         <div className="w-20 h-20 bg-red-50 rounded-full mx-auto flex items-center justify-center mb-6">
           <svg
             className="w-9 h-9 text-red-500"

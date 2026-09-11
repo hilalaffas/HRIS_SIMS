@@ -48,7 +48,7 @@ const Login = ({ onLoginSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A4D44] flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-[var(--color-primary)] flex items-center justify-center p-4 font-sans">
       <div className="bg-white rounded-[24px] w-full max-w-[400px] p-8 shadow-2xl relative">
         
         {/* Logo area */}
@@ -86,7 +86,7 @@ const Login = ({ onLoginSuccess }) => {
           <div className="text-right mt-2">
             <Link
               to="/forgot-password"
-              className="text-[13px] font-bold text-[#0A4D44] hover:text-[#008256] hover:underline"
+              className="text-[13px] font-bold text-[var(--color-primary)] hover:text-[#008256] hover:underline"
             >
               Lupa Sandi?
             </Link>

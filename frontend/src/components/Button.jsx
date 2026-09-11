@@ -4,7 +4,7 @@ import React from 'react';
 const Button = ({ children, isLoading, ...props }) => {
   return (
     <button
-      className="w-full bg-[#0A4D44] hover:bg-[#083c35] text-white font-bold py-3.5 px-4 rounded-full transition-colors duration-200 mt-2 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center shadow-md"
+      className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-semibold py-2.5 px-4 rounded-full transition-colors duration-200 mt-2 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center shadow-sm text-sm"
       disabled={isLoading}
       {...props}
     >

@@ -334,8 +334,8 @@
 }
 
 .table-pagination__btn--primary {
-  background-color: #2d6a4f;
-  border-color: #2d6a4f;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
   color: #ffffff;
 }
 

@@ -206,9 +206,9 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
             if (!item.isCurrentMonth) {
               colorClass = 'text-gray-200 bg-transparent cursor-default';
             } else if (isSelected) {
-              colorClass = 'bg-[#2A6B4F] text-white font-bold shadow-md scale-105 cursor-pointer';
+              colorClass = 'bg-[var(--color-primary)] text-white font-bold shadow-md scale-105 cursor-pointer';
             } else if (item.isToday) {
-              colorClass = 'bg-emerald-100 text-[#2A6B4F] font-bold border border-[#2A6B4F] cursor-pointer';
+              colorClass = 'bg-emerald-100 text-[var(--color-primary)] font-bold border border-[var(--color-primary)] cursor-pointer';
             } else if (item.isHoliday) {
               colorClass = 'bg-red-50 text-red-600 font-semibold hover:bg-red-100 cursor-pointer';
             } else if (item.isTeamLeave) {
@@ -237,7 +237,7 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
         {/* Legend Warna */}
         <div className="flex items-center gap-3 mt-3 text-[10px] text-gray-500">
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#2A6B4F]"></span> Hari Ini
+            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)]"></span> Hari Ini
           </span>
           <span className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-sm bg-emerald-100"></span> Ada Cuti

@@ -39,7 +39,7 @@
 
 /* Efek saat kursor diarahkan ke tombol */
 .btn-export:hover {
-  background-color: #124a35;
+  background-color: var(--color-primary);
 }
 
 /* Memastikan wrapper SVG tidak memiliki margin ekstra */

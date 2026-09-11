@@ -8,20 +8,21 @@
 .form-wrapper {
   display: flex;
   flex-direction: column; /* Mengizinkan kartu metrik menumpuk di atas formulir */
-  justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  padding: 40px 20px;
-  background-color: #f8fafc;
+  /* min-height:100vh dihapus — halaman ini dirender di dalam .content-outlet
+     yang sudah punya tinggi & padding sendiri, jadi 100vh di sini menambah
+     ruang kosong yang tidak perlu (halaman terasa longgar). */
+  padding: var(--space-3, 0.75rem) 0; /* padding luar cukup vertikal saja, horizontal sudah dari .content-outlet */
+  background-color: var(--color-bg-page, #f8fafc);
   font-family: Arial, sans-serif;
-  width: 95%;
+  width: 100%;
 }
 
 /* Pembungkus kartu TOTAL SISA CUTI TAHUNAN (CutiSummaryCards, dipakai bersama Dashboard) */
 .applycuti-summary-wrapper {
   width: 100%;
-  max-width: 1450px;
-  margin-bottom: 24px;
+  max-width: 1450px; /* disamakan dengan LeaveForm.css & LeaveHistory.css supaya sisi kiri/kanan rata */
+  margin: 0 auto var(--space-4, 1rem); /* center + jarak bawah, konsisten dgn page-container */
 }
 
 .applycuti-summary-wrapper .cuti-card {

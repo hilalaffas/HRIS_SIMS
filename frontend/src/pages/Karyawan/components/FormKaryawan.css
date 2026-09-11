@@ -15,7 +15,7 @@
     gap: 0px;
     font-size: 16px;
     font-weight: 700;
-    color: #124a35;
+    color: var(--color-primary);
     border-bottom: 1px solid #e2e8f0;
   }
 
@@ -36,7 +36,7 @@
   .section-title_formkaryawan {
     font-size: 14px;
     font-weight: 700;
-    color: #124a35;
+    color: var(--color-primary);
     margin-bottom: 16px;
     border-bottom: 1px solid #e2e8f0;
     padding-bottom: 8px;
@@ -70,7 +70,7 @@
   .input-group_formkaryawan select:focus, 
   .input-group_formkaryawan textarea:focus {
     outline: none;
-    border-color: #124a35;
+    border-color: var(--color-primary);
   }
 
   .input-group_formkaryawan select:disabled {
@@ -128,7 +128,7 @@
   }
 
   .btn-submit_formkaryawan {
-    background-color: #124a35;
+    background-color: var(--color-primary);
     color: white;
     padding: 12px 24px;
     border: none;

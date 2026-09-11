@@ -36,7 +36,7 @@
 }
 
 .modal-header-section {
-  background-color: #2d6a4f;
+  background-color: var(--color-primary);
   color: #ffffff;
   padding: 16px 20px;
   display: flex;
@@ -87,7 +87,7 @@
 }
 
 .modal-info-value.value-highlight {
-  color: #2d6a4f;
+  color: var(--color-primary);
   font-weight: bold;
 }
 

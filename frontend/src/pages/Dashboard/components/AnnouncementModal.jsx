@@ -56,7 +56,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
 
         {/* Header */}
-        <div className="bg-[#0A4D44] px-6 py-4 flex items-center justify-between">
+        <div className="bg-[var(--color-primary)] px-6 py-4 flex items-center justify-between">
           <h3 className="text-white font-bold text-base">
             {isEditMode ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'}
           </h3>
@@ -76,7 +76,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
               value={judul}
               onChange={(e) => setJudul(e.target.value)}
               placeholder="Contoh: Kebijakan Libur Lebaran"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#0A4D44]"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
               required
             />
           </div>
@@ -88,7 +88,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
             <select
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#0A4D44] bg-white"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)] bg-white"
             >
               <option value="penting">Penting (Merah)</option>
               <option value="update">Update (Hijau)</option>
@@ -105,7 +105,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
               value={isi}
               onChange={(e) => setIsi(e.target.value)}
               placeholder="Tulis rincian pengumuman..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[#0A4D44] resize-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)] resize-none"
               required
             />
           </div>
@@ -121,7 +121,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-lg bg-[#0A4D44] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+              className="px-5 py-2 rounded-lg bg-[var(--color-primary)] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60"
             >
               {isSubmitting ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Terbitkan Berita'}
             </button>

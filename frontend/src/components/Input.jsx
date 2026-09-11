@@ -19,7 +19,7 @@ const Input = ({ label, labelRight, id, type = 'text', ...props }) => {
         <input
           id={id}
           type={inputType}
-          className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A4D44] focus:border-transparent transition-all text-sm text-gray-800 ${
+          className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all text-sm text-gray-800 ${
             isPassword ? 'pr-11' : ''
           }`}
           {...props}

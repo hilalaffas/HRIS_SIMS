@@ -1,5 +1,6 @@
 /* STREAMING_CHUNK: Menerapkan directive Tailwind CSS utama */
 @import "tailwindcss";
+@import "./styles/tokens.css";
 
 /* CSS tambahan untuk animasi transisi dasar jika diperlukan */
 body {
