@@ -357,3 +357,30 @@ button.mini-day-cell.weekend:disabled {
   color: #dc2626;
   font-weight: 700;
 }
+
+/* ==========================================
+   [BARU] RESPONSIVE MOBILE — FORM PENGAJUAN CUTI
+   Perbaikan: kalender mini "SAMPAI TANGGAL" meluber ke luar layar di HP
+   karena .form-row tetap 2 kolom sejajar (flex row) sedangkan popup
+   kalender punya lebar tetap 260px yang dihitung dari left:0 kolom
+   kanan yang sempit. Solusi: di layar <=640px, field Dari/Sampai
+   ditumpuk vertikal (1 kolom penuh) supaya popup kalender selalu
+   punya cukup ruang di dalam lebar layar, dan lebar popup dibatasi
+   dengan calc(100vw) sebagai jaring pengaman tambahan.
+   ========================================== */
+@media (max-width: 640px) {
+  .form-body {
+    padding: 24px 16px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .custom-mini-calendar {
+    width: min(260px, calc(100vw - 64px));
+    left: 0;
+    right: auto;
+  }
+}
