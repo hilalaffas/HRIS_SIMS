@@ -97,6 +97,8 @@
 }
 
 /* Tambahan: Lapisan Transparan Ikon Kamera (Default: Tersembunyi) */
+/* Elemen ini adalah <button> (aksi terpisah dari klik foto untuk buka popup),
+   jadi style default tombol browser di-reset di sini. */
 .profile-avatar-hover-overlay {
   position: absolute;
   top: 0;
@@ -112,6 +114,11 @@
   opacity: 0;
   visibility: hidden;
   transition: opacity 200ms ease, visibility 200ms ease;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* Tambahan: Munculkan Lapisan Kamera Saat Avatar Di-hover */
@@ -336,6 +343,52 @@
 /* Input file avatar utama — disembunyikan, dipicu lewat klik lingkaran avatar */
 .profile-avatar-file-input {
   display: none;
+}
+
+/* ===================================================== */
+/* POPUP LIHAT FOTO PROFIL (lightbox)                     */
+/* ===================================================== */
+.profile-photo-viewer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1100;
+  animation: profileOverlayFadeIn 180ms ease;
+  cursor: zoom-out;
+}
+
+.profile-photo-viewer-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+.profile-photo-viewer-close {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #ffffff;
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.profile-photo-viewer-close:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 .profile-photo-picker {
   display: flex;

@@ -17,10 +17,11 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
   const isFieldEditable = (cfg) => !cfg.lockedFor || !cfg.lockedFor.includes(currentUserRole);
 
   const {
-    isEditing, loading, profileImage, chosenFileName, toast, saving,
+    isEditing, loading, profileImage, chosenFileName, showPhotoViewer, toast, saving,
     fileInputRef, formData, draftData, passwordData, passwordError,
     openEdit, closeEdit, handleDraftChange, handlePasswordChange,
-    handleImageChange, handleAvatarChange, triggerFileInput, handleSave,
+    handleImageChange, handleAvatarChange, triggerFileInput,
+    openPhotoViewer, closePhotoViewer, handleSave,
   } = useProfileForm(currentUserRole, mockData);
 
   if (loading) return <div className="profile-loading">Memuat data...</div>;
@@ -38,6 +39,9 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
           fileInputRef={fileInputRef}
           onImageChange={handleAvatarChange}
           onTriggerFileInput={triggerFileInput}
+          showPhotoViewer={showPhotoViewer}
+          onOpenPhotoViewer={openPhotoViewer}
+          onClosePhotoViewer={closePhotoViewer}
           onOpenEdit={openEdit}
           kolomKiri={kolomKiri}
           kolomKanan={kolomKanan}

@@ -15,6 +15,7 @@ export const useProfileForm = (currentUserRole, mockData) => {
   const [profileImage, setProfileImage] = useState(null);
   const [chosenFileName, setChosenFileName] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
   const [toast, setToast] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
@@ -60,7 +61,21 @@ export const useProfileForm = (currentUserRole, mockData) => {
     setIsEditing(true);
   };
 
-  const closeEdit = () => setIsEditing(false);
+  // Batal/close modal tanpa simpan harus membuang preview foto yang belum
+  // di-upload. Tanpa ini, halaman profil sempat menampilkan foto yang belum
+  // tersimpan (padahal sidebar tidak ikut berubah, karena event
+  // 'profile-updated' cuma dikirim saat handleSave berhasil) — baru balik ke
+  // foto asli setelah refresh. Reset ke formData.photoUrl di sini membuat
+  // preview konsisten dengan data tersimpan begitu modal ditutup.
+  const closeEdit = () => {
+    setProfileImage(formData.photoUrl || null);
+    setSelectedPhoto(null);
+    setChosenFileName('');
+    setIsEditing(false);
+  };
+
+  const openPhotoViewer = () => setShowPhotoViewer(true);
+  const closePhotoViewer = () => setShowPhotoViewer(false);
   const handleDraftChange = (e) => setDraftData({ ...draftData, [e.target.name]: e.target.value });
   const handlePasswordChange = (e) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
@@ -141,5 +156,5 @@ export const useProfileForm = (currentUserRole, mockData) => {
     }
   };
 
-  return { isEditing, loading, profileImage, chosenFileName, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarChange, triggerFileInput, handleSave };
+  return { isEditing, loading, profileImage, chosenFileName, showPhotoViewer, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarChange, triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave };
 };

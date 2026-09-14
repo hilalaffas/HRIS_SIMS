@@ -1,11 +1,13 @@
 import React from 'react';
 import ProfileAvatar from './ProfileAvatar';
+import ProfilePhotoViewer from './ProfilePhotoViewer';
 import { getInitials } from '../hooks/useProfileForm';
 import { EMERGENCY_CONTACT_KEY, EMERGENCY_RELATION_KEY } from '../config/profileFieldConfig';
 
 // Tampilan MODE BACA — banner hijau, foto, nama/NIK, tombol edit, dan grid info profil.
 const ProfileViewSection = ({
   formData, profileImage, fileInputRef, onImageChange, onTriggerFileInput,
+  showPhotoViewer, onOpenPhotoViewer, onClosePhotoViewer,
   onOpenEdit, kolomKiri, kolomKanan, isFieldEditable,
 }) => (
   <>
@@ -17,6 +19,7 @@ const ProfileViewSection = ({
           profileImage={profileImage}
           initials={getInitials(formData.namaLengkap)}
           onTrigger={onTriggerFileInput}
+          onView={onOpenPhotoViewer}
           fileInputRef={fileInputRef}
           onImageChange={onImageChange}
         />
@@ -71,6 +74,14 @@ const ProfileViewSection = ({
         </div>
       </div>
     </div>
+
+    {showPhotoViewer && profileImage && (
+      <ProfilePhotoViewer
+        photoUrl={profileImage}
+        altText={formData.namaLengkap}
+        onClose={onClosePhotoViewer}
+      />
+    )}
   </>
 );
 
