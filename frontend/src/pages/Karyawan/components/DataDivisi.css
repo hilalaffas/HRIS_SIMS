@@ -346,3 +346,80 @@
 
 .toast_data_divisi--success { background-color: #0d5c3f; }
 .toast_data_divisi--error { background-color: #b91c1c; }
+
+/* =========================================
+   RESPONSIVE MOBILE
+   [BARU] Sebelumnya file ini tidak punya @media sama sekali: header
+   (judul + input tambah + tombol) tetap satu baris flex dengan
+   input-new_data_divisi lebar tetap 220px, sehingga di layar HP
+   kontennya meluber ke samping (harus discroll horizontal). Ditambahkan
+   breakpoint di bawah supaya header, baris list, modal, dan toast
+   menyesuaikan ke tata letak vertikal yang pas di layar sempit.
+   ========================================= */
+@media (max-width: 768px) {
+  .header_data_divisi {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .header-actions_data_divisi {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .input-new_data_divisi {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .btn-add_data_divisi {
+    width: 100%;
+  }
+
+  .list-header_data_divisi,
+  .list-row_data_divisi {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .list-header_data_divisi {
+    font-size: 10px;
+  }
+
+  .list-row_data_divisi {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .row-name_data_divisi {
+    width: 100%;
+  }
+
+  .row-actions_data_divisi {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+
+  .modal-overlay_data_divisi {
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  .modal-content_data_divisi,
+  .modal-delete-content_data_divisi {
+    max-width: 100%;
+  }
+
+  .toast_data_divisi {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    text-align: center;
+  }
+}

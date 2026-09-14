@@ -287,9 +287,9 @@ export default function RiwayatCuti({ user }) {
                       <span className="rc-row__employeeName">{item.employeeName}</span>
                     </div>
                   )}
-                  <div role="cell">{item.leaveType}</div>
-                  <div role="cell" className="rc-row__period">{item.period}</div>
-                  <div role="cell">
+                  <div role="cell" className="rc-cell" data-label="Jenis Cuti">{item.leaveType}</div>
+                  <div role="cell" className="rc-cell rc-row__period" data-label="Periode & Durasi">{item.period}</div>
+                  <div role="cell" className="rc-cell" data-label="Status">
                     <span className={`rc-badge rc-badge--${meta.className}`}>{meta.label}</span>
                   </div>
                 </div>

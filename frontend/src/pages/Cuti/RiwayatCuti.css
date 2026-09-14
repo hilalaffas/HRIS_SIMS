@@ -397,25 +397,111 @@
 }
 
 /* ---------- Responsive ---------- */
+/* [UBAH] Sebelumnya di <=900px grid cuma diubah jadi 1 kolom (grid-template-
+   columns: 1fr) tanpa header (rc-row--head disembunyikan) -- hasilnya tiap
+   baris jadi tumpukan teks polos tanpa label, jenis cuti/periode/status
+   sulit dibedakan sekilas ("bikin pusing"). Sekarang tiap baris dirender
+   sebagai KARTU compact: nama karyawan (jika ada) sebagai header kartu,
+   lalu field lain ditampilkan sebagai baris "label kecil ↔ nilai" memakai
+   atribut data-label (lihat rc-cell di RiwayatCuti.jsx) supaya tetap jelas
+   tanpa perlu tabel/header horizontal. */
 @media (max-width: 900px) {
   .riwayat-cuti-page__stats {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .rc-row,
-  .rc-table--withEmployee .rc-row {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .riwayat-cuti-page__body {
+    padding: 16px;
+  }
+
+  .rc-table {
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .rc-row--head {
     display: none;
   }
+
+  .rc-row,
+  .rc-table--withEmployee .rc-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--rc-bg-card);
+    border: 1px solid var(--rc-border);
+    border-radius: var(--rc-radius-md);
+    box-shadow: var(--rc-shadow-card);
+    padding: 14px 16px;
+  }
+
+  .rc-row:last-child {
+    border-bottom: 1px solid var(--rc-border);
+  }
+
+  .rc-row__employee {
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+    border-bottom: 1px dashed var(--rc-border);
+  }
+
+  .rc-cell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--rc-text-primary);
+  }
+
+  .rc-cell::before {
+    content: attr(data-label);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--rc-text-muted);
+    flex-shrink: 0;
+  }
+
+  .rc-row__period {
+    text-align: right;
+  }
 }
 
 @media (max-width: 640px) {
   .riwayat-cuti-page__body {
-    padding: 16px;
+    padding: 12px;
+  }
+
+  .riwayat-cuti-page__stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .rc-stat {
+    padding: 10px 12px;
+  }
+
+  .rc-stat__count {
+    font-size: 18px;
+  }
+
+  .rc-toolbar {
+    gap: 10px;
+  }
+
+  .rc-tabs {
+    gap: 6px;
+  }
+
+  .rc-tab {
+    padding: 6px 10px;
+    font-size: 11.5px;
   }
 
   .rc-pagination {
