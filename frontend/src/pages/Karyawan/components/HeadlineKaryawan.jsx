@@ -11,7 +11,6 @@ const HeadlineKaryawan = ({ data = [] }) => {
 
     // 1. Definisikan Header Kolom CSV (Bisa disesuaikan urutannya)
     const csvHeaders = [
-      'ID', 
       'NIK Karyawan', 
       'Nama Lengkap', 
       'Posisi', 
@@ -29,7 +28,6 @@ const HeadlineKaryawan = ({ data = [] }) => {
     // 3. Map data ke dalam baris CSV menggunakan struktur backend
     const csvRows = data.map(emp => {
       // Menarik data berdasarkan penamaan atribut dari backend Spring Boot kamu
-      const id = emp.employeeId || emp.id || '-';
       const nik = emp.nikKaryawan || '-';
       const nama = emp.fullName || '-';
       const role = emp.user?.roleId?.roleName || 'MEMBER';
@@ -41,12 +39,11 @@ const HeadlineKaryawan = ({ data = [] }) => {
       // (Total Sisa Cuti Tahunan + Lama, hasil hitung backend) dulu,
       // baru fallback ke manualLeaveBalance kalau belum berhasil dimuat.
       const sisaCuti = emp.totalRemainingLeave ?? emp.manualLeaveBalance ?? 0;
-      const email = emp.email || '-'; 
-      const telepon = emp.phone || emp.noTelp || emp.telepon || '-'; 
+      const email = emp.user?.email || emp.email || '-';
+      const telepon = emp.phoneNumber || emp.phone || emp.noTelp || emp.telepon || '-'; 
       const status = emp.isActive ? 'AKTIF' : 'NONAKTIF';
 
       return [
-        id,
         escapeCsv(nik),
         escapeCsv(nama),
         escapeCsv(role),
