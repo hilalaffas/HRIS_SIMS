@@ -56,6 +56,10 @@
     text-transform: uppercase;
   }
 
+  /* [UBAH] <select> asli sudah diganti komponen Dropdown (src/components/Dropdown.jsx).
+     Rule di bawah ini sekarang cuma "menyentuh" native <select> tersembunyi milik
+     Dropdown (dipakai khusus untuk validasi HTML5 `required`) -- elemen itu sudah
+     diposisikan absolute 1x1px & opacity 0 di Dropdown.css, jadi aman dibiarkan. */
   .input-group_formkaryawan input, 
   .input-group_formkaryawan select, 
   .input-group_formkaryawan textarea {
@@ -119,6 +123,10 @@
 
   .text-red_formkaryawan { color: #e53e3e !important; }
   .border-red_formkaryawan { border-color: #fc8181 !important; background-color: #fff5f5; }
+
+  /* [BARU] Versi untuk komponen Dropdown custom -- border/bg sekarang
+     digambar di .dropdown__trigger, bukan langsung di elemen <select>. */
+  .border-red_formkaryawan .dropdown__trigger { border-color: #fc8181 !important; background-color: #fff5f5; }
 
   .form-actions_formkaryawan {
     grid-column: span 2;

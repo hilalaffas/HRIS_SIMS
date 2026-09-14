@@ -1,0 +1,209 @@
+/**
+ * Dropdown.css
+ * ------------------------------------------------------------------
+ * [BARU] Style komponen Dropdown custom (lihat Dropdown.jsx).
+ * Sengaja pakai token warna GLOBAL dari styles/tokens.css (bukan token
+ * lokal per-halaman) supaya warna dropdown konsisten di semua modul:
+ * Karyawan, Cuti, Profile, Dashboard, dst.
+ * ------------------------------------------------------------------
+ */
+
+.dropdown {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.dropdown.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ===== Tombol pembuka (trigger) ===== */
+.dropdown__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dropdown__trigger:hover:not(:disabled) {
+  border-color: var(--color-primary-soft);
+}
+
+.dropdown__trigger.is-open {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.dropdown__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown__value.is-placeholder {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.dropdown__chevron {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.dropdown__trigger.is-open .dropdown__chevron {
+  transform: rotate(180deg);
+}
+
+/* ===== Varian "form" -- dipakai di dalam form input biasa (lebar penuh) === */
+.dropdown--form {
+  width: 100%;
+}
+
+.dropdown--form .dropdown__trigger {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ===== Varian "pill" -- dipakai untuk filter/list (kompak & rounded) ===== */
+.dropdown--pill {
+  display: inline-flex;
+}
+
+.dropdown--pill .dropdown__trigger {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dropdown--pill .dropdown__trigger:hover:not(:disabled),
+.dropdown--pill .dropdown__trigger.is-open {
+  border-color: var(--color-primary);
+}
+
+/* ===== Menu / listbox ===== */
+.dropdown__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 100%;
+  width: max-content;
+  max-width: 320px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  animation: dropdownPop 0.14s ease;
+}
+
+.dropdown--form .dropdown__menu {
+  width: 100%;
+  max-width: none;
+}
+
+@keyframes dropdownPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Opsi (option) ===== */
+.dropdown__option {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+/* Highlight hover / keyboard-navigate -- HIJAU (pengganti biru bawaan browser) */
+.dropdown__option:hover:not(:disabled),
+.dropdown__option.is-highlighted:not(:disabled) {
+  background: var(--color-success);
+  color: #ffffff;
+}
+
+/* Opsi yang sedang terpilih (saat listbox baru dibuka, sebelum di-hover) */
+.dropdown__option.is-selected {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.dropdown__option.is-selected:hover:not(:disabled),
+.dropdown__option.is-selected.is-highlighted:not(:disabled) {
+  background: var(--color-success);
+  color: #ffffff;
+}
+
+.dropdown__option:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.dropdown__option:focus-visible {
+  outline: 2px solid var(--color-success);
+  outline-offset: -2px;
+}
+
+/* ===== Native <select> tersembunyi (khusus validasi `required`) ===== */
+.dropdown__hidden-native {
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* State tidak valid -- dipicu event 'invalid' saat submit form ditolak
+   karena field wajib ini masih kosong. */
+.dropdown--invalid .dropdown__trigger {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-bg);
+}
+
+@media (max-width: 640px) {
+  .dropdown--pill .dropdown__trigger {
+    width: 100%;
+  }
+}

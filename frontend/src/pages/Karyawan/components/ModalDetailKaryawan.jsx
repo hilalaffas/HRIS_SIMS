@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // BARIS INI SANGAT PENTING:
 import './ModalDetailKaryawan.css';
+import Dropdown from '../../../components/Dropdown';
 import { updateKaryawan } from '../../../services/karyawanService';
 import { updateUser } from '../../../services/userService';
 import { getAllDivisi } from '../../../services/divisiService';
@@ -303,15 +304,20 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
               </div>
               <div className="form-group_detail_karyawan">
                 <label>JABATAN / POSISI</label>
-                <select name="jabatan" value={formData.jabatan} onChange={handleInputChange}>
-                  <option value="">Pilih Jabatan...</option>
-                  <option value="Staff">Staff</option>
-                  <option value="Leader">Leader</option>
-                  <option value="SPV">SPV</option>
-                  <option value="Manager">Manager</option>
-                  <option value="HRD_Admin">HR Admin</option>
-                  <option value="HRD_Karyawan">HR Karyawan</option>
-                </select>
+                <Dropdown
+                  name="jabatan"
+                  value={formData.jabatan}
+                  onChange={handleInputChange}
+                  options={[
+                    { value: 'Staff', label: 'Staff' },
+                    { value: 'Leader', label: 'Leader' },
+                    { value: 'SPV', label: 'SPV' },
+                    { value: 'Manager', label: 'Manager' },
+                    { value: 'HRD_Admin', label: 'HR Admin' },
+                    { value: 'HRD_Karyawan', label: 'HR Karyawan' },
+                  ]}
+                  placeholder="Pilih Jabatan..."
+                />
               </div>
             </div>
             <div className="form-group_detail_karyawan">
@@ -329,12 +335,14 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
               </div>
               <div className="form-group_detail_karyawan">
                 <label>DIVISI / DEPARTEMEN *</label>
-                <select name="divisiId" value={formData.divisiId} onChange={handleInputChange} disabled={isLoadingDivisi}>
-                  <option value="">{isLoadingDivisi ? 'Memuat divisi...' : 'Pilih Divisi...'}</option>
-                  {divisiList.map((divisi) => (
-                    <option key={divisi.id} value={divisi.id}>{divisi.namaDivisi}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  name="divisiId"
+                  value={formData.divisiId}
+                  onChange={handleInputChange}
+                  options={divisiList.map((divisi) => ({ value: divisi.id, label: divisi.namaDivisi }))}
+                  placeholder={isLoadingDivisi ? 'Memuat divisi...' : 'Pilih Divisi...'}
+                  disabled={isLoadingDivisi}
+                />
               </div>
             </div>
             <div className="form-grid-3_detail_karyawan">
@@ -352,12 +360,14 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
               </div>
               <div className="form-group_detail_karyawan error-group_detail_karyawan">
                 <label>HUBUNGAN</label>
-                <select name="hubDarurat" value={formData.hubDarurat} onChange={handleInputChange} disabled={isLoadingOptions}>
-                  <option value="">{isLoadingOptions ? 'Memuat...' : 'Pilih Hubungan...'}</option>
-                  {relationshipList.map((rel) => (
-                    <option key={rel.id} value={rel.name}>{rel.name}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  name="hubDarurat"
+                  value={formData.hubDarurat}
+                  onChange={handleInputChange}
+                  options={relationshipList.map((rel) => ({ value: rel.name, label: rel.name }))}
+                  placeholder={isLoadingOptions ? 'Memuat...' : 'Pilih Hubungan...'}
+                  disabled={isLoadingOptions}
+                />
               </div>
             </div>
             <div className="form-group_detail_karyawan w-half_detail_karyawan">
@@ -391,20 +401,27 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
             <div className="form-grid_detail_karyawan">
               <div className="form-group_detail_karyawan">
                 <label>HAK AKSES ROLE *</label>
-                <select name="role" value={formData.role} onChange={handleInputChange} disabled={isLoadingOptions}>
-                  <option value="">{isLoadingOptions ? 'Memuat role...' : 'Pilih Role...'}</option>
-                  {selectableRoles.map((r) => (
-                    <option key={r.roleId} value={r.roleName}>{r.roleName}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  options={selectableRoles.map((r) => ({ value: r.roleName, label: r.roleName }))}
+                  placeholder={isLoadingOptions ? 'Memuat role...' : 'Pilih Role...'}
+                  disabled={isLoadingOptions}
+                />
               </div>
               {/* Gunakan ternary operator untuk mengubah class berdasarkan value status */}
               <div className={`form-group_detail_karyawan ${formData.status === 'Nonaktif' ?              'error-group_detail_karyawan' : 'success-group_detail_karyawan'}`}>
                 <label>STATUS AKUN</label>
-                <select name="status" value={formData.status} onChange={handleInputChange}>
-                  <option value="Aktif" className="text-green-option">Aktif (Bisa Login)</option>
-                  <option value="Nonaktif" className="text-red-option">Nonaktif (Suspend)</option>
-                </select>
+                <Dropdown
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  options={[
+                    { value: 'Aktif', label: 'Aktif (Bisa Login)', className: 'text-green-option' },
+                    { value: 'Nonaktif', label: 'Nonaktif (Suspend)', className: 'text-red-option' },
+                  ]}
+                />
               </div>
             </div>
             <div className="form-grid_detail_karyawan">

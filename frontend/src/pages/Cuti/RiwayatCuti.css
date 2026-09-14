@@ -222,22 +222,9 @@
   color: var(--rc-text-secondary);
 }
 
-.rc-pageSize__select {
-  padding: 7px 12px;
-  border-radius: var(--rc-radius-full);
-  border: 1px solid var(--rc-border);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--rc-text-primary);
-  background: var(--rc-bg-card);
-  cursor: pointer;
-  outline: none;
-}
-
-.rc-pageSize__select:focus {
-  border-color: var(--rc-primary);
-  box-shadow: 0 0 0 3px var(--rc-primary-tint);
-}
+/* [UBAH] Style dropdown lama dipindah ke src/components/Dropdown.css
+   (komponen Dropdown reusable). .rc-pageSize__select sekarang hanya
+   dipakai sebagai className tambahan (lihat variant="pill" di Dropdown). */
 
 /* ---------- Table ---------- */
 .rc-empty {

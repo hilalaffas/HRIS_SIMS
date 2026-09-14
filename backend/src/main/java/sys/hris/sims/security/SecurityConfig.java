@@ -22,6 +22,13 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
+    // [BARU] Dua handler ini membuat 401 (sesi habis) dan 403 (role tidak
+    // cukup) balas JSON yang jelas & bisa dibedakan frontend -- lihat
+    // RestAuthenticationEntryPoint.java & RestAccessDeniedHandler.java untuk
+    // penjelasan lengkap kenapa keduanya otomatis terpisah dengan benar.
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
+
     private static final String[] ADMIN_ROLES = {
             "ADMIN",
             "HRD_ADMIN",
@@ -36,8 +43,12 @@ public class SecurityConfig {
             "SUPER_ADMIN"
     };
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                           RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+                           RestAccessDeniedHandler restAccessDeniedHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
+        this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
 
     @Bean
@@ -83,6 +94,13 @@ public class SecurityConfig {
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // [BARU] Tanpa ini, Spring Security pakai handler default-nya
+                // sendiri yang membalas 403 polos (tanpa body JSON yang jelas)
+                // untuk KEDUA kasus "belum/tidak login" maupun "role kurang".
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler))
 
                 .authorizeHttpRequests(auth -> auth
 

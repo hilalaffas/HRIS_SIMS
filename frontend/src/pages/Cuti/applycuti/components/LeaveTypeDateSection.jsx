@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Dropdown from '../../../../components/Dropdown';
 import './LeaveForm.css';
 
 const formatDateDisplay = (dateStr) => {
@@ -225,19 +226,27 @@ const LeaveTypeDateSection = ({
     <>
       <div className="form-group">
         <label className="form-label">JENIS PERMOHONAN CUTI</label>
-        <select value={jenisCuti} onChange={(e) => setJenisCuti(e.target.value)} className="form-control">
-          <option value="" disabled>Pilih Jenis Cuti</option>
-          {leaveTypes.map(type => <option key={type.leaveTypeId} value={type.name}>{type.name}</option>)}
-        </select>
+        <Dropdown
+          name="jenisCuti"
+          value={jenisCuti}
+          onChange={(e) => setJenisCuti(e.target.value)}
+          options={leaveTypes.map(type => ({ value: type.name, label: type.name }))}
+          placeholder="Pilih Jenis Cuti"
+        />
       </div>
 
       {isHalfDayLeave && (
         <div className="form-group">
           <label className="form-label">DURASI SESI SETENGAH HARI *</label>
-          <select value={durasiSesi} onChange={(e) => setDurasiSesi(e.target.value)} className="form-control">
-            <option value="Setengah Hari (Pagi)">Setengah Hari (Pagi: 08.00 - 12.00)</option>
-            <option value="Setengah Hari (Siang)">Setengah Hari (Siang: 13.00 - 17.00)</option>
-          </select>
+          <Dropdown
+            name="durasiSesi"
+            value={durasiSesi}
+            onChange={(e) => setDurasiSesi(e.target.value)}
+            options={[
+              { value: 'Setengah Hari (Pagi)', label: 'Setengah Hari (Pagi: 08.00 - 12.00)' },
+              { value: 'Setengah Hari (Siang)', label: 'Setengah Hari (Siang: 13.00 - 17.00)' },
+            ]}
+          />
         </div>
       )}
 

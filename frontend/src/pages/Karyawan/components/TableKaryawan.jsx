@@ -1,8 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import Dropdown from '../../../components/Dropdown';
 import './TableKaryawan.css';
 
 // [BARU] Opsi jumlah data per halaman untuk pagination Direktori Karyawan.
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+// [BARU] Opsi filter jabatan (pengganti <select> native -- lihat komentar
+// di komponen Dropdown untuk alasan blue-highlight fix).
+const JABATAN_FILTER_OPTIONS = [
+  { value: 'Staff', label: 'Staff' },
+  { value: 'Leader', label: 'Leader' },
+  { value: 'SPV', label: 'SPV' },
+  { value: 'Manager', label: 'Manager' },
+  { value: 'HRD_Admin', label: 'HR Admin' },
+  { value: 'HRD_Karyawan', label: 'HR Karyawan' },
+];
 
 const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,31 +82,24 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null }) =
         </div>
         <div className="filters">
           {/* 3. Dropdown Filter Dinamis */}
-          <select 
-            className="filter-select" 
-            value={filterJabatan} 
+          <Dropdown
+            className="filter-select"
+            variant="pill"
+            value={filterJabatan}
             onChange={(e) => setFilterJabatan(e.target.value)}
-          >
-            <option value="">Semua Jabatan</option>
-            <option value="Staff">Staff</option>
-            <option value="Leader">Leader</option>
-            <option value="SPV">SPV</option>
-            <option value="Manager">Manager</option>
-            <option value="HRD_Admin">HR Admin</option>
-            <option value="HRD_Karyawan">HR Karyawan</option>
-          </select>
+            options={JABATAN_FILTER_OPTIONS}
+            placeholder="Semua Jabatan"
+          />
 
           {/* [BARU] Dropdown jumlah data per halaman */}
-          <select
+          <Dropdown
             className="filter-select"
+            variant="pill"
             value={pageSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            aria-label="Jumlah data per halaman"
-          >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>{size} / halaman</option>
-            ))}
-          </select>
+            options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size} / halaman` }))}
+            ariaLabel="Jumlah data per halaman"
+          />
           
           <div className="search-box">
             <span className="search-icon">🔍</span>

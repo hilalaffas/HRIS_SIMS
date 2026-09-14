@@ -4,6 +4,7 @@ import { registerKaryawan } from '../../../services/karyawanService';
 import { getAllDivisi } from '../../../services/divisiService';
 import { getAllRelationships } from '../../../services/relationshipService';
 import Toast from '../../../components/Toast'; // Sesuaikan path ini jika perlu
+import Dropdown from '../../../components/Dropdown';
 
 const ROLE_POSITION_MAP = {
   Member: ['Staff'],
@@ -186,11 +187,17 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
           </div>
           <div className="input-group_formkaryawan">
             <label>JENIS KELAMIN *</label>
-            <select name="gender" value={formData.gender} onChange={handleInputChange} required>
-              <option value="">Pilih Jenis Kelamin...</option>
-              <option value="L">Laki-laki</option>
-              <option value="P">Perempuan</option>
-            </select>
+            <Dropdown
+              name="gender"
+              value={formData.gender}
+              onChange={handleInputChange}
+              options={[
+                { value: 'L', label: 'Laki-laki' },
+                { value: 'P', label: 'Perempuan' },
+              ]}
+              placeholder="Pilih Jenis Kelamin..."
+              required
+            />
           </div>
           <div className="input-group_formkaryawan">
             <label>TANGGAL MASUK</label>
@@ -202,26 +209,21 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
           <div className="grid-2-col_formkaryawan">
             <div className="input-group_formkaryawan">
               <label>DIVISI / DEPT *</label>
-              <select
+              <Dropdown
                 name="divisiId"
                 value={formData.divisiId}
                 onChange={handleInputChange}
-                disabled={isLoadingDivisi || !!divisiError}
-                required
-              >
-                <option value="">
-                  {isLoadingDivisi
+                options={divisiList.map((divisi) => ({ value: divisi.id, label: divisi.namaDivisi }))}
+                placeholder={
+                  isLoadingDivisi
                     ? 'Memuat divisi...'
                     : divisiError
                     ? 'Gagal memuat divisi'
-                    : 'Pilih Divisi / Dept...'}
-                </option>
-                {divisiList.map((divisi) => (
-                  <option key={divisi.id} value={divisi.id}>
-                    {divisi.namaDivisi}
-                  </option>
-                ))}
-              </select>
+                    : 'Pilih Divisi / Dept...'
+                }
+                disabled={isLoadingDivisi || !!divisiError}
+                required
+              />
               {divisiError && (
                 <span className="text-red_formkaryawan" style={{ fontSize: '12px' }}>
                   {divisiError}
@@ -231,25 +233,37 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
             {canManageRole && (
               <div className="input-group_formkaryawan">
                 <label>HAK AKSES SISTEM (ROLE) *</label>
-                <select name="role" value={formData.role} onChange={handleInputChange} required>
-                  <option value="">Pilih Akses...</option>
-                  <option value="Member">Karyawan Biasa (Member)</option>
-                  <option value="MANAGER">Manager / Supervisor / Leader</option>
-                  <option value="HRD_Admin">Admin (HR)</option>
-                </select>
+                <Dropdown
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  options={[
+                    { value: 'Member', label: 'Karyawan Biasa (Member)' },
+                    { value: 'MANAGER', label: 'Manager / Supervisor / Leader' },
+                    { value: 'HRD_Admin', label: 'Admin (HR)' },
+                  ]}
+                  placeholder="Pilih Akses..."
+                  required
+                />
               </div>
             )}
             <div className="input-group_formkaryawan">
               <label>JABATAN</label>
-              <select name="position" value={formData.position} onChange={handleInputChange} disabled={!formData.role}>
-                <option value="">{formData.role ? 'Pilih Jabatan...' : 'Pilih Hak Akses dahulu'}</option>
-                <option value="Staff" disabled={!allowedPositions?.includes('Staff')}>Staff</option>
-                <option value="Leader" disabled={!allowedPositions?.includes('Leader')}>Leader</option>
-                <option value="SPV" disabled={!allowedPositions?.includes('SPV')}>SPV</option>
-                <option value="Manager" disabled={!allowedPositions?.includes('Manager')}>Manager</option>
-                <option value="HRD_Admin" disabled={!allowedPositions?.includes('HRD_Admin')}>HR Admin</option>
-                <option value="HRD_Karyawan" disabled={!allowedPositions?.includes('HRD_Karyawan')}>HR Karyawan</option>
-              </select>
+              <Dropdown
+                name="position"
+                value={formData.position}
+                onChange={handleInputChange}
+                options={[
+                  { value: 'Staff', label: 'Staff', disabled: !allowedPositions?.includes('Staff') },
+                  { value: 'Leader', label: 'Leader', disabled: !allowedPositions?.includes('Leader') },
+                  { value: 'SPV', label: 'SPV', disabled: !allowedPositions?.includes('SPV') },
+                  { value: 'Manager', label: 'Manager', disabled: !allowedPositions?.includes('Manager') },
+                  { value: 'HRD_Admin', label: 'HR Admin', disabled: !allowedPositions?.includes('HRD_Admin') },
+                  { value: 'HRD_Karyawan', label: 'HR Karyawan', disabled: !allowedPositions?.includes('HRD_Karyawan') },
+                ]}
+                placeholder={formData.role ? 'Pilih Jabatan...' : 'Pilih Hak Akses dahulu'}
+                disabled={!formData.role}
+              />
             </div>
           </div>
           <div className="input-group_formkaryawan">
@@ -283,12 +297,15 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
           </div>
           <div className="input-group_formkaryawan">
             <label className="text-red_formkaryawan">HUBUNGAN KONTAK DARURAT</label>
-            <select name="emergencyRelation" onChange={handleInputChange} className="border-red_formkaryawan" disabled={isLoadingRelationships}>
-              <option value="">{isLoadingRelationships ? 'Memuat...' : 'Pilih Hubungan...'}</option>
-              {relationshipList.map((rel) => (
-                <option key={rel.id} value={rel.name}>{rel.name}</option>
-              ))}
-            </select>
+            <Dropdown
+              name="emergencyRelation"
+              value={formData.emergencyRelation}
+              onChange={handleInputChange}
+              options={relationshipList.map((rel) => ({ value: rel.name, label: rel.name }))}
+              placeholder={isLoadingRelationships ? 'Memuat...' : 'Pilih Hubungan...'}
+              className="border-red_formkaryawan"
+              disabled={isLoadingRelationships}
+            />
           </div>
           <div className="credential-box_formkaryawan">
             <div className="grid-2-col_formkaryawan">

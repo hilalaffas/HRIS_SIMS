@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
+import Dropdown from '../../../components/Dropdown';
 import './LogSistem.css';
+
+// [BARU] Opsi jumlah data per halaman untuk dropdown filter (pengganti
+// <select> native -- lihat komentar di komponen Dropdown).
+const LOG_PAGE_SIZE_OPTIONS = [
+  { value: 10, label: '10' },
+  { value: 50, label: '50' },
+  { value: 100, label: '100' },
+];
 
 const LogSistem = ({ logList = [] }) => {
   // State untuk Pagination
@@ -39,16 +48,14 @@ const LogSistem = ({ logList = [] }) => {
         {/* Kontrol Filter Jumlah Data */}
         <div className="filter-wrapper_log_sistem">
           <label htmlFor="log-filter">Tampilkan:</label>
-          <select 
+          <Dropdown
             id="log-filter"
-            value={itemsPerPage} 
-            onChange={handleFilterChange} 
+            value={itemsPerPage}
+            onChange={handleFilterChange}
+            options={LOG_PAGE_SIZE_OPTIONS}
+            variant="pill"
             className="select-filter_log_sistem"
-          >
-            <option value={10}>10</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
+          />
         </div>
       </div>
       

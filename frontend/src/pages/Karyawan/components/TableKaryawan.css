@@ -25,7 +25,10 @@
   gap: 12px;
 }
 
-.filter-select, .search-box input {
+/* [UBAH] Style dropdown lama dipindah ke src/components/Dropdown.css
+   (komponen Dropdown reusable, variant="pill"). .filter-select sekarang
+   hanya dipakai sebagai className tambahan pada Dropdown. */
+.search-box input {
   padding: 8px 12px;
   border: 1px solid #cbd5e0;
   border-radius: 6px;

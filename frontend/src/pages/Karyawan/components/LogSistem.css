@@ -47,21 +47,9 @@
   color: #4b5563;
 }
 
-.select-filter_log_sistem {
-  padding: 6px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background-color: #f9fafb;
-  color: #374151;
-  font-size: 14px;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s ease;
-}
-
-.select-filter_log_sistem:focus {
-  border-color: #6366f1;
-}
+/* [UBAH] Style dropdown lama dipindah ke src/components/Dropdown.css
+   (komponen Dropdown reusable). .select-filter_log_sistem sekarang hanya
+   dipakai sebagai className tambahan (lihat variant="pill" di Dropdown). */
 
 /* LIST ITEM LOG */
 .body_log_sistem {

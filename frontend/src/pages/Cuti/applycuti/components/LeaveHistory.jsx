@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import Dropdown from '../../../../components/Dropdown';
 import './LeaveHistory.css';
+
+// [BARU] Opsi status untuk dropdown filter riwayat (pengganti <select> native
+// -- lihat komentar di komponen Dropdown untuk alasan blue-highlight fix).
+const STATUS_FILTER_OPTIONS = [
+  { value: 'Semua Berkas', label: 'Semua Berkas' },
+  { value: 'Dalam Proses', label: 'Dalam Proses' },
+  { value: 'Disetujui (ACC)', label: 'Disetujui (ACC)' },
+  { value: 'Dikembalikan', label: 'Dikembalikan' },
+  { value: 'Ditolak', label: 'Ditolak' },
+];
 
 // [BARU] Opsi jumlah data per halaman untuk pagination riwayat pengajuan.
 // Default 5 (list ini dalam 1 kolom formulir, jadi lebih ringkas dari
@@ -128,28 +139,22 @@ const LeaveHistory = ({
 
         <div className="history-filter-container">
           <span className="filter-label">FILTER:</span>
-          <select
+          <Dropdown
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
+            options={STATUS_FILTER_OPTIONS}
+            variant="pill"
             className="filter-dropdown"
-          >
-            <option value="Semua Berkas">Semua Berkas</option>
-            <option value="Dalam Proses">Dalam Proses</option>
-            <option value="Disetujui (ACC)">Disetujui (ACC)</option>
-            <option value="Dikembalikan">Dikembalikan</option>
-            <option value="Ditolak">Ditolak</option>
-          </select>
+          />
           {/* [BARU] Dropdown jumlah data per halaman */}
-          <select
+          <Dropdown
             value={pageSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size} / halaman` }))}
+            variant="pill"
             className="filter-dropdown history-pageSize"
-            aria-label="Jumlah data per halaman"
-          >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>{size} / halaman</option>
-            ))}
-          </select>
+            ariaLabel="Jumlah data per halaman"
+          />
         </div>
       </div>
 

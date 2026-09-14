@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Dropdown from '../../components/Dropdown';
 import './RiwayatCuti.css';
 import { getAllLeaveRequestsForHr, getApprovalHistory, getRiwayatByUser } from '../../services/CutiService';
 import { isHrAdmin, isManagerOrSpv, isSuperAdmin } from '../../utils/roles';
@@ -251,15 +252,13 @@ export default function RiwayatCuti({ user }) {
 
           <label className="rc-pageSize">
             Tampilkan
-            <select
+            <Dropdown
               value={pageSize}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size} data` }))}
+              variant="pill"
               className="rc-pageSize__select"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>{size} data</option>
-              ))}
-            </select>
+            />
           </label>
         </div>
 

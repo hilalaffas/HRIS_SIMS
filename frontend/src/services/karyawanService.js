@@ -1,30 +1,18 @@
 // src/services/karyawanService.js
-import { api, getStoredToken } from './api'; // Import dari folder yang sama
+import { api } from './api'; // Import dari folder yang sama
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://sims-backend-api-61je.onrender.com';
+// [UBAH] registerKaryawan & updateKaryawan SEBELUMNYA pakai fetch() mentah
+// sendiri-sendiri (duplikat logic ambil token, cek response.ok, parse
+// error) supaya bisa kirim FormData tanpa di-JSON.stringify oleh api.js.
+// Sekarang cukup pakai api.postForm/api.putForm (lihat services/api.js) --
+// sama-sama tidak menstringify body, tapi tetap lewat SATU wrapper
+// terpusat. Efeknya: token, format pesan error, dan deteksi sesi habis
+// (401 SESSION_EXPIRED -> auto-redirect ke /login) otomatis berlaku juga
+// untuk dua fungsi ini, tanpa perlu ditulis ulang di sini.
 
 // 1. CREATE / REGISTER (Khusus FormData, bypass JSON.stringify dari api.js)
-export const registerKaryawan = async (formData) => {
-    const token = getStoredToken();
-    
-    const response = await fetch(`${BASE_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-            // PENTING: Jangan tulis 'Content-Type': 'multipart/form-data'
-            // Biarkan browser mengisinya otomatis agar terbentuk boundary yang benar.
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: formData
-    });
-
-    const rawText = await response.text();
-    let data = rawText;
-    try { data = JSON.parse(rawText); } catch(e) {}
-
-    if (!response.ok) {
-        throw new Error(data.message || data || 'Gagal mendaftarkan karyawan');
-    }
-    return data;
+export const registerKaryawan = (formData) => {
+    return api.postForm('/api/auth/register', formData);
 };
 
 // 2. GET LIST (Bisa langsung pakai wrapper api.js)
@@ -34,26 +22,8 @@ export const getKaryawanList = () => {
 
 // 3. UPDATE (Khusus FormData juga, sama seperti register -- backend-nya
 // consumes = MULTIPART_FORM_DATA_VALUE karena ada upload foto)
-export const updateKaryawan = async (id, formData) => {
-    const token = getStoredToken();
-
-    const response = await fetch(`${BASE_URL}/api/karyawan/${id}`, {
-        method: 'PUT',
-        headers: {
-            // Sama seperti registerKaryawan: jangan set Content-Type manual.
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: formData
-    });
-
-    const rawText = await response.text();
-    let data = rawText;
-    try { data = JSON.parse(rawText); } catch (e) {}
-
-    if (!response.ok) {
-        throw new Error(data.message || data || 'Gagal memperbarui data karyawan');
-    }
-    return data;
+export const updateKaryawan = (id, formData) => {
+    return api.putForm(`/api/karyawan/${id}`, formData);
 };
 
 // 4. DELETE

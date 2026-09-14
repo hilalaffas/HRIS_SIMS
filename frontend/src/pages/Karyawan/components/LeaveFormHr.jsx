@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import Dropdown from '../../../components/Dropdown';
 import './LeaveFormHr.css';
 import { getLeaveTypes, getApprovers, submitUrgentCuti } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles';
@@ -168,23 +169,28 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
         <div className="form-grid_leaveFormHr">
           <div className="form-group_leaveFormHr">
             <label>PILIH KARYAWAN *</label>
-            <select name="karyawanId" value={formData.karyawanId} onChange={handleInputChange} required>
-              <option value="">Pilih...</option>
-              {karyawanList?.map(k => (
-                <option key={k.employeeId || k.id} value={k.employeeId || k.id}>
-                  {k.fullName} ({k.nikKaryawan})
-                </option>
-              ))}
-            </select>
+            <Dropdown
+              name="karyawanId"
+              value={formData.karyawanId}
+              onChange={handleInputChange}
+              options={(karyawanList || []).map(k => ({
+                value: k.employeeId || k.id,
+                label: `${k.fullName} (${k.nikKaryawan})`,
+              }))}
+              placeholder="Pilih..."
+              required
+            />
           </div>
           <div className="form-group_leaveFormHr">
             <label>JENIS PERMOHONAN CUTI *</label>
-            <select name="leaveTypeId" value={formData.leaveTypeId} onChange={handleInputChange} required>
-              <option value="">Pilih...</option>
-              {leaveTypes.map((type) => (
-                <option key={type.leaveTypeId} value={type.leaveTypeId}>{type.name}</option>
-              ))}
-            </select>
+            <Dropdown
+              name="leaveTypeId"
+              value={formData.leaveTypeId}
+              onChange={handleInputChange}
+              options={leaveTypes.map((type) => ({ value: type.leaveTypeId, label: type.name }))}
+              placeholder="Pilih..."
+              required
+            />
           </div>
         </div>
 
@@ -222,32 +228,35 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
                 <>
                   <div className="sub-group_leaveFormHr">
                     <span className="sub-label_leaveFormHr">Leader</span>
-                    <select name="leaderEmployeeId" value={formData.leaderEmployeeId} onChange={handleInputChange}>
-                      <option value="">Pilih...</option>
-                      {leaderOptions.map((a) => (
-                        <option key={a.employeeId} value={a.employeeId}>{a.fullName}</option>
-                      ))}
-                    </select>
+                    <Dropdown
+                      name="leaderEmployeeId"
+                      value={formData.leaderEmployeeId}
+                      onChange={handleInputChange}
+                      options={leaderOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
+                      placeholder="Pilih..."
+                    />
                   </div>
                   <div className="sub-group_leaveFormHr">
                     <span className="sub-label_leaveFormHr">SPV</span>
-                    <select name="spvEmployeeId" value={formData.spvEmployeeId} onChange={handleInputChange}>
-                      <option value="">Pilih...</option>
-                      {spvOptions.map((a) => (
-                        <option key={a.employeeId} value={a.employeeId}>{a.fullName}</option>
-                      ))}
-                    </select>
+                    <Dropdown
+                      name="spvEmployeeId"
+                      value={formData.spvEmployeeId}
+                      onChange={handleInputChange}
+                      options={spvOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
+                      placeholder="Pilih..."
+                    />
                   </div>
                 </>
               )}
               <div className="sub-group_leaveFormHr">
                 <span className="sub-label_leaveFormHr">Manager</span>
-                <select name="managerEmployeeId" value={formData.managerEmployeeId} onChange={handleInputChange}>
-                  <option value="">Pilih...</option>
-                  {managerOptions.map((a) => (
-                    <option key={a.employeeId} value={a.employeeId}>{a.fullName}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  name="managerEmployeeId"
+                  value={formData.managerEmployeeId}
+                  onChange={handleInputChange}
+                  options={managerOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
+                  placeholder="Pilih..."
+                />
               </div>
             </div>
           )}

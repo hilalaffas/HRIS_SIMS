@@ -1,0 +1,87 @@
+/* src/components/SessionExpiredModal.css */
+/* [BARU] Class dibuat unik (prefix session-modal-*), sengaja TIDAK memakai
+   nama generic .modal-overlay/.modal-card seperti LogoutModal.css, supaya
+   dua file CSS ini tetap independen (co-located per komponen) tanpa risiko
+   saling menimpa kalau salah satu suatu saat diubah. */
+
+.session-modal-overlay {
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.45);
+  padding: var(--space-4);
+}
+
+.session-modal-card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.session-modal-body {
+  padding: var(--space-6);
+}
+
+.session-modal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.session-modal-icon-container {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background-color: var(--color-warning-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.session-modal-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-warning);
+}
+
+.session-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.session-modal-text {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 var(--space-6);
+}
+
+.session-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.session-modal-btn-ok {
+  padding: 0.625rem 1.5rem;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.session-modal-btn-ok:hover {
+  background-color: var(--color-primary-hover);
+}

@@ -4,8 +4,10 @@ import { BrowserRouter, useNavigate } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import Toast from './components/Toast';
 import LogoutModal from './components/LogoutModal';
+import SessionExpiredModal from './components/SessionExpiredModal'; // [BARU]
 import { logoutUser } from './services/authService';
 import { getMyProfile } from './services/profileService'; // [BARU] untuk hydrate foto profil di awal sesi
+import { getAndClearRedirectPath } from './services/api'; // [BARU] alur "kembali ke halaman terakhir"
 
 import './App.css'; 
 
@@ -15,6 +17,8 @@ const AppContent = () => {
   const navigate = useNavigate();
   
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  // [BARU] null = modal sesi habis tersembunyi; string = tampil dengan pesan ini
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
   // Gunakan state untuk user agar UI langsung ter-update saat login/logout
@@ -79,6 +83,24 @@ const AppContent = () => {
     return () => window.removeEventListener('profile-updated', syncProfileSummary);
   }, []);
 
+  // [BARU] Sesi habis (token tidak ada/tidak valid/kedaluwarsa) dideteksi
+  // secara terpusat di services/api.js setiap kali sebuah panggilan API
+  // gagal dengan 401 + errorCode SESSION_EXPIRED. api.js sendiri tidak
+  // menyentuh state React (dia cuma lapisan network), jadi dia broadcast
+  // lewat CustomEvent di window, dan di sinilah App.jsx menangkapnya untuk
+  // menampilkan modal. Pola ini menjaga api.js tetap murni & tidak
+  // ter-coupling ke React.
+  useEffect(() => {
+    const handleSessionExpired = (event) => {
+      setSessionExpiredMessage(
+        event.detail?.message ||
+        'Sesi Anda telah berakhir demi keamanan. Silakan login kembali.'
+      );
+    };
+    window.addEventListener('sims:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('sims:session-expired', handleSessionExpired);
+  }, []);
+
   const TOAST_DURATION = 2500; // durasi toast tampil (ms), bisa disesuaikan 2000-3000
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -111,14 +133,23 @@ const AppContent = () => {
       });
 
     showToast(`Selamat datang kembali, ${userData.name}`, 'success');
-    
-    // TIDAK perlu navigate manual di sini.
-    // Begitu token di-set di localStorage (oleh authService) dan state currentUser
-    // berubah, AppRoutes akan re-render dan PublicRoute otomatis
-    // mendeteksi token lalu redirect ke /dashboard.
+
+    // [UBAH] Sebelumnya redirect ke /dashboard diserahkan begitu saja ke
+    // PublicRoute (yang path tujuannya selalu hardcode /dashboard). Sekarang
+    // navigate dilakukan eksplisit di sini supaya kita bisa mengembalikan
+    // user ke halaman terakhir yang dia akses sebelum sesi habis / sebelum
+    // diarahkan ke /login (disimpan services/api.js atau ProtectedRoute.jsx
+    // lewat saveRedirectPath()). Kalau tidak ada URL tersimpan, fallback ke
+    // /dashboard seperti perilaku semula.
+    const redirectPath = getAndClearRedirectPath();
+    navigate(redirectPath || '/dashboard', { replace: true });
   };
 
-  const handleConfirmLogout = () => {
+  // [BARU] Diekstrak dari handleConfirmLogout supaya logic yang sama persis
+  // (hapus token + data user dari localStorage) bisa dipakai ulang oleh
+  // handleSessionExpiredConfirm() di bawah -- logout manual dan "sesi habis"
+  // pada dasarnya butuh pembersihan sesi yang identik.
+  const clearSessionData = () => {
     // Bersihkan hanya data sesi login. Jangan memakai localStorage.clear()
     // karena status notifikasi yang sudah dibaca harus tetap tersimpan saat
     // pengguna login kembali.
@@ -128,14 +159,30 @@ const AppContent = () => {
     localStorage.removeItem('user_gender');
     localStorage.removeItem('user_avatar_url');
     setCurrentUser({ name: 'Guest', role: 'Guest' });
+  };
+
+  const handleConfirmLogout = () => {
+    clearSessionData();
     setIsLogoutModalOpen(false);
-    
+
     showToast('Anda berhasil keluar dari sistem.', 'success');
-    
+
     // TIDAK perlu navigate manual di sini.
     // Begitu localStorage.clear() dipanggil dan state currentUser berubah,
     // AppRoutes akan re-render dan ProtectedRoute otomatis mendeteksi
     // token yang sudah hilang lalu redirect ke /login.
+  };
+
+  // [BARU] Dipanggil saat user klik tombol "OK" di SessionExpiredModal.
+  // BEDA dengan handleConfirmLogout: di sini kita WAJIB navigate manual ke
+  // /login, karena user bisa saja sedang di halaman yang tidak dibungkus
+  // ProtectedRoute pada saat token kedaluwarsa terdeteksi (mis. request
+  // background/polling), jadi tidak selalu ada re-render otomatis yang
+  // memicu redirect seperti pada alur logout manual biasa.
+  const handleSessionExpiredConfirm = () => {
+    clearSessionData();
+    setSessionExpiredMessage(null);
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -155,6 +202,17 @@ const AppContent = () => {
         onConfirm={handleConfirmLogout} 
         onCancel={() => setIsLogoutModalOpen(false)} 
       />
+      )}
+
+      {/* [BARU] 4. Global Session Expired Modal -- tampil di atas semua
+          halaman (termasuk halaman protected manapun) begitu event
+          'sims:session-expired' diterima. Tidak ada tombol "Batal": user
+          WAJIB klik OK untuk lanjut, sesuai alur yang diminta. */}
+      {sessionExpiredMessage && (
+        <SessionExpiredModal
+          message={sessionExpiredMessage}
+          onConfirm={handleSessionExpiredConfirm}
+        />
       )}
     </div>
   );

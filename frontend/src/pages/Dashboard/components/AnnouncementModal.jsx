@@ -1,5 +1,6 @@
 // src/pages/Dashboard/components/AnnouncementModal.jsx
 import React, { useState, useEffect } from 'react';
+import Dropdown from '../../../components/Dropdown';
 
 export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialData = null }) {
   const [judul, setJudul] = useState('');
@@ -85,15 +86,15 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">
               Label / Tag
             </label>
-            <select
+            <Dropdown
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)] bg-white"
-            >
-              <option value="penting">Penting (Merah)</option>
-              <option value="update">Update (Hijau)</option>
-              <option value="info">Info (Biru)</option>
-            </select>
+              options={[
+                { value: 'penting', label: 'Penting (Merah)' },
+                { value: 'update', label: 'Update (Hijau)' },
+                { value: 'info', label: 'Info (Biru)' },
+              ]}
+            />
           </div>
 
           <div>

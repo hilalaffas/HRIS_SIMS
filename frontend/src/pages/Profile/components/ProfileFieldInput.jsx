@@ -1,4 +1,5 @@
 import React from 'react';
+import Dropdown from '../../../components/Dropdown';
 
 // Satu baris input di form edit — otomatis textarea/text, dan terkunci (disabled)
 // jika field tersebut tidak boleh diedit oleh role yang sedang login.
@@ -11,19 +12,15 @@ const ProfileFieldInput = ({ cfg, value, onChange, editable }) => (
       {!editable && <span className="field-lock-icon" title="Kolom ini dikunci untuk role Anda">🔒</span>}
     </label>
     {cfg.select ? (
-      <select
+      <Dropdown
         name={cfg.key}
         value={value}
         onChange={onChange}
         disabled={!editable}
         title={!editable ? 'Kolom ini dikunci untuk role Anda — hubungi admin/HR untuk perubahan' : undefined}
-        className="form-input-profile"
-      >
-        <option value="" disabled>Pilih...</option>
-        {cfg.options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
+        options={cfg.options.map((opt) => ({ value: opt, label: opt }))}
+        placeholder="Pilih..."
+      />
     ) : cfg.textarea ? (
       <textarea
         name={cfg.key}

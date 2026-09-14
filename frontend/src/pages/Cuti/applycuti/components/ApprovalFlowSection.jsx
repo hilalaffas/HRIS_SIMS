@@ -1,4 +1,5 @@
 import React from 'react';
+import Dropdown from '../../../../components/Dropdown';
 import './LeaveForm.css';
 
 /**
@@ -19,49 +20,40 @@ const ApprovalFlowSection = ({
       <div className="approval-row">
         <div className="approval-col">
           <span className="badge-approval leader">Leader</span>
-          <select
+          <Dropdown
+            name="leaderEmployeeId"
             value={isSupervisor ? '' : leaderEmployeeId}
             onChange={(e) => setLeaderEmployeeId(e.target.value)}
-            className="form-control"
+            options={approvers.LEADER.map(person => ({ value: person.employeeId, label: person.fullName }))}
+            placeholder={isSupervisor ? 'None' : 'Pilih...'}
             required={!isSupervisor}
             disabled={isSupervisor}
-          >
-            <option value="">{isSupervisor ? 'None' : 'Pilih...'}</option>
-            {!isSupervisor && approvers.LEADER.map(person => (
-              <option key={person.employeeId} value={person.employeeId}>{person.fullName}</option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="approval-col">
           <span className="badge-approval spv">SPV</span>
-          <select
+          <Dropdown
+            name="spvEmployeeId"
             value={isSupervisor ? '' : spvEmployeeId}
             onChange={(e) => setSpvEmployeeId(e.target.value)}
-            className="form-control"
+            options={approvers.SPV.map(person => ({ value: person.employeeId, label: person.fullName }))}
+            placeholder={isSupervisor ? 'None' : 'Pilih...'}
             required={!isSupervisor}
             disabled={isSupervisor}
-          >
-            <option value="">{isSupervisor ? 'None' : 'Pilih...'}</option>
-            {!isSupervisor && approvers.SPV.map(person => (
-              <option key={person.employeeId} value={person.employeeId}>{person.fullName}</option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="approval-col">
           <span className="badge-approval manager">Manager</span>
-          <select
+          <Dropdown
+            name="managerEmployeeId"
             value={managerEmployeeId}
             onChange={(e) => setManagerEmployeeId(e.target.value)}
-            className="form-control"
+            options={approvers.MANAGER.map(person => ({ value: person.employeeId, label: person.fullName }))}
+            placeholder="Pilih..."
             required
-          >
-            <option value="">Pilih...</option>
-            {approvers.MANAGER.map(person => (
-              <option key={person.employeeId} value={person.employeeId}>{person.fullName}</option>
-            ))}
-          </select>
+          />
         </div>
       </div>
     </div>

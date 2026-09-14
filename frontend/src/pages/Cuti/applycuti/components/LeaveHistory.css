@@ -54,22 +54,9 @@
   letter-spacing: 0.5px;
 }
 
-.filter-dropdown {
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 2px solid var(--color-primary);
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-  background-color: #ffffff;
-  outline: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.filter-dropdown:focus {
-  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.15);
-}
+/* [UBAH] Style dropdown filter lama dipindah ke src/components/Dropdown.css
+   (komponen Dropdown reusable). Class .filter-dropdown sekarang hanya dipakai
+   sebagai className tambahan (lihat variant="pill" di Dropdown). */
 
 .history-body {
   padding: 24px;

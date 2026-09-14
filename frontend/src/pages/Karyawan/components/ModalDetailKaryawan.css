@@ -203,6 +203,18 @@
   font-weight: 600;
 }
 
+/* [BARU] Versi untuk komponen Dropdown custom (pengganti <select> native).
+   Tanpa ini, cue warna merah/hijau pada field STATUS AKUN hilang karena
+   border sekarang digambar di .dropdown__trigger, bukan di <select>. */
+.error-group_detail_karyawan .dropdown__trigger {
+  border-color: #fc8181;
+  background-color: #fff5f5;
+}
+.success-group_detail_karyawan .dropdown__trigger {
+  color: #047857;
+  font-weight: 600;
+}
+
 .green-bg-group_detail_karyawan label {
   color: var(--color-primary);
 }
