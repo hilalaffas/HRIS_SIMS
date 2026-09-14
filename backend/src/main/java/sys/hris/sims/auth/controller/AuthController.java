@@ -302,8 +302,13 @@ public class AuthController {
             @RequestBody ChangePasswordRequest request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
-        // Panggil service
-        authService.changePassword(authentication, request);
+        // [UBAH] Panggil SEKALI saja & tampung hasilnya. authService.changePassword()
+        // tidak idempoten -- dia mencocokkan oldPassword terhadap password TERKINI
+        // di DB lalu langsung menyimpan password baru. Memanggilnya dua kali (versi
+        // sebelumnya) membuat panggilan kedua selalu gagal karena password di DB
+        // sudah berubah oleh panggilan pertama, sehingga user selalu melihat error
+        // "Password lama salah" walau perubahan sebenarnya SUDAH berhasil tersimpan.
+        String result = authService.changePassword(authentication, request);
 
         // Catat log sukses
         activityLogService.log(
@@ -316,8 +321,7 @@ public class AuthController {
                 httpRequest
         );
 
-        return ResponseEntity.ok(
-                authService.changePassword(authentication, request));
+        return ResponseEntity.ok(result);
     }
 
     private boolean isPasswordValid(String rawPassword, User user) {
