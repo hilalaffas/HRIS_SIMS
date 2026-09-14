@@ -18,10 +18,11 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
 
   const {
     isEditing, loading, profileImage, chosenFileName, showPhotoViewer, toast, saving,
+    pendingAvatarPreview, avatarSaving, avatarError,
     fileInputRef, formData, draftData, passwordData, passwordError,
     openEdit, closeEdit, handleDraftChange, handlePasswordChange,
-    handleImageChange, handleAvatarChange, triggerFileInput,
-    openPhotoViewer, closePhotoViewer, handleSave,
+    handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange,
+    triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave,
   } = useProfileForm(currentUserRole, mockData);
 
   if (loading) return <div className="profile-loading">Memuat data...</div>;
@@ -37,11 +38,16 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
           formData={formData}
           profileImage={profileImage}
           fileInputRef={fileInputRef}
-          onImageChange={handleAvatarChange}
+          onImageChange={handleAvatarFileSelected}
           onTriggerFileInput={triggerFileInput}
           showPhotoViewer={showPhotoViewer}
           onOpenPhotoViewer={openPhotoViewer}
           onClosePhotoViewer={closePhotoViewer}
+          pendingAvatarPreview={pendingAvatarPreview}
+          avatarSaving={avatarSaving}
+          avatarError={avatarError}
+          onConfirmAvatarChange={confirmAvatarChange}
+          onCancelAvatarChange={cancelAvatarChange}
           onOpenEdit={openEdit}
           kolomKiri={kolomKiri}
           kolomKanan={kolomKanan}

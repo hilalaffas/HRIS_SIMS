@@ -16,6 +16,10 @@ export const useProfileForm = (currentUserRole, mockData) => {
   const [chosenFileName, setChosenFileName] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
+  const [pendingAvatarPreview, setPendingAvatarPreview] = useState(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
   const [toast, setToast] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
@@ -91,29 +95,42 @@ export const useProfileForm = (currentUserRole, mockData) => {
     reader.readAsDataURL(file);
   };
 
-  // Input avatar pada halaman baca tidak memiliki tombol "Simpan". Karena itu
-  // foto di jalur ini langsung diunggah, lalu sidebar ikut diperbarui.
-  const handleAvatarChange = async (e) => {
+  // Input avatar pada halaman baca (ikon kamera). Dulu file yang dipilih
+  // langsung diunggah ke server tanpa konfirmasi. Sekarang hanya menyiapkan
+  // preview lokal dulu — upload sebenarnya baru terjadi setelah user
+  // menekan "Simpan Foto" di popup konfirmasi (lihat confirmAvatarChange).
+  const handleAvatarFileSelected = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const previewUrl = URL.createObjectURL(file);
-    setProfileImage(previewUrl);
-    window.dispatchEvent(new CustomEvent('profile-updated', {
-      detail: { ...formData, photoUrl: previewUrl },
-    }));
+    setAvatarError('');
+    setPendingAvatarFile(file);
+    setPendingAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const cancelAvatarChange = () => {
+    if (pendingAvatarPreview) URL.revokeObjectURL(pendingAvatarPreview);
+    setPendingAvatarFile(null);
+    setPendingAvatarPreview(null);
+    setAvatarError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const confirmAvatarChange = async () => {
+    if (!pendingAvatarFile) return;
+    setAvatarSaving(true);
+    setAvatarError('');
     try {
-      const saved = await updateMyProfile({}, file);
+      const saved = await updateMyProfile({}, pendingAvatarFile);
       setFormData(saved);
       setDraftData(saved);
       setProfileImage(saved.photoUrl || null);
+      // Sidebar baru diberitahu setelah upload benar-benar sukses.
       window.dispatchEvent(new CustomEvent('profile-updated', { detail: saved }));
+      cancelAvatarChange();
     } catch (error) {
-      setProfileImage(formData.photoUrl || null);
-      window.dispatchEvent(new CustomEvent('profile-updated', { detail: formData }));
-      console.error('Gagal mengunggah foto profil:', error);
+      setAvatarError(error.message || 'Gagal mengunggah foto profil.');
     } finally {
-      URL.revokeObjectURL(previewUrl);
-      e.target.value = '';
+      setAvatarSaving(false);
     }
   };
   const triggerFileInput = () => fileInputRef.current?.click();
@@ -156,5 +173,5 @@ export const useProfileForm = (currentUserRole, mockData) => {
     }
   };
 
-  return { isEditing, loading, profileImage, chosenFileName, showPhotoViewer, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarChange, triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave };
+  return { isEditing, loading, profileImage, chosenFileName, showPhotoViewer, pendingAvatarPreview, avatarSaving, avatarError, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange, triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave };
 };

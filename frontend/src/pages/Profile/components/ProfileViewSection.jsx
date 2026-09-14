@@ -1,6 +1,7 @@
 import React from 'react';
 import ProfileAvatar from './ProfileAvatar';
 import ProfilePhotoViewer from './ProfilePhotoViewer';
+import ProfileAvatarConfirmModal from './ProfileAvatarConfirmModal';
 import { getInitials } from '../hooks/useProfileForm';
 import { EMERGENCY_CONTACT_KEY, EMERGENCY_RELATION_KEY } from '../config/profileFieldConfig';
 
@@ -8,6 +9,7 @@ import { EMERGENCY_CONTACT_KEY, EMERGENCY_RELATION_KEY } from '../config/profile
 const ProfileViewSection = ({
   formData, profileImage, fileInputRef, onImageChange, onTriggerFileInput,
   showPhotoViewer, onOpenPhotoViewer, onClosePhotoViewer,
+  pendingAvatarPreview, avatarSaving, avatarError, onConfirmAvatarChange, onCancelAvatarChange,
   onOpenEdit, kolomKiri, kolomKanan, isFieldEditable,
 }) => (
   <>
@@ -80,6 +82,16 @@ const ProfileViewSection = ({
         photoUrl={profileImage}
         altText={formData.namaLengkap}
         onClose={onClosePhotoViewer}
+      />
+    )}
+
+    {pendingAvatarPreview && (
+      <ProfileAvatarConfirmModal
+        previewUrl={pendingAvatarPreview}
+        saving={avatarSaving}
+        error={avatarError}
+        onCancel={onCancelAvatarChange}
+        onConfirm={onConfirmAvatarChange}
       />
     )}
   </>
