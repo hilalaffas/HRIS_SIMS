@@ -1,13 +1,66 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
 import './LeaveFormHr.css';
-import { getLeaveTypes, getApprovers, submitUrgentCuti } from '../../../services/CutiService';
+import { getLeaveTypes, getApprovers, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles';
 import { getAllHolidays } from '../../../services/holidayService';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const toDateKey = (year, month, day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 const formatDate = (value) => value ? value.split('-').reverse().join('/') : '';
+const isoToday = () => {
+  const d = new Date();
+  return toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+};
+const isFemaleEmployee = (genderValue = '') => ['P', 'F', 'PEREMPUAN', 'FEMALE'].includes(
+  String(genderValue).trim().toUpperCase()
+);
+const isBereavementLeave = (name = '') => String(name).trim().toLowerCase().includes('meninggal');
+const isUrgentLeave = (name = '') => {
+  const normalized = String(name).trim().toLowerCase();
+  return ['cuti urgent', 'cuti berduka'].includes(normalized) || isBereavementLeave(name);
+};
+const addWorkingDaysInclusive = (startDateStr, totalHariKerja, holidayDates) => {
+  if (!startDateStr || totalHariKerja <= 0) return startDateStr;
+  let count = 0;
+  let lastValidStr = startDateStr;
+  const current = new Date(`${startDateStr}T00:00:00`);
+  while (count < totalHariKerja) {
+    const isWeekend = current.getDay() === 0 || current.getDay() === 6;
+    const key = toDateKey(current.getFullYear(), current.getMonth(), current.getDate());
+    if (!isWeekend && !holidayDates.has(key)) {
+      count += 1;
+      lastValidStr = key;
+    }
+    if (count >= totalHariKerja) break;
+    current.setDate(current.getDate() + 1);
+  }
+  return lastValidStr;
+};
+const addMonthsToDateStr = (dateStr, months) => {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+};
+const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false, bookedDates = new Set()) => {
+  if (!startDate || !endDate || startDate > endDate) return 0;
+  const normalized = String(jenisCuti || '').trim().toLowerCase();
+  if (normalized === 'cuti setengah hari') {
+    const d = new Date(`${startDate}T00:00:00`);
+    const key = toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+    return d.getDay() !== 0 && d.getDay() !== 6 && !holidayDates.has(key) && !bookedDates.has(key) ? 0.5 : 0;
+  }
+  if (normalized.includes('melahirkan') && isFemale) {
+    return Math.max(0, Math.round((new Date(`${endDate}T00:00:00`) - new Date(`${startDate}T00:00:00`)) / 86400000) + 1);
+  }
+  let total = 0;
+  for (const d = new Date(`${startDate}T00:00:00`); d <= new Date(`${endDate}T00:00:00`); d.setDate(d.getDate() + 1)) {
+    const key = toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+    if (d.getDay() !== 0 && d.getDay() !== 6 && !holidayDates.has(key) && !bookedDates.has(key)) total += 1;
+  }
+  return total;
+};
 
 const getCalendarDays = (viewDate) => {
   const year = viewDate.getFullYear();
@@ -62,6 +115,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [holidayDates, setHolidayDates] = useState(() => new Set());
+  const [bookedDates, setBookedDates] = useState(() => new Set());
   const [activeDatePicker, setActiveDatePicker] = useState(null);
   const [calendarView, setCalendarView] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const dateFieldsRef = useRef(null);
@@ -91,6 +145,39 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     document.addEventListener('mousedown', closeDatePicker);
     return () => document.removeEventListener('mousedown', closeDatePicker);
   }, []);
+
+  // Sinkron dengan form cuti karyawan: tanggal yang sudah dipakai karyawan
+  // pada cuti ACC/Dalam Proses tidak boleh dipilih lagi. Endpoint kalender
+  // hanya mengembalikan PENDING/APPROVED, sama seperti kalender tim.
+  useEffect(() => {
+    if (!formData.karyawanId) {
+      setBookedDates(new Set());
+      return;
+    }
+    let cancelled = false;
+    const loadBookedDates = async () => {
+      try {
+        const years = [new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1];
+        const responses = await Promise.all(years.map((year) => getCalendarLeaves(year)));
+        const dates = new Set();
+        responses.flatMap((records) => records || []).forEach((record) => {
+          if (String(record?.employee?.employeeId ?? '') !== String(formData.karyawanId)) return;
+          const start = String(record.startDate || '').split('T')[0];
+          const end = String(record.endDate || '').split('T')[0];
+          if (!start || !end) return;
+          for (const date = new Date(`${start}T00:00:00`); date <= new Date(`${end}T00:00:00`); date.setDate(date.getDate() + 1)) {
+            dates.add(toDateKey(date.getFullYear(), date.getMonth(), date.getDate()));
+          }
+        });
+        if (!cancelled) setBookedDates(dates);
+      } catch (error) {
+        console.error('Gagal memuat tanggal cuti karyawan:', error);
+        if (!cancelled) setBookedDates(new Set());
+      }
+    };
+    loadBookedDates();
+    return () => { cancelled = true; };
+  }, [formData.karyawanId]);
 
 
   // [UBAH] Approver (Leader/SPV/Manager) WAJIB satu divisi dengan karyawan
@@ -155,6 +242,31 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     [leaveTypes, formData.leaveTypeId]
   );
   const isHalfDayLeave = String(selectedLeaveType?.name || '').trim().toLowerCase() === 'cuti setengah hari';
+  const selectedEmployeeGender = selectedKaryawan?.gender || selectedKaryawan?.jenisKelamin || '';
+  const isFemale = isFemaleEmployee(selectedEmployeeGender);
+  const normalizedLeaveType = String(selectedLeaveType?.name || '').trim().toLowerCase();
+  const isMelahirkan = normalizedLeaveType.includes('melahirkan');
+  const isMeninggal = isBereavementLeave(selectedLeaveType?.name);
+  const isNikah = normalizedLeaveType.includes('nikah');
+  const todayStr = isoToday();
+  // Sama persis dengan form karyawan: Urgent/Berduka/Meninggal boleh mulai hari ini;
+  // jenis lain mengikuti jeda minimal 5 hari kerja.
+  const minStartDate = isUrgentLeave(selectedLeaveType?.name) ? todayStr : addWorkingDaysInclusive(todayStr, 5, new Set());
+  const maxEndDate = isHalfDayLeave && formData.startDate
+    ? formData.startDate
+    : (isMelahirkan && formData.startDate
+      ? (isFemale ? addMonthsToDateStr(formData.startDate, 3) : addWorkingDaysInclusive(formData.startDate, 2, holidayDates))
+      : (isMeninggal && formData.startDate
+        ? addWorkingDaysInclusive(formData.startDate, 2, holidayDates)
+        : (isNikah && formData.startDate ? addWorkingDaysInclusive(formData.startDate, 3, holidayDates) : null)));
+  const jumlahHariCuti = countWorkingDays(formData.startDate, formData.endDate, holidayDates, selectedLeaveType?.name, isFemale, bookedDates);
+  const hasBookedDateInRange = useMemo(() => {
+    if (!formData.startDate || !formData.endDate) return false;
+    for (const d = new Date(`${formData.startDate}T00:00:00`); d <= new Date(`${formData.endDate}T00:00:00`); d.setDate(d.getDate() + 1)) {
+      if (bookedDates.has(toDateKey(d.getFullYear(), d.getMonth(), d.getDate()))) return true;
+    }
+    return false;
+  }, [formData.startDate, formData.endDate, bookedDates]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -179,6 +291,18 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     }
     if (formData.endDate < formData.startDate) {
       setErrorMessage('Tanggal selesai tidak boleh lebih awal dari tanggal mulai.');
+      return;
+    }
+    if (formData.startDate < minStartDate) {
+      setErrorMessage(`Tanggal mulai minimal ${formatDate(minStartDate)} sesuai aturan cuti.`);
+      return;
+    }
+    if (maxEndDate && formData.endDate > maxEndDate) {
+      setErrorMessage(`Tanggal selesai maksimal ${formatDate(maxEndDate)} sesuai aturan jenis cuti.`);
+      return;
+    }
+    if (jumlahHariCuti <= 0) {
+      setErrorMessage('Rentang tanggal tidak memiliki hari kerja yang bisa diajukan atau tanggalnya sudah terpakai.');
       return;
     }
     if (!selectedIsApproverLevel && (!formData.leaderEmployeeId || !formData.spvEmployeeId)) {
@@ -234,15 +358,20 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
 
   const chooseDate = (field, day) => {
     const value = toDateKey(day.year, day.month, day.day);
-    if (field === 'endDate' && formData.startDate && value < formData.startDate) return;
-    setFormData((current) => ({ ...current, [field]: value, ...(field === 'startDate' && current.endDate < value ? { endDate: '' } : {}) }));
+    const minDate = field === 'startDate' ? minStartDate : formData.startDate;
+    if (minDate && value < minDate) return;
+    if (maxEndDate && field === 'endDate' && value > maxEndDate) return;
+    setFormData((current) => ({
+      ...current,
+      [field]: value,
+      ...(field === 'startDate' && current.endDate < value ? { endDate: '' } : {}),
+    }));
     setActiveDatePicker(null);
   };
 
   const renderDatePicker = (field) => {
     if (activeDatePicker !== field) return null;
-    const today = new Date();
-    const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayKey = todayStr;
     return (
       <div className="superadmin-date-calendar">
         <div className="superadmin-date-calendar__header">
@@ -254,12 +383,15 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
           {getCalendarDays(calendarView).map((day) => {
             const value = toDateKey(day.year, day.month, day.day);
             const isHoliday = holidayDates.has(value);
-            const isWeekend = new Date(day.year, day.month, day.day).getDay() === 0 || new Date(day.year, day.month, day.day).getDay() === 6;
-            const disabled = field === 'endDate' && formData.startDate && value < formData.startDate;
-            return <button key={value} type="button" disabled={disabled} onClick={() => chooseDate(field, day)} title={isHoliday ? 'Hari libur nasional' : isWeekend ? 'Akhir pekan' : undefined} className={`${!day.isCurrentMonth ? 'is-outside ' : ''}${isHoliday || isWeekend ? 'is-red-day ' : ''}${value === formData[field] ? 'is-selected ' : ''}${value === todayKey ? 'is-today' : ''}`}>{day.day}</button>;
+            const dateObj = new Date(day.year, day.month, day.day);
+            const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+            const isBooked = bookedDates.has(value);
+            const minDate = field === 'startDate' ? minStartDate : formData.startDate;
+            const disabled = (minDate && value < minDate) || (field === 'endDate' && maxEndDate && value > maxEndDate);
+            return <button key={value} type="button" disabled={disabled} onClick={() => chooseDate(field, day)} title={isBooked ? 'Tanggal sudah terpakai pengajuan cuti' : isHoliday ? 'Hari libur nasional' : isWeekend ? 'Akhir pekan' : undefined} className={`${!day.isCurrentMonth ? 'is-outside ' : ''}${isHoliday || isWeekend ? 'is-red-day ' : ''}${isBooked ? 'is-booked ' : ''}${disabled ? 'is-disabled-rule ' : ''}${value === formData[field] ? 'is-selected ' : ''}${value === todayKey ? 'is-today' : ''}`}>{day.day}</button>;
           })}
         </div>
-        <div className="superadmin-date-calendar__footer"><button type="button" onClick={() => { setFormData((current) => ({ ...current, [field]: '' })); setActiveDatePicker(null); }}>Clear</button><button type="button" onClick={() => { const value = todayKey; setFormData((current) => ({ ...current, [field]: value })); setActiveDatePicker(null); }}>Today</button></div>
+        <div className="superadmin-date-calendar__footer"><button type="button" onClick={() => { setFormData((current) => ({ ...current, [field]: '' })); setActiveDatePicker(null); }}>Clear</button><button type="button" onClick={() => { if (field === 'startDate' && todayKey < minStartDate) return; if (field === 'endDate' && (todayKey < (formData.startDate || minStartDate) || (maxEndDate && todayKey > maxEndDate))) return; setFormData((current) => ({ ...current, [field]: todayKey })); setActiveDatePicker(null); }}>Today</button></div>
       </div>
     );
   };
@@ -342,6 +474,22 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
             <button type="button" className="superadmin-date-field__input" onClick={() => showDatePicker('endDate')}><span>{formatDate(formData.endDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
             {renderDatePicker('endDate')}
           </div>
+        </div>
+
+        {(isMelahirkan || isMeninggal || isNikah) && (
+          <div className="duration-info-alert">
+            {isMelahirkan
+              ? (isFemale ? 'Cuti melahirkan untuk karyawan perempuan maksimal 3 bulan sejak tanggal mulai.' : 'Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal 2 hari kerja. Tanggal merah dan akhir pekan tidak dihitung.')
+              : isMeninggal
+                ? 'Cuti meninggal dapat diajukan kapan saja, maksimal 2 hari kerja. Tanggal merah dan akhir pekan tidak dihitung, serta tidak memotong cuti tahunan.'
+                : 'Cuti nikah maksimal 3 hari kerja. Tanggal merah dan akhir pekan tidak dihitung.'}
+          </div>
+        )}
+        {hasBookedDateInRange && jumlahHariCuti <= 0 && (
+          <div className="duration-info-alert duration-info-alert--warning">Tanggal yang dipilih sudah ada pengajuan cuti lain. Silahkan pilih tanggal lain.</div>
+        )}
+        <div className="duration-info-alert">
+          Durasi pengajuan: {jumlahHariCuti} {isMelahirkan && isFemale ? 'Hari' : 'Hari Kerja'}
         </div>
 
         <div className="form-group_leaveFormHr mt-4">

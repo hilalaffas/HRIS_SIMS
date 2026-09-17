@@ -85,6 +85,7 @@ export const getApprovers = (role, employeeId) => {
 };
 
 export const getLeaveTypes = () => api.get('/api/jenis-cuti');
+export const getCalendarLeaves = (year) => api.get(`/api/cuti/calendar?year=${year}`);
 
 export async function submitCuti(payload) {
   const body = {

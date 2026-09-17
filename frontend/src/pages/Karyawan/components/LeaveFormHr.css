@@ -38,3 +38,15 @@
 .footer-actions_leaveFormHr { display: flex; justify-content: flex-end; margin-top: 16px; border-top: 1px solid #f3f4f6; padding-top: 20px; }
 .btn-submit_leaveFormHr { background-color: var(--color-primary); color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background-color 0.2s; }
 .btn-submit_leaveFormHr:hover { background-color: #0d3828; }
+
+/* Sinkronisasi tampilan blok tanggal dengan kalender form cuti karyawan. */
+.superadmin-date-calendar__days button.is-disabled-rule {
+  opacity: .38;
+  cursor: not-allowed;
+}
+.superadmin-date-calendar__days button.is-booked {
+  text-decoration: line-through;
+}
+.duration-info-alert--warning {
+  border-left: 4px solid currentColor;
+}
