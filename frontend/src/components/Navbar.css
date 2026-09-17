@@ -345,3 +345,29 @@
     right: -0.5rem;
   }
 }
+
+/* [BARU] Tombol hapus (×) per item notifikasi */
+.notification-item {
+  position: relative;
+  padding-right: 2.2rem;
+}
+
+.notification-dismiss-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.notification-dismiss-btn:hover {
+  background-color: #f3f4f6;
+  color: #ef4444;
+}

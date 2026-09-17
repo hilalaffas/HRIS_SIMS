@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getApprovers, getLeaveBalance, getLeaveTypes, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../services/CutiService';
 import CutiSummaryCards from '../../Dashboard/components/CutiSummaryCards';
 import LeaveForm from './components/LeaveForm';
@@ -110,6 +111,7 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale 
 
 const ApplyCuti = ({ user }) => {
   const todayStr = isoToday();
+  const [searchParams, setSearchParams] = useSearchParams(); // [BARU] baca query param dari notifikasi cuti disetujui
   const userRole = user?.role || user?.jabatan || 'Karyawan';
   const atasan = isSupervisor(userRole);
   // [BARU] Dipakai buat batasan Cuti Melahirkan (lihat isFemaleUser di atas).
@@ -223,7 +225,20 @@ const ApplyCuti = ({ user }) => {
   }, [load]);  
   
   //useEffect(() => { if (atasan) { setLeaderEmployeeId(''); setSpvEmployeeId(''); } }, [atasan]);
+// [BARU] Auto-buka modal detail cuti kalau halaman ini diakses lewat
+// notifikasi "cuti disetujui" (Navbar.jsx -> navigate(`/ApplyCuti?leaveRequestId=...`)).
+// Menunggu `history` terisi dulu supaya pencariannya tidak sia-sia, lalu
+// query param dibersihkan supaya tidak auto-buka lagi setelah modal ditutup.
+useEffect(() => {
+  const leaveRequestIdParam = searchParams.get('leaveRequestId');
+  if (!leaveRequestIdParam || history.length === 0) return;
 
+  const target = history.find((item) => String(item.id) === String(leaveRequestIdParam));
+  if (target) handleOpenDetail(target);
+
+  setSearchParams({}, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [history]);
   // Di dalam handleSubmit di ApplyCuti.js
   const handleSubmit = async (event) => {
     event.preventDefault();
