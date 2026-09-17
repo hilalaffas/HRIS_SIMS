@@ -631,6 +631,17 @@ public class LeaveService {
             cuti.setStatus(getStatus(ACTION_RETURNED));
             cuti.setReturnedAt(LocalDateTime.now());
         } else if (isAllApprovalsApproved(leaveRequestId)) {
+            // [FIX] Hitung ulang totalDays di sini, JANGAN percaya begitu saja
+            // nilai yang tersimpan sejak pengajuan dibuat. Kalau pengajuan
+            // sempat dibuat oleh versi aplikasi lama (mis. sebelum dukungan
+            // Cuti Setengah Hari 0,5 hari dibetulkan) lalu baru di-ACC
+            // sekarang, tanpa baris ini saldo akan tetap terpotong dengan
+            // angka lama yang salah walau kode sudah dibetulkan.
+            BigDecimal recalculatedTotalDays = calculateLeaveDays(cuti);
+            if (recalculatedTotalDays.signum() > 0) {
+                cuti.setTotalDays(recalculatedTotalDays);
+            }
+
             // Semua tahap sudah ACC: baru pada titik ini saldo Cuti Lama
             // benar-benar dipotong. Pengajuan PENDING/RETURNED/REJECTED
             // tidak menyentuh saldo.
@@ -901,7 +912,12 @@ public class LeaveService {
 
     private BigDecimal calculateLeaveDays(LeaveRequest cuti) {
         String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
-        String normalizedLeaveTypeName = leaveTypeName == null ? "" : leaveTypeName.toLowerCase(Locale.ROOT);
+        // [FIX] Disamakan dengan getInvalidLeaveDurationMessage() yang sudah
+        // trim() lebih dulu -- sebelumnya method ini TIDAK trim, jadi nama
+        // jenis cuti dengan spasi tak sengaja (leading/trailing) akan lolos
+        // dari pengecekan "cuti setengah hari" dan dihitung sebagai 1 hari
+        // penuh, bukan 0,5.
+        String normalizedLeaveTypeName = leaveTypeName == null ? "" : leaveTypeName.trim().toLowerCase(Locale.ROOT);
 
         if ("cuti setengah hari".equals(normalizedLeaveTypeName)) {
             if (!cuti.getStartDate().equals(cuti.getEndDate())) {
