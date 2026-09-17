@@ -1,4 +1,5 @@
 import React from 'react';
+import { PHOTO_INPUT_ACCEPT } from '../../../utils/fileValidation';
 
 // Lingkaran foto profil (mode baca).
 // - Klik pada foto: buka popup lihat foto ukuran penuh (kalau sudah ada foto).
@@ -48,7 +49,7 @@ const ProfileAvatar = ({ profileImage, initials, onTrigger, onView, fileInputRef
         type="file"
         ref={fileInputRef}
         onChange={onImageChange}
-        accept="image/*"
+        accept={PHOTO_INPUT_ACCEPT}
         className="profile-avatar-file-input"
       />
     </>

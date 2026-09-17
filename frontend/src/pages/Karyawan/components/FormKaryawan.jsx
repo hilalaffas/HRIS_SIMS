@@ -5,6 +5,7 @@ import { getAllDivisi } from '../../../services/divisiService';
 import { getAllRelationships } from '../../../services/relationshipService';
 import Toast from '../../../components/Toast'; // Sesuaikan path ini jika perlu
 import Dropdown from '../../../components/Dropdown';
+import { validatePhotoFile, PHOTO_INPUT_ACCEPT } from '../../../utils/fileValidation';
 
 const ROLE_POSITION_MAP = {
   Member: ['Staff'],
@@ -32,7 +33,7 @@ const getInitialFormData = (canManageRole) => ({
 });
 
 const FormKaryawan = ({ onSubmit, canManageRole }) => {
-  const [fileName, setFileName] = useState("Tidak ada file(Maks. 900KB,.jpg/.png/)");
+  const [fileName, setFileName] = useState("Tidak ada file (Maks. 1MB, .jpg/.png)");
   const [file, setFile] = useState(null);
   const [formData, setFormData] = useState(() => getInitialFormData(canManageRole));
   const [showPassword, setShowPassword] = useState(false);
@@ -87,10 +88,20 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
   const allowedPositions = ROLE_POSITION_MAP[formData.role];
 
   const handleFileChange = (e) => {
-    if (e.target.files.length > 0) {
-      setFileName(e.target.files[0].name);
-      setFile(e.target.files[0]);
+    if (e.target.files.length === 0) return;
+    const selectedFile = e.target.files[0];
+
+    const validationError = validatePhotoFile(selectedFile);
+    if (validationError) {
+      triggerToast(validationError, 'error');
+      e.target.value = ''; // reset input supaya user bisa pilih ulang file yang sama setelah diganti
+      setFile(null);
+      setFileName("Tidak ada file (Maks. 1MB, .jpg/.png)");
+      return;
     }
+
+    setFileName(selectedFile.name);
+    setFile(selectedFile);
   };
 
   const handleInputChange = (e) => {
@@ -178,7 +189,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
             <div className="file-upload-container">
               <label htmlFor="arquivo" className="btn-upload_formkaryawan">Choose File</label>
               <span className="file-name_formkaryawan">{fileName}</span>
-              <input type="file" id="arquivo" className="file-input-hidden" onChange={handleFileChange} accept=".jpg, .jpeg, .png, .gif, .pdf" />
+              <input type="file" id="arquivo" className="file-input-hidden" onChange={handleFileChange} accept={PHOTO_INPUT_ACCEPT} />
             </div>
           </div>
           <div className="input-group_formkaryawan">

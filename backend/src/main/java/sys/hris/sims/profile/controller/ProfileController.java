@@ -93,6 +93,11 @@ public class ProfileController {
     private String storePhoto(UpdateProfileRequest request, User user) {
         try {
             return cloudinaryService.uploadFoto(request.getPhoto(), "user-" + user.getUserId());
+        } catch (IllegalArgumentException validationError) {
+            // Pesan validasi (ukuran/tipe file) dari CloudinaryService harus
+            // sampai apa adanya ke frontend -- jangan dibungkus jadi pesan
+            // generik di bawah ini.
+            throw validationError;
         } catch (Exception exception) {
             throw new IllegalStateException("Gagal menyimpan foto profil", exception);
         }

@@ -9,7 +9,7 @@ import { EMERGENCY_CONTACT_KEY, EMERGENCY_RELATION_KEY } from '../config/profile
 const ProfileViewSection = ({
   formData, profileImage, fileInputRef, onImageChange, onTriggerFileInput,
   showPhotoViewer, onOpenPhotoViewer, onClosePhotoViewer,
-  pendingAvatarPreview, avatarSaving, avatarError, onConfirmAvatarChange, onCancelAvatarChange,
+  pendingAvatarPreview, pendingAvatarFileValid, avatarSaving, avatarError, onConfirmAvatarChange, onCancelAvatarChange,
   onOpenEdit, kolomKiri, kolomKanan, isFieldEditable,
 }) => (
   <>
@@ -90,6 +90,7 @@ const ProfileViewSection = ({
         previewUrl={pendingAvatarPreview}
         saving={avatarSaving}
         error={avatarError}
+        fileValid={pendingAvatarFileValid}
         onCancel={onCancelAvatarChange}
         onConfirm={onConfirmAvatarChange}
       />

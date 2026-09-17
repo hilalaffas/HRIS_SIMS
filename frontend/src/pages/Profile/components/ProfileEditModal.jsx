@@ -2,11 +2,12 @@ import React from 'react';
 import ProfileFieldInput from './ProfileFieldInput';
 import ProfilePasswordSection from './ProfilePasswordSection';
 import { EMERGENCY_CONTACT_KEY, EMERGENCY_RELATION_KEY } from '../config/profileFieldConfig';
+import { PHOTO_INPUT_ACCEPT } from '../../../utils/fileValidation';
 
 // Tampilan MODE EDIT — muncul sebagai popup/modal di atas halaman.
 // Berisi: upload foto, grid field kiri/kanan, section kata sandi, tombol aksi.
 const ProfileEditModal = ({
-  closeEdit, handleSave, saving, chosenFileName, handleImageChange,
+  closeEdit, handleSave, saving, chosenFileName, photoError, handleImageChange,
   kolomKiri, kolomKanan, draftData, handleDraftChange, isFieldEditable,
   passwordData, passwordError, handlePasswordChange,
 }) => (
@@ -40,11 +41,12 @@ const ProfileEditModal = ({
                 <input
                   id="fotoProfilInput"
                   type="file"
-                  accept="image/*"
+                  accept={PHOTO_INPUT_ACCEPT}
                   onChange={handleImageChange}
                   className="profile-photo-input-hidden"
                 />
               </div>
+              {photoError && <p className="profile-photo-error">{photoError}</p>}
             </div>
 
             <div className="profile-edit-grid">

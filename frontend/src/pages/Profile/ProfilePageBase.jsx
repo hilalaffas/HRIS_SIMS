@@ -17,8 +17,8 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
   const isFieldEditable = (cfg) => !cfg.lockedFor || !cfg.lockedFor.includes(currentUserRole);
 
   const {
-    isEditing, loading, profileImage, chosenFileName, showPhotoViewer, toast, saving,
-    pendingAvatarPreview, avatarSaving, avatarError,
+    isEditing, loading, profileImage, chosenFileName, photoError, showPhotoViewer, toast, saving,
+    pendingAvatarPreview, pendingAvatarFileValid, avatarSaving, avatarError,
     fileInputRef, formData, draftData, passwordData, passwordError,
     openEdit, closeEdit, handleDraftChange, handlePasswordChange,
     handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange,
@@ -44,6 +44,7 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
           onOpenPhotoViewer={openPhotoViewer}
           onClosePhotoViewer={closePhotoViewer}
           pendingAvatarPreview={pendingAvatarPreview}
+          pendingAvatarFileValid={pendingAvatarFileValid}
           avatarSaving={avatarSaving}
           avatarError={avatarError}
           onConfirmAvatarChange={confirmAvatarChange}
@@ -62,6 +63,7 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
           handleSave={handleSave}
           saving={saving}
           chosenFileName={chosenFileName}
+          photoError={photoError}
           handleImageChange={handleImageChange}
           kolomKiri={kolomKiri}
           kolomKanan={kolomKanan}

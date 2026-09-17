@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { changeMyPassword, getMyProfile, updateMyProfile } from '../../../services/profileService';
+import { validatePhotoFile } from '../../../utils/fileValidation';
 
 export const getInitials = (fullName) => {
   if (!fullName) return 'AS';
@@ -20,6 +21,7 @@ export const useProfileForm = (currentUserRole, mockData) => {
   const [pendingAvatarPreview, setPendingAvatarPreview] = useState(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [avatarError, setAvatarError] = useState('');
+  const [photoError, setPhotoError] = useState('');
   const [toast, setToast] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
@@ -62,6 +64,7 @@ export const useProfileForm = (currentUserRole, mockData) => {
     setPasswordError('');
     setChosenFileName('');
     setSelectedPhoto(null);
+    setPhotoError('');
     setIsEditing(true);
   };
 
@@ -75,6 +78,7 @@ export const useProfileForm = (currentUserRole, mockData) => {
     setProfileImage(formData.photoUrl || null);
     setSelectedPhoto(null);
     setChosenFileName('');
+    setPhotoError('');
     setIsEditing(false);
   };
 
@@ -88,6 +92,17 @@ export const useProfileForm = (currentUserRole, mockData) => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const validationError = validatePhotoFile(file);
+    if (validationError) {
+      setPhotoError(validationError);
+      e.target.value = ''; // reset input supaya user bisa pilih ulang
+      setChosenFileName('');
+      setSelectedPhoto(null);
+      return;
+    }
+
+    setPhotoError('');
     setChosenFileName(file.name);
     setSelectedPhoto(file);
     const reader = new FileReader();
@@ -102,6 +117,18 @@ export const useProfileForm = (currentUserRole, mockData) => {
   const handleAvatarFileSelected = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const validationError = validatePhotoFile(file);
+    if (validationError) {
+      // Tetap tampilkan preview + pesan error di modal konfirmasi, tapi
+      // pendingAvatarFile sengaja dikosongkan supaya tombol "Simpan Foto"
+      // tidak mengunggah file yang tidak valid (lihat confirmAvatarChange).
+      setAvatarError(validationError);
+      setPendingAvatarFile(null);
+      setPendingAvatarPreview(URL.createObjectURL(file));
+      return;
+    }
+
     setAvatarError('');
     setPendingAvatarFile(file);
     setPendingAvatarPreview(URL.createObjectURL(file));
@@ -173,5 +200,5 @@ export const useProfileForm = (currentUserRole, mockData) => {
     }
   };
 
-  return { isEditing, loading, profileImage, chosenFileName, showPhotoViewer, pendingAvatarPreview, avatarSaving, avatarError, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange, triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave };
+  return { isEditing, loading, profileImage, chosenFileName, photoError, showPhotoViewer, pendingAvatarPreview, pendingAvatarFileValid: !!pendingAvatarFile, avatarSaving, avatarError, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange, triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave };
 };

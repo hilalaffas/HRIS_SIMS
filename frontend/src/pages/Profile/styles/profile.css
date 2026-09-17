@@ -427,6 +427,12 @@
   color: #dc2626;
 }
 
+.profile-photo-error {
+  margin: 6px 0 0 0;
+  font-size: 13px;
+  color: #dc2626;
+}
+
 .profile-avatar-confirm-actions {
   display: flex;
   justify-content: center;

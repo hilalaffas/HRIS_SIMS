@@ -3,7 +3,7 @@ import React from 'react';
 // Popup konfirmasi setelah user memilih foto baru dari ikon kamera di
 // halaman baca. Menampilkan preview dulu — foto baru benar-benar
 // diunggah ke server setelah tombol "Simpan Foto" ditekan.
-const ProfileAvatarConfirmModal = ({ previewUrl, saving, error, onCancel, onConfirm }) => (
+const ProfileAvatarConfirmModal = ({ previewUrl, saving, error, fileValid = true, onCancel, onConfirm }) => (
   <div className="profile-photo-viewer-overlay" onClick={saving ? undefined : onCancel}>
     <div className="profile-avatar-confirm-box" onClick={(e) => e.stopPropagation()}>
       <img src={previewUrl} alt="Preview foto profil" className="profile-avatar-confirm-img" />
@@ -22,7 +22,7 @@ const ProfileAvatarConfirmModal = ({ previewUrl, saving, error, onCancel, onConf
           type="button"
           className="btn-profile-save"
           onClick={onConfirm}
-          disabled={saving}
+          disabled={saving || !fileValid}
         >
           {saving ? 'Menyimpan...' : 'Simpan Foto'}
         </button>
