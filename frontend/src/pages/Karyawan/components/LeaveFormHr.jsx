@@ -25,9 +25,21 @@ const getCalendarDays = (viewDate) => {
   return days;
 };
 
+// [BARU] Konversi label dropdown "DURASI SESI SETENGAH HARI" (sistemnya
+// disamakan dengan ApplyCuti.jsx / LeaveTypeDateSection.jsx pada form
+// Ajukan Cuti karyawan) ke kode sesi mentah "PAGI"/"SIANG" yang disimpan
+// backend (leave_requests.session).
+const SESSION_CODE_BY_LABEL = {
+  'Setengah Hari (Pagi)': 'PAGI',
+  'Setengah Hari (Siang)': 'SIANG',
+};
+
 const initialFormState = {
   karyawanId: '',
   leaveTypeId: '',
+  // [BARU] Default sesi cuti setengah hari, hanya relevan/terkirim kalau
+  // jenis cuti yang dipilih adalah "Cuti Setengah Hari" (lihat isHalfDayLeave).
+  durasiSesi: 'Setengah Hari (Pagi)',
   startDate: '',
   endDate: '',
   leaderEmployeeId: '',
@@ -134,6 +146,16 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   );
   const selectedIsApproverLevel = isManagerOrSpv({ jabatan: selectedKaryawan?.user?.roleId?.roleName });
 
+  // [BARU] Deteksi Cuti Setengah Hari dari leaveTypeId yang dipilih --
+  // sistemnya disamakan dengan LeaveTypeDateSection.jsx (form Ajukan Cuti
+  // karyawan), supaya dropdown "DURASI SESI SETENGAH HARI" (Pagi/Siang)
+  // ikut muncul di form Cuti Susulan ini.
+  const selectedLeaveType = useMemo(
+    () => leaveTypes.find((type) => String(type.leaveTypeId) === String(formData.leaveTypeId)),
+    [leaveTypes, formData.leaveTypeId]
+  );
+  const isHalfDayLeave = String(selectedLeaveType?.name || '').trim().toLowerCase() === 'cuti setengah hari';
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -180,6 +202,11 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
         alasan: formData.alasan,
         pekerjaanTertunda: formData.pekerjaanTertunda,
         dicoverOleh: formData.dicoverOleh,
+        // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
+        // Hari -- jenis cuti lain selalu null, konsisten dengan
+        // submitCuti()/ApplyCuti.jsx (CutiService.js sudah mendukung field
+        // ini di submitUrgentCuti(), tinggal dikirim dari sini).
+        session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[formData.durasiSesi] || 'PAGI') : null,
         leaderEmployeeId: selectedIsApproverLevel ? null : formData.leaderEmployeeId,
         spvEmployeeId: selectedIsApproverLevel ? null : formData.spvEmployeeId,
         managerEmployeeId: formData.managerEmployeeId,
@@ -285,6 +312,25 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
           </div>
         </div>
 
+        {/* [BARU] Muncul hanya untuk "Cuti Setengah Hari" -- sistemnya sama
+            dengan LeaveTypeDateSection.jsx pada form Ajukan Cuti karyawan. */}
+        {isHalfDayLeave && (
+          <div className="form-group_leaveFormHr">
+            <label>DURASI SESI SETENGAH HARI *</label>
+            <Dropdown
+              name="durasiSesi"
+              value={formData.durasiSesi}
+              onChange={handleInputChange}
+              options={[
+                { value: 'Setengah Hari (Pagi)', label: 'Setengah Hari (Pagi: 08.00 - 12.00)' },
+                { value: 'Setengah Hari (Siang)', label: 'Setengah Hari (Siang: 13.00 - 17.00)' },
+              ]}
+              placeholder="Pilih..."
+              required
+            />
+          </div>
+        )}
+
         <div className="form-grid_leaveFormHr" ref={dateFieldsRef}>
           <div className="form-group_leaveFormHr superadmin-date-field">
             <label>DARI TANGGAL (BEBAS)</label>
@@ -296,10 +342,6 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
             <button type="button" className="superadmin-date-field__input" onClick={() => showDatePicker('endDate')}><span>{formatDate(formData.endDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
             {renderDatePicker('endDate')}
           </div>
-        </div>
-
-        <div className="info-box_leaveFormHr">
-          Silakan pilih tanggal awal dan akhir.
         </div>
 
         <div className="form-group_leaveFormHr mt-4">
