@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './Dropdown.css';
 
 /**
@@ -49,13 +49,21 @@ const Dropdown = ({
   id,
   ariaLabel,
   title,
+  searchable = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [query, setQuery] = useState('');
   const wrapperRef = useRef(null);
   const hiddenSelectRef = useRef(null);
 
-  const selectedIndex = options.findIndex(
+  const filteredOptions = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase('id-ID');
+    if (!searchable || !normalizedQuery) return options;
+    return options.filter((opt) => opt.label.toLocaleLowerCase('id-ID').includes(normalizedQuery));
+  }, [options, query, searchable]);
+
+  const selectedIndex = filteredOptions.findIndex(
     (opt) => String(opt.value) === String(value)
   );
   const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : null;
@@ -92,6 +100,7 @@ const Dropdown = ({
 
   const openMenu = () => {
     if (disabled) return;
+    setQuery('');
     setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
     setOpen(true);
   };
@@ -99,11 +108,11 @@ const Dropdown = ({
   const closeMenu = () => setOpen(false);
 
   const moveHighlight = (step) => {
-    if (!options.length) return;
+    if (!filteredOptions.length) return;
     let next = highlightedIndex;
-    for (let i = 0; i < options.length; i += 1) {
-      next = (next + step + options.length) % options.length;
-      if (!options[next]?.disabled) break;
+    for (let i = 0; i < filteredOptions.length; i += 1) {
+      next = (next + step + filteredOptions.length) % filteredOptions.length;
+      if (!filteredOptions[next]?.disabled) break;
     }
     setHighlightedIndex(next);
   };
@@ -120,7 +129,7 @@ const Dropdown = ({
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (open) {
-        const opt = options[highlightedIndex];
+        const opt = filteredOptions[highlightedIndex];
         if (opt && !opt.disabled) {
           emitChange(opt.value);
           closeMenu();
@@ -160,7 +169,21 @@ const Dropdown = ({
 
       {open && !disabled && (
         <ul className="dropdown__menu" role="listbox">
-          {options.map((opt, idx) => {
+          {searchable && (
+            <li className="dropdown__search-wrap">
+              <input
+                autoFocus
+                type="search"
+                className="dropdown__search"
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setHighlightedIndex(0); }}
+                onKeyDown={(e) => e.stopPropagation()}
+                placeholder="Cari..."
+                aria-label="Cari pilihan"
+              />
+            </li>
+          )}
+          {filteredOptions.map((opt, idx) => {
             const isSelected = String(opt.value) === String(value);
             return (
               <li key={opt.value}>
@@ -182,6 +205,9 @@ const Dropdown = ({
               </li>
             );
           })}
+          {filteredOptions.length === 0 && (
+            <li className="dropdown__empty">Data tidak ditemukan.</li>
+          )}
         </ul>
       )}
 

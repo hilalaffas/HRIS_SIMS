@@ -12,6 +12,27 @@
 .sub-label_leaveFormHr { font-size: 12px; font-weight: 600; color: #374151; }
 .form-group_leaveFormHr input, .form-group_leaveFormHr select, .sub-group_leaveFormHr select { padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; color: #2d3748; background-color: #ffffff; outline: none; transition: border-color 0.2s; }
 .form-group_leaveFormHr input:focus, .form-group_leaveFormHr select:focus, .sub-group_leaveFormHr select:focus { border-color: var(--color-primary); }
+.superadmin-date-field { position: relative; }
+.superadmin-date-field__input { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 53px; padding: 10px 17px; border: 1px solid #cbd5e0; border-radius: 7px; background: #fff; color: #243b5a; font: inherit; font-size: 16px; text-align: left; cursor: pointer; }
+.superadmin-date-field__input:focus { border-color: var(--color-primary); outline: none; }
+.superadmin-date-field__icon { width: 20px; height: 20px; fill: none; stroke: #111; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+.superadmin-date-calendar { position: absolute; top: calc(100% + 1px); left: 0; z-index: 50; width: 272px; padding: 12px 13px 10px; box-sizing: border-box; background: #fff; border: 1px solid #aeb4bb; box-shadow: 0 1px 2px rgba(0,0,0,.08); font-family: Arial, sans-serif; }
+.superadmin-date-calendar__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 17px; color: #000; font-size: 14px; }
+.superadmin-date-calendar__header strong span { font-size: 11px; }
+.superadmin-date-calendar__header div { display: flex; gap: 13px; }
+.superadmin-date-calendar__header button { width: 28px; height: 26px; padding: 0; border: 0; background: transparent; color: #222; font-size: 31px; line-height: 20px; cursor: pointer; }
+.superadmin-date-calendar__weekdays, .superadmin-date-calendar__days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.superadmin-date-calendar__weekdays { margin-bottom: 10px; color: #000; font-size: 14px; }
+.superadmin-date-calendar__days { row-gap: 7px; }
+.superadmin-date-calendar__days button { width: 33px; height: 28px; padding: 0; justify-self: center; border: 0; border-radius: 0; background: #fff; color: #000; font: inherit; font-size: 14px; cursor: pointer; }
+.superadmin-date-calendar__days button:hover:not(:disabled) { outline: 1px solid #0078d4; }
+.superadmin-date-calendar__days button.is-outside { color: #78818c; }
+.superadmin-date-calendar__days button.is-red-day { color: #c72222; font-weight: 700; }
+.superadmin-date-calendar__days button.is-selected { background: #0078d4; color: #fff; outline: 2px solid #111; }
+.superadmin-date-calendar__days button.is-today:not(.is-selected) { outline: 1px solid #0078d4; }
+.superadmin-date-calendar__days button:disabled { color: #cbd5e1; cursor: not-allowed; }
+.superadmin-date-calendar__footer { display: flex; justify-content: space-between; margin-top: 18px; padding: 0 7px; }
+.superadmin-date-calendar__footer button { padding: 0; border: 0; background: transparent; color: #0078d4; font: inherit; font-size: 14px; cursor: pointer; }
 .info-box_leaveFormHr { background-color: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; font-size: 13px; text-align: center; padding: 12px; border-radius: 6px; margin-top: 4px; }
 .mt-4 { margin-top: 16px; }
 .footer-actions_leaveFormHr { display: flex; justify-content: flex-end; margin-top: 16px; border-top: 1px solid #f3f4f6; padding-top: 20px; }

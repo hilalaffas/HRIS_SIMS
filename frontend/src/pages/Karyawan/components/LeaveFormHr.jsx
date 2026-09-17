@@ -1,8 +1,29 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
 import './LeaveFormHr.css';
 import { getLeaveTypes, getApprovers, submitUrgentCuti } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles';
+import { getAllHolidays } from '../../../services/holidayService';
+
+const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const toDateKey = (year, month, day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+const formatDate = (value) => value ? value.split('-').reverse().join('/') : '';
+
+const getCalendarDays = (viewDate) => {
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const previousLastDay = new Date(year, month, 0).getDate();
+  const days = [];
+  for (let day = firstWeekday - 1; day >= 0; day -= 1) days.push({ day: previousLastDay - day, month: month === 0 ? 11 : month - 1, year: month === 0 ? year - 1 : year, isCurrentMonth: false });
+  for (let day = 1; day <= lastDay; day += 1) days.push({ day, month, year, isCurrentMonth: true });
+  while (days.length < 42) {
+    const day = days.length - firstWeekday - lastDay + 1;
+    days.push({ day, month: month === 11 ? 0 : month + 1, year: month === 11 ? year + 1 : year, isCurrentMonth: false });
+  }
+  return days;
+};
 
 const initialFormState = {
   karyawanId: '',
@@ -28,6 +49,10 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   const [isLoadingApprovers, setIsLoadingApprovers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [holidayDates, setHolidayDates] = useState(() => new Set());
+  const [activeDatePicker, setActiveDatePicker] = useState(null);
+  const [calendarView, setCalendarView] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const dateFieldsRef = useRef(null);
 
   // Jenis cuti tidak tergantung karyawan yang dipilih -> cukup diambil sekali di awal.
   useEffect(() => {
@@ -40,6 +65,21 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    getAllHolidays()
+      .then((holidays) => setHolidayDates(new Set((holidays || []).map((holiday) => holiday.date))))
+      .catch((error) => console.error('Gagal memuat hari libur:', error));
+  }, []);
+
+  useEffect(() => {
+    const closeDatePicker = (event) => {
+      if (dateFieldsRef.current && !dateFieldsRef.current.contains(event.target)) setActiveDatePicker(null);
+    };
+    document.addEventListener('mousedown', closeDatePicker);
+    return () => document.removeEventListener('mousedown', closeDatePicker);
+  }, []);
+
 
   // [UBAH] Approver (Leader/SPV/Manager) WAJIB satu divisi dengan karyawan
   // yang dipilih HR (bukan divisi HR yang login) -- jadi daftar approver
@@ -111,6 +151,14 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     e.preventDefault();
     setErrorMessage('');
 
+    if (!formData.startDate || !formData.endDate) {
+      setErrorMessage('Tanggal mulai dan tanggal selesai wajib dipilih.');
+      return;
+    }
+    if (formData.endDate < formData.startDate) {
+      setErrorMessage('Tanggal selesai tidak boleh lebih awal dari tanggal mulai.');
+      return;
+    }
     if (!selectedIsApproverLevel && (!formData.leaderEmployeeId || !formData.spvEmployeeId)) {
       setErrorMessage('Leader dan SPV wajib dipilih untuk karyawan ini.');
       return;
@@ -148,6 +196,48 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     }
   };
 
+  const showDatePicker = (field) => {
+    const value = formData[field];
+    if (value) {
+      const [year, month] = value.split('-').map(Number);
+      setCalendarView(new Date(year, month - 1, 1));
+    }
+    setActiveDatePicker((current) => current === field ? null : field);
+  };
+
+  const chooseDate = (field, day) => {
+    const value = toDateKey(day.year, day.month, day.day);
+    if (field === 'endDate' && formData.startDate && value < formData.startDate) return;
+    setFormData((current) => ({ ...current, [field]: value, ...(field === 'startDate' && current.endDate < value ? { endDate: '' } : {}) }));
+    setActiveDatePicker(null);
+  };
+
+  const renderDatePicker = (field) => {
+    if (activeDatePicker !== field) return null;
+    const today = new Date();
+    const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+    return (
+      <div className="superadmin-date-calendar">
+        <div className="superadmin-date-calendar__header">
+          <strong>{MONTH_NAMES[calendarView.getMonth()]} {calendarView.getFullYear()} <span>⌄</span></strong>
+          <div><button type="button" onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() - 1, 1))} aria-label="Bulan sebelumnya">↑</button><button type="button" onClick={() => setCalendarView(new Date(calendarView.getFullYear(), calendarView.getMonth() + 1, 1))} aria-label="Bulan berikutnya">↓</button></div>
+        </div>
+        <div className="superadmin-date-calendar__weekdays"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+        <div className="superadmin-date-calendar__days">
+          {getCalendarDays(calendarView).map((day) => {
+            const value = toDateKey(day.year, day.month, day.day);
+            const isHoliday = holidayDates.has(value);
+            const isWeekend = new Date(day.year, day.month, day.day).getDay() === 0 || new Date(day.year, day.month, day.day).getDay() === 6;
+            const disabled = field === 'endDate' && formData.startDate && value < formData.startDate;
+            return <button key={value} type="button" disabled={disabled} onClick={() => chooseDate(field, day)} title={isHoliday ? 'Hari libur nasional' : isWeekend ? 'Akhir pekan' : undefined} className={`${!day.isCurrentMonth ? 'is-outside ' : ''}${isHoliday || isWeekend ? 'is-red-day ' : ''}${value === formData[field] ? 'is-selected ' : ''}${value === todayKey ? 'is-today' : ''}`}>{day.day}</button>;
+          })}
+        </div>
+        <div className="superadmin-date-calendar__footer"><button type="button" onClick={() => { setFormData((current) => ({ ...current, [field]: '' })); setActiveDatePicker(null); }}>Clear</button><button type="button" onClick={() => { const value = todayKey; setFormData((current) => ({ ...current, [field]: value })); setActiveDatePicker(null); }}>Today</button></div>
+      </div>
+    );
+  };
+
+
   return (
     <div className="card_leaveFormHr">
       <div className="header_leaveFormHr">
@@ -179,6 +269,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
               }))}
               placeholder="Pilih..."
               required
+              searchable
             />
           </div>
           <div className="form-group_leaveFormHr">
@@ -194,14 +285,16 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
           </div>
         </div>
 
-        <div className="form-grid_leaveFormHr">
-          <div className="form-group_leaveFormHr">
+        <div className="form-grid_leaveFormHr" ref={dateFieldsRef}>
+          <div className="form-group_leaveFormHr superadmin-date-field">
             <label>DARI TANGGAL (BEBAS)</label>
-            <input type="date" name="startDate" value={formData.startDate} onChange={handleInputChange} required />
+            <button type="button" className="superadmin-date-field__input" onClick={() => showDatePicker('startDate')}><span>{formatDate(formData.startDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
+            {renderDatePicker('startDate')}
           </div>
-          <div className="form-group_leaveFormHr">
+          <div className="form-group_leaveFormHr superadmin-date-field">
             <label>SAMPAI TANGGAL</label>
-            <input type="date" name="endDate" value={formData.endDate} onChange={handleInputChange} required />
+            <button type="button" className="superadmin-date-field__input" onClick={() => showDatePicker('endDate')}><span>{formatDate(formData.endDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
+            {renderDatePicker('endDate')}
           </div>
         </div>
 
