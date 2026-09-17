@@ -89,9 +89,11 @@ const LeaveTypeDateSection = ({
   leaveTypes = [],
   jumlahHariCuti = 0,
   holidayDates,
+  bookedDates,
   isFemale = false,
 }) => {
   const safeHolidayDates = holidayDates instanceof Set ? holidayDates : new Set();
+  const safeBookedDates = bookedDates instanceof Set ? bookedDates : new Set();
 
   const [showDariCalendar, setShowDariCalendar] = useState(false);
   const [showSampaiCalendar, setShowSampaiCalendar] = useState(false);
@@ -107,6 +109,22 @@ const LeaveTypeDateSection = ({
   const isCutiMeninggal = normalizedLeaveType.includes('meninggal');
   const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType) || isCutiMeninggal;
   const isHalfDayLeave = normalizedLeaveType === 'cuti setengah hari';
+  // [BARU/FIX] Deteksi apakah rentang tanggal yang dipilih tumpang tindih
+  // dengan pengajuan lain yang sudah ACC/masih diproses -- dipakai untuk
+  // menjelaskan KENAPA durasi pengajuan jadi 0 hari kerja (bukan cuma
+  // karena weekend/tanggal merah, tapi karena tanggalnya sudah kepakai).
+  const hasBookedDateInRange = (() => {
+    if (!startDate || !endDate || safeBookedDates.size === 0) return false;
+    for (
+      const date = new Date(`${startDate}T00:00:00`);
+      date <= new Date(`${endDate}T00:00:00`);
+      date.setDate(date.getDate() + 1)
+    ) {
+      const key = toLocalDateStr(date);
+      if (safeBookedDates.has(key)) return true;
+    }
+    return false;
+  })();
   // [BARU] Deteksi Cuti Melahirkan tanpa terikat suffix nama persis
   // (mis. "Cuti Melahirkan (Khusus)").
   const isMelahirkan = normalizedLeaveType.includes('melahirkan');
@@ -303,6 +321,12 @@ const LeaveTypeDateSection = ({
       {isNikah && (
         <div className="duration-info-alert" style={{ marginTop: '-6px' }}>
           {`Cuti nikah maksimal ${MARRIAGE_MAX_DAYS} hari kerja. Tanggal merah dan akhir pekan tidak dihitung.`}
+        </div>
+      )}
+
+      {hasBookedDateInRange && jumlahHariCuti <= 0 && (
+        <div className="duration-info-alert duration-info-alert--warning">
+          Tanggal yang dipilih sudah ada pengajuan cuti lain (ACC, masih diproses, atau dikembalikan). Silahkan pilih tanggal lain
         </div>
       )}
 

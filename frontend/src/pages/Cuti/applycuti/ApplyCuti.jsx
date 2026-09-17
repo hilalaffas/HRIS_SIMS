@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getApprovers, getLeaveBalance, getLeaveTypes, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../services/CutiService';
 import CutiSummaryCards from '../../Dashboard/components/CutiSummaryCards';
@@ -60,20 +60,33 @@ const BEREAVEMENT_MAX_DAYS = 2;
 // info alert-nya).
 const MARRIAGE_MAX_DAYS = 3;
 const isBereavementLeave = (leaveType = '') => String(leaveType).trim().toLowerCase().includes('meninggal');
-const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false) => {
+// [BARU/FIX] "Durasi pengajuan" di form sebelumnya cuma mengecek
+// weekend/tanggal merah -- sama sekali tidak tahu kalau tanggal yang
+// dipilih SUDAH kepakai oleh pengajuan lain milik user yang sama (baik
+// yang sudah ACC maupun yang masih menunggu approval). Akibatnya preview
+// durasi tetap menampilkan angka normal (mis. 0,5 atau 1 hari kerja)
+// padahal backend pasti akan menolaknya sebagai bentrok tanggal
+// (ensureNoOverlap() di LeaveService.java). `bookedDates` berisi setiap
+// tanggal individual yang sudah tercakup pengajuan APPROVED/PENDING lain,
+// diperlakukan sama seperti tanggal merah -- ikut mengurangi hari kerja
+// yang dihitung jadi 0.
+const isDateBooked = (dateStr, bookedDates) => bookedDates instanceof Set && bookedDates.has(dateStr);
+
+const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false, bookedDates = new Set()) => {
   if (!startDate || !endDate) return 0;
   if (startDate > endDate) return 0;
 
   const normalizedJenisCuti = String(jenisCuti).toLowerCase();
 
   // Aturan Khusus: Jika Cuti Setengah Hari, hanya dihitung 0,5 hari
-  // bila tanggal yang dipilih adalah hari kerja. Sabtu/Minggu dan tanggal
-  // merah tetap bernilai 0 hari kerja.
+  // bila tanggal yang dipilih adalah hari kerja DAN belum kepakai
+  // pengajuan lain. Sabtu/Minggu, tanggal merah, dan tanggal yang sudah
+  // dipakai pengajuan lain tetap bernilai 0 hari kerja.
   if (normalizedJenisCuti === 'cuti setengah hari') {
     const tempDate = new Date(`${startDate}T00:00:00`);
     const weekend = tempDate.getDay() === 0 || tempDate.getDay() === 6;
     const key = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`;
-    return !weekend && !holidayDates.has(key) ? 0.5 : 0;
+    return !weekend && !holidayDates.has(key) && !isDateBooked(key, bookedDates) ? 0.5 : 0;
   }
 
   // [UBAH] Cuti Melahirkan PEREMPUAN tetap hari KALENDER (kontinu, batas 3
@@ -92,11 +105,11 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale 
     const tempDate = new Date(`${startDate}T00:00:00`);
     const weekend = tempDate.getDay() === 0 || tempDate.getDay() === 6;
     const key = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`;
-    
-    if (!weekend && !holidayDates.has(key)) {
+
+    if (!weekend && !holidayDates.has(key) && !isDateBooked(key, bookedDates)) {
       return 1; // Terhitung 1 hari kerja jika di hari yang sama
     }
-    return 0; // 0 jika ternyata memilih hari libur/weekend
+    return 0; // 0 jika hari libur/weekend atau tanggal sudah kepakai pengajuan lain
   }
 
   // Perhitungan dinamis rentang tanggal yang berbeda
@@ -104,7 +117,7 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale 
   for (const date = new Date(`${startDate}T00:00:00`); date <= new Date(`${endDate}T00:00:00`); date.setDate(date.getDate() + 1)) {
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    if (!weekend && !holidayDates.has(key)) total++;
+    if (!weekend && !holidayDates.has(key) && !isDateBooked(key, bookedDates)) total++;
   }
   return total;
 };
@@ -150,7 +163,38 @@ const ApplyCuti = ({ user }) => {
   const [isModalEditing, setIsModalEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const jumlahHariCuti = countWorkingDays(startDate, endDate, holidayDates, jenisCuti, isFemale);
+  // [BARU/FIX] Kumpulan tanggal individual yang sudah tercakup pengajuan
+  // APPROVED/PENDING/DIKEMBALIKAN lain milik user ini -- dipakai
+  // countWorkingDays() supaya "Durasi pengajuan" langsung menampilkan 0
+  // hari kerja kalau tanggalnya bentrok, konsisten dengan penolakan
+  // ensureNoOverlap() di backend. Status "Dikembalikan" ikut disertakan
+  // (bukan cuma ACC/Dalam Proses): kalau tanggal yang dipilih sudah
+  // dipakai pengajuan yang DIKEMBALIKAN, user seharusnya memperbaiki &
+  // mengajukan ulang pengajuan itu lewat "Edit" di Riwayat Cuti, bukan
+  // bikin pengajuan baru untuk tanggal yang sama. Saat sedang EDIT
+  // (editingId terisi), pengajuan yang sedang diedit itu sendiri
+  // dikecualikan supaya tidak dianggap bentrok dengan dirinya sendiri.
+  const bookedDates = useMemo(() => {
+    const dates = new Set();
+    history
+      .filter((record) => record.id !== editingId
+        && ['Disetujui (ACC)', 'Dalam Proses', 'Dikembalikan'].includes(record.status))
+      .forEach((record) => {
+        const start = record.rawDetail?.startDate;
+        const end = record.rawDetail?.endDate;
+        if (!start || !end) return;
+        for (
+          const date = new Date(`${String(start).split('T')[0]}T00:00:00`);
+          date <= new Date(`${String(end).split('T')[0]}T00:00:00`);
+          date.setDate(date.getDate() + 1)
+        ) {
+          const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          dates.add(key);
+        }
+      });
+    return dates;
+  }, [history, editingId]);
+  const jumlahHariCuti = countWorkingDays(startDate, endDate, holidayDates, jenisCuti, isFemale, bookedDates);
   const formTopRef = useRef(null);
 
   // Gabungan semua approver (LEADER, SPV, MANAGER) menjadi map { employeeId: fullName }
@@ -225,26 +269,45 @@ const ApplyCuti = ({ user }) => {
   }, [load]);  
   
   //useEffect(() => { if (atasan) { setLeaderEmployeeId(''); setSpvEmployeeId(''); } }, [atasan]);
-// [BARU] Auto-buka modal detail cuti kalau halaman ini diakses lewat
-// notifikasi "cuti disetujui" (Navbar.jsx -> navigate(`/ApplyCuti?leaveRequestId=...`)).
-// Menunggu `history` terisi dulu supaya pencariannya tidak sia-sia, lalu
-// query param dibersihkan supaya tidak auto-buka lagi setelah modal ditutup.
-useEffect(() => {
-  const leaveRequestIdParam = searchParams.get('leaveRequestId');
-  if (!leaveRequestIdParam || history.length === 0) return;
 
-  const target = history.find((item) => String(item.id) === String(leaveRequestIdParam));
-  if (target) handleOpenDetail(target);
+  // [BARU] Auto-buka modal detail cuti kalau halaman ini diakses lewat
+  // notifikasi "cuti disetujui" (Navbar.jsx -> navigate(`/ApplyCuti?leaveRequestId=...`)).
+  // Menunggu `history` terisi dulu supaya pencariannya tidak sia-sia, lalu
+  // query param dibersihkan supaya tidak auto-buka lagi setelah modal ditutup.
+  useEffect(() => {
+    const leaveRequestIdParam = searchParams.get('leaveRequestId');
+    if (!leaveRequestIdParam || history.length === 0) return;
 
-  setSearchParams({}, { replace: true });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [history]);
+    const target = history.find((item) => String(item.id) === String(leaveRequestIdParam));
+    if (target) handleOpenDetail(target);
+
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history]);
+
   // Di dalam handleSubmit di ApplyCuti.js
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (new Date(startDate) < new Date(dinamisBatasMinStr) || new Date(endDate) < new Date(startDate)) {
       setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); 
       return false;
+    }
+
+    // [BARU/FIX] Tolak lebih awal di frontend kalau rentang tanggal sudah
+    // tercakup pengajuan lain (ACC/masih diproses) milik user ini sendiri,
+    // dengan pesan yang jelas -- sebelumnya baru ketahuan setelah backend
+    // menolak dengan pesan generik "sudah memiliki pengajuan cuti pada
+    // rentang tanggal yang bentrok" (ensureNoOverlap() di LeaveService.java).
+    for (
+      const date = new Date(`${startDate}T00:00:00`);
+      date <= new Date(`${endDate}T00:00:00`);
+      date.setDate(date.getDate() + 1)
+    ) {
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      if (bookedDates.has(key)) {
+        setError('Tanggal yang dipilih sudah tercakup pengajuan cuti lain (ACC, masih diproses, atau dikembalikan). Pilih tanggal lain.');
+        return false;
+      }
     }
 
     // Cuti Setengah Hari tetap harus jatuh pada hari kerja. Pada Sabtu,
@@ -465,7 +528,7 @@ useEffect(() => {
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
-      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} canApplyCuti />
+      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
   <FormCuti
@@ -482,7 +545,7 @@ useEffect(() => {
         reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
         pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
         isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true }}
-        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} canApplyCuti />
+        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
     ) : null}
   />
 )}

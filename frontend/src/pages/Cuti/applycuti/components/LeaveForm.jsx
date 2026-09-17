@@ -20,6 +20,7 @@ const LeaveForm = ({
   isSubmitting,
   jumlahHariCuti = 0,
   holidayDates,
+  bookedDates,
   canApplyCuti,
   todayStr,
   leaveTypes = [],
@@ -60,6 +61,7 @@ const LeaveForm = ({
           leaveTypes={leaveTypes}
           jumlahHariCuti={jumlahHariCuti}
           holidayDates={holidayDates}
+          bookedDates={bookedDates}
           isFemale={isFemale}
         />
 
