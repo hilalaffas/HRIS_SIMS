@@ -209,13 +209,6 @@ const LeaveHistory = ({
                         >
                           DIKEMBALIKAN
                         </span>
-                        <button
-                          type="button"
-                          className="btn-edit-inline"
-                          onClick={() => handleEditKembali(item.id)}
-                        >
-                          <i className="fa-regular fa-pen-to-square"></i> Edit
-                        </button>
                       </div>
                     ) : (
                       <button
