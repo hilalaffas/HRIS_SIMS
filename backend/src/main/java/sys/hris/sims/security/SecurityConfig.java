@@ -109,6 +109,13 @@ public class SecurityConfig {
                         // ==========================
                         .requestMatchers("/test", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/register").hasAnyRole(ADMIN_ROLES)
+
+                        // [BARU] Sliding session -- WAJIB authenticated() (bukan permitAll),
+                        // supaya cuma token yang MASIH VALID yang bisa memperpanjang diri.
+                        // Ditulis eksplisit di sini (walau sebenarnya sudah ke-cover oleh
+                        // .anyRequest().authenticated() di baris paling bawah) supaya niatnya
+                        // jelas kebaca & konsisten dengan gaya penulisan rule lain di file ini.
+                        .requestMatchers(HttpMethod.POST, "/api/auth/refresh").authenticated()
                         .requestMatchers("/api/roles").hasAnyRole(ADMIN_ROLES)
                         .requestMatchers("/api/emergency-contact-relationships").hasAnyRole(ADMIN_ROLES)
 

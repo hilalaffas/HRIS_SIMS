@@ -32,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Map; // [BARU] untuk body respons ringkas endpoint /api/auth/refresh
 import java.util.UUID;
 
 import java.time.LocalDate;
@@ -295,6 +296,30 @@ public class AuthController {
                 employee != null ? employee.getGender() : null,
                 employee != null ? employee.getEmployeeId() : null
         ));
+    }
+
+    // [BARU] Sliding session: dipanggil frontend (lihat App.jsx, hook keep-alive)
+    // saat user MASIH AKTIF dan token akan segera kedaluwarsa, supaya sesi
+    // diperpanjang diam-diam tanpa perlu login ulang di tengah kerja.
+    //
+    // Endpoint ini WAJIB melalui JwtAuthFilter seperti endpoint protected
+    // lain (lihat SecurityConfig: .authenticated()) -- jadi kalau token yang
+    // dikirim SUDAH kedaluwarsa/rusak, JwtAuthFilter tidak akan mengisi
+    // SecurityContext, dan request ini otomatis gagal 401 SESSION_EXPIRED
+    // lewat RestAuthenticationEntryPoint seperti biasa. Artinya: token yang
+    // sudah mati TIDAK BISA memperpanjang dirinya sendiri -- user tetap
+    // harus login ulang, sesuai prinsip keamanan yang sama seperti sebelumnya.
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(Authentication authentication) {
+        User user = userRepository.findByUsername(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(401).body("User tidak ditemukan");
+        }
+
+        String role = user.getRoleId().getRoleName();
+        String newToken = jwtService.generateToken(user.getUsername(), role);
+
+        return ResponseEntity.ok(Map.of("token", newToken));
     }
 
     @PutMapping("/change-password")

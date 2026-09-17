@@ -7,7 +7,7 @@ import LogoutModal from './components/LogoutModal';
 import SessionExpiredModal from './components/SessionExpiredModal'; // [BARU]
 import { logoutUser } from './services/authService';
 import { getMyProfile } from './services/profileService'; // [BARU] untuk hydrate foto profil di awal sesi
-import { getAndClearRedirectPath } from './services/api'; // [BARU] alur "kembali ke halaman terakhir"
+import { getAndClearRedirectPath, getTokenExpiryMs, refreshSession } from './services/api'; // [BARU] redirect terakhir & sliding session
 
 import './App.css'; 
 
@@ -99,6 +99,68 @@ const AppContent = () => {
     };
     window.addEventListener('sims:session-expired', handleSessionExpired);
     return () => window.removeEventListener('sims:session-expired', handleSessionExpired);
+  }, []);
+
+  // [BARU] Sliding session: perpanjang token diam-diam SELAMA user masih
+  // aktif memakai aplikasi, supaya modal "sesi habis" di atas tidak lagi
+  // muncul mendadak di tengah kerja padahal user aktif terus -- sebelumnya
+  // token punya masa berlaku TETAP 1 jam sejak login tanpa peduli aktivitas.
+  //
+  // Kalau user BENAR-BENAR tidak aktif (mis. tab dibiarkan terbuka semalaman),
+  // refresh SENGAJA tidak dipicu -- token dibiarkan kedaluwarsa apa adanya
+  // supaya sifat "session timeout demi keamanan" yang asli tetap terjaga.
+  //
+  // Efek ini didaftarkan SEKALI untuk seluruh umur App (bukan digate oleh
+  // ada/tidaknya token saat mount), karena checkAndRefresh() membaca token
+  // dari localStorage LANGSUNG setiap kali jalan -- otomatis menangani
+  // login/logout/refresh-halaman tanpa perlu efek terpisah untuk tiap kasus.
+  useEffect(() => {
+    // Ambang batas -- boleh disesuaikan sesuai kebutuhan:
+    const CHECK_INTERVAL_MS = 60 * 1000;             // cek tiap 1 menit
+    const REFRESH_BEFORE_EXPIRY_MS = 5 * 60 * 1000;  // refresh 5 menit sebelum token habis
+    const INACTIVITY_LIMIT_MS = 15 * 60 * 1000;      // dianggap "tidak aktif" kalau diam >15 menit
+
+    let lastActivityAt = Date.now();
+    let refreshInFlight = false;
+    const markActive = () => { lastActivityAt = Date.now(); };
+
+    // Cuma event yang menandakan user SUNGGUHAN berinteraksi -- polling
+    // background (Navbar.jsx, MainLayout.jsx, dll.) TIDAK dihitung sebagai
+    // aktivitas, supaya tab yang dibiarkan idle tetap ikut logout otomatis.
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    activityEvents.forEach((eventName) =>
+      window.addEventListener(eventName, markActive, { passive: true })
+    );
+
+    const checkAndRefresh = async () => {
+      if (refreshInFlight) return;
+
+      const expiryMs = getTokenExpiryMs();
+      if (!expiryMs) return; // tidak ada token / tidak terbaca -- biarkan alur lain yang menangani
+
+      const timeLeft = expiryMs - Date.now();
+      const idleFor = Date.now() - lastActivityAt;
+
+      if (timeLeft > 0 && timeLeft <= REFRESH_BEFORE_EXPIRY_MS && idleFor <= INACTIVITY_LIMIT_MS) {
+        refreshInFlight = true;
+        try {
+          await refreshSession();
+        } catch (error) {
+          // Diamkan -- kalau token ternyata sudah kedaluwarsa/invalid duluan,
+          // alur 'sims:session-expired' yang sudah ada akan menangani otomatis.
+          console.error('Gagal memperpanjang sesi:', error);
+        } finally {
+          refreshInFlight = false;
+        }
+      }
+    };
+
+    const intervalId = window.setInterval(checkAndRefresh, CHECK_INTERVAL_MS);
+
+    return () => {
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, markActive));
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   const TOAST_DURATION = 2500; // durasi toast tampil (ms), bisa disesuaikan 2000-3000

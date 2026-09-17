@@ -163,3 +163,46 @@ export const api = {
   putForm: (path, formData) => request(path, { method: 'PUT', body: formData }),
   delete: (path) => request(path, { method: 'DELETE' }),
 };
+
+// [BARU] Sliding session -- bagian frontend.
+// Baca klaim `exp` (waktu kedaluwarsa) langsung dari payload JWT yang
+// tersimpan, tanpa perlu library tambahan (cukup base64url decode manual).
+// Dipakai hook keep-alive di App.jsx untuk tahu KAPAN token akan habis,
+// supaya refresh bisa dijadwalkan SEBELUM itu terjadi -- bukan menebak.
+function decodeTokenExpiry(token) {
+  try {
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(base64);
+    const { exp } = JSON.parse(json);
+    // Klaim `exp` JWT standarnya dalam detik Unix -- konversi ke ms
+    // supaya bisa langsung dibandingkan dengan Date.now().
+    return typeof exp === 'number' ? exp * 1000 : null;
+  } catch {
+    return null; // token rusak/format tidak terduga -- biarkan alur normal yang menangani
+  }
+}
+
+// [BARU] Waktu kedaluwarsa token yang TERSIMPAN saat ini, dalam ms epoch.
+// null kalau tidak ada token atau tidak bisa dibaca.
+export function getTokenExpiryMs() {
+  const token = getStoredToken();
+  return token ? decodeTokenExpiry(token) : null;
+}
+
+// [BARU] Tukar token LAMA (yang masih valid) dengan token BARU yang masa
+// berlakunya di-reset penuh -- inilah yang membuat sesi "sliding" (mengikuti
+// aktivitas user), bukan cuma hard-expiry tetap 1 jam sejak login.
+//
+// Lewat wrapper request() yang sama seperti endpoint lain, jadi kalau
+// ternyata token sudah kedaluwarsa duluan (mis. tab dibiarkan idle lama
+// sebelum hook keep-alive sempat jalan), ini akan gagal 401 SESSION_EXPIRED
+// dan mengalir NATURAL ke alur modal "sesi habis" yang sudah ada -- tidak
+// perlu penanganan khusus di sini.
+export async function refreshSession() {
+  const data = await request('/api/auth/refresh', { method: 'POST' });
+  if (data?.token) {
+    setToken(data.token);
+  }
+  return data;
+}
