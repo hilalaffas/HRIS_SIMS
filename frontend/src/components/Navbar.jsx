@@ -87,8 +87,11 @@ export default function Navbar({ toggleSidebar, user }) {
 
     const fetchNotificationFromDB = async () => {
       const [riwayatResult, stepUpdatesResult] = await Promise.allSettled([
-        getRiwayatByUser(),
-        getMyApprovalUpdates(),
+        // [UBAH] { silent: true } -- ini polling badge lonceng notifikasi,
+        // BUKAN loading data utama halaman, jadi tidak boleh memicu
+        // LoadingScreen global tiap 30 detik. Lihat services/api.js.
+        getRiwayatByUser({ silent: true }),
+        getMyApprovalUpdates({ silent: true }),
       ]);
 
       const mappedNotifications = [];
@@ -195,7 +198,10 @@ export default function Navbar({ toggleSidebar, user }) {
     let isMounted = true;
     const fetchAnnouncements = async () => {
       try {
-        const items = await getAnnouncements();
+        // [UBAH] { silent: true } -- badge lonceng, bukan konten utama
+        // halaman, jadi polling 30 detiknya tidak boleh memicu LoadingScreen
+        // global. Lihat services/api.js.
+        const items = await getAnnouncements({ silent: true });
         if (!isMounted) return;
         setAnnouncementNotifications((items || []).map((item) => {
           const timestamp = item.updatedAt || item.createdAt;
@@ -232,7 +238,8 @@ export default function Navbar({ toggleSidebar, user }) {
 
     const fetchResetRequests = async () => {
       try {
-        const data = await getPendingResetRequests();
+        // [UBAH] { silent: true } -- badge lonceng, bukan konten utama halaman.
+        const data = await getPendingResetRequests({ silent: true });
         if (isMounted) setResetRequests(data || []);
       } catch (error) {
         console.error('Gagal memuat notifikasi permintaan reset sandi:', error);
@@ -280,7 +287,8 @@ export default function Navbar({ toggleSidebar, user }) {
 
     const fetchLeaveApprovalTasks = async () => {
       try {
-        const data = await getPendingApprovals();
+        // [UBAH] { silent: true } -- badge lonceng, bukan konten utama halaman.
+        const data = await getPendingApprovals({ silent: true });
         if (isMounted) setLeaveApprovalTasks(data || []);
       } catch (error) {
         console.error('Gagal memuat notifikasi cuti perlu diproses:', error);

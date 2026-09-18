@@ -15,8 +15,11 @@ export const submitForgotPassword = (username) => {
 // lonceng notifikasi. Balikannya sudah berupa PendingPasswordResetResponse
 // (bawa employeeId, employeeName, position, divisiName) -- lihat backend
 // PasswordResetService.getPendingRequests().
-export const getPendingResetRequests = () => {
-  return api.get('/api/password-reset/pending');
+// [UBAH] Tambah parameter config opsional ({ silent }) -- Navbar.jsx
+// memanggil ini tiap 30 detik untuk badge lonceng, selalu silent supaya
+// tidak memicu LoadingScreen global berulang-ulang. Lihat services/api.js.
+export const getPendingResetRequests = (config = {}) => {
+  return api.get('/api/password-reset/pending', config);
 };
 
 // Dipanggil dari Navbar.jsx untuk badge angka di ikon lonceng.

@@ -31,8 +31,12 @@ export function formatRelativeTime(isoString) {
   return `${Math.floor(diffDays / 7)} Minggu Lalu`;
 }
 
-export async function getAnnouncements() {
-  const news = await api.get('/api/news');
+// [UBAH] Tambah parameter config opsional ({ silent }) -- diteruskan ke
+// api.get. Dipakai Navbar.jsx (polling badge, selalu silent) dan
+// AnnouncementSection.jsx (widget Dashboard, polling 30 detik selalu
+// silent). Lihat services/api.js.
+export async function getAnnouncements(config = {}) {
+  const news = await api.get('/api/news', config);
   return news
     .filter((item) => item.published !== false)
     .map(mapNews)

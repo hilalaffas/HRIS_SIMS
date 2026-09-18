@@ -5,6 +5,7 @@ import { useProfileForm } from './hooks/useProfileForm';
 import ProfileViewSection from './components/ProfileViewSection';
 import ProfileEditModal from './components/ProfileEditModal';
 import ProfileToast from './components/ProfileToast';
+import ProfileSkeleton from './components/ProfileSkeleton'; // [BARU]
 
 // Komponen inti — dipakai bersama oleh ProfileStaff, ProfileSPV, ProfileManager, ProfileAdmin.
 // Semua logic/state ada di hook `useProfileForm`. Tampilan dipecah jadi:
@@ -25,7 +26,13 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
     triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave,
   } = useProfileForm(currentUserRole, mockData);
 
-  if (loading) return <div className="profile-loading">Memuat data...</div>;
+  // [UBAH] Skeleton (mengikuti bentuk banner + avatar + grid info asli),
+  // bukan lagi teks polos "Memuat data...".
+  if (loading) return (
+    <div className="profile-page-container">
+      <ProfileSkeleton />
+    </div>
+  );
 
   const kolomKiri = FIELD_CONFIG.filter((f) => f.column === 'kiri');
   const kolomKanan = FIELD_CONFIG.filter((f) => f.column === 'kanan');

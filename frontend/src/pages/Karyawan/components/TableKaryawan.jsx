@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
+import Skeleton from '../../../components/Skeleton'; // [BARU]
 import './TableKaryawan.css';
 
 // [BARU] Opsi jumlah data per halaman untuk pagination Direktori Karyawan.
@@ -16,7 +17,7 @@ const JABATAN_FILTER_OPTIONS = [
   { value: 'HRD_Karyawan', label: 'HR Karyawan' },
 ];
 
-const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null }) => {
+const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isLoading = false }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterJabatan, setFilterJabatan] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -127,8 +128,36 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null }) =
             </tr>
           </thead>
           <tbody>
-            {/* 4. Render menggunakan pageData di sini (hasil filter + pagination) */}
-            {pageData.map((emp) => {
+            {/* [BARU] Selagi fetch pertama berlangsung, tampilkan baris
+                skeleton (bentuk tabel aslinya) alih-alih tabel kosong --
+                supaya user langsung tahu ini "sedang memuat", bukan "memang
+                tidak ada data". Tidak tampil lagi begitu data sudah ada
+                (polling silent berikutnya tidak menimpa data dengan skeleton). */}
+            {isLoading && pageData.length === 0 ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={`skeleton-${i}`} aria-hidden="true">
+                  <td>
+                    <div className="employee-info">
+                      <Skeleton variant="circle" size={40} />
+                      <div style={{ flex: 1 }}>
+                        <Skeleton width="70%" height={13} style={{ marginBottom: 6 }} />
+                        <Skeleton width="45%" height={11} />
+                      </div>
+                    </div>
+                  </td>
+                  <td><Skeleton variant="pill" width={80} height={20} /></td>
+                  <td>
+                    <Skeleton width="60%" height={13} style={{ marginBottom: 6 }} />
+                    <Skeleton width="40%" height={11} />
+                  </td>
+                  <td style={{ textAlign: 'center' }}><Skeleton width={24} height={13} style={{ margin: '0 auto' }} /></td>
+                  <td><Skeleton variant="pill" width={64} height={20} /></td>
+                  <td><Skeleton width={70} height={28} style={{ borderRadius: 'var(--radius-sm)' }} /></td>
+                </tr>
+              ))
+            ) : (
+              /* 4. Render menggunakan pageData di sini (hasil filter + pagination) */
+              pageData.map((emp) => {
               const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://sims-backend-api-61je.onrender.com';
               const photoUrl = emp.photo
                 ? (emp.photo.startsWith('http') ? emp.photo : `${API_BASE_URL}/${emp.photo}`)
@@ -174,7 +203,8 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null }) =
                   </td>
                 </tr>
               );
-            })}
+              })
+            )}
           </tbody>
         </table>
       </div>

@@ -24,9 +24,12 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
     const loadCalendarData = async () => {
       setIsLoading(true);
       try {
+        // [UBAH] { silent: true } -- widget sekunder di Dashboard (bukan
+        // konten utama halaman), jadi polling 30 detiknya tidak boleh
+        // memicu LoadingScreen global. Lihat services/api.js.
         const [holidayList, teamLeaveData] = await Promise.all([
-          getHolidaysByMonth(currentYear, currentMonth + 1), // backend 1-indexed (LocalDate Java)
-          getTeamLeaveByYear(currentYear),
+          getHolidaysByMonth(currentYear, currentMonth + 1, { silent: true }), // backend 1-indexed (LocalDate Java)
+          getTeamLeaveByYear(currentYear, { silent: true }),
         ]);
 
         const holidayMap = {};

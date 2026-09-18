@@ -1,0 +1,103 @@
+/* src/components/LoadingScreen.css */
+
+/* [BARU] Overlay penuh layar. z-index sengaja di BAWAH SessionExpiredModal
+   (9999) -- kalau sesi habis tepat saat data sedang dimuat, modal sesi
+   habis tetap harus menang -- tapi di ATAS Toast (100) dan seluruh konten
+   halaman. */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-surface);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.loading-screen--active,
+.loading-screen--complete {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.loading-screen--hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-screen__logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* [BELUM] Placeholder wordmark teks -- lihat catatan penggantian SVG di
+   LoadingScreen.jsx. Warna default "redup" (belum menyala), berubah ke
+   hijau brand + glow begitu progress bar menyentuh titik di ujungnya. */
+.loading-screen__wordmark {
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--color-border);
+  text-shadow: none;
+  transition: color 0.35s ease, text-shadow 0.35s ease;
+}
+
+.loading-screen--complete .loading-screen__wordmark {
+  color: var(--color-primary);
+  text-shadow: 0 0 18px var(--color-primary-tint), 0 0 6px var(--color-primary-soft);
+}
+
+/* Garis horizontal tepat di bawah wordmark -- track diam (abu-abu pucat),
+   bar hijau di dalamnya yang memanjang dari kiri ke kanan sesuai progress. */
+.loading-screen__track {
+  position: relative;
+  width: 160px;
+  height: 3px;
+  background-color: var(--color-border);
+  border-radius: 999px;
+  overflow: visible;
+}
+
+.loading-screen__bar {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-primary);
+  border-radius: 999px;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.2s ease-out;
+}
+
+/* Titik di ujung kanan track -- diam/pudar selagi loading, menyala + glow
+   begitu bar mencapai 100%. */
+.loading-screen__dot {
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-border);
+  transform: translate(50%, -50%) scale(1);
+  transition: background-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+}
+
+.loading-screen--complete .loading-screen__dot {
+  background-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-tint), 0 0 10px var(--color-primary-soft);
+  transform: translate(50%, -50%) scale(1.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-screen,
+  .loading-screen__wordmark,
+  .loading-screen__bar,
+  .loading-screen__dot {
+    transition: none;
+  }
+}

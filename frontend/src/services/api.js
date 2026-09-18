@@ -43,6 +43,47 @@ export class SessionExpiredError extends Error {
   }
 }
 
+// [BARU] Penghitung request GET yang sedang berjalan, dipakai untuk
+// menyalakan/mematikan LoadingScreen global (lihat components/LoadingScreen.jsx).
+// Pola CustomEvent-nya SENGAJA disamakan dengan triggerSessionExpired() di
+// atas: api.js tetap murni lapisan network, tidak tahu apa-apa soal React --
+// dia cuma broadcast 'sims:loading-start' / 'sims:loading-end' ke window,
+// dan LoadingScreen yang mendengarkan lalu mengatur tampilannya sendiri.
+//
+// Kenapa cuma GET yang dihitung? Supaya LoadingScreen konsisten artinya
+// "sedang mengambil data halaman", bukan "sedang menyimpan/mengubah data".
+// Aksi simpan/update/hapus (POST/PUT/DELETE) sudah punya pola sendiri
+// (tombol disabled + teks "Menyimpan...", lihat catatan double-submit-
+// prevention) -- tidak perlu (dan tidak enak dilihat) ditimpa splash
+// screen penuh layar tiap kali user klik "Simpan".
+let pendingGetRequests = 0;
+
+function beginGlobalLoading() {
+  pendingGetRequests += 1;
+  if (pendingGetRequests === 1) {
+    window.dispatchEvent(new CustomEvent('sims:loading-start'));
+  }
+}
+
+function endGlobalLoading() {
+  pendingGetRequests = Math.max(0, pendingGetRequests - 1);
+  if (pendingGetRequests === 0) {
+    window.dispatchEvent(new CustomEvent('sims:loading-end'));
+  }
+}
+
+// [BARU] Helper generik untuk kasus (kalau ada) file lain yang suatu saat
+// perlu fetch() manual di luar wrapper `api` di atas, supaya tetap bisa ikut
+// terhitung LoadingScreen global tanpa migrasi penuh ke wrapper `api`.
+// Bungkus promise-nya: trackGlobalLoading(fetch(...)). Saat ini SELURUH
+// halaman (termasuk Profile, lewat services/profileService.js) sudah lewat
+// wrapper `api` di atas, jadi helper ini belum ada pemakainya -- disiapkan
+// untuk jaga-jaga saja.
+export function trackGlobalLoading(promise) {
+  beginGlobalLoading();
+  return promise.finally(endGlobalLoading);
+}
+
 function triggerSessionExpired(message) {
   if (sessionExpiryHandled) return;
   sessionExpiryHandled = true;
@@ -106,8 +147,21 @@ export function clearToken() {
 async function request(path, options = {}) {
   const token = getStoredToken();
 
-  const headers = { ...(options.headers || {}) };
-  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+  // [BARU] `silent` BUKAN properti fetch RequestInit -- dikeluarkan dulu
+  // dari options sebelum di-spread ke fetch(), supaya tidak ikut terkirim.
+  // method di-uppercase soalnya beberapa caller lama ada yang ikut nulis
+  // 'get' huruf kecil (lihat riwayat git); jangan sampai GET tercecer
+  // karena perbandingan case-sensitive.
+  const { silent = false, ...fetchOptions } = options;
+  const method = (fetchOptions.method || 'GET').toUpperCase();
+  // [BARU] Cuma GET yang dianggap "loading data halaman" (lihat komentar
+  // beginGlobalLoading di atas). Silent=true dipakai pemanggil untuk polling
+  // background (notifikasi navbar, badge approval, dst) yang tidak boleh
+  // memicu splash screen berulang-ulang.
+  const shouldTrack = method === 'GET' && !silent;
+
+  const headers = { ...(fetchOptions.headers || {}) };
+  if (!(fetchOptions.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -115,10 +169,16 @@ async function request(path, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  if (shouldTrack) beginGlobalLoading();
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...fetchOptions,
+      headers,
+    });
+  } finally {
+    if (shouldTrack) endGlobalLoading();
+  }
 
   // Beberapa endpoint (mis. DELETE /api/holidays/{id}) mengembalikan plain text,
   // bukan JSON, jadi kita coba parse JSON dulu dan fallback ke teks mentah kalau gagal.
@@ -164,7 +224,11 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  get: (path) => request(path, { method: 'GET' }),
+  // [UBAH] `config` baru, opsional -- saat ini cuma dibaca `config.silent`.
+  // Pemanggilan lama `api.get(path)` tetap jalan apa adanya (silent default
+  // false), jadi tidak ada call site lain yang perlu diubah kecuali yang
+  // memang mau ikut skema silent (lihat CutiService.js, holidayService.js, dst).
+  get: (path, config = {}) => request(path, { method: 'GET', silent: config.silent }),
   post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) }),
   put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body) }),
   // [BARU] Rekan `putForm` untuk method POST -- dipakai karyawanService.js

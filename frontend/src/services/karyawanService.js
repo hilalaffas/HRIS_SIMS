@@ -16,8 +16,11 @@ export const registerKaryawan = (formData) => {
 };
 
 // 2. GET LIST (Bisa langsung pakai wrapper api.js)
-export const getKaryawanList = () => {
-    return api.get('/api/karyawan'); // Ganti dengan endpoint Get All Karyawan Anda
+// [UBAH] Tambah parameter config opsional ({ silent }) -- dipakai
+// Karyawan.jsx (fetchKaryawan) supaya polling background silent tidak
+// memicu LoadingScreen global berulang-ulang. Lihat services/api.js.
+export const getKaryawanList = (config = {}) => {
+    return api.get('/api/karyawan', config); // Ganti dengan endpoint Get All Karyawan Anda
 };
 
 // 3. UPDATE (Khusus FormData juga, sama seperti register -- backend-nya

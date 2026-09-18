@@ -1,6 +1,7 @@
 // src/pages/Dashboard/components/CutiSummaryCards.jsx
 import React from 'react';
 import './CutiSummaryCards.css';
+import Skeleton from '../../../components/Skeleton'; // [BARU]
 
 const formatTanggal = (isoDate) => {
   if (!isoDate) return null;
@@ -19,7 +20,22 @@ const formatTanggal = (isoDate) => {
  * Contoh pemakaian:
  * <CutiSummaryCards balance={balance} />
  */
-export default function CutiSummaryCards({ balance }) {
+export default function CutiSummaryCards({ balance, isLoading = false }) {
+  // [BARU] Selagi balance belum datang dari backend, tampilkan skeleton
+  // dengan bentuk kartu yang sama persis -- sebelumnya kartu ini langsung
+  // menampilkan "0 Hari" (angka default saat balance masih null), yang
+  // menyesatkan karena terlihat seperti data asli padahal belum tentu 0.
+  if (isLoading) {
+    return (
+      <div className="cuti-card cuti-card--dark" aria-hidden="true">
+        <Skeleton className="skeleton--onDark" width={110} height={11} style={{ marginBottom: 10 }} />
+        <Skeleton className="skeleton--onDark" width={90} height={38} style={{ marginBottom: 10 }} />
+        <Skeleton className="skeleton--onDark" width="80%" height={11} />
+        <i className="fa-regular fa-calendar cuti-card__icon" aria-hidden="true"></i>
+      </div>
+    );
+  }
+
   const totalSisa = balance?.totalRemainingLeave ?? 0;
   const sisaManual = balance?.remainingManualLeave ?? 0;
   const tanggalRefresh = formatTanggal(balance?.annualPeriodEnd);

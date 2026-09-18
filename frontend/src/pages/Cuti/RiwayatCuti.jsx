@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Dropdown from '../../components/Dropdown';
+import Skeleton from '../../components/Skeleton'; // [BARU]
 import './RiwayatCuti.css';
 import { getAllLeaveRequestsForHr, getApprovalHistory, getRiwayatByUser } from '../../services/CutiService';
 import { isHrAdmin, isManagerOrSpv, isSuperAdmin } from '../../utils/roles';
@@ -118,13 +119,17 @@ export default function RiwayatCuti({ user }) {
   const fetchHistory = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     try {
+      // [UBAH] Teruskan { silent } ke service -- supaya polling background
+      // (silent=true, lihat interval di bawah) tidak ikut memicu
+      // LoadingScreen global, sementara initial load (silent=false) tetap
+      // memicunya seperti biasa. Lihat services/api.js.
       let rows;
       if (hrOrSuperAdmin) {
-        rows = (await getAllLeaveRequestsForHr()).map(normalizeOthersRow);
+        rows = (await getAllLeaveRequestsForHr({ silent })).map(normalizeOthersRow);
       } else if (approver) {
-        rows = (await getApprovalHistory()).map(normalizeOthersRow);
+        rows = (await getApprovalHistory({ silent })).map(normalizeOthersRow);
       } else {
-        rows = (await getRiwayatByUser()).map(normalizeSelfRow);
+        rows = (await getRiwayatByUser({ silent })).map(normalizeSelfRow);
       }
       // id (leave_request_id) auto-increment, jadi urutan ID terbesar =
       // pengajuan paling baru. Dipakai sebagai patokan urutan terbaru di
@@ -263,7 +268,30 @@ export default function RiwayatCuti({ user }) {
         </div>
 
         {loading ? (
-          <div className="rc-empty">Memuat riwayat cuti...</div>
+          <div className={`rc-table ${!isKaryawanSelf ? 'rc-table--withEmployee' : ''}`} role="table" aria-hidden="true">
+            <div className="rc-row rc-row--head" role="row">
+              {!isKaryawanSelf && <div role="columnheader">Karyawan</div>}
+              <div role="columnheader">Jenis Cuti</div>
+              <div role="columnheader">Periode &amp; Durasi</div>
+              <div role="columnheader">Status</div>
+            </div>
+            {/* [BARU] Baris skeleton mengikuti bentuk rc-row/rc-cell asli --
+                supaya user langsung lihat "ini tabel riwayat", bukan kotak
+                kosong bertuliskan teks loading. */}
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div className="rc-row" role="row" key={`skeleton-${i}`}>
+                {!isKaryawanSelf && (
+                  <div role="cell" className="rc-row__employee">
+                    <Skeleton variant="circle" size={28} />
+                    <Skeleton width="55%" height={12} style={{ marginLeft: 8 }} />
+                  </div>
+                )}
+                <div role="cell" className="rc-cell"><Skeleton width="70%" height={12} /></div>
+                <div role="cell" className="rc-cell rc-row__period"><Skeleton width="80%" height={12} /></div>
+                <div role="cell" className="rc-cell"><Skeleton variant="pill" width={72} height={20} /></div>
+              </div>
+            ))}
+          </div>
         ) : filteredData.length === 0 ? (
           <div className="rc-empty">Belum ada riwayat cuti untuk status ini.</div>
         ) : (

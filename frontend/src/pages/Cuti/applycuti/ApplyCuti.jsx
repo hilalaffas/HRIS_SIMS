@@ -242,7 +242,10 @@ const ApplyCuti = ({ user }) => {
     // formulir pengajuan cuti di atas.
     const syncHistory = async () => {
       try {
-        const latest = await getRiwayatByUser();
+        // [UBAH] { silent: true } -- ini polling background sambil user
+        // sedang mengisi formulir, tidak boleh memicu LoadingScreen global.
+        // Lihat services/api.js.
+        const latest = await getRiwayatByUser({ silent: true });
         setHistory(latest);
         setHistorySyncedAt(new Date());
       } catch {

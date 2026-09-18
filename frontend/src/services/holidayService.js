@@ -17,15 +17,20 @@ export async function syncHolidays(year) {
  * Ambil semua hari libur pada bulan tertentu.
  * month: 1-12 (LocalDate Java 1-indexed, BUKAN 0-indexed seperti Date.getMonth() di JS)
  */
-export async function getHolidaysByMonth(year, month) {
-  return api.get(`/api/holidays/month?year=${year}&month=${month}`);
+// [UBAH] Tambah parameter config opsional ({ silent }) -- diteruskan ke
+// api.get. Dipakai CalendarCard.jsx (widget Dashboard, polling 30 detik
+// selalu silent). Lihat services/api.js.
+export async function getHolidaysByMonth(year, month, config = {}) {
+  return api.get(`/api/holidays/month?year=${year}&month=${month}`, config);
 }
 
 /**
  * Ambil semua hari libur (dipakai kalau butuh data satu tahun penuh sekaligus).
  */
-export async function getAllHolidays() {
-  return api.get('/api/holidays');
+// [UBAH] Tambah parameter config opsional ({ silent }) -- dipakai Navbar.jsx
+// (polling notifikasi hari libur, selalu silent). Lihat services/api.js.
+export async function getAllHolidays(config = {}) {
+  return api.get('/api/holidays', config);
 }
 
 /**

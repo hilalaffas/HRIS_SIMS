@@ -21,16 +21,22 @@ export default function DashboardManager({ user }) {
   // [UBAH] Simpan seluruh objek balance (bukan cuma remainingAnnualLeave)
   // supaya CutiSummaryCards bisa nampilin Total (Tahunan + Sisa Cuti manual).
   const [leaveBalance, setLeaveBalance] = useState(null);
+  // [BARU] Dipakai CutiSummaryCards untuk menampilkan skeleton, bukan "0 Hari"
+  // yang menyesatkan, selagi fetch pertama berlangsung.
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
 
   useEffect(() => {
-    getLeaveBalance().then(setLeaveBalance).catch(() => setLeaveBalance(null));
+    getLeaveBalance()
+      .then(setLeaveBalance)
+      .catch(() => setLeaveBalance(null))
+      .finally(() => setIsLoadingBalance(false));
   }, []);
 
   return (
     <div className="dashboard">
 
       <div className="dashboard__announcements">
-        <CutiSummaryCards balance={leaveBalance} />
+        <CutiSummaryCards balance={leaveBalance} isLoading={isLoadingBalance} />
 
         <h2 className="dashboard__section-title">PENGUMUMAN &amp; PORTAL BERITA</h2>
         <AnnouncementSection />

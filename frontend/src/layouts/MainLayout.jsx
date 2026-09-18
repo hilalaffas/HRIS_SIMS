@@ -28,7 +28,10 @@ export default function MainLayout({ onLogout, user }) {
 
     const refreshApprovalCount = async () => {
       try {
-        const pending = await getPendingApprovals();
+        // [UBAH] { silent: true } -- ini cuma badge angka approval di
+        // Sidebar, bukan konten utama halaman, jadi tidak boleh memicu
+        // LoadingScreen global tiap 15 detik. Lihat services/api.js.
+        const pending = await getPendingApprovals({ silent: true });
         setApprovalCount(pending.length);
       } catch {
         setApprovalCount(0);

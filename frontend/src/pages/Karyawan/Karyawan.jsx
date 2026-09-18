@@ -61,6 +61,9 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
 
   const [karyawanList, setKaryawanList] = useState([]);
+  // [BARU] Dipakai TableKaryawan untuk menampilkan skeleton loading (baris
+  // shimmer) selagi fetch pertama kali berlangsung, alih-alih tabel kosong.
+  const [isLoadingKaryawan, setIsLoadingKaryawan] = useState(true);
   // [BARU] Timestamp sinkronisasi terakhir, dipakai TableKaryawan untuk
   // indikator "Live · terakhir diperbarui ...".
   const [karyawanSyncedAt, setKaryawanSyncedAt] = useState(null);
@@ -119,8 +122,15 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   };
 
   const fetchKaryawan = async ({ silent = false } = {}) => {
+    // [BARU] Skeleton cuma perlu tampil saat BENAR-BENAR belum ada data
+    // (initial load) -- polling silent di background TIDAK boleh menimpa
+    // tabel yang sudah terisi dengan skeleton lagi.
+    if (!silent) setIsLoadingKaryawan(true);
     try {
-      const response = await getKaryawanList();
+      // [UBAH] Teruskan { silent } ke service -- supaya polling background
+      // (silent=true, lihat interval di bawah) tidak ikut memicu
+      // LoadingScreen global. Lihat services/api.js.
+      const response = await getKaryawanList({ silent });
       // Asumsi backend mengembalikan array of object di response.data atau response langsung
       const list = response.data || response || [];
 
@@ -130,7 +140,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
       // (lihat TableKaryawan.jsx) supaya tidak blank total.
       let balanceByEmployeeId = new Map();
       try {
-        const balanceResponse = await getAllLeaveBalances();
+        const balanceResponse = await getAllLeaveBalances({ silent });
         const balances = balanceResponse.data || balanceResponse || [];
         balanceByEmployeeId = new Map(balances.map((b) => [b.employeeId, b]));
       } catch (balanceError) {
@@ -150,6 +160,10 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
       // Error polling background tidak perlu mengganggu user dengan apapun --
       // data lama tetap tampil, dan fetch berikutnya akan mencoba lagi.
       if (!silent) console.error("Gagal menarik data karyawan:", error);
+    } finally {
+      // [BARU] Selalu dimatikan di sini (bukan cuma di jalur sukses) supaya
+      // skeleton tidak nyangkut kalau request gagal.
+      if (!silent) setIsLoadingKaryawan(false);
     }
   };
 
@@ -401,6 +415,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
               currentUserRole={currentUserRole}
               onEdit={handleOpenEdit}
               lastSyncedAt={karyawanSyncedAt}
+              isLoading={isLoadingKaryawan}
             />
           </div>
         )}

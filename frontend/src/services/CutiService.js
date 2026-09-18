@@ -71,9 +71,12 @@ export const getLeaveBalance = () => api.get('/api/cuti/balance/me');
 // tahunan karyawan lain -- bukan dirinya sendiri.
 export const getLeaveBalanceByEmployeeId = (employeeId) => api.get(`/api/cuti/balance/${employeeId}`);
 
-// [BARU] Total sisa cuti (Tahunan + Lama) SEMUA karyawan sekaligus,
+// [UBAH] Tambah parameter config opsional ({ silent }) -- diteruskan ke
+// api.get supaya polling silent Karyawan.jsx (fetchKaryawan) tidak memicu
+// LoadingScreen global berulang-ulang. Lihat services/api.js.
+// Total sisa cuti (Tahunan + Lama) SEMUA karyawan sekaligus,
 // dipakai TableKaryawan.jsx lewat Karyawan.jsx (fetchKaryawan).
-export const getAllLeaveBalances = () => api.get('/api/cuti/balance/all');
+export const getAllLeaveBalances = (config = {}) => api.get('/api/cuti/balance/all', config);
 
 // [UBAH] Tambah employeeId opsional -- dipakai form Cuti Susulan (HR pilih
 // approver ATAS NAMA karyawan lain, bukan dirinya sendiri). Pemanggilan lama
@@ -182,8 +185,13 @@ export function mapMyLeave(item) {
   };
 }
 
-export async function getRiwayatByUser() { 
-  const res = await api.get('/api/cuti/me');
+// [UBAH] Tambah parameter config opsional ({ silent }) -- diteruskan ke
+// api.get. Dipakai Navbar.jsx (polling notifikasi, selalu silent) dan
+// ApplyCuti.jsx/RiwayatCuti.jsx (silent hanya saat polling background,
+// TIDAK saat initial load) supaya LoadingScreen global tidak muncul
+// berulang-ulang tiap 15-30 detik. Lihat services/api.js.
+export async function getRiwayatByUser(config = {}) {
+  const res = await api.get('/api/cuti/me', config);
   return Array.isArray(res) ? res.map(mapMyLeave) : []; 
 }
 
@@ -194,10 +202,15 @@ export const getMyLeaveDetail = (id) => api.get(`/api/cuti/${id}/detail`);
 // approver (Leader/SPV/Manager) sudah ACC, walau berkas belum final/lengkap
 // (masih menunggu approver lain). Begitu berkas final, baris terkait otomatis
 // tidak ikut lagi (lihat LeaveService.getMyApprovalStepUpdates di backend).
-export const getMyApprovalUpdates = () => api.get('/api/cuti/me/approval-updates');
+// [UBAH] Tambah parameter config opsional ({ silent }) -- dipakai Navbar.jsx
+// (selalu silent, ini murni polling badge notifikasi). Lihat services/api.js.
+export const getMyApprovalUpdates = (config = {}) => api.get('/api/cuti/me/approval-updates', config);
 
-export async function getTeamLeaveByYear(year) {
-  const requests = await api.get(`/api/cuti/calendar?year=${year}`);
+// [UBAH] Tambah parameter config opsional ({ silent }) -- dipakai
+// CalendarCard.jsx (widget kalender Dashboard, polling tiap 30 detik selalu
+// silent). Lihat services/api.js.
+export async function getTeamLeaveByYear(year, config = {}) {
+  const requests = await api.get(`/api/cuti/calendar?year=${year}`, config);
   const result = {};
 
   if (!Array.isArray(requests)) return result;
@@ -347,19 +360,23 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
   };
 }
 
+// [UBAH] Tambah parameter config opsional ({ silent }) di getAllLeaveRequestsForHr,
+// getPendingApprovals & getApprovalHistory -- diteruskan ke api.get. Dipakai
+// Navbar.jsx/MainLayout.jsx (selalu silent, badge notifikasi) dan
+// RiwayatCuti.jsx (silent hanya saat polling background). Lihat services/api.js.
 // [BARU MERGED] Mengambil seluruh cuti untuk HR
-export async function getAllLeaveRequestsForHr() {
-  const res = await api.get('/api/cuti');
+export async function getAllLeaveRequestsForHr(config = {}) {
+  const res = await api.get('/api/cuti', config);
   return Array.isArray(res) ? res.map(mapKaryawanLeave) : [];
 }
 
-export const getPendingApprovals = async () => {
-  const res = await api.get('/api/cuti/approvals/my-task');
+export const getPendingApprovals = async (config = {}) => {
+  const res = await api.get('/api/cuti/approvals/my-task', config);
   return Array.isArray(res) ? res.map(item => mapApproval(item)) : [];
 };
 
-export const getApprovalHistory = async () => {
-  const res = await api.get('/api/cuti/approvals/history');
+export const getApprovalHistory = async (config = {}) => {
+  const res = await api.get('/api/cuti/approvals/history', config);
   return Array.isArray(res) ? res.map(item => mapApproval(item)) : [];
 };
 
