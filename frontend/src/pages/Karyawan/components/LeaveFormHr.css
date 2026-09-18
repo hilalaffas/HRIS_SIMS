@@ -47,6 +47,26 @@
 .superadmin-date-calendar__days button.is-booked {
   text-decoration: line-through;
 }
+/* [BARU] Base style untuk .duration-info-alert -- sebelumnya cuma ada
+   varian --warning di bawah tanpa base class-nya sendiri, jadi kotak info
+   "Durasi pengajuan" & batas jenis cuti (Setengah Hari/Nikah/Melahirkan/
+   Meninggal) tampil polos tanpa background/border/padding. Disamakan
+   tampilannya dengan .duration-info-alert di LeaveForm.css (form Ajukan
+   Cuti karyawan), tapi pakai design token global (styles/tokens.css)
+   supaya konsisten dengan sistem warna proyek. */
+.duration-info-alert {
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
 .duration-info-alert--warning {
-  border-left: 4px solid currentColor;
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning);
 }

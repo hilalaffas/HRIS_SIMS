@@ -16,10 +16,6 @@ const isFemaleEmployee = (genderValue = '') => ['P', 'F', 'PEREMPUAN', 'FEMALE']
   String(genderValue).trim().toUpperCase()
 );
 const isBereavementLeave = (name = '') => String(name).trim().toLowerCase().includes('meninggal');
-const isUrgentLeave = (name = '') => {
-  const normalized = String(name).trim().toLowerCase();
-  return ['cuti urgent', 'cuti berduka'].includes(normalized) || isBereavementLeave(name);
-};
 const addWorkingDaysInclusive = (startDateStr, totalHariKerja, holidayDates) => {
   if (!startDateStr || totalHariKerja <= 0) return startDateStr;
   let count = 0;
@@ -249,9 +245,14 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   const isMeninggal = isBereavementLeave(selectedLeaveType?.name);
   const isNikah = normalizedLeaveType.includes('nikah');
   const todayStr = isoToday();
-  // Sama persis dengan form karyawan: Urgent/Berduka/Meninggal boleh mulai hari ini;
-  // jenis lain mengikuti jeda minimal 5 hari kerja.
-  const minStartDate = isUrgentLeave(selectedLeaveType?.name) ? todayStr : addWorkingDaysInclusive(todayStr, 5, new Set());
+  // [UBAH] Sebelumnya DARI TANGGAL ikut kena aturan H-5 (minimal 5 hari
+  // kerja dari sekarang, meniru form Ajukan Cuti karyawan) padahal labelnya
+  // sendiri sudah "DARI TANGGAL (BEBAS)". Form ini untuk HR/Super Admin
+  // mencatat cuti SUSULAN/darurat, jadi tanggalnya memang harus bisa bebas
+  // dipilih kapan saja (termasuk tanggal yang sudah lewat) -- TIDAK
+  // mengikuti aturan H-5 milik form karyawan. Yang tetap disamakan hanya
+  // batas jenis cuti di bawah (maxEndDate: Setengah Hari/Melahirkan/
+  // Meninggal/Nikah).
   const maxEndDate = isHalfDayLeave && formData.startDate
     ? formData.startDate
     : (isMelahirkan && formData.startDate
@@ -259,6 +260,23 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       : (isMeninggal && formData.startDate
         ? addWorkingDaysInclusive(formData.startDate, 2, holidayDates)
         : (isNikah && formData.startDate ? addWorkingDaysInclusive(formData.startDate, 3, holidayDates) : null)));
+  // [BARU] Klem SAMPAI TANGGAL otomatis kalau melewati/tidak lagi cocok
+  // dengan batas jenis cuti yang aktif -- mis. ganti JENIS PERMOHONAN CUTI
+  // atau ganti KARYAWAN (gender beda) setelah SAMPAI TANGGAL lama sudah
+  // dipilih. Sebelumnya field ini nyangkut di nilai lama sampai HR sadar
+  // sendiri dan submit ditolak backend. Pola "adjust state during render"
+  // ini disamakan dengan LeaveTypeDateSection.jsx (form Ajukan Cuti
+  // karyawan) supaya tidak kena warning eslint react-hooks/set-state-in-effect.
+  const endDateClampKey = `${isHalfDayLeave}|${formData.startDate}|${maxEndDate}`;
+  const [prevEndDateClampKey, setPrevEndDateClampKey] = useState(endDateClampKey);
+  if (endDateClampKey !== prevEndDateClampKey) {
+    setPrevEndDateClampKey(endDateClampKey);
+    if (isHalfDayLeave && formData.startDate && formData.endDate !== formData.startDate) {
+      setFormData((current) => ({ ...current, endDate: formData.startDate }));
+    } else if (maxEndDate && formData.endDate && formData.endDate > maxEndDate) {
+      setFormData((current) => ({ ...current, endDate: maxEndDate }));
+    }
+  }
   const jumlahHariCuti = countWorkingDays(formData.startDate, formData.endDate, holidayDates, selectedLeaveType?.name, isFemale, bookedDates);
   const hasBookedDateInRange = useMemo(() => {
     if (!formData.startDate || !formData.endDate) return false;
@@ -291,10 +309,6 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     }
     if (formData.endDate < formData.startDate) {
       setErrorMessage('Tanggal selesai tidak boleh lebih awal dari tanggal mulai.');
-      return;
-    }
-    if (formData.startDate < minStartDate) {
-      setErrorMessage(`Tanggal mulai minimal ${formatDate(minStartDate)} sesuai aturan cuti.`);
       return;
     }
     if (maxEndDate && formData.endDate > maxEndDate) {
@@ -358,7 +372,9 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
 
   const chooseDate = (field, day) => {
     const value = toDateKey(day.year, day.month, day.day);
-    const minDate = field === 'startDate' ? minStartDate : formData.startDate;
+    // [UBAH] DARI TANGGAL sekarang benar-benar bebas (tidak ada batas
+    // bawah/H-5). SAMPAI TANGGAL tetap minimal = DARI TANGGAL yang dipilih.
+    const minDate = field === 'endDate' ? formData.startDate : null;
     if (minDate && value < minDate) return;
     if (maxEndDate && field === 'endDate' && value > maxEndDate) return;
     setFormData((current) => ({
@@ -386,12 +402,12 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
             const dateObj = new Date(day.year, day.month, day.day);
             const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
             const isBooked = bookedDates.has(value);
-            const minDate = field === 'startDate' ? minStartDate : formData.startDate;
+            const minDate = field === 'endDate' ? formData.startDate : null;
             const disabled = (minDate && value < minDate) || (field === 'endDate' && maxEndDate && value > maxEndDate);
             return <button key={value} type="button" disabled={disabled} onClick={() => chooseDate(field, day)} title={isBooked ? 'Tanggal sudah terpakai pengajuan cuti' : isHoliday ? 'Hari libur nasional' : isWeekend ? 'Akhir pekan' : undefined} className={`${!day.isCurrentMonth ? 'is-outside ' : ''}${isHoliday || isWeekend ? 'is-red-day ' : ''}${isBooked ? 'is-booked ' : ''}${disabled ? 'is-disabled-rule ' : ''}${value === formData[field] ? 'is-selected ' : ''}${value === todayKey ? 'is-today' : ''}`}>{day.day}</button>;
           })}
         </div>
-        <div className="superadmin-date-calendar__footer"><button type="button" onClick={() => { setFormData((current) => ({ ...current, [field]: '' })); setActiveDatePicker(null); }}>Clear</button><button type="button" onClick={() => { if (field === 'startDate' && todayKey < minStartDate) return; if (field === 'endDate' && (todayKey < (formData.startDate || minStartDate) || (maxEndDate && todayKey > maxEndDate))) return; setFormData((current) => ({ ...current, [field]: todayKey })); setActiveDatePicker(null); }}>Today</button></div>
+        <div className="superadmin-date-calendar__footer"><button type="button" onClick={() => { setFormData((current) => ({ ...current, [field]: '' })); setActiveDatePicker(null); }}>Clear</button><button type="button" onClick={() => { if (field === 'endDate' && (todayKey < formData.startDate || (maxEndDate && todayKey > maxEndDate))) return; setFormData((current) => ({ ...current, [field]: todayKey })); setActiveDatePicker(null); }}>Today</button></div>
       </div>
     );
   };
