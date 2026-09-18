@@ -24,7 +24,7 @@ const STATUS_BADGE_LABEL = {
   DITOLAK: "Ditolak",
 };
 
-const LeaveListHr = ({ data, sisaCuti, onOpenDetail, currentUserRole, onRevokeLeave }) => {
+const LeaveListHr = ({ data, sisaCutiByEmployeeId = {}, onOpenDetail, currentUserRole, onRevokeLeave }) => {
   const [statusFilter, setStatusFilter] = useState("ALL");
   
   // State untuk modal revoke
@@ -67,7 +67,11 @@ const LeaveListHr = ({ data, sisaCuti, onOpenDetail, currentUserRole, onRevokeLe
           </div>
 
           {filteredData.map((item) => {
-            const infoCuti = item.KuotaCuti || sisaCuti;
+            // [UBAH] Sisa cuti sekarang di-lookup per-karyawan lewat
+            // employeeId (bukan satu angka dummy yang sama untuk semua
+            // baris) -- lihat sisaCutiByEmployeeId di Karyawan.jsx.
+            const sisaHari = sisaCutiByEmployeeId[item.employeeId];
+            const hasSisaHari = sisaHari !== undefined && sisaHari !== null;
             const isDitolak = item.statusBerkas === 'DITOLAK';
 
             return (
@@ -82,7 +86,7 @@ const LeaveListHr = ({ data, sisaCuti, onOpenDetail, currentUserRole, onRevokeLe
                 </div>
                 <div>
                   <span className="leaveList__quota_leaveListHr">
-                    {infoCuti ? <strong>{infoCuti.totalHari} hari</strong> : "-"}
+                    {hasSisaHari ? <strong>{sisaHari} hari</strong> : "-"}
                   </span>
                 </div>
                 <div className="leaveList__colStatus_leaveListHr">

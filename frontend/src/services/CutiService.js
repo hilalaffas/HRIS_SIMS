@@ -322,6 +322,10 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
 
   return {
     id: item.leaveRequestId,
+    // [BARU] employeeId disisipkan supaya kolom "Sisa Cuti" di LeaveListHr.jsx
+    // bisa di-lookup per-karyawan dari data balance backend asli, bukan lagi
+    // pakai satu angka dummy yang sama untuk semua orang.
+    employeeId: item.employee?.employeeId,
     karyawan: { nama: item.employee?.fullName, kode: item.employee?.nikKaryawan || '-' },
     jenisCuti: item.leaveType?.name || 'Cuti',
     // [UBAH] Sesi Pagi/Siang disisipkan di sini juga, supaya konsisten

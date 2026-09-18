@@ -97,6 +97,17 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     return { total, aktif, nonaktif, totalDepartemen };
   }, [karyawanList]);
 
+  // [BARU] Peta employeeId -> sisa cuti asli (totalRemainingLeave), dari
+  // data yang sudah digabung fetchKaryawan() lewat getAllLeaveBalances().
+  // Menggantikan sisaCuti={{ totalHari: 12 }} yang sebelumnya dummy/sama
+  // rata untuk semua karyawan di tab "Cuti Karyawan" (lihat LeaveListHr.jsx).
+  const sisaCutiByEmployeeId = useMemo(
+    () => Object.fromEntries(
+      karyawanList.map((k) => [k.employeeId, k.totalRemainingLeave])
+    ),
+    [karyawanList]
+  );
+
   // [UBAH] Fungsi handler disesuaikan dengan pemisahan state
   const handleToggleAdd = () => setShowAddForm(!showAddForm);
   const handleOpenEdit = (item) => setEditTarget(item);
@@ -405,11 +416,13 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
             
             <LeaveListHr 
               data={riwayatCuti} 
-              // [BELUM] Sisa Cuti masih placeholder sama untuk semua karyawan
-              // (backend belum punya endpoint saldo per-karyawan arbitrary,
-              // getMyLeaveBalance saat ini hanya untuk user yang login sendiri).
-              // Di luar scope Cuti Susulan — perlu endpoint baru kalau mau digarap.
-              sisaCuti={{ totalHari: 12 }} 
+              // [UBAH] Sebelumnya sisaCuti={{ totalHari: 12 }} -- dummy sama
+              // rata untuk semua karyawan. Sekarang pakai sisaCutiByEmployeeId
+              // (peta employeeId -> totalRemainingLeave asli dari backend,
+              // sumber sama dengan kolom TOTAL CUTI di TableKaryawan.jsx &
+              // Dashboard karyawan), supaya tiap baris menampilkan sisa cuti
+              // milik karyawan yang bersangkutan, bukan angka yang sama semua.
+              sisaCutiByEmployeeId={sisaCutiByEmployeeId}
               currentUserRole={currentUserRole}
               onOpenDetail={(item) => setDetailCutiTarget(item)}
               onRevokeLeave={handleRevokeCuti}
