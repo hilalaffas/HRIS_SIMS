@@ -152,6 +152,20 @@ public class LeaveService {
             throw new RuntimeException("Karyawan pemohon wajib diisi");
         }
 
+        // [FIX] cuti.getLeaveType() pada titik ini masih objek mentah hasil
+        // deserialize JSON body (cuma leaveTypeId terisi, name = null --
+        // frontend cuma kirim { leaveTypeId }). Kalau tidak di-fetch ulang
+        // di sini, calculateLeaveDays()/validateCutiXxxLimit() di bawah
+        // tidak akan pernah mengenali nama jenis cuti (mis. "Cuti setengah
+        // hari"), sehingga durasi salah dihitung sebagai 1 hari penuh
+        // padahal seharusnya 0,5. Disamakan dengan pola yang sudah dipakai
+        // resubmitCuti().
+        if (cuti.getLeaveType() == null || cuti.getLeaveType().getLeaveTypeId() == null) {
+            throw new RuntimeException("Jenis cuti wajib dipilih");
+        }
+        cuti.setLeaveType(leaveTypeRepository.findById(cuti.getLeaveType().getLeaveTypeId())
+                .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
+
         validateCutiMelahirkanLimit(cuti, requester);
         validateCutiNikahLimit(cuti);
         validateCutiMeninggalLimit(cuti);
@@ -187,6 +201,23 @@ public class LeaveService {
         Employee hrActor = getEmployeeByUsername(hrUsername);
 
         cuti.setEmployee(targetEmployee);
+        // [FIX] Sama seperti createCuti(): cuti.getLeaveType() di titik ini
+        // masih objek mentah dari JSON body (leaveTypeId saja, name = null).
+        // Tanpa fetch ulang ini, calculateLeaveDays() & validateCutiXxxLimit()
+        // di bawah tidak bisa mengenali "Cuti setengah hari"/"Nikah"/
+        // "Meninggal"/"Melahirkan" dari nama -- akibatnya Cuti Setengah Hari
+        // yang diinput lewat Cuti Susulan (HR) kepotong 1 hari PENUH ke Sisa
+        // Cuti, bukan 0,5 seperti seharusnya. Beda dengan pengajuan mandiri
+        // karyawan (createCuti) yang sempat "ke-fix" ulang saat approval
+        // 3-tingkat selesai (lihat processApprovalAction), alur Cuti Susulan
+        // ini auto-ACC langsung di method ini juga -- tidak pernah lewat
+        // recalculation itu, jadi nilai yang salah tersimpan permanen kalau
+        // tidak diperbaiki di sini.
+        if (cuti.getLeaveType() == null || cuti.getLeaveType().getLeaveTypeId() == null) {
+            throw new RuntimeException("Jenis cuti wajib dipilih");
+        }
+        cuti.setLeaveType(leaveTypeRepository.findById(cuti.getLeaveType().getLeaveTypeId())
+                .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
         // [BARU] Sebelumnya alur Cuti Susulan/Darurat (HR input) TIDAK
         // divalidasi batas Cuti Meninggal/Melahirkan/Nikah sama sekali -- HR
         // bisa input cuti meninggal 10 hari tanpa ditolak. Sekarang

@@ -6,29 +6,42 @@
 --   "Cuti setengah hari" yang total_days-nya masih tersimpan 1
 --   (hari penuh), bukan 0.5 seperti seharusnya.
 --
--- Kenapa ini perlu:
---   Sisa Cuti yang ditampilkan di halaman ApplyCuti sudah BENAR
---   (10 hari) karena frontend punya patch koreksi sementara
---   (lihat legacyHalfDayCorrection di ApplyCuti.jsx) yang
---   membandingkan durasi yang ditampilkan (0,5 hari, dari nama
---   jenis cuti) dengan total_days mentah dari backend (masih 1).
---   Tapi Dashboard & Direktori Karyawan TIDAK memakai patch itu --
---   keduanya menampilkan LeaveBalanceResponse apa adanya dari
---   LeaveService.getLeaveBalance(), sehingga saldo tahunan
---   terpotong 1 hari penuh (bukan 0,5) untuk tiap baris "Cuti
---   setengah hari" yang datanya masih salah, dan hasilnya beda
---   dengan ApplyCuti (9 vs 10).
+-- Akar masalah (SUDAH DIPERBAIKI di kode -- lihat LeaveService.java
+-- createCuti() & createUrgentCuti()):
+--   Body request dari frontend cuma mengirim leaveType sebagai
+--   { leaveTypeId } saja (tanpa name). Sebelum diperbaiki,
+--   cuti.getLeaveType() di titik calculateLeaveDays() dipanggil
+--   masih berupa objek mentah hasil deserialize JSON itu -- field
+--   "name"-nya NULL karena memang tidak dikirim frontend, BUKAN
+--   diambil dari database. Akibatnya pengecekan nama jenis cuti
+--   ("cuti setengah hari") tidak pernah cocok, dan durasinya
+--   dihitung sebagai hari kerja biasa (1 hari), bukan 0,5.
 --
---   Migrasi ini menyamakan total_days di DATABASE ke 0.5 untuk
---   semua baris "Cuti setengah hari" yang belum 0.5, supaya
---   ApplyCuti, Dashboard, dan Direktori Karyawan konsisten
---   memakai satu sumber data yang sama-sama benar -- tanpa perlu
---   patch tambahan di frontend.
+--   Untuk pengajuan MANDIRI karyawan (createCuti/ApplyCuti), nilai
+--   yang salah ini sempat "ke-fix" ulang otomatis saat approval
+--   3 tingkat (Leader->SPV->Manager) selesai, karena
+--   processApprovalAction() menghitung ulang totalDays memakai
+--   entity yang sudah benar-benar diambil dari database (bukan
+--   objek mentah JSON) -- makanya Sisa Cuti di ApplyCuti sudah
+--   BENAR (0,5) untuk kasus ini.
 --
---   Sama seperti V21 (yang dulu melakukan koreksi serupa saat
---   half-day pertama kali didukung), tapi baris yang diperbaiki
---   V33 ini dibuat/diedit SETELAH V21 lewat alur lain (mis. Cuti
---   Susulan/HR) sehingga sempat lolos dari koreksi V21.
+--   Untuk Cuti Susulan/Darurat (createUrgentCuti, auto-ACC oleh
+--   HR/Super Admin), TIDAK ADA proses approval bertingkat yang
+--   memicu perhitungan ulang tersebut -- status langsung APPROVED
+--   di method yang sama, jadi nilai total_days = 1 yang salah itu
+--   tersimpan PERMANEN ke database. Inilah sebabnya Dashboard,
+--   Direktori Karyawan, dan tab Cuti Karyawan (yang semuanya
+--   membaca total_days apa adanya dari database, tanpa proses
+--   approval ulang) menampilkan Sisa Cuti yang salah (terpotong
+--   1 hari penuh, bukan 0,5) untuk cuti setengah hari yang
+--   diinput lewat Cuti Susulan.
+--
+--   Kode sudah diperbaiki (fetch ulang LeaveType dari
+--   leaveTypeRepository sebelum calculateLeaveDays() dipanggil,
+--   di createCuti() MAUPUN createUrgentCuti()), sehingga
+--   pengajuan BARU setelah migrasi ini akan langsung tersimpan
+--   benar (0.5). Migrasi ini HANYA membereskan baris yang
+--   terlanjur salah tersimpan SEBELUM perbaikan kode berlaku.
 --
 -- Catatan:
 --   - Idempoten: WHERE total_days <> 0.5 membuat migrasi ini

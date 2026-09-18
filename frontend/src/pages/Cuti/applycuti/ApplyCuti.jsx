@@ -214,20 +214,14 @@ const ApplyCuti = ({ user }) => {
       ]);
       setTypes(leaveTypes); setJenisCuti(current => current || leaveTypes[0]?.name || '');
       setApprovers({ LEADER: leader, SPV: spv, MANAGER: manager });
-      // Kompensasi data lama yang pernah tersimpan sebagai 1 hari sebelum backend
-      // mendukung pecahan. Jika API sudah mengirim 0,5, nilai koreksinya otomatis nol.
-      const legacyHalfDayCorrection = records
-        .filter(record => record.status === 'Disetujui (ACC)' && record.totalDays === 0.5 && record.reportedTotalDays === 1)
-        .length * 0.5;
-      // [UBAH] Koreksi legacy tetap diterapkan, tapi sekarang ke objek
-      // balance lengkap (remainingAnnualLeave & totalRemainingLeave),
-      // supaya field lain (Sisa Cuti manual, tanggal refresh) tetap terbawa.
-      const correctedAnnual = (leaveBalance.remainingAnnualLeave ?? 0) + legacyHalfDayCorrection;
-      setBalance({
-        ...leaveBalance,
-        remainingAnnualLeave: correctedAnnual,
-        totalRemainingLeave: correctedAnnual + (leaveBalance.remainingManualLeave ?? 0),
-      });
+      // [UBAH] Sebelumnya ada koreksi "legacyHalfDayCorrection" di sini untuk
+      // menambal Cuti setengah hari yang totalDays mentahnya masih 1 (bukan
+      // 0.5). Akar masalahnya sudah dibetulkan di backend (LeaveService.java
+      // createCuti()/createUrgentCuti() sekarang fetch ulang LeaveType penuh
+      // sebelum menghitung durasi, plus migrasi V33 membereskan data lama),
+      // jadi leaveBalance dari backend sudah benar apa adanya -- tidak perlu
+      // ditambal lagi di sini.
+      setBalance(leaveBalance);
       setHistory(records); setHolidayDates(new Set(holidays.map((holiday) => holiday.date))); setError('');
     } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
   }, []);
