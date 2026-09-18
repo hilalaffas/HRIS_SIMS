@@ -26,6 +26,7 @@
 // "Menyimpan..." yang sudah ada di berbagai form.
 import React, { useEffect, useRef, useState } from 'react';
 import './LoadingScreen.css';
+import { isLoadingScreenEnabled, FEATURE_FLAG_CHANGE_EVENT } from '../utils/featureFlags'; // [BARU]
 
 // [BARU] Konstanta timing -- sengaja dikumpulkan di satu tempat supaya
 // gampang di-tuning tanpa bongkar logic di bawah.
@@ -76,6 +77,12 @@ export default function LoadingScreen() {
     };
 
     const handleLoadingStart = () => {
+      // [BARU] Splash ini sekarang bisa dimatikan lewat halaman pengaturan
+      // tersembunyi (lihat utils/featureFlags.js) -- kalau nonaktif, jangan
+      // jadwalkan apa-apa sama sekali. Skeleton loading per-halaman tetap
+      // jalan seperti biasa, tidak terpengaruh flag ini.
+      if (!isLoadingScreenEnabled()) return;
+
       // Kalau sebelumnya sedang fade-out (siklus lama), batalkan dulu lalu
       // mulai siklus baru dari awal.
       clearAllTimers();
@@ -112,12 +119,25 @@ export default function LoadingScreen() {
       }, MIN_VISIBLE_MS);
     };
 
+    // [BARU] Kalau flag dimatikan LEWAT halaman pengaturan SAAT splash
+    // sedang tampil (mis. dipakai untuk preview), langsung sembunyikan --
+    // tidak perlu tunggu request berikutnya.
+    const handleFlagChange = (event) => {
+      if (event.detail?.key === 'loadingScreen' && !event.detail.value) {
+        clearAllTimers();
+        setPhase('idle');
+        setProgress(0);
+      }
+    };
+
     window.addEventListener('sims:loading-start', handleLoadingStart);
     window.addEventListener('sims:loading-end', handleLoadingEnd);
+    window.addEventListener(FEATURE_FLAG_CHANGE_EVENT, handleFlagChange);
 
     return () => {
       window.removeEventListener('sims:loading-start', handleLoadingStart);
       window.removeEventListener('sims:loading-end', handleLoadingEnd);
+      window.removeEventListener(FEATURE_FLAG_CHANGE_EVENT, handleFlagChange);
       clearAllTimers();
     };
   }, []);

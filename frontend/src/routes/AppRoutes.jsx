@@ -14,6 +14,10 @@ import Karyawan from '../pages/Karyawan/Karyawan';
 // [BARU] Halaman Riwayat Cuti (sebelumnya placeholder <div>, sekarang
 // terhubung ke backend + real-time polling + pagination, lihat RiwayatCuti.jsx)
 import RiwayatCuti from '../pages/Cuti/RiwayatCuti';
+// [BARU] Halaman pengaturan fitur tersembunyi -- SENGAJA tidak ditambahkan
+// ke config/menuConfig.js, jadi tidak muncul di Sidebar mana pun. Cuma bisa
+// diakses dengan mengetik path-nya langsung (lihat rute di bawah).
+import DevSettings from '../pages/DevSettings/DevSettings';
 
 
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
@@ -60,6 +64,8 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
 
           {/* Wadah Halaman Manajemen Karyawan */}
           <Route path="/karyawan" element={<Karyawan user={user} />} />
+
+          <Route path="/supersecret" element={<DevSettings />} />
 
           {/* ============================================================
               TAMBAHAN: RUTE HALAMAN YANG SEBELUMNYA BELUM ADA DI SNIPPET KAMU 

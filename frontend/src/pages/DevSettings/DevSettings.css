@@ -1,0 +1,113 @@
+/* src/pages/DevSettings/DevSettings.css */
+
+.devsettings-page {
+  padding: var(--space-6);
+  display: flex;
+  justify-content: center;
+}
+
+.devsettings-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--color-surface);
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+}
+
+.devsettings-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 var(--space-1);
+}
+
+.devsettings-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-5);
+}
+
+.devsettings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.devsettings-row__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-1);
+}
+
+.devsettings-row__desc {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 380px;
+}
+
+/* Toggle switch sederhana -- bukan <input type="checkbox"> supaya bebas
+   di-styling penuh, tapi tetap pakai role="switch" + aria-checked di JSX
+   supaya screen reader tetap paham ini kontrol on/off. */
+.devsettings-switch {
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
+  background-color: var(--color-border);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.devsettings-switch.is-on {
+  background-color: var(--color-primary);
+}
+
+.devsettings-switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.devsettings-switch.is-on .devsettings-switch__knob {
+  transform: translateX(20px);
+}
+
+.devsettings-preview-btn {
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background-color: var(--color-primary-tint);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.devsettings-preview-btn:disabled {
+  color: var(--color-text-muted);
+  background-color: var(--color-bg-page);
+  cursor: not-allowed;
+}
+
+.devsettings-hint {
+  margin: var(--space-2) 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
