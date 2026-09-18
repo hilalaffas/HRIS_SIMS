@@ -20,6 +20,7 @@ const DataDivisi = ({ karyawanList }) => {
   const [editValue, setEditValue] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isNameEmpty, setIsNameEmpty] = useState(false);
 
   // State Toast
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -51,7 +52,12 @@ const DataDivisi = ({ karyawanList }) => {
 
   // 2. Handler Tambah
   const handleAddDivisi = async () => {
-    if (!newDivisiName.trim()) return;
+    if (!newDivisiName.trim()) {
+      setIsNameEmpty(true);
+      showToastMessage('Harap isi nama divisi terlebih dahulu.', 'error');
+      return;
+    }
+    setIsNameEmpty(false);
     setIsAdding(true);
     try {
       await createDivisi(newDivisiName.trim());
@@ -131,14 +137,22 @@ const DataDivisi = ({ karyawanList }) => {
         </div>
 
         <div className="header-actions_data_divisi">
-          <input
-            type="text"
-            placeholder="Nama Divisi Baru..."
-            value={newDivisiName}
-            onChange={(e) => setNewDivisiName(e.target.value)}
-            disabled={isAdding}
-            className="input-new_data_divisi"
-          />
+          <div className="input-wrapper_data_divisi">
+            <input
+              type="text"
+              placeholder="Nama Divisi Baru..."
+              value={newDivisiName}
+              onChange={(e) => {
+                setNewDivisiName(e.target.value);
+                if (isNameEmpty && e.target.value.trim()) setIsNameEmpty(false);
+              }}
+              disabled={isAdding}
+              className={`input-new_data_divisi${isNameEmpty ? ' input-new_data_divisi--error' : ''}`}
+            />
+            {isNameEmpty && (
+              <span className="input-error-text_data_divisi">Harap isi nama divisi</span>
+            )}
+          </div>
           <button className="btn-add_data_divisi" onClick={handleAddDivisi} disabled={isAdding}>
             {isAdding ? 'Menambah...' : '+ Tambah'}
           </button>
