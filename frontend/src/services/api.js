@@ -58,6 +58,14 @@ function triggerSessionExpired(message) {
   );
 }
 
+// Dipakai timer idle di App.jsx. Walau belum ada request API yang gagal,
+// pengguna yang tidak beraktivitas selama batas waktu tetap harus keluar.
+export function expireSessionForInactivity() {
+  triggerSessionExpired(
+    'Sesi Anda berakhir karena tidak ada aktivitas selama 1 jam. Silakan login kembali.'
+  );
+}
+
 // [BARU] Dipanggil ProtectedRoute.jsx saat token sama sekali tidak ada
 // (mis. user buka link/bookmark halaman protected setelah lama tidak
 // aktif). Diekspos terpisah dari triggerSessionExpired() karena kasus ini
@@ -78,9 +86,13 @@ export function getAndClearRedirectPath() {
 
 export const toApiUrl = (path) => (path?.startsWith('/') ? `${BASE_URL}${path}` : path);
 
-export function setToken(token) {
+export function setToken(token, { startSession = false } = {}) {
   localStorage.setItem(TOKEN_KEY, token);
   sessionExpiryHandled = false; // [BARU] sesi baru dimulai, reset guard
+  // Hanya login baru yang boleh mengulang penghitung idle. Refresh token
+  // tidak boleh dianggap aktivitas, karena itu bisa membuat sesi idle hidup
+  // lebih dari satu jam.
+  if (startSession) window.dispatchEvent(new Event('sims:session-started'));
 }
 
 export function getStoredToken() {

@@ -19,7 +19,7 @@ export const loginUser = async (username, password) => {
     throw new Error('Login gagal: token tidak diterima dari server.');
   }
 
-  setToken(data.token);
+  setToken(data.token, { startSession: true });
 
   const userData = {
     username: data.username,

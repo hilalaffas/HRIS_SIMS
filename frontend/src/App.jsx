@@ -7,7 +7,7 @@ import LogoutModal from './components/LogoutModal';
 import SessionExpiredModal from './components/SessionExpiredModal'; // [BARU]
 import { logoutUser } from './services/authService';
 import { getMyProfile } from './services/profileService'; // [BARU] untuk hydrate foto profil di awal sesi
-import { getAndClearRedirectPath, getTokenExpiryMs, refreshSession } from './services/api'; // [BARU] redirect terakhir & sliding session
+import { expireSessionForInactivity, getAndClearRedirectPath, getTokenExpiryMs, refreshSession } from './services/api'; // [BARU] redirect terakhir & sliding session
 
 import './App.css'; 
 
@@ -118,11 +118,39 @@ const AppContent = () => {
     // Ambang batas -- boleh disesuaikan sesuai kebutuhan:
     const CHECK_INTERVAL_MS = 60 * 1000;             // cek tiap 1 menit
     const REFRESH_BEFORE_EXPIRY_MS = 5 * 60 * 1000;  // refresh 5 menit sebelum token habis
-    const INACTIVITY_LIMIT_MS = 15 * 60 * 1000;      // dianggap "tidak aktif" kalau diam >15 menit
+    const INACTIVITY_LIMIT_MS = 60 * 60 * 1000;      // logout setelah tepat 1 jam tanpa aktivitas
 
     let lastActivityAt = Date.now();
     let refreshInFlight = false;
-    const markActive = () => { lastActivityAt = Date.now(); };
+    let idleTimerId;
+
+    const scheduleIdleLogout = () => {
+      window.clearTimeout(idleTimerId);
+      if (!localStorage.getItem('token')) return;
+      idleTimerId = window.setTimeout(() => {
+        // Cek ulang diperlukan karena timer lama dapat bangun setelah browser
+        // sempat ditangguhkan lalu pengguna kembali berinteraksi.
+        if (Date.now() - lastActivityAt >= INACTIVITY_LIMIT_MS) {
+          expireSessionForInactivity();
+        } else {
+          scheduleIdleLogout();
+        }
+      }, INACTIVITY_LIMIT_MS);
+    };
+
+    const markActive = () => {
+      if (!localStorage.getItem('token')) return;
+      lastActivityAt = Date.now();
+      scheduleIdleLogout();
+    };
+
+    // Login bisa terjadi lama setelah App pertama kali dimuat. Event ini
+    // memastikan penghitung idle selalu dimulai dari sesi yang baru dibuat,
+    // bukan dari waktu halaman login dibuka.
+    const startSessionTimer = () => {
+      lastActivityAt = Date.now();
+      scheduleIdleLogout();
+    };
 
     // Cuma event yang menandakan user SUNGGUHAN berinteraksi -- polling
     // background (Navbar.jsx, MainLayout.jsx, dll.) TIDAK dihitung sebagai
@@ -131,6 +159,8 @@ const AppContent = () => {
     activityEvents.forEach((eventName) =>
       window.addEventListener(eventName, markActive, { passive: true })
     );
+    window.addEventListener('sims:session-started', startSessionTimer);
+    startSessionTimer();
 
     const checkAndRefresh = async () => {
       if (refreshInFlight) return;
@@ -159,7 +189,9 @@ const AppContent = () => {
 
     return () => {
       activityEvents.forEach((eventName) => window.removeEventListener(eventName, markActive));
+      window.removeEventListener('sims:session-started', startSessionTimer);
       window.clearInterval(intervalId);
+      window.clearTimeout(idleTimerId);
     };
   }, []);
 
