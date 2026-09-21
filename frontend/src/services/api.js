@@ -86,6 +86,10 @@ export function trackGlobalLoading(promise) {
 
 function triggerSessionExpired(message) {
   if (sessionExpiryHandled) return;
+  // [BARU] Tanpa token = tidak ada sesi yang bisa "berakhir" (user sudah
+  // logout / sedang di halaman login). Tanpa guard ini, timer idle atau
+  // request sisa yang bangun setelah logout memunculkan modal di /login.
+  if (!getStoredToken()) return;
   sessionExpiryHandled = true;
 
   saveRedirectPath(window.location.pathname + window.location.search);
@@ -129,11 +133,16 @@ export const toApiUrl = (path) => (path?.startsWith('/') ? `${BASE_URL}${path}` 
 
 export function setToken(token, { startSession = false } = {}) {
   localStorage.setItem(TOKEN_KEY, token);
-  sessionExpiryHandled = false; // [BARU] sesi baru dimulai, reset guard
   // Hanya login baru yang boleh mengulang penghitung idle. Refresh token
   // tidak boleh dianggap aktivitas, karena itu bisa membuat sesi idle hidup
   // lebih dari satu jam.
-  if (startSession) window.dispatchEvent(new Event('sims:session-started'));
+  if (startSession) {
+    // [UBAH] Reset guard dipindah ke sini (sebelumnya di luar if, sehingga
+    // refresh token ikut me-reset guard di tengah modal yang masih tampil
+    // dan memicu modal kedua).
+    sessionExpiryHandled = false;
+    window.dispatchEvent(new Event('sims:session-started'));
+  }
 }
 
 export function getStoredToken() {
@@ -213,7 +222,13 @@ async function request(path, options = {}) {
       !SESSION_EXPIRY_EXCLUDED_PATHS.includes(path);
 
     if (isSessionExpired) {
-      triggerSessionExpired(message);
+      // [UBAH] Backend membalas SESSION_EXPIRED juga untuk request yang TIDAK
+      // membawa token sama sekali. Modal hanya boleh muncul kalau request ini
+      // membawa token DAN token itu masih token yang sedang aktif. Kalau tidak
+      // (request tanpa token, atau respon basi dari sesi sebelumnya yang baru
+      // datang setelah user login ulang), cukup lempar error tanpa modal.
+      const sessionStillCurrent = Boolean(token) && token === getStoredToken();
+      if (sessionStillCurrent) triggerSessionExpired(message);
       throw new SessionExpiredError(message);
     }
 

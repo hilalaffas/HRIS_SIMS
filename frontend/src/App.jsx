@@ -129,6 +129,9 @@ const AppContent = () => {
       window.clearTimeout(idleTimerId);
       if (!localStorage.getItem('token')) return;
       idleTimerId = window.setTimeout(() => {
+        // [BARU] Timer ini tidak dibatalkan saat logout, jadi bisa bangun di
+        // halaman login. Tanpa token = tidak ada sesi yang perlu diakhiri.
+        if (!localStorage.getItem('token')) return;
         // Cek ulang diperlukan karena timer lama dapat bangun setelah browser
         // sempat ditangguhkan lalu pengguna kembali berinteraksi.
         if (Date.now() - lastActivityAt >= INACTIVITY_LIMIT_MS) {
