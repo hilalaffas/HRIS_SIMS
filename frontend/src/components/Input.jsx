@@ -2,10 +2,15 @@
 import React, { useState } from 'react';
 import './Input.css';
 
-const Input = ({ label, labelRight, id, type = 'text', ...props }) => {
+const Input = ({ label, labelRight, id, type = 'text', error = '', ...props }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
+  // [BARU] Prop `error`: kalau diisi (string pesan), field ditandai border
+  // merah lewat class "input-error" (lihat index.css). Cukup pass
+  // error={errors.username} dari form pemanggil -- tidak perlu ubah apa pun
+  // di sini kalau prop ini tidak dipakai (default kosong = tampilan lama).
+  const hasError = Boolean(error);
 
   return (
     <div className="mb-4 text-left">
@@ -21,7 +26,7 @@ const Input = ({ label, labelRight, id, type = 'text', ...props }) => {
           type={inputType}
           className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all text-sm text-gray-800 ${
             isPassword ? 'pr-11' : ''
-          }`}
+          } ${hasError ? 'input-error' : ''}`}
           {...props}
         />
 

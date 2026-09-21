@@ -6,6 +6,7 @@ import { getAllRelationships } from '../../../services/relationshipService';
 import Toast from '../../../components/Toast'; // Sesuaikan path ini jika perlu
 import Dropdown from '../../../components/Dropdown';
 import { validatePhotoFile, PHOTO_INPUT_ACCEPT } from '../../../utils/fileValidation';
+import { validateRequired, inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
 
 const ROLE_POSITION_MAP = {
   Member: ['Staff'],
@@ -39,6 +40,10 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [formResetKey, setFormResetKey] = useState(0);  
   const [toast, setToast] = useState(null); // State untuk Toast
+  // [BARU] Menyimpan field mana saja yang kosong/salah setelah percobaan
+  // submit, supaya field yang bersangkutan bisa ditandai border merah
+  // (lihat inputErrorClass/dropdownErrorClass dari utils/validation.js).
+  const [errors, setErrors] = useState({});
 
   // Daftar divisi diambil dari backend, supaya otomatis ikut update
   // begitu ada penambahan/perubahan divisi di menu Manajemen Divisi.
@@ -113,16 +118,34 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
       else if (!allowed.includes(updatedFormData.position)) updatedFormData.position = '';
     }
     setFormData(updatedFormData);
+    // [BARU] Begitu user mulai mengisi field yang tadi error, hapus tanda
+    // merahnya -- tidak perlu menunggu submit ulang untuk tahu sudah benar.
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validasi Field Wajib
-    if (!formData.fullName || !formData.username || !formData.password || !formData.divisiId) {
-      triggerToast('Harap lengkapi field yang bertanda bintang (*)', 'error');
+
+    // [UBAH] Sebelumnya cuma 1 pesan gabungan ("Harap lengkapi field yang
+    // bertanda bintang (*)") tanpa border merah sama sekali, jadi user harus
+    // menebak sendiri field mana yang masih kosong. Sekarang tiap field
+    // wajib dicek satu-satu lewat validateRequired() -- toast menampilkan
+    // pesan field PERTAMA yang kosong, dan errors dipakai untuk memberi
+    // border merah ke SEMUA field yang bermasalah sekaligus.
+    const { errors: newErrors, isValid, firstErrorMessage } = validateRequired([
+      { field: 'fullName', label: 'Nama lengkap', value: formData.fullName },
+      { field: 'gender', label: 'Jenis kelamin', value: formData.gender, verb: 'dipilih' },
+      { field: 'divisiId', label: 'Divisi / Dept', value: formData.divisiId, verb: 'dipilih' },
+      ...(canManageRole ? [{ field: 'role', label: 'Hak akses sistem (role)', value: formData.role, verb: 'dipilih' }] : []),
+      { field: 'username', label: 'Username login', value: formData.username },
+      { field: 'password', label: 'Password', value: formData.password },
+    ]);
+    if (!isValid) {
+      setErrors(newErrors);
+      triggerToast(firstErrorMessage, 'error');
       return;
     }
+    setErrors({});
 
     const data = new FormData();
     const mappedRoleId = POSITION_ROLE_ID_MAP[formData.position] || 7;
@@ -161,6 +184,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
       setFile(null);
       setFileName('Tidak ada file');
       setShowPassword(false);
+      setErrors({});
       setFormResetKey((prev) => prev + 1);
     } catch (error) {
       triggerToast('Gagal menyimpan: ' + error.message, 'error');
@@ -194,7 +218,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
           </div>
           <div className="input-group_formkaryawan">
             <label>NAMA LENGKAP *</label>
-            <input type="text" name="fullName" onChange={handleInputChange} required />
+            <input type="text" name="fullName" onChange={handleInputChange} className={inputErrorClass(errors.fullName)} />
           </div>
           <div className="input-group_formkaryawan">
             <label>JENIS KELAMIN *</label>
@@ -207,7 +231,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
                 { value: 'P', label: 'Perempuan' },
               ]}
               placeholder="Pilih Jenis Kelamin..."
-              required
+              className={dropdownErrorClass(errors.gender)}
             />
           </div>
           <div className="input-group_formkaryawan">
@@ -233,7 +257,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
                     : 'Pilih Divisi / Dept...'
                 }
                 disabled={isLoadingDivisi || !!divisiError}
-                required
+                className={dropdownErrorClass(errors.divisiId)}
               />
               {divisiError && (
                 <span className="text-red_formkaryawan" style={{ fontSize: '12px' }}>
@@ -254,7 +278,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
                     { value: 'HRD_Admin', label: 'Admin (HR)' },
                   ]}
                   placeholder="Pilih Akses..."
-                  required
+                  className={dropdownErrorClass(errors.role)}
                 />
               </div>
             )}
@@ -322,12 +346,12 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
             <div className="grid-2-col_formkaryawan">
               <div className="input-group_formkaryawan">
                 <label>USERNAME LOGIN *</label>
-                <input type="text" name="username" onChange={handleInputChange} required />
+                <input type="text" name="username" onChange={handleInputChange} className={inputErrorClass(errors.username)} />
               </div>
               <div className="input-group_formkaryawan">
                 <label>PASSWORD *</label>
                 <div className="password-wrapper_formkaryawan">
-                  <input type={showPassword ? "text" : "password"} name="password" onChange={handleInputChange} required />
+                  <input type={showPassword ? "text" : "password"} name="password" onChange={handleInputChange} className={inputErrorClass(errors.password)} />
                   <span className="eye-icon_formkaryawan" onClick={() => setShowPassword(!showPassword)}>👁️</span>
                 </div>
               </div>

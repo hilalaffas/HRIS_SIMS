@@ -1,9 +1,10 @@
 import React from 'react';
 import Dropdown from '../../../components/Dropdown';
+import { dropdownErrorClass, inputErrorClass } from '../../../utils/validation';
 
 // Satu baris input di form edit — otomatis textarea/text, dan terkunci (disabled)
 // jika field tersebut tidak boleh diedit oleh role yang sedang login.
-const ProfileFieldInput = ({ cfg, value, onChange, editable }) => (
+const ProfileFieldInput = ({ cfg, value, onChange, editable, error }) => (
   <div
     className={`info-group ${cfg.required ? 'emergency-contact' : ''} ${cfg.fullWidth ? 'info-group-full' : ''}`}
   >
@@ -20,6 +21,7 @@ const ProfileFieldInput = ({ cfg, value, onChange, editable }) => (
         title={!editable ? 'Kolom ini dikunci untuk role Anda — hubungi admin/HR untuk perubahan' : undefined}
         options={cfg.options.map((opt) => ({ value: opt, label: opt }))}
         placeholder="Pilih..."
+        className={dropdownErrorClass(error)}
       />
     ) : cfg.textarea ? (
       <textarea
@@ -28,7 +30,7 @@ const ProfileFieldInput = ({ cfg, value, onChange, editable }) => (
         onChange={onChange}
         disabled={!editable}
         rows="3"
-        className="form-input-profile"
+        className={inputErrorClass(error, 'form-input-profile')}
       />
     ) : (
       <input
@@ -38,7 +40,7 @@ const ProfileFieldInput = ({ cfg, value, onChange, editable }) => (
         onChange={onChange}
         disabled={!editable}
         title={!editable ? 'Kolom ini dikunci untuk role Anda — hubungi admin/HR untuk perubahan' : undefined}
-        className="form-input-profile"
+        className={inputErrorClass(error, 'form-input-profile')}
       />
     )}
   </div>

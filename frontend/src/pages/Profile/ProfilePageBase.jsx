@@ -20,7 +20,8 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
   const {
     isEditing, loading, profileImage, chosenFileName, photoError, showPhotoViewer, toast, saving,
     pendingAvatarPreview, pendingAvatarFileValid, avatarSaving, avatarError,
-    fileInputRef, formData, draftData, passwordData, passwordError,
+    fileInputRef, formData, draftData, passwordData, passwordError, passwordErrorField,
+    fieldErrors, formError,
     openEdit, closeEdit, handleDraftChange, handlePasswordChange,
     handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange,
     triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave,
@@ -77,8 +78,11 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
           draftData={draftData}
           handleDraftChange={handleDraftChange}
           isFieldEditable={isFieldEditable}
+          fieldErrors={fieldErrors}
+          formError={formError}
           passwordData={passwordData}
           passwordError={passwordError}
+          passwordErrorField={passwordErrorField}
           handlePasswordChange={handlePasswordChange}
         />
       )}

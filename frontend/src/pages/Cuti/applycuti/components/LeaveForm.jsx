@@ -29,6 +29,9 @@ const LeaveForm = ({
   isFemale = false,
   isEditing,
   onCancelEdit,
+  // [BARU] Nama field yang lagi kosong/salah setelah percobaan submit --
+  // diteruskan ke tiap section supaya field yang tepat ditandai merah.
+  invalidField = '',
   // [BARU] Sembunyikan header hijau "Formulir Pengajuan Cuti" -- dipakai saat
   // komponen ini dirender ULANG di dalam modal detail (FormCuti.jsx, lihat
   // prop `editForm`), supaya tidak tampil dua header bertumpuk (header modal
@@ -63,6 +66,7 @@ const LeaveForm = ({
           holidayDates={holidayDates}
           bookedDates={bookedDates}
           isFemale={isFemale}
+          invalidField={invalidField}
         />
 
         <ApprovalFlowSection
@@ -71,12 +75,14 @@ const LeaveForm = ({
           managerEmployeeId={managerEmployeeId} setManagerEmployeeId={setManagerEmployeeId}
           approvers={approvers}
           isSupervisor={isSupervisor}
+          invalidField={invalidField}
         />
 
         <ReasonCoverageSection
           reason={reason} setReason={setReason}
           pendingWork={pendingWork} setPendingWork={setPendingWork}
           coveredBy={coveredBy} setCoveredBy={setCoveredBy}
+          invalidField={invalidField}
         />
 
         <div className="btn-group-right" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

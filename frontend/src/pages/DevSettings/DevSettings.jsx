@@ -11,6 +11,7 @@
 // flag lain, tambahkan baris baru di FEATURES di bawah -- tidak perlu ubah
 // struktur halaman.
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   isLoadingScreenEnabled,
   setLoadingScreenEnabled,
@@ -79,6 +80,24 @@ export default function DevSettings() {
         {!loadingScreenOn && (
           <p className="devsettings-hint">Aktifkan switch di atas dulu untuk mencoba pratinjaunya.</p>
         )}
+
+        {/* [BARU] Akun ini sekarang berperan sebagai SuperAdmin penuh (lihat
+            migration V34 & ProtectedRoute.jsx), jadi bisa langsung masuk ke
+            halaman-halaman SuperAdmin biasa dari sini -- begitu keluar dari
+            /supersecret, Sidebar/Navbar normal langsung muncul lagi seperti
+            akun SuperAdmin pada umumnya. */}
+        <div className="devsettings-row devsettings-row--nolined">
+          <div>
+            <p className="devsettings-row__label">Akses SuperAdmin</p>
+            <p className="devsettings-row__desc">
+              Akun ini juga berperan sebagai SuperAdmin -- buka Dashboard untuk lanjut ke
+              halaman Karyawan, Cuti, dll seperti akun SuperAdmin biasa.
+            </p>
+          </div>
+          <Link to="/dashboard" className="devsettings-link-btn">
+            Buka Dashboard SuperAdmin
+          </Link>
+        </div>
       </div>
     </div>
   );

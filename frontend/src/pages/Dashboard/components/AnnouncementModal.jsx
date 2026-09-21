@@ -1,12 +1,25 @@
 // src/pages/Dashboard/components/AnnouncementModal.jsx
 import React, { useState, useEffect } from 'react';
 import Dropdown from '../../../components/Dropdown';
+import Toast from '../../../components/Toast';
+import { validateRequired, inputErrorClass } from '../../../utils/validation';
 
 export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialData = null }) {
   const [judul, setJudul] = useState('');
   const [label, setLabel] = useState('penting');
   const [isi, setIsi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // [BARU] Sebelumnya handleSubmit cuma `if (!judul.trim() || !isi.trim()) return;`
+  // -- form diam saja kalau ada yang kosong. Sekarang tiap field dicek lewat
+  // validateRequired(), errors dipakai untuk border merah, toast menunjukkan
+  // pesan spesifik field yang kosong.
+  const [errors, setErrors] = useState({});
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const isEditMode = !!initialData;
 
@@ -23,6 +36,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
       setLabel('penting');
       setIsi('');
     }
+    setErrors({});
   }, [isOpen, initialData]);
 
   if (!isOpen) return null;
@@ -31,6 +45,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
     setJudul('');
     setLabel('penting');
     setIsi('');
+    setErrors({});
   };
 
   const handleClose = () => {
@@ -40,7 +55,16 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!judul.trim() || !isi.trim()) return;
+    const { errors: newErrors, isValid, firstErrorMessage } = validateRequired([
+      { field: 'judul', label: 'Judul pengumuman', value: judul },
+      { field: 'isi', label: 'Isi berita', value: isi },
+    ]);
+    if (!isValid) {
+      setErrors(newErrors);
+      showToast(firstErrorMessage);
+      return;
+    }
+    setErrors({});
 
     setIsSubmitting(true);
     try {
@@ -75,10 +99,9 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
             <input
               type="text"
               value={judul}
-              onChange={(e) => setJudul(e.target.value)}
+              onChange={(e) => { setJudul(e.target.value); if (errors.judul) setErrors((prev) => ({ ...prev, judul: undefined })); }}
               placeholder="Contoh: Kebijakan Libur Lebaran"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
-              required
+              className={inputErrorClass(errors.judul, 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]')}
             />
           </div>
 
@@ -104,10 +127,9 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
             <textarea
               rows={4}
               value={isi}
-              onChange={(e) => setIsi(e.target.value)}
+              onChange={(e) => { setIsi(e.target.value); if (errors.isi) setErrors((prev) => ({ ...prev, isi: undefined })); }}
               placeholder="Tulis rincian pengumuman..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)] resize-none"
-              required
+              className={inputErrorClass(errors.isi, 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)] resize-none')}
             />
           </div>
 
@@ -129,6 +151,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
           </div>
         </form>
       </div>
+      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   );
 }

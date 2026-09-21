@@ -16,7 +16,7 @@ const EyeOffIcon = () => (
 );
 
 // Satu input password + tombol mata untuk toggle tampil/sembunyikan
-const PasswordInputWithToggle = ({ name, value, onChange, placeholder, autoComplete }) => {
+const PasswordInputWithToggle = ({ name, value, onChange, placeholder, autoComplete, error }) => {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -27,7 +27,7 @@ const PasswordInputWithToggle = ({ name, value, onChange, placeholder, autoCompl
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="form-input-profile"
+        className={`form-input-profile ${error ? 'input-error' : ''}`}
         autoComplete={autoComplete}
       />
       <button
@@ -44,7 +44,7 @@ const PasswordInputWithToggle = ({ name, value, onChange, placeholder, autoCompl
 };
 
 // Blok "Keamanan & Kata Sandi" di dalam form edit — opsional diisi, hanya divalidasi jika diisi.
-const ProfilePasswordSection = ({ passwordData, passwordError, onChange }) => (
+const ProfilePasswordSection = ({ passwordData, passwordError, errorField, onChange }) => (
   <div className="profile-security-block">
     <h3 className="section-title">Keamanan & Kata Sandi</h3>
     <div className="info-group">
@@ -55,6 +55,7 @@ const ProfilePasswordSection = ({ passwordData, passwordError, onChange }) => (
         onChange={onChange}
         placeholder="Masukkan sandi saat ini"
         autoComplete="current-password"
+        error={errorField === 'kataSandiLama'}
       />
     </div>
     <div className="profile-password-grid">
@@ -66,6 +67,7 @@ const ProfilePasswordSection = ({ passwordData, passwordError, onChange }) => (
           onChange={onChange}
           placeholder="Kosongkan jika tidak ingin mengubah"
           autoComplete="new-password"
+          error={errorField === 'kataSandiBaru'}
         />
       </div>
       <div className="info-group">
@@ -76,6 +78,7 @@ const ProfilePasswordSection = ({ passwordData, passwordError, onChange }) => (
           onChange={onChange}
           placeholder="Ketik ulang sandi baru"
           autoComplete="new-password"
+          error={errorField === 'ulangiSandiBaru'}
         />
       </div>
     </div>

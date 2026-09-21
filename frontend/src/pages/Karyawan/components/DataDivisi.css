@@ -94,6 +94,17 @@
   font-weight: 600;
 }
 
+/* [BARU] State error untuk input "NAMA DIVISI BARU" di modal Edit --
+   tampilan disamakan persis dengan .input-new_data_divisi--error di atas. */
+.input-edit_data_divisi--error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+.input-edit_data_divisi--error:focus {
+  border-color: #dc2626;
+}
+
 .btn-add_data_divisi {
   background-color: #064e3b;
   color: #ffffff;

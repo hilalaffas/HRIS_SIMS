@@ -9,7 +9,8 @@ import { PHOTO_INPUT_ACCEPT } from '../../../utils/fileValidation';
 const ProfileEditModal = ({
   closeEdit, handleSave, saving, chosenFileName, photoError, handleImageChange,
   kolomKiri, kolomKanan, draftData, handleDraftChange, isFieldEditable,
-  passwordData, passwordError, handlePasswordChange,
+  fieldErrors = {}, formError,
+  passwordData, passwordError, passwordErrorField, handlePasswordChange,
 }) => (
   <div className="profile-edit-overlay" onClick={closeEdit}>
     <div className="profile-edit-page" onClick={(e) => e.stopPropagation()}>
@@ -57,6 +58,7 @@ const ProfileEditModal = ({
                   value={draftData[cfg.key]}
                   onChange={handleDraftChange}
                   editable={isFieldEditable(cfg)}
+                  error={fieldErrors[cfg.key]}
                 />
               ))}
             </div>
@@ -79,6 +81,7 @@ const ProfileEditModal = ({
                         value={draftData[cfg.key]}
                         onChange={handleDraftChange}
                         editable={isFieldEditable(cfg)}
+                        error={fieldErrors[cfg.key]}
                       />
                       {relationCfg && (
                         <ProfileFieldInput
@@ -86,6 +89,7 @@ const ProfileEditModal = ({
                           value={draftData[relationCfg.key]}
                           onChange={handleDraftChange}
                           editable={isFieldEditable(relationCfg)}
+                          error={fieldErrors[relationCfg.key]}
                         />
                       )}
                     </div>
@@ -99,6 +103,7 @@ const ProfileEditModal = ({
                     value={draftData[cfg.key]}
                     onChange={handleDraftChange}
                     editable={isFieldEditable(cfg)}
+                    error={fieldErrors[cfg.key]}
                   />
                 );
               })}
@@ -108,8 +113,15 @@ const ProfileEditModal = ({
           <ProfilePasswordSection
             passwordData={passwordData}
             passwordError={passwordError}
+            errorField={passwordErrorField}
             onChange={handlePasswordChange}
           />
+
+          {/* [BARU] Pesan spesifik untuk field wajib di grid atas (mis. "Nomor
+              Telepon Darurat (Urgent) perlu diisi.") -- field config sudah
+              lama menandai beberapa field dengan "*" tapi belum pernah
+              benar-benar divalidasi/ditampilkan pesannya. */}
+          {formError && <p className="profile-password-error">{formError}</p>}
 
           <div className="profile-action-group">
             <button type="button" className="btn-profile-cancel" onClick={closeEdit}>

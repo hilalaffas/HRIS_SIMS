@@ -1,11 +1,25 @@
 // src/pages/Dashboard/components/HolidayModal.jsx
 import React, { useState, useEffect } from 'react';
+import Toast from '../../../components/Toast';
+import { validateRequired, inputErrorClass } from '../../../utils/validation';
 
 export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = null }) {
   const [tanggal, setTanggal] = useState('');
   const [nama, setNama] = useState('');
   const [isNational, setIsNational] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // [BARU] Sebelumnya handleSubmit cuma `if (!tanggal || !nama.trim()) return;`
+  // -- kalau ada yang kosong, form diam saja tanpa pesan apa pun dan tidak
+  // ada tanda visual sama sekali. Sekarang tiap field dicek satu-satu lewat
+  // validateRequired(), errors dipakai untuk border merah, dan toast
+  // menunjukkan pesan spesifik field yang kosong.
+  const [errors, setErrors] = useState({});
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const isEditMode = !!initialData;
 
@@ -22,6 +36,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
       setNama('');
       setIsNational(false);
     }
+    setErrors({});
   }, [isOpen, initialData]);
 
   if (!isOpen) return null;
@@ -30,6 +45,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
     setTanggal('');
     setNama('');
     setIsNational(false);
+    setErrors({});
   };
 
   const handleClose = () => {
@@ -39,7 +55,16 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!tanggal || !nama.trim()) return;
+    const { errors: newErrors, isValid, firstErrorMessage } = validateRequired([
+      { field: 'tanggal', label: 'Tanggal libur', value: tanggal, verb: 'dipilih' },
+      { field: 'nama', label: 'Nama hari libur', value: nama },
+    ]);
+    if (!isValid) {
+      setErrors(newErrors);
+      showToast(firstErrorMessage);
+      return;
+    }
+    setErrors({});
 
     setIsSubmitting(true);
     try {
@@ -74,9 +99,8 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
             <input
               type="date"
               value={tanggal}
-              onChange={(e) => setTanggal(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
-              required
+              onChange={(e) => { setTanggal(e.target.value); if (errors.tanggal) setErrors((prev) => ({ ...prev, tanggal: undefined })); }}
+              className={inputErrorClass(errors.tanggal, 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]')}
             />
           </div>
 
@@ -87,10 +111,9 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
             <input
               type="text"
               value={nama}
-              onChange={(e) => setNama(e.target.value)}
+              onChange={(e) => { setNama(e.target.value); if (errors.nama) setErrors((prev) => ({ ...prev, nama: undefined })); }}
               placeholder="Contoh: Tahun Baru Masehi"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
-              required
+              className={inputErrorClass(errors.nama, 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]')}
             />
           </div>
 
@@ -124,6 +147,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
           </div>
         </form>
       </div>
+      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   );
 }

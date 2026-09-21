@@ -1,6 +1,7 @@
 import React from 'react';
 import Dropdown from '../../../../components/Dropdown';
 import './LeaveForm.css';
+import { dropdownErrorClass } from '../../../../utils/validation';
 
 /**
  * Bagian: PILIH ALUR APPROVAL CUTI (Leader / SPV / Manager)
@@ -13,6 +14,7 @@ const ApprovalFlowSection = ({
   managerEmployeeId, setManagerEmployeeId,
   approvers = { LEADER: [], SPV: [], MANAGER: [] },
   isSupervisor = false,
+  invalidField = '',
 }) => {
   return (
     <div className="form-group">
@@ -26,8 +28,8 @@ const ApprovalFlowSection = ({
             onChange={(e) => setLeaderEmployeeId(e.target.value)}
             options={approvers.LEADER.map(person => ({ value: person.employeeId, label: person.fullName }))}
             placeholder={isSupervisor ? 'None' : 'Pilih...'}
-            required={!isSupervisor}
             disabled={isSupervisor}
+            className={dropdownErrorClass(invalidField === 'leaderEmployeeId')}
           />
         </div>
 
@@ -39,8 +41,8 @@ const ApprovalFlowSection = ({
             onChange={(e) => setSpvEmployeeId(e.target.value)}
             options={approvers.SPV.map(person => ({ value: person.employeeId, label: person.fullName }))}
             placeholder={isSupervisor ? 'None' : 'Pilih...'}
-            required={!isSupervisor}
             disabled={isSupervisor}
+            className={dropdownErrorClass(invalidField === 'spvEmployeeId')}
           />
         </div>
 
@@ -52,7 +54,7 @@ const ApprovalFlowSection = ({
             onChange={(e) => setManagerEmployeeId(e.target.value)}
             options={approvers.MANAGER.map(person => ({ value: person.employeeId, label: person.fullName }))}
             placeholder="Pilih..."
-            required
+            className={dropdownErrorClass(invalidField === 'managerEmployeeId')}
           />
         </div>
       </div>

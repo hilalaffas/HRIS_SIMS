@@ -4,6 +4,7 @@ import './LeaveFormHr.css';
 import { getLeaveTypes, getApprovers, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles';
 import { getAllHolidays } from '../../../services/holidayService';
+import { validateRequired, inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const toDateKey = (year, month, day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -110,6 +111,10 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   const [isLoadingApprovers, setIsLoadingApprovers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  // [BARU] Field mana saja yang kosong/salah -- dipakai untuk border merah
+  // (lihat inputErrorClass/dropdownErrorClass), berdampingan dengan
+  // `errorMessage` (banner teks) yang sudah ada.
+  const [errors, setErrors] = useState({});
   const [holidayDates, setHolidayDates] = useState(() => new Set());
   const [bookedDates, setBookedDates] = useState(() => new Set());
   const [activeDatePicker, setActiveDatePicker] = useState(null);
@@ -297,36 +302,63 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       return { ...prev, [name]: value };
     });
     setErrorMessage('');
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
-    if (!formData.startDate || !formData.endDate) {
-      setErrorMessage('Tanggal mulai dan tanggal selesai wajib dipilih.');
+    // [UBAH] Sebelumnya field KARYAWAN, JENIS CUTI, ALASAN, PEKERJAAN
+    // TERTUNDA, dan DICOVER OLEH cuma mengandalkan atribut HTML `required`
+    // (munculkan bubble bawaan browser, bahasa Inggris & tidak ada border
+    // merah kalau lewat Dropdown custom). Sekarang semua dicek lewat
+    // validateRequired() supaya pesannya konsisten Bahasa Indonesia + field
+    // yang kosong langsung ditandai merah.
+    const { errors: requiredErrors, isValid, firstErrorMessage } = validateRequired([
+      { field: 'karyawanId', label: 'Karyawan', value: formData.karyawanId, verb: 'dipilih' },
+      { field: 'leaveTypeId', label: 'Jenis permohonan cuti', value: formData.leaveTypeId, verb: 'dipilih' },
+      { field: 'startDate', label: 'Tanggal mulai', value: formData.startDate, verb: 'dipilih' },
+      { field: 'endDate', label: 'Tanggal selesai', value: formData.endDate, verb: 'dipilih' },
+      { field: 'alasan', label: 'Alasan / keterangan', value: formData.alasan },
+      { field: 'pekerjaanTertunda', label: 'Pekerjaan tertunda', value: formData.pekerjaanTertunda },
+      { field: 'dicoverOleh', label: 'Dicover oleh', value: formData.dicoverOleh },
+    ]);
+    if (!isValid) {
+      setErrors(requiredErrors);
+      setErrorMessage(firstErrorMessage);
       return;
     }
+
     if (formData.endDate < formData.startDate) {
+      setErrors({ startDate: 'Tanggal mulai perlu diperiksa lagi.', endDate: 'Tanggal selesai perlu diperiksa lagi.' });
       setErrorMessage('Tanggal selesai tidak boleh lebih awal dari tanggal mulai.');
       return;
     }
     if (maxEndDate && formData.endDate > maxEndDate) {
+      setErrors({ endDate: 'Tanggal selesai perlu diperiksa lagi.' });
       setErrorMessage(`Tanggal selesai maksimal ${formatDate(maxEndDate)} sesuai aturan jenis cuti.`);
       return;
     }
     if (jumlahHariCuti <= 0) {
+      setErrors({ startDate: 'Rentang tanggal perlu diperiksa lagi.', endDate: 'Rentang tanggal perlu diperiksa lagi.' });
       setErrorMessage('Rentang tanggal tidak memiliki hari kerja yang bisa diajukan atau tanggalnya sudah terpakai.');
       return;
     }
     if (!selectedIsApproverLevel && (!formData.leaderEmployeeId || !formData.spvEmployeeId)) {
+      setErrors({
+        leaderEmployeeId: formData.leaderEmployeeId ? undefined : 'Leader perlu dipilih.',
+        spvEmployeeId: formData.spvEmployeeId ? undefined : 'SPV perlu dipilih.',
+      });
       setErrorMessage('Leader dan SPV wajib dipilih untuk karyawan ini.');
       return;
     }
     if (!formData.managerEmployeeId) {
+      setErrors({ managerEmployeeId: 'Manager perlu dipilih.' });
       setErrorMessage('Manager wajib dipilih.');
       return;
     }
+    setErrors({});
 
     setIsSubmitting(true);
     try {
@@ -351,6 +383,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       });
 
       setFormData(initialFormState);
+      setErrors({});
       // [UBAH] leaveRequestId diteruskan lagi ke parent (sempat hilang saat
       // merge) supaya Karyawan.jsx bisa buka langsung modal Detail dari toast sukses.
       if (onSubmit) onSubmit({ karyawanNama: selectedKaryawan?.fullName, leaveRequestId: created?.leaveRequestId });
@@ -382,6 +415,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       [field]: value,
       ...(field === 'startDate' && current.endDate < value ? { endDate: '' } : {}),
     }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
     setActiveDatePicker(null);
   };
 
@@ -443,8 +477,8 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
                 label: `${k.fullName} (${k.nikKaryawan})`,
               }))}
               placeholder="Pilih..."
-              required
               searchable
+              className={dropdownErrorClass(errors.karyawanId)}
             />
           </div>
           <div className="form-group_leaveFormHr">
@@ -455,7 +489,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
               onChange={handleInputChange}
               options={leaveTypes.map((type) => ({ value: type.leaveTypeId, label: type.name }))}
               placeholder="Pilih..."
-              required
+              className={dropdownErrorClass(errors.leaveTypeId)}
             />
           </div>
         </div>
@@ -482,12 +516,12 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
         <div className="form-grid_leaveFormHr" ref={dateFieldsRef}>
           <div className="form-group_leaveFormHr superadmin-date-field">
             <label>DARI TANGGAL (BEBAS)</label>
-            <button type="button" className="superadmin-date-field__input" onClick={() => showDatePicker('startDate')}><span>{formatDate(formData.startDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
+            <button type="button" className={inputErrorClass(errors.startDate, 'superadmin-date-field__input')} onClick={() => showDatePicker('startDate')}><span>{formatDate(formData.startDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
             {renderDatePicker('startDate')}
           </div>
           <div className="form-group_leaveFormHr superadmin-date-field">
             <label>SAMPAI TANGGAL</label>
-            <button type="button" className="superadmin-date-field__input" onClick={() => showDatePicker('endDate')}><span>{formatDate(formData.endDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
+            <button type="button" className={inputErrorClass(errors.endDate, 'superadmin-date-field__input')} onClick={() => showDatePicker('endDate')}><span>{formatDate(formData.endDate) || 'dd/mm/yyyy'}</span><svg className="superadmin-date-field__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></button>
             {renderDatePicker('endDate')}
           </div>
         </div>
@@ -533,6 +567,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
                       onChange={handleInputChange}
                       options={leaderOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
                       placeholder="Pilih..."
+                      className={dropdownErrorClass(errors.leaderEmployeeId)}
                     />
                   </div>
                   <div className="sub-group_leaveFormHr">
@@ -543,6 +578,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
                       onChange={handleInputChange}
                       options={spvOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
                       placeholder="Pilih..."
+                      className={dropdownErrorClass(errors.spvEmployeeId)}
                     />
                   </div>
                 </>
@@ -555,6 +591,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
                   onChange={handleInputChange}
                   options={managerOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
                   placeholder="Pilih..."
+                  className={dropdownErrorClass(errors.managerEmployeeId)}
                 />
               </div>
             </div>
@@ -569,17 +606,17 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
 
         <div className="form-group_leaveFormHr">
           <label>ALASAN / KETERANGAN *</label>
-          <input type="text" name="alasan" placeholder="Berikan alasan yang jelas..." value={formData.alasan} onChange={handleInputChange} required />
+          <input type="text" name="alasan" placeholder="Berikan alasan yang jelas..." value={formData.alasan} onChange={handleInputChange} className={inputErrorClass(errors.alasan)} />
         </div>
 
         <div className="form-group_leaveFormHr">
           <label>PEKERJAAN TERTUNDA *</label>
-          <input type="text" name="pekerjaanTertunda" placeholder="Jelaskan status pekerjaan yang ditinggalkan..." value={formData.pekerjaanTertunda} onChange={handleInputChange} required />
+          <input type="text" name="pekerjaanTertunda" placeholder="Jelaskan status pekerjaan yang ditinggalkan..." value={formData.pekerjaanTertunda} onChange={handleInputChange} className={inputErrorClass(errors.pekerjaanTertunda)} />
         </div>
 
         <div className="form-group_leaveFormHr">
           <label>DICOVER OLEH *</label>
-          <input type="text" name="dicoverOleh" placeholder="Nama rekan kerja yang mem-backup..." value={formData.dicoverOleh} onChange={handleInputChange} required />
+          <input type="text" name="dicoverOleh" placeholder="Nama rekan kerja yang mem-backup..." value={formData.dicoverOleh} onChange={handleInputChange} className={inputErrorClass(errors.dicoverOleh)} />
         </div>
 
         {errorMessage && (

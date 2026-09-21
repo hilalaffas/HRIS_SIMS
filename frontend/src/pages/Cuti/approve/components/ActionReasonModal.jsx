@@ -140,7 +140,7 @@ const ActionReasonModal = ({ request, onCancel, onSubmit }) => {
             <textarea
               id="action-reason-textarea"
               ref={textareaRef}
-              className="action-reason__textarea"
+              className={`action-reason__textarea${touched && !isValid ? ' input-error' : ''}`}
               rows={4}
               value={alasan}
               placeholder={config.placeholder}

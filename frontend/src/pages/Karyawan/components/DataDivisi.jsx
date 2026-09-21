@@ -21,6 +21,10 @@ const DataDivisi = ({ karyawanList }) => {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isNameEmpty, setIsNameEmpty] = useState(false);
+  // [BARU] Sama seperti isNameEmpty di atas, tapi untuk modal "Edit Nama
+  // Divisi" -- sebelumnya kosongin nama di sini cuma `return;` diam-diam
+  // tanpa toast maupun border merah sama sekali.
+  const [isEditValueEmpty, setIsEditValueEmpty] = useState(false);
 
   // State Toast
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -75,15 +79,22 @@ const DataDivisi = ({ karyawanList }) => {
   const handleStartEdit = (divisi) => {
     setEditingId(divisi.id);
     setEditValue(divisi.namaDivisi);
+    setIsEditValueEmpty(false);
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditValue('');
+    setIsEditValueEmpty(false);
   };
 
   const handleSaveEdit = async () => {
-    if (!editValue.trim()) return;
+    if (!editValue.trim()) {
+      setIsEditValueEmpty(true);
+      showToastMessage('Harap isi nama divisi terlebih dahulu.', 'error');
+      return;
+    }
+    setIsEditValueEmpty(false);
     setIsSavingEdit(true);
     try {
       await updateDivisi(editingId, editValue.trim());
@@ -203,9 +214,16 @@ const DataDivisi = ({ karyawanList }) => {
               <input 
                 type="text" 
                 value={editValue} 
-                onChange={(e) => setEditValue(e.target.value)} 
+                onChange={(e) => {
+                  setEditValue(e.target.value);
+                  if (isEditValueEmpty && e.target.value.trim()) setIsEditValueEmpty(false);
+                }}
+                className={isEditValueEmpty ? 'input-edit_data_divisi--error' : ''}
                 autoFocus 
               />
+              {isEditValueEmpty && (
+                <span className="input-error-text_data_divisi">Harap isi nama divisi</span>
+              )}
             </div>
             
             {/* Footer Modal */}

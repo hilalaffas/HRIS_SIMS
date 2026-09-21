@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Dropdown from '../../../../components/Dropdown';
 import './LeaveForm.css';
+import { inputErrorClass, dropdownErrorClass } from '../../../../utils/validation';
 
 const formatDateDisplay = (dateStr) => {
   if (!dateStr) return '';
@@ -91,6 +92,7 @@ const LeaveTypeDateSection = ({
   holidayDates,
   bookedDates,
   isFemale = false,
+  invalidField = '',
 }) => {
   const safeHolidayDates = holidayDates instanceof Set ? holidayDates : new Set();
   const safeBookedDates = bookedDates instanceof Set ? bookedDates : new Set();
@@ -250,6 +252,7 @@ const LeaveTypeDateSection = ({
           onChange={(e) => setJenisCuti(e.target.value)}
           options={leaveTypes.map(type => ({ value: type.name, label: type.name }))}
           placeholder="Pilih Jenis Cuti"
+          className={dropdownErrorClass(invalidField === 'jenisCuti')}
         />
       </div>
 
@@ -272,7 +275,7 @@ const LeaveTypeDateSection = ({
         <div className="form-group flex-1" ref={dariRef} style={{ position: 'relative' }}>
           <label className="form-label">DARI TANGGAL</label>
           <div className="input-with-icon">
-            <input type="text" readOnly value={formatDateDisplay(startDate)} onClick={() => setShowDariCalendar(!showDariCalendar)} className="form-control text-input-clickable" placeholder="dd/mm/yyyy" />
+            <input type="text" readOnly value={formatDateDisplay(startDate)} onClick={() => setShowDariCalendar(!showDariCalendar)} className={inputErrorClass(invalidField === 'startDate', 'form-control text-input-clickable')} placeholder="dd/mm/yyyy" />
             <i className="fa-regular fa-calendar-days input-icon-inside"></i>
           </div>
           {showDariCalendar && (() => {
@@ -284,7 +287,7 @@ const LeaveTypeDateSection = ({
         <div className="form-group flex-1" ref={sampaiRef} style={{ position: 'relative' }}>
           <label className="form-label">SAMPAI TANGGAL</label>
           <div className="input-with-icon">
-            <input type="text" readOnly value={formatDateDisplay(endDate)} onClick={() => setShowSampaiCalendar(!showSampaiCalendar)} className="form-control text-input-clickable" placeholder="dd/mm/yyyy" />
+            <input type="text" readOnly value={formatDateDisplay(endDate)} onClick={() => setShowSampaiCalendar(!showSampaiCalendar)} className={inputErrorClass(invalidField === 'endDate', 'form-control text-input-clickable')} placeholder="dd/mm/yyyy" />
             <i className="fa-regular fa-calendar-days input-icon-inside"></i>
           </div>
           {showSampaiCalendar && (() => {

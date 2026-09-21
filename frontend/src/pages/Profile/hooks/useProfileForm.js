@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { changeMyPassword, getMyProfile, updateMyProfile } from '../../../services/profileService';
 import { validatePhotoFile } from '../../../utils/fileValidation';
+import { validateRequired } from '../../../utils/validation';
+import { FIELD_CONFIG } from '../config/profileFieldConfig';
 
 export const getInitials = (fullName) => {
   if (!fullName) return 'AS';
@@ -30,6 +32,14 @@ export const useProfileForm = (currentUserRole, mockData) => {
   const [draftData, setDraftData] = useState({});
   const [passwordData, setPasswordData] = useState({ kataSandiLama: '', kataSandiBaru: '', ulangiSandiBaru: '' });
   const [passwordError, setPasswordError] = useState('');
+  // [BARU] fieldErrors: field profil (nama, telepon darurat, dll) mana yang
+  // kosong -- dipakai buat border merah di ProfileFieldInput. formError:
+  // pesan spesifik yang ditampilkan di atas tombol Simpan. passwordErrorField:
+  // field password mana (lama/baru/ulangi) yang bermasalah, berdampingan
+  // dengan `passwordError` (pesan teks) yang sudah ada.
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  const [passwordErrorField, setPasswordErrorField] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -62,6 +72,9 @@ export const useProfileForm = (currentUserRole, mockData) => {
     setDraftData(formData);
     setPasswordData({ kataSandiLama: '', kataSandiBaru: '', ulangiSandiBaru: '' });
     setPasswordError('');
+    setPasswordErrorField('');
+    setFieldErrors({});
+    setFormError('');
     setChosenFileName('');
     setSelectedPhoto(null);
     setPhotoError('');
@@ -84,10 +97,14 @@ export const useProfileForm = (currentUserRole, mockData) => {
 
   const openPhotoViewer = () => setShowPhotoViewer(true);
   const closePhotoViewer = () => setShowPhotoViewer(false);
-  const handleDraftChange = (e) => setDraftData({ ...draftData, [e.target.name]: e.target.value });
+  const handleDraftChange = (e) => {
+    setDraftData({ ...draftData, [e.target.name]: e.target.value });
+    if (fieldErrors[e.target.name]) setFieldErrors((prev) => ({ ...prev, [e.target.name]: undefined }));
+  };
   const handlePasswordChange = (e) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
     setPasswordError('');
+    setPasswordErrorField('');
   };
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -164,12 +181,35 @@ export const useProfileForm = (currentUserRole, mockData) => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setFormError('');
+
+    // [BARU] Field yang di FIELD_CONFIG ditandai required:true (mis. Nomor
+    // Telepon Darurat, Hubungan) sudah lama dikasih label "*" tapi TIDAK
+    // PERNAH benar-benar dicek sebelum disimpan. Sekarang dicek generik dari
+    // config yang sama supaya label "*" dan validasinya selalu sinkron.
+    const requiredFieldRules = FIELD_CONFIG
+      .filter((cfg) => cfg.required)
+      .map((cfg) => ({
+        field: cfg.key,
+        label: cfg.label.replace(/\s*\*$/, ''),
+        value: draftData[cfg.key],
+        verb: cfg.select ? 'dipilih' : 'diisi',
+      }));
+    const { errors: requiredErrors, isValid, firstErrorMessage } = validateRequired(requiredFieldRules);
+    if (!isValid) {
+      setFieldErrors(requiredErrors);
+      setFormError(firstErrorMessage);
+      return;
+    }
+    setFieldErrors({});
+
     const inginGantiSandi = passwordData.kataSandiBaru || passwordData.ulangiSandiBaru;
     if (inginGantiSandi) {
-      if (!passwordData.kataSandiLama) return setPasswordError('Masukkan kata sandi lama untuk mengonfirmasi perubahan.');
-      if (passwordData.kataSandiBaru.length < 8) return setPasswordError('Kata sandi baru minimal 8 karakter.');
-      if (passwordData.kataSandiBaru !== passwordData.ulangiSandiBaru) return setPasswordError('Kata sandi baru dan pengulangannya tidak sama.');
+      if (!passwordData.kataSandiLama) { setPasswordErrorField('kataSandiLama'); return setPasswordError('Masukkan kata sandi lama untuk mengonfirmasi perubahan.'); }
+      if (passwordData.kataSandiBaru.length < 8) { setPasswordErrorField('kataSandiBaru'); return setPasswordError('Kata sandi baru minimal 8 karakter.'); }
+      if (passwordData.kataSandiBaru !== passwordData.ulangiSandiBaru) { setPasswordErrorField('ulangiSandiBaru'); return setPasswordError('Kata sandi baru dan pengulangannya tidak sama.'); }
     }
+    setPasswordErrorField('');
     setSaving(true);
     try {
       const saved = await updateMyProfile({
@@ -200,5 +240,5 @@ export const useProfileForm = (currentUserRole, mockData) => {
     }
   };
 
-  return { isEditing, loading, profileImage, chosenFileName, photoError, showPhotoViewer, pendingAvatarPreview, pendingAvatarFileValid: !!pendingAvatarFile, avatarSaving, avatarError, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange, triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave };
+  return { isEditing, loading, profileImage, chosenFileName, photoError, showPhotoViewer, pendingAvatarPreview, pendingAvatarFileValid: !!pendingAvatarFile, avatarSaving, avatarError, toast, saving, fileInputRef, formData, draftData, passwordData, passwordError, passwordErrorField, fieldErrors, formError, openEdit, closeEdit, handleDraftChange, handlePasswordChange, handleImageChange, handleAvatarFileSelected, confirmAvatarChange, cancelAvatarChange, triggerFileInput, openPhotoViewer, closePhotoViewer, handleSave };
 };

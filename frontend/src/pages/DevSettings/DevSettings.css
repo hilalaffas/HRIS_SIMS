@@ -39,6 +39,12 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* [BARU] Dipakai baris kedua (Akses SuperAdmin) supaya tidak dobel garis
+   dengan border-bottom baris pertama di atasnya. */
+.devsettings-row--nolined {
+  border-top: none;
+}
+
 .devsettings-row__label {
   font-size: 0.9rem;
   font-weight: 600;
@@ -110,4 +116,25 @@
   margin: var(--space-2) 0 0;
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+/* [BARU] Tombol "Buka Dashboard SuperAdmin" -- pakai <Link>, bukan
+   <button>, jadi warnanya disamakan manual dengan .devsettings-preview-btn
+   supaya tetap satu bahasa visual. */
+.devsettings-link-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.devsettings-link-btn:hover {
+  background-color: var(--color-primary-hover);
 }

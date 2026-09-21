@@ -7,11 +7,17 @@ import { loginUser } from '../../services/authService';
 import AccountLocked from './AccountLocked';
 import './Login.css';
 import logoImage from '../../assets/sims_logo.png';
+import { validateRequired } from '../../utils/validation';
 
 const Login = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  // [BARU] Menyimpan field mana yang kosong/salah, supaya Input yang
+  // bersangkutan bisa ditandai border merah (prop `error` di Input.jsx).
+  // Sebelumnya cuma ada 1 pesan gabungan ("Username dan password wajib
+  // diisi.") tanpa tahu field mana yang sebenarnya kosong.
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showLockedScreen, setShowLockedScreen] = useState(false);
 
@@ -19,10 +25,16 @@ const Login = ({ onLoginSuccess }) => {
     e.preventDefault();
     setError('');
 
-    if (!username || !password) {
-      setError('Username dan password wajib diisi.');
+    const { errors, isValid, firstErrorMessage } = validateRequired([
+      { field: 'username', label: 'Username', value: username },
+      { field: 'password', label: 'Password', value: password },
+    ]);
+    if (!isValid) {
+      setFieldErrors(errors);
+      setError(firstErrorMessage);
       return;
     }
+    setFieldErrors({});
 
     setIsLoading(true);
     try {
@@ -72,6 +84,7 @@ const Login = ({ onLoginSuccess }) => {
             placeholder="username.anda"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            error={fieldErrors.username}
           />
 
           <Input
@@ -81,6 +94,7 @@ const Login = ({ onLoginSuccess }) => {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            error={fieldErrors.password}
           />
 
           <div className="text-right mt-2">

@@ -94,6 +94,21 @@ export default function LoadingScreen() {
     };
 
     const handleLoadingEnd = () => {
+      // [UBAH] BUG FIX: sebelumnya fungsi ini tidak pernah mengecek flag,
+      // jadi kalau sebuah request GET dimulai SAAT flag masih nyala lalu
+      // baru selesai SETELAH flag dimatikan (mis. lewat halaman
+      // pengaturan), event 'sims:loading-end' yang datang belakangan ini
+      // tetap memaksa splash tampil sebentar lewat setPhase('complete') di
+      // bawah -- inilah sebabnya splash "masih muncul" walau sudah
+      // di-toggle off. Sekarang dicek ulang di sini juga, sama seperti
+      // handleLoadingStart.
+      if (!isLoadingScreenEnabled()) {
+        clearAllTimers();
+        setPhase('idle');
+        setProgress(0);
+        return;
+      }
+
       if (showTimerRef.current) {
         // Request-nya selesai SEBELUM delay anti-flash habis -- berarti
         // cepat banget, splash tidak perlu ditampilkan sama sekali.

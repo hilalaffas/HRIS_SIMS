@@ -8,6 +8,7 @@ import LeaveHistory from './components/LeaveHistory';
 import FormCuti from '../approve/components/Form';
 import NotifModal from './components/NotifModal';
 import { getAllHolidays } from '../../../services/holidayService';
+import { isEmpty } from '../../../utils/validation';
 import './ApplyCuti.css';
 
 // [BARU] Interval polling live-sync riwayat cuti (lihat useEffect di bawah).
@@ -140,6 +141,11 @@ const ApplyCuti = ({ user }) => {
   // menampilkan indikator "Live · terakhir diperbarui ...".
   const [historySyncedAt, setHistorySyncedAt] = useState(null);
   const [error, setError] = useState('');
+  // [BARU] Nama field yang lagi bermasalah (kosong/salah), dipakai supaya
+  // field yang bersangkutan ditandai border merah -- berdampingan dengan
+  // `error` (pesan teks yang sudah tampil lewat NotifModal). Konsisten
+  // dengan pola form ini yang menampilkan SATU error pada satu waktu.
+  const [invalidField, setInvalidField] = useState('');
   const [jenisCuti, setJenisCuti] = useState('');
   // [UBAH] Cuti Meninggal ikut dibebaskan dari jeda H-5 (bisa diajukan
   // kapan saja), dicek pakai isBereavementLeave() supaya tetap berlaku
@@ -285,8 +291,41 @@ const ApplyCuti = ({ user }) => {
   // Di dalam handleSubmit di ApplyCuti.js
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (new Date(startDate) < new Date(dinamisBatasMinStr) || new Date(endDate) < new Date(startDate)) {
-      setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.'); 
+    setInvalidField('');
+
+    // [BARU] Sebelumnya ALASAN, PEKERJAAN TERTUNDA, dan DICOVER OLEH cuma
+    // mengandalkan atribut HTML `required` di ReasonCoverageSection.jsx --
+    // artinya browser memblokir submit dengan bubble bawaan SEBELUM
+    // handleSubmit ini sempat jalan, jadi tidak pernah dicek di sini sama
+    // sekali. Sekarang dicek eksplisit supaya pesan & border merahnya
+    // konsisten dengan validasi lain di form ini.
+    if (isEmpty(reason)) {
+      setError('Alasan / keterangan perlu diisi.');
+      setInvalidField('reason');
+      return false;
+    }
+    if (isEmpty(pendingWork)) {
+      setError('Pekerjaan tertunda perlu diisi.');
+      setInvalidField('pendingWork');
+      return false;
+    }
+    if (isEmpty(coveredBy)) {
+      setError('Kolom "Dicover Oleh" perlu diisi.');
+      setInvalidField('coveredBy');
+      return false;
+    }
+
+    // [UBAH] Dipecah jadi 2 pengecekan terpisah (sebelumnya 1 kondisi
+    // gabungan pakai `||`) supaya border merah bisa menunjuk tepat ke
+    // "DARI TANGGAL" atau "SAMPAI TANGGAL", bukan cuma pesan umum.
+    if (new Date(startDate) < new Date(dinamisBatasMinStr)) {
+      setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.');
+      setInvalidField('startDate');
+      return false;
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      setError('Tanggal cuti tidak sesuai dengan ketentuan pengajuan.');
+      setInvalidField('endDate');
       return false;
     }
 
@@ -303,6 +342,7 @@ const ApplyCuti = ({ user }) => {
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       if (bookedDates.has(key)) {
         setError('Tanggal yang dipilih sudah tercakup pengajuan cuti lain (ACC, masih diproses, atau dikembalikan). Pilih tanggal lain.');
+        setInvalidField('endDate');
         return false;
       }
     }
@@ -313,6 +353,7 @@ const ApplyCuti = ({ user }) => {
     const isHalfDayLeave = String(jenisCuti || '').trim().toLowerCase() === 'cuti setengah hari';
     if (isHalfDayLeave && jumlahHariCuti <= 0) {
       setError('Rentang cuti harus memiliki minimal setengah hari kerja');
+      setInvalidField('startDate');
       return false;
     }
     // [UBAH] Validasi batas cuti khusus sesuai kebijakan (Melahirkan &
@@ -323,11 +364,13 @@ const ApplyCuti = ({ user }) => {
         const batasMaxTanggal = addMonthsToDateStr(startDate, MATERNITY_MAX_MONTHS_FEMALE);
         if (endDate > batasMaxTanggal) {
           setError(`Cuti melahirkan untuk karyawan perempuan maksimal ${MATERNITY_MAX_MONTHS_FEMALE} bulan sejak tanggal mulai.`);
+          setInvalidField('endDate');
           return false;
         }
       } else {
         if (jumlahHariCuti > MATERNITY_MAX_DAYS_MALE) {
           setError(`Cuti melahirkan (pendamping) untuk karyawan laki-laki maksimal ${MATERNITY_MAX_DAYS_MALE} hari kerja.`);
+          setInvalidField('endDate');
           return false;
         }
       }
@@ -337,6 +380,7 @@ const ApplyCuti = ({ user }) => {
     if (isBereavementLeave(jenisCuti)) {
       if (jumlahHariCuti > BEREAVEMENT_MAX_DAYS) {
         setError(`Cuti meninggal maksimal ${BEREAVEMENT_MAX_DAYS} hari kerja.`);
+        setInvalidField('endDate');
         return false;
       }
     }
@@ -345,12 +389,33 @@ const ApplyCuti = ({ user }) => {
     if (String(jenisCuti || '').toLowerCase().includes('nikah')) {
       if (jumlahHariCuti > MARRIAGE_MAX_DAYS) {
         setError(`Cuti nikah maksimal ${MARRIAGE_MAX_DAYS} hari kerja.`);
+        setInvalidField('endDate');
         return false;
       }
     }
     const type = types.find(item => item.name === jenisCuti);
-    if (!type || !managerEmployeeId || (!atasan && (!leaderEmployeeId || !spvEmployeeId))) {
-      setError('Pilih seluruh approver yang wajib sebelum mengirim pengajuan.'); 
+    if (!type) {
+      setError('Jenis permohonan cuti perlu dipilih.');
+      setInvalidField('jenisCuti');
+      return false;
+    }
+    // [UBAH] Sebelumnya 1 pesan gabungan untuk ketiga approver ("Pilih
+    // seluruh approver yang wajib..."), jadi user harus menebak approver
+    // mana yang sebenarnya belum dipilih. Sekarang dicek satu-satu supaya
+    // pesan & border merahnya menunjuk ke dropdown approver yang tepat.
+    if (!atasan && !leaderEmployeeId) {
+      setError('Approver Leader perlu dipilih.');
+      setInvalidField('leaderEmployeeId');
+      return false;
+    }
+    if (!atasan && !spvEmployeeId) {
+      setError('Approver SPV perlu dipilih.');
+      setInvalidField('spvEmployeeId');
+      return false;
+    }
+    if (!managerEmployeeId) {
+      setError('Approver Manager perlu dipilih.');
+      setInvalidField('managerEmployeeId');
       return false;
     }
     setIsSubmitting(true);
@@ -377,6 +442,7 @@ const ApplyCuti = ({ user }) => {
         await submitCuti(payload);
       }
       setReason(''); setPendingWork(''); setCoveredBy(''); setLeaderEmployeeId(''); setSpvEmployeeId(''); setManagerEmployeeId(''); setEditingId(null);
+      setInvalidField('');
       await load(); 
       alert(editingId ? 'Perbaikan cuti berhasil diajukan kembali.' : 'Pengajuan cuti berhasil dikirim.');
       return true;
@@ -469,6 +535,7 @@ const ApplyCuti = ({ user }) => {
   const cancelEdit = () => {
     setEditingId(null);
     setError('');
+    setInvalidField('');
   };
 
   // [BARU] Dipanggil dari tombol "Edit Berkas" DI DALAM popup detail
@@ -524,7 +591,7 @@ const ApplyCuti = ({ user }) => {
     <NotifModal type="error" message={error} onClose={() => setError('')} />
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
-      pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit }}
+      pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit, invalidField }}
       leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
@@ -541,7 +608,7 @@ const ApplyCuti = ({ user }) => {
       <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
         reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
         pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
-        isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true }}
+        isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true, invalidField }}
         leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
     ) : null}
   />

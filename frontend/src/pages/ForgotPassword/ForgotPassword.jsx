@@ -13,6 +13,9 @@ const ForgotPassword = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
+  // [BARU] Menandai input Username supaya border-nya merah saat kosong,
+  // selaras dengan toast "Username wajib diisi." yang sudah ada.
+  const [identifierError, setIdentifierError] = useState('');
 
   const showErrorToast = (message) => {
     setToast({ show: true, message });
@@ -30,9 +33,11 @@ const ForgotPassword = () => {
     e.preventDefault();
 
     if (!identifier.trim()) {
+      setIdentifierError('Username perlu diisi.');
       showErrorToast('Username wajib diisi.');
       return;
     }
+    setIdentifierError('');
 
     setShowConfirm(true);
   };
@@ -130,7 +135,8 @@ const ForgotPassword = () => {
                 label="USERNAME ANDA"
                 id="identifier"
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                onChange={(e) => { setIdentifier(e.target.value); setIdentifierError(''); }}
+                error={identifierError}
               />
 
               <div className="mt-6">

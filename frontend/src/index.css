@@ -11,3 +11,15 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ============ VALIDASI FORM: highlight field yang kosong/salah ============ */
+/* Dipakai global di SEMUA form (input & textarea polos) lewat
+   utils/validation.js (inputErrorClass) supaya border merah konsisten di
+   satu tempat -- tidak perlu hex warna baru, ikut token --color-danger /
+   --color-danger-bg yang sudah ada di styles/tokens.css. Untuk komponen
+   <Dropdown> custom, padanannya adalah class "dropdown--invalid" yang sudah
+   ada di components/Dropdown.css. */
+.input-error {
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 0 0 3px var(--color-danger-bg);
+}
