@@ -809,12 +809,27 @@ public class LeaveService {
         return employee;
     }
 
+    // [BARU] Akun khusus /supersecret (lihat frontend ProtectedRoute.jsx &
+    // migration V34/V35) SENGAJA dibuat TANPA profil Employee -- supaya
+    // tidak pernah muncul di halaman Karyawan. Auto-create di bawah ini
+    // (createEmployeeProfileForExistingUser) awalnya jadi bug: begitu akun
+    // ini menyentuh endpoint cuti/approval apa pun (mis. badge approval di
+    // Sidebar), Employee-nya otomatis ter-create lagi. Jadi username ini
+    // WAJIB dikecualikan dari auto-create -- fitur cuti/approval memang
+    // TIDAK dimaksudkan untuk akun ini, jadi melempar error di sini adalah
+    // perilaku yang benar, bukan bug.
+    private static final String SUPERSECRET_USERNAME = "supersecret";
+
     private Employee getEmployeeByUsername(String username) {
         return karyawanRepository.findFirstByUser_Username(username)
                 .orElseGet(() -> createEmployeeProfileForExistingUser(username));
     }
 
     private Employee createEmployeeProfileForExistingUser(String username) {
+        if (SUPERSECRET_USERNAME.equalsIgnoreCase(username)) {
+            throw new RuntimeException("Akun ini tidak memiliki profil karyawan dan tidak dibuatkan otomatis");
+        }
+
         User user = userRepository.findByUsername(username);
         if (user == null) {
             throw new RuntimeException("User login tidak ditemukan");
