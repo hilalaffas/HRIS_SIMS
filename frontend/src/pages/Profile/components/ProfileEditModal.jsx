@@ -34,10 +34,10 @@ const ProfileEditModal = ({
               <label>Foto Profil</label>
               <div className="profile-photo-picker">
                 <label htmlFor="fotoProfilInput" className="profile-photo-button">
-                  Choose File
+                  Pilih Foto
                 </label>
                 <span className="profile-photo-filename">
-                  {chosenFileName || 'No file chosen'}
+                  {chosenFileName || 'Belum ada file foto, Ukuran Maks. 1MB JPG,PNG'}
                 </span>
                 <input
                   id="fotoProfilInput"
