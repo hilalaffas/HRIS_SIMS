@@ -28,7 +28,7 @@ const ProfileViewSection = ({
 
         <div className="profile-title-wrapper">
           <h2 className="profile-main-name">{formData.namaLengkap}</h2>
-          <p className="profile-main-nik">NIK/ID Karyawan: {formData.nikKaryawan}</p>
+          <p className="profile-main-nik">{formData.nikKaryawan}</p>
         </div>
 
         <button className="btn-edit-data" onClick={onOpenEdit}>

@@ -17,7 +17,7 @@
 }
 
 .profile-main-nik {
-  margin: 0 0 20px 0;        /* Jarak antara teks NIK dengan tombol di bawahnya */
+  margin: 0 0 10px 0;        /* Jarak antara teks NIK dengan tombol di bawahnya */
   font-size: 14px;
   color: #94a3b8;
 }
@@ -63,7 +63,7 @@
   flex-direction: row;       
   align-items: flex-end;     
   margin-top: -60px;         /* Tetap mempertahankan posisi memotong setengah banner hijau */
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   position: relative;        /* Kunci utama agar tombol absolute tetap presisi di kanan */
   width: 100%;
 }
@@ -135,7 +135,7 @@
 }
 
 .profile-main-name {
-  margin: 0 0 4px 0;
+  margin: 0 0 1px 0;
   font-size: 26px;
   color: #0f172a;
   font-weight: 700;
@@ -144,8 +144,8 @@
 
 .profile-main-nik {
   margin: 0;
-  font-size: 14px;
-  color: #94a3b8;
+  font-size: 16px;
+  color: #4f5853;
   text-align: left;
 }
 
@@ -170,9 +170,10 @@
 /* Form Grid */
 .profile-info-grid {
   display: flex;
-  gap: 60px;
+  gap: 40px;
   border-top: 1px solid #f1f5f9;
-  padding-top: 30px;
+  padding-top: 10px;
+  
 }
 
 .info-column {
@@ -180,7 +181,7 @@
 }
 
 .section-title {
-  font-size: 12px;
+  font-size: 16px;
   text-transform: uppercase;
   color: var(--color-primary);
   font-weight: 700;
@@ -193,7 +194,7 @@
 
 .info-group label {
   display: block;
-  font-size: 11px;
+  font-size: 14px;
   text-transform: uppercase;
   color: #94a3b8;
   font-weight: bold;
@@ -202,7 +203,7 @@
 
 .info-group p {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   color: #0f172a;
   font-weight: 600;
 }

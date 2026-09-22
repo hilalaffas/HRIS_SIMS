@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import ProfileFieldInput from './ProfileFieldInput';
 import ProfilePasswordSection from './ProfilePasswordSection';
 import { EMERGENCY_CONTACT_KEY, EMERGENCY_RELATION_KEY } from '../config/profileFieldConfig';
@@ -11,17 +11,34 @@ const ProfileEditModal = ({
   kolomKiri, kolomKanan, draftData, handleDraftChange, isFieldEditable,
   fieldErrors = {}, formError,
   passwordData, passwordError, passwordErrorField, handlePasswordChange,
-}) => (
-  <div className="profile-edit-overlay" onClick={closeEdit}>
+}) => {
+  // [BARU] Fix bug: modal ikut tertutup saat user melakukan drag-select teks
+  // (mousedown di dalam modal, lalu mouseup di luar/overlay). Browser menghitung
+  // target "click" sebagai ancestor bersama dari mousedown & mouseup, sehingga
+  // overlay tetap menerima event click walau stopPropagation dipasang di modal.
+  // Solusinya: overlay hanya boleh close jika mousedown DAN click sama-sama
+  // terjadi tepat di overlay itu sendiri (bukan hasil drag dari dalam modal).
+  const overlayMouseDownRef = useRef(false);
+
+  const handleOverlayMouseDown = (e) => {
+    overlayMouseDownRef.current = e.target === e.currentTarget;
+  };
+
+  const handleOverlayClick = (e) => {
+    if (overlayMouseDownRef.current && e.target === e.currentTarget) {
+      closeEdit();
+    }
+    overlayMouseDownRef.current = false;
+  };
+
+  return (
+  <div className="profile-edit-overlay" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
     <div className="profile-edit-page" onClick={(e) => e.stopPropagation()}>
       <div className="profile-edit-header">
         <div>
           <h3>Edit Data Profil</h3>
           <p>Perbarui informasi personal, kontak, dan alamat Anda</p>
         </div>
-        <button type="button" className="profile-edit-close" onClick={closeEdit} aria-label="Tutup">
-          ✕
-        </button>
       </div>
 
       <form onSubmit={handleSave}>
@@ -135,6 +152,7 @@ const ProfileEditModal = ({
       </form>
     </div>
   </div>
-);
+  );
+};
 
 export default ProfileEditModal;
