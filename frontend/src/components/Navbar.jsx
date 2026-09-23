@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getRiwayatByUser, getPendingApprovals, getMyApprovalUpdates } from '../services/CutiService';
 import { getPendingResetRequests } from '../services/passwordResetService';
-import { getAnnouncements } from '../services/announcementService';
 import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
 import NotifPasswordResetModal from './NotifPasswordResetModal';
 import NotifLeaveApprovalModal from './NotifLeaveApprovalModal';
@@ -14,10 +13,10 @@ const APPROVER_ROLE_LABELS = {
   MANAGER: 'Manager',
 };
 
-// [BARU] Notifikasi yang mengarahkan ke suatu tempat saat diklik.
-// Reset password & cuti-perlu-diproses tetap membuka modal seperti sebelumnya;
-// berita & cuti disetujui sekarang juga ikut "clickable" (baru).
-const CLICKABLE_TYPES = ['password-reset', 'leave-approval', 'announcement', 'approved'];
+// [UBAH] Notifikasi yang mengarahkan ke suatu tempat saat diklik.
+// 'announcement' DIHAPUS -- lonceng notifikasi sekarang murni perihal cuti
+// (+ permintaan reset sandi), berita/pengumuman tidak lagi masuk sini.
+const CLICKABLE_TYPES = ['password-reset', 'leave-approval', 'approved'];
 
 export default function Navbar({ toggleSidebar, user }) {
   const location = useLocation();
@@ -38,10 +37,10 @@ export default function Navbar({ toggleSidebar, user }) {
   }, []);
 
   const [notifications, setNotifications] = useState([]);
-  // [UBAH] holidayNotifications DIHAPUS TOTAL -- notifikasi hari libur
-  // sudah tidak lagi bagian dari lonceng notifikasi. Hanya cuti & berita.
-  const [announcementNotifications, setAnnouncementNotifications] = useState([]);
-
+  // [UBAH] holidayNotifications & announcementNotifications DIHAPUS TOTAL --
+  // lonceng notifikasi sekarang murni perihal cuti (+ reset sandi untuk
+  // HR/SuperAdmin). Berita/pengumuman tidak lagi ditampilkan di sini; tetap
+  // bisa dilihat lewat panel Pengumuman & Portal Berita di Dashboard.
   const [resetRequests, setResetRequests] = useState([]);
   const [selectedResetNotif, setSelectedResetNotif] = useState(null);
   const canSeeResetNotif = isHrAdmin(user) || isSuperAdmin(user);
@@ -187,48 +186,6 @@ export default function Navbar({ toggleSidebar, user }) {
     };
   }, [notificationOwner, notificationStorageKey, userRole, showDropdown]);
 
-  // === NOTIFIKASI BERITA / PENGUMUMAN ===
-  // [UBAH] Sebelumnya fetchCompanyInformation() mengambil pengumuman DAN hari
-  // libur sekaligus (Promise.allSettled 2 sumber). Sekarang HANYA pengumuman;
-  // seluruh logic hari libur (getAllHolidays, holidayNotifications, ikon
-  // 'holiday') telah dihapus.
-  useEffect(() => {
-    if (notificationOwner === 'guest') return undefined;
-
-    let isMounted = true;
-    const fetchAnnouncements = async () => {
-      try {
-        // [UBAH] { silent: true } -- badge lonceng, bukan konten utama
-        // halaman, jadi polling 30 detiknya tidak boleh memicu LoadingScreen
-        // global. Lihat services/api.js.
-        const items = await getAnnouncements({ silent: true });
-        if (!isMounted) return;
-        setAnnouncementNotifications((items || []).map((item) => {
-          const timestamp = item.updatedAt || item.createdAt;
-          return {
-            id: `news-${item.id}-${timestamp ? new Date(timestamp).getTime() : item.id}`,
-            text: <><strong>Pengumuman/berita baru:</strong> {item.judul}</>,
-            date: timestamp
-              ? new Date(timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-              : '-',
-            timestamp,
-            type: 'announcement',
-            raw: item,
-          };
-        }));
-      } catch (error) {
-        console.error('Gagal memuat notifikasi berita:', error);
-      }
-    };
-
-    fetchAnnouncements();
-    const intervalId = window.setInterval(fetchAnnouncements, 30000);
-    return () => {
-      isMounted = false;
-      window.clearInterval(intervalId);
-    };
-  }, [notificationOwner]);
-
   // === NOTIFIKASI PERMINTAAN RESET SANDI (HR ADMIN / SUPER ADMIN) ===
   // Tidak berubah: Super Admin & HR Admin sama-sama melihat notifikasi ini.
   useEffect(() => {
@@ -337,9 +294,9 @@ export default function Navbar({ toggleSidebar, user }) {
       : parsedTime;
   };
 
-  // [UBAH] holidayNotifications dikeluarkan dari daftar gabungan (sudah dihapus di atas)
+  // [UBAH] holidayNotifications & announcementNotifications dikeluarkan dari
+  // daftar gabungan (sudah dihapus di atas) -- sekarang murni cuti + reset sandi.
   const allNotificationCandidates = [
-    ...announcementNotifications,
     ...leaveApprovalNotifications,
     ...resetNotifications,
     ...notifications,
@@ -351,11 +308,11 @@ export default function Navbar({ toggleSidebar, user }) {
     ))
     .sort((first, second) => getNotificationTime(second) - getNotificationTime(first));
 
-  // [BARU] Satu handler terpusat untuk semua jenis klik notifikasi:
+  // [UBAH] Satu handler terpusat untuk semua jenis klik notifikasi:
   // - password-reset & leave-approval: buka modal (perilaku lama, tidak berubah)
-  // - announcement: hilangkan notifikasi + arahkan ke Dashboard (tempat berita tampil)
   // - approved: hilangkan notifikasi + arahkan ke ApplyCuti dengan leaveRequestId,
   //   supaya ApplyCuti.jsx otomatis membuka modal detail cuti tsb.
+  // Cabang 'announcement' DIHAPUS -- berita tidak lagi jadi notifikasi.
   const handleNotifClick = (notif) => {
     if (notif.type === 'password-reset') {
       setSelectedResetNotif(notif.raw);
@@ -363,12 +320,6 @@ export default function Navbar({ toggleSidebar, user }) {
     }
     if (notif.type === 'leave-approval') {
       setSelectedLeaveNotif(notif.raw);
-      return;
-    }
-    if (notif.type === 'announcement') {
-      handleDismissOne(notif.id);
-      setShowDropdown(false);
-      navigate('/dashboard');
       return;
     }
     if (notif.type === 'approved' && notif.raw?.id) {
@@ -520,12 +471,6 @@ export default function Navbar({ toggleSidebar, user }) {
                             <circle cx="12" cy="14.5" r="1.6" fill="#0284c7"/>
                           </svg>
                         )}
-                        {notif.type === 'announcement' && (
-                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                            <path d="M4 11v2a2 2 0 0 0 2 2h2l2 4h3l-2-4 7-3V6l-10 4H6a2 2 0 0 0-2 1Z" stroke="#7c3aed" strokeWidth="2" strokeLinejoin="round"/>
-                            <path d="M18 8.5c1 .5 1 2.5 0 3" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"/>
-                          </svg>
-                        )}
                       </div>
 
                       <div className="notification-content">
@@ -536,9 +481,6 @@ export default function Navbar({ toggleSidebar, user }) {
                         )}
                         {notif.type === 'leave-approval' && (
                           <span className="notification-action-hint notification-action-hint_leave">Klik untuk memproses →</span>
-                        )}
-                        {notif.type === 'announcement' && (
-                          <span className="notification-action-hint" style={{ color: '#7c3aed' }}>Klik untuk membuka →</span>
                         )}
                         {notif.type === 'approved' && (
                           <span className="notification-action-hint" style={{ color: '#10b981' }}>Klik untuk lihat detail →</span>

@@ -51,7 +51,14 @@ public class ProfileController {
 
         Employee employee = employeeRepository.findFirstByUser_Username(user.getUsername()).orElse(null);
         if (employee != null) {
-            if (hasText(request.getFullName())) employee.setFullName(request.getFullName().trim());
+            // [BARU] Nama hanya boleh diubah oleh HRD_Admin / SUPER_ADMIN, walau
+            // yang mengedit lewat halaman profil ini selalu profil miliknya
+            // sendiri. Ini enforcement utama -- frontend (useProfileForm.js)
+            // sudah tidak mengirim fullName untuk role lain, tapi field ini tetap
+            // harus diabaikan di sini kalau ada yang memanggil endpoint langsung.
+            if (hasText(request.getFullName()) && isHrAdminOrSuperAdmin(user)) {
+                employee.setFullName(request.getFullName().trim());
+            }
             if (hasText(request.getAddress())) employee.setAddress(request.getAddress().trim());
             if (hasText(request.getPhoneNumber())) employee.setPhoneNumber(request.getPhoneNumber().trim());
             if (hasText(request.getEmergencyContactPhone())) employee.setEmergencyContactPhone(request.getEmergencyContactPhone().trim());
@@ -65,6 +72,12 @@ public class ProfileController {
         }
         userRepository.save(user);
         return ResponseEntity.ok(toResponse(user));
+    }
+
+    // [BARU] Pola sama persis dengan pengecekan role di EmployeeController.
+    private boolean isHrAdminOrSuperAdmin(User user) {
+        String roleName = user.getRoleId() == null ? "" : user.getRoleId().getRoleName();
+        return "HRD_ADMIN".equalsIgnoreCase(roleName) || "SUPER_ADMIN".equalsIgnoreCase(roleName);
     }
 
     private User currentUser(Authentication authentication) {

@@ -4,6 +4,15 @@ import { validatePhotoFile } from '../../../utils/fileValidation';
 import { validateRequired } from '../../../utils/validation';
 import { FIELD_CONFIG } from '../config/profileFieldConfig';
 
+// [BARU] Cek apakah field boleh diedit oleh role tertentu -- logikanya sama
+// persis dengan isFieldEditable() di ProfilePageBase.jsx. Dipakai di
+// handleSave supaya field yang terkunci (mis. namaLengkap utk non-HR-Admin)
+// tidak ikut terkirim ke backend walau inputnya sempat ter-render disabled.
+const isFieldEditableForRole = (fieldKey, role) => {
+  const cfg = FIELD_CONFIG.find((field) => field.key === fieldKey);
+  return !cfg?.lockedFor || !cfg.lockedFor.includes(role);
+};
+
 export const getInitials = (fullName) => {
   if (!fullName) return 'AS';
   const parts = fullName.trim().split(/\s+/);
@@ -212,8 +221,11 @@ export const useProfileForm = (currentUserRole, mockData) => {
     setPasswordErrorField('');
     setSaving(true);
     try {
+      // [UBAH] fullName hanya disertakan kalau role ini memang boleh
+      // mengedit namaLengkap (lihat isFieldEditableForRole di atas) --
+      // proteksi ganda di sisi frontend selain kuncian di backend.
       const saved = await updateMyProfile({
-        fullName: draftData.namaLengkap,
+        fullName: isFieldEditableForRole('namaLengkap', currentUserRole) ? draftData.namaLengkap : undefined,
         address: draftData.alamatLengkap,
         email: draftData.email,
         phoneNumber: draftData.nomorTelepon,

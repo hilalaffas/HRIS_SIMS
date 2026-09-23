@@ -19,6 +19,13 @@ export const ROLES = {
 // perlu) dilakukan lewat modul lain di luar halaman profil (mis. modul HR/Karyawan).
 const LOCKED_FOR_ALL_ROLES = Object.values(ROLES);
 
+// [BARU] Field "Nama Lengkap" hanya boleh diedit oleh HRD_Admin & SUPER_ADMIN.
+// Semua role lain (termasuk HRD_Karyawan) melihat field ini sebagai read-only
+// di halaman profil masing-masing.
+const LOCKED_FOR_NON_HR_ADMIN = Object.values(ROLES).filter(
+  (role) => role !== ROLES.HRD_ADMIN && role !== ROLES.SUPER_ADMIN
+);
+
 // Kunci field kontak darurat & hubungannya — dipakai untuk menggabungkan
 // keduanya dalam satu baris tampilan (lihat ProfileEditModal & ProfileViewSection).
 export const EMERGENCY_CONTACT_KEY = 'nomorTeleponDarurat';
@@ -31,7 +38,8 @@ export const EMERGENCY_RELATION_OPTIONS = ['Orang Tua', 'Suami / Istri', 'Anak',
 // `lockedFor`: daftar role yang TIDAK BOLEH mengedit field ini.
 // Field tanpa `lockedFor` berarti semua role boleh mengedit.
 export const FIELD_CONFIG = [
-  { key: 'namaLengkap', label: 'Nama Lengkap', column: 'kiri', section: 'umum' },
+  // [UBAH] lockedFor ditambahkan -- lihat LOCKED_FOR_NON_HR_ADMIN di atas.
+  { key: 'namaLengkap', label: 'Nama Lengkap', lockedFor: LOCKED_FOR_NON_HR_ADMIN, column: 'kiri', section: 'umum' },
   { key: 'nikKaryawan', label: 'NIK / ID Karyawan', lockedFor: LOCKED_FOR_ALL_ROLES, column: 'kiri', section: 'umum' },
   { key: 'jabatan', label: 'Jabatan / Posisi', lockedFor: LOCKED_FOR_ALL_ROLES, column: 'kiri', section: 'umum' },
   { key: 'alamatLengkap', label: 'Alamat Lengkap', textarea: true, column: 'kiri', section: 'umum', fullWidth: true },
