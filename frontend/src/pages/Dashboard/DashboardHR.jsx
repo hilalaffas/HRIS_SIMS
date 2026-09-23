@@ -55,14 +55,16 @@ export default function DashboardHR({ user }) {
     setEditingAnnouncement(null);
   };
 
-  const handleSubmitAnnouncement = async ({ judul, label, isi }) => {
+  const handleSubmitAnnouncement = async ({ judul, label, isi, publishAt, expiresAt }) => {
     if (editingAnnouncement) {
-      await updateAnnouncement(editingAnnouncement.id, { judul, label, isi });
+      await updateAnnouncement(editingAnnouncement.id, { judul, label, isi, publishAt, expiresAt });
     } else {
       await addAnnouncement({
         judul,
         label,
         isi,
+        publishAt,
+        expiresAt,
         author: user?.name || 'HRD',
       });
     }
@@ -112,6 +114,7 @@ export default function DashboardHR({ user }) {
         </div>
         <AnnouncementSection
           key={announcementRefreshKey}
+          mode="admin"
           onEdit={handleOpenEditAnnouncement}
           onDelete={handleDeleteAnnouncement}
         />

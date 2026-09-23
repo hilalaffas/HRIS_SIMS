@@ -25,6 +25,15 @@ public class News {
 
     private Boolean published;
 
+    // [BARU] Jadwal tayang. publishAt = kapan mulai tampil ke karyawan,
+    // expiresAt = kapan berhenti tampil otomatis. Lihat V36 migration &
+    // NewsRepository.findActiveAndPublished() untuk filternya.
+    @Column(name = "publish_at")
+    private LocalDateTime publishAt;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
     @Column(name = "created_by")
     private String createdBy;
 

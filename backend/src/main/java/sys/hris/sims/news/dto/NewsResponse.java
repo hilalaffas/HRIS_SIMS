@@ -9,6 +9,8 @@ public class NewsResponse {
     private String content;
     private String category;
     private Boolean published;
+    private java.time.LocalDateTime publishAt;
+    private java.time.LocalDateTime expiresAt;
     private String createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -54,6 +56,22 @@ public class NewsResponse {
 
     public void setPublished(Boolean published) {
         this.published = published;
+    }
+
+    public java.time.LocalDateTime getPublishAt() {
+        return publishAt;
+    }
+
+    public void setPublishAt(java.time.LocalDateTime publishAt) {
+        this.publishAt = publishAt;
+    }
+
+    public java.time.LocalDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(java.time.LocalDateTime expiresAt) {
+        this.expiresAt = expiresAt;
     }
 
     public String getCreatedBy() {

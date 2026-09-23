@@ -54,14 +54,16 @@ export default function DashboardSuperAdmin({ user }) {
     setEditingAnnouncement(null);
   };
 
-  const handleSubmitAnnouncement = async ({ judul, label, isi }) => {
+  const handleSubmitAnnouncement = async ({ judul, label, isi, publishAt, expiresAt }) => {
     if (editingAnnouncement) {
-      await updateAnnouncement(editingAnnouncement.id, { judul, label, isi });
+      await updateAnnouncement(editingAnnouncement.id, { judul, label, isi, publishAt, expiresAt });
     } else {
       await addAnnouncement({
         judul,
         label,
         isi,
+        publishAt,
+        expiresAt,
         author: user?.name || 'Super Admin',
       });
     }
@@ -111,6 +113,7 @@ export default function DashboardSuperAdmin({ user }) {
         </div>
         <AnnouncementSection
           key={announcementRefreshKey}
+          mode="admin"
           onEdit={handleOpenEditAnnouncement}
           onDelete={handleDeleteAnnouncement}
         />

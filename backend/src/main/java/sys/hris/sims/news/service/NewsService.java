@@ -15,6 +15,12 @@ public interface NewsService {
 
     List<NewsResponse> getAllNews();
 
+    // [BARU] Untuk dashboard manajemen HR/SuperAdmin -- tidak difilter
+    // jendela waktu, supaya berita yang belum tayang (terjadwal) atau sudah
+    // berakhir tetap kelihatan & bisa diedit/dihapus. Listing publik
+    // (getAllNews()) tetap terfilter jendela waktu.
+    List<NewsResponse> getAllNewsForManagement();
+
     NewsResponse getNewsById(Long id);
 
     NewsResponse updateNews(Long id, NewsRequest request);

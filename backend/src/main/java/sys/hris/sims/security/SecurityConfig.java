@@ -344,6 +344,19 @@ public class SecurityConfig {
                         // ==========================
                         // News
                         // ==========================
+                        // [BARU] Dua rule spesifik ini WAJIB di atas rule
+                        // wildcard /api/news/** di bawah -- Spring Security
+                        // mengevaluasi requestMatchers berurutan dari atas
+                        // ke bawah, match PERTAMA yang dipakai. Tanpa ini,
+                        // /api/news/all & /api/news/upload-image akan
+                        // ketiban rule GET wildcard "authenticated()" (semua
+                        // role login bisa akses), padahal keduanya harus
+                        // khusus admin: /all berisi berita terjadwal/sudah
+                        // berakhir yang belum semestinya dilihat karyawan
+                        // biasa, dan /upload-image cuma dipakai form buat
+                        // pengumuman.
+                        .requestMatchers(HttpMethod.GET, "/api/news/all").hasAnyRole(ADMIN_ROLES)
+                        .requestMatchers(HttpMethod.POST, "/api/news/upload-image").hasAnyRole(ADMIN_ROLES)
                         .requestMatchers(HttpMethod.GET, "/api/news/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/news").hasAnyRole(ADMIN_ROLES)
                         .requestMatchers(HttpMethod.PUT, "/api/news/**").hasAnyRole(ADMIN_ROLES)
