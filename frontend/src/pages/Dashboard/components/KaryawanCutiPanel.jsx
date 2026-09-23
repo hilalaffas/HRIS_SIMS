@@ -44,7 +44,7 @@ export default function KaryawanCutiPanel({ leaves = [] }) {
   const pageItems = leaves.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 h-full relative">
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
       <h4 className="font-bold text-sm text-gray-800 pb-3 border-b border-gray-100">
         Karyawan Cuti Bulan Ini
       </h4>
