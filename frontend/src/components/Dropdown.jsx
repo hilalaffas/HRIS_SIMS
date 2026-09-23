@@ -63,10 +63,24 @@ const Dropdown = ({
     return options.filter((opt) => opt.label.toLocaleLowerCase('id-ID').includes(normalizedQuery));
   }, [options, query, searchable]);
 
-  const selectedIndex = filteredOptions.findIndex(
+  // [UBAH] selectedOption sekarang dicari langsung dari `options` (daftar
+  // PENUH), BUKAN dari filteredOptions (hasil pencarian). Sebelumnya index
+  // hasil pencarian dipakai untuk mengambil item dari daftar penuh yang
+  // urutan/panjangnya beda -- makanya label yang tampil di kotak dropdown
+  // selalu "nyasar" ke karyawan lain begitu ada query pencarian aktif
+  // (mis. cari "hilal", yang kepilih malah karyawan lain yang kebetulan
+  // ada di index yang sama pada daftar penuh).
+  const selectedOption = options.find(
+    (opt) => String(opt.value) === String(value)
+  ) || null;
+
+  // selectedIndexInFiltered HANYA dipakai untuk menentukan opsi mana yang
+  // di-highlight duluan saat menu baru dibuka (lihat openMenu) -- ini tetap
+  // benar dihitung dari filteredOptions karena highlightedIndex memang
+  // index ke filteredOptions (dipakai moveHighlight & handleMenuKeyDown).
+  const selectedIndexInFiltered = filteredOptions.findIndex(
     (opt) => String(opt.value) === String(value)
   );
-  const selectedOption = selectedIndex >= 0 ? options[selectedIndex] : null;
 
   // Tutup menu saat klik di luar komponen.
   useEffect(() => {
@@ -101,7 +115,7 @@ const Dropdown = ({
   const openMenu = () => {
     if (disabled) return;
     setQuery('');
-    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    setHighlightedIndex(selectedIndexInFiltered >= 0 ? selectedIndexInFiltered : 0);
     setOpen(true);
   };
 
@@ -117,29 +131,39 @@ const Dropdown = ({
     setHighlightedIndex(next);
   };
 
-  const handleTriggerKeyDown = (e) => {
-    if (disabled) return;
+  // [BARU] Logika keyboard "saat menu terbuka" (Arrow/Enter/Escape),
+  // dipusatkan di sini supaya bisa dipakai baik oleh tombol trigger MAUPUN
+  // kotak pencarian. Sebelumnya logika Enter cuma ada di handler tombol
+  // trigger (handleTriggerKeyDown) -- begitu fokus pindah ke kotak
+  // pencarian (elemen <input>, sibling dari <button> di JSX, BUKAN anaknya),
+  // event Enter di kotak pencarian tidak pernah nyampai ke handler itu sama
+  // sekali, jadi ketik nama lalu Enter tidak menyeleksi apa-apa.
+  const handleMenuKeyDown = (e) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      if (!open) {
-        openMenu();
-      } else {
-        moveHighlight(e.key === 'ArrowDown' ? 1 : -1);
-      }
-    } else if (e.key === 'Enter' || e.key === ' ') {
+      moveHighlight(e.key === 'ArrowDown' ? 1 : -1);
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (open) {
-        const opt = filteredOptions[highlightedIndex];
-        if (opt && !opt.disabled) {
-          emitChange(opt.value);
-          closeMenu();
-        }
-      } else {
-        openMenu();
+      const opt = filteredOptions[highlightedIndex];
+      if (opt && !opt.disabled) {
+        emitChange(opt.value);
+        closeMenu();
       }
     } else if (e.key === 'Escape') {
       closeMenu();
     }
+  };
+
+  const handleTriggerKeyDown = (e) => {
+    if (disabled) return;
+    if (!open) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openMenu();
+      }
+      return;
+    }
+    handleMenuKeyDown(e);
   };
 
   return (
@@ -177,7 +201,16 @@ const Dropdown = ({
                 className="dropdown__search"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setHighlightedIndex(0); }}
-                onKeyDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  // [UBAH] Sebelumnya cuma e.stopPropagation() -- Enter/Arrow/
+                  // Escape di kotak pencarian tidak diproses sama sekali.
+                  // Sekarang pakai handler yang sama dengan tombol trigger
+                  // (handleMenuKeyDown), supaya Enter benar-benar memilih opsi
+                  // yang sedang di-highlight. stopPropagation tetap dipertahankan
+                  // supaya keydown di sini tidak memicu shortcut lain di halaman.
+                  e.stopPropagation();
+                  handleMenuKeyDown(e);
+                }}
                 placeholder="Cari..."
                 aria-label="Cari pilihan"
               />
