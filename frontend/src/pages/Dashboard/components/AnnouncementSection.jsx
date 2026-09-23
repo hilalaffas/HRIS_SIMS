@@ -1,5 +1,5 @@
 // src/pages/Dashboard/components/AnnouncementSection.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   getAnnouncements,
   getAllAnnouncementsForManagement,
@@ -9,6 +9,9 @@ import {
   getScheduleStatus,
 } from '../../../services/announcementService';
 import Skeleton from '../../../components/Skeleton'; // [BARU]
+
+// [BARU] Jumlah berita yang ditampilkan per halaman.
+const ITEMS_PER_PAGE = 3;
 
 // [UBAH] Tambah prop `mode`. mode="admin" (dipakai DashboardHR/
 // DashboardSuperAdmin, hanya saat onEdit/onDelete disediakan) memanggil
@@ -21,6 +24,8 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
   const [announcements, setAnnouncements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const isAdminMode = mode === 'admin';
+  // [BARU] State halaman aktif untuk paging daftar berita.
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     // [BARU] Skeleton cuma boleh tampil di load PERTAMA. Tanpa flag ini,
@@ -55,12 +60,22 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
     return () => window.clearInterval(refreshTimer);
   }, [isAdminMode]);
 
+  // [BARU] Hitung total halaman & potong data ke 3 item per halaman.
+  // safeCurrentPage menjaga halaman tetap valid kalau jumlah berita
+  // berkurang (mis. setelah dihapus / refresh polling 30 detik).
+  const totalPages = Math.max(1, Math.ceil(announcements.length / ITEMS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageAnnouncements = useMemo(() => {
+    const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return announcements.slice(start, start + ITEMS_PER_PAGE);
+  }, [announcements, safeCurrentPage]);
+
   if (isLoading) {
     // [UBAH] Skeleton 2 kartu mengikuti bentuk kartu pengumuman asli
     // (label pill, meta, judul, body) -- bukan lagi teks "Memuat pengumuman...".
     return (
       <div className="flex flex-col gap-5" aria-hidden="true">
-        {[0, 1].map((i) => (
+        {[0, 1, 2].map((i) => (
           <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between min-h-[180px]">
             <div>
               <div className="flex items-center gap-3 mb-3">
@@ -88,7 +103,7 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {announcements.map((item) => {
+      {pageAnnouncements.map((item) => {
         const labelStyle = getLabelStyle(item.label);
         // [BARU] Badge status jadwal (Terjadwal/Tayang/Berakhir) cuma
         // relevan di mode admin -- listing publik (mode default) sudah
@@ -146,7 +161,7 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
                   HRD_Admin/SUPER_ADMIN saja (lihat SecurityConfig.java) --
                   bukan konten dari sembarang user. */}
               <div
-                className="text-sm text-gray-500 leading-relaxed [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline [&_a]:text-[var(--color-primary)]"
+                className="text-sm text-gray-500 leading-relaxed  [&_img]:h-48  [&_img]:rounded-lg [&_img]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline [&_a]:text-[var(--color-primary)]"
                 dangerouslySetInnerHTML={{ __html: item.isi }}
               />
               {isAdminMode && (item.publishAt || item.expiresAt) && (
@@ -158,6 +173,33 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
           </div>
         );
       })}
+
+      {/* [BARU] Kontrol paging -- hanya tampil kalau berita lebih dari
+          satu halaman (>3 item), mengikuti pola & label yang sama
+          dengan TableKaryawan.jsx. */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={safeCurrentPage <= 1}
+            className="text-xs font-bold px-3 py-1.5 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <i className="fa-solid fa-chevron-left mr-1"></i> Sebelumnya
+          </button>
+          <span className="text-xs text-gray-400">
+            Halaman {safeCurrentPage} dari {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={safeCurrentPage >= totalPages}
+            className="text-xs font-bold px-3 py-1.5 rounded-md text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Berikutnya <i className="fa-solid fa-chevron-right ml-1"></i>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
