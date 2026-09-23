@@ -209,11 +209,20 @@ export const getMyApprovalUpdates = (config = {}) => api.get('/api/cuti/me/appro
 // [UBAH] Tambah parameter config opsional ({ silent }) -- dipakai
 // CalendarCard.jsx (widget kalender Dashboard, polling tiap 30 detik selalu
 // silent). Lihat services/api.js.
+//
+// [UBAH] Return value sekarang { byDate, list } (sebelumnya cuma peta harian
+// yang setara `byDate`):
+// - byDate: peta tanggal ('YYYY-MM-DD') -> array cuti di hari itu. Dipakai
+//   untuk mewarnai kotak kalender (tidak berubah dari sebelumnya).
+// - list: [BARU] satu entri per PENGAJUAN cuti (bukan per-hari) dengan
+//   rentang startDate/endDate utuh. Dipakai KaryawanCutiPanel untuk
+//   menampilkan "Karyawan Cuti Bulan Ini" (menggantikan HariLiburPanel).
 export async function getTeamLeaveByYear(year, config = {}) {
   const requests = await api.get(`/api/cuti/calendar?year=${year}`, config);
-  const result = {};
+  const byDate = {};
+  const list = [];
 
-  if (!Array.isArray(requests)) return result;
+  if (!Array.isArray(requests)) return { byDate, list };
 
   requests
     .filter((item) => item?.startDate && item?.endDate && ['PENDING', 'APPROVED'].includes(String(item.status?.statusName || item.status || '').toUpperCase()))
@@ -225,18 +234,31 @@ export async function getTeamLeaveByYear(year, config = {}) {
 
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
 
+      const rawStatus = item.status?.statusName || item.status;
+
+      // [BARU] Satu entri ringkas per pengajuan, dipakai KaryawanCutiPanel.
+      list.push({
+        id: item.id ?? `${item.employee?.fullName || 'karyawan'}-${cleanStart}`,
+        nama: item.employee?.fullName || 'Karyawan',
+        jenisCuti: item.leaveType?.name || 'Cuti',
+        status: statusLabel(rawStatus),
+        statusCode: statusCode(rawStatus),
+        startDate: cleanStart,
+        endDate: cleanEnd,
+      });
+
       for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
         if (date.getFullYear() !== Number(year)) continue;
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        (result[key] ??= []).push({
+        (byDate[key] ??= []).push({
           nama: item.employee?.fullName || 'Karyawan',
           jenisCuti: item.leaveType?.name || 'Cuti',
-          status: statusLabel(item.status?.statusName || item.status),
+          status: statusLabel(rawStatus),
         });
       }
     });
 
-  return result;
+  return { byDate, list };
 }
 
 export function mapApproval(item, employeeLookup = {}) {

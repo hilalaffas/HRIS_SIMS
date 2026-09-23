@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import AnnouncementSection from './components/AnnouncementSection';
 import CalendarCard from './components/CalendarCard';
-import HariLiburPanel from './components/HariLiburPanel';
+import KaryawanCutiPanel from './components/KaryawanCutiPanel';
 import AnnouncementModal from './components/AnnouncementModal';
 import HolidayModal from './components/HolidayModal';
 import {
@@ -10,11 +10,7 @@ import {
   updateAnnouncement,
   deleteAnnouncement,
 } from '../../services/announcementService';
-import {
-  addHoliday,
-  updateHoliday,
-  deleteHoliday,
-} from '../../services/holidayService';
+import { addHoliday } from '../../services/holidayService';
 import './Dashboard.css';
 
 export default function DashboardHR({ user }) {
@@ -27,7 +23,10 @@ export default function DashboardHR({ user }) {
     agenda: "Meeting Evaluasi Kuartal II - Jam 10:00"
   });
 
-  const [holidaysThisMonth, setHolidaysThisMonth] = useState([]);
+  // [UBAH] holidaysThisMonth diganti teamLeavesThisMonth -- panel "Hari Libur
+  // Bulan Ini" digantikan "Karyawan Cuti Bulan Ini" (highlight libur di
+  // kotak kalender sendiri tidak berubah, itu internal CalendarCard).
+  const [teamLeavesThisMonth, setTeamLeavesThisMonth] = useState([]);
 
   // Kunci untuk memaksa AnnouncementSection & CalendarCard refresh data setelah submit
   const [announcementRefreshKey, setAnnouncementRefreshKey] = useState(0);
@@ -38,7 +37,6 @@ export default function DashboardHR({ user }) {
 
   // Item yang sedang diedit. null berarti modal dalam mode "Tambah".
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
-  const [editingHoliday, setEditingHoliday] = useState(null);
 
   // ----- Pengumuman (masih localStorage, backend belum ada) -----
 
@@ -79,52 +77,25 @@ export default function DashboardHR({ user }) {
   };
 
   // ----- Hari Libur (sudah tersambung ke backend /api/holidays) -----
+  // [UBAH] handleOpenEditHoliday & handleDeleteHoliday DIHAPUS -- satu-
+  // satunya pemicu keduanya adalah tombol Edit/Hapus di HariLiburPanel, dan
+  // panel itu sudah digantikan KaryawanCutiPanel. "Tambah Hari Libur" di
+  // atas kalender tetap ada & berfungsi seperti biasa.
 
   const handleOpenAddHoliday = () => {
-    setEditingHoliday(null);
-    setIsHolidayModalOpen(true);
-  };
-
-  const handleOpenEditHoliday = (item) => {
-    // item berasal dari holidaysThisMonth: { day, month, year, agenda, holidayId, isNational }
-    const mm = String(item.month + 1).padStart(2, '0');
-    const dd = String(item.day).padStart(2, '0');
-    setEditingHoliday({
-      id: item.holidayId,
-      tanggal: `${item.year}-${mm}-${dd}`,
-      nama: item.agenda,
-      isNational: item.isNational,
-    });
     setIsHolidayModalOpen(true);
   };
 
   const handleCloseHolidayModal = () => {
     setIsHolidayModalOpen(false);
-    setEditingHoliday(null);
   };
 
   const handleSubmitHoliday = async ({ tanggal, nama, isNational }) => {
     try {
-      if (editingHoliday) {
-        await updateHoliday(editingHoliday.id, { tanggal, nama, isNational });
-      } else {
-        await addHoliday({ tanggal, nama, isNational });
-      }
+      await addHoliday({ tanggal, nama, isNational });
       setCalendarRefreshKey((k) => k + 1);
     } catch (err) {
       alert(err.message || 'Gagal menyimpan hari libur.');
-    }
-  };
-
-  const handleDeleteHoliday = async (item) => {
-    if (!item.holidayId) return;
-    const confirmed = window.confirm('Yakin ingin menghapus hari libur ini?');
-    if (!confirmed) return;
-    try {
-      await deleteHoliday(item.holidayId);
-      setCalendarRefreshKey((k) => k + 1);
-    } catch (err) {
-      alert(err.message || 'Gagal menghapus hari libur.');
     }
   };
 
@@ -157,14 +128,10 @@ export default function DashboardHR({ user }) {
         <CalendarCard
           selectedDate={selectedDate}
           onDateClick={setSelectedDate}
-          onHolidaysChange={setHolidaysThisMonth}
+          onTeamLeavesChange={setTeamLeavesThisMonth}
           refreshTrigger={calendarRefreshKey}
         />
-        <HariLiburPanel
-          holidays={holidaysThisMonth}
-          onEdit={handleOpenEditHoliday}
-          onDelete={handleDeleteHoliday}
-        />
+        <KaryawanCutiPanel leaves={teamLeavesThisMonth} />
       </div>
 
       {/* Modal Pengumuman (Tambah / Edit) */}
@@ -175,12 +142,11 @@ export default function DashboardHR({ user }) {
         initialData={editingAnnouncement}
       />
 
-      {/* Modal Hari Libur (Tambah / Edit) */}
+      {/* Modal Hari Libur (Tambah) */}
       <HolidayModal
         isOpen={isHolidayModalOpen}
         onClose={handleCloseHolidayModal}
         onSubmit={handleSubmitHoliday}
-        initialData={editingHoliday}
       />
     </div>
   );

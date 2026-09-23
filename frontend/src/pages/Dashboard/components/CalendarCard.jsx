@@ -3,12 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { getHolidaysByMonth } from '../../../services/holidayService';
 import { getTeamLeaveByYear } from '../../../services/CutiService';
 
-export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChange, refreshTrigger }) {
+export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChange, onTeamLeavesChange, refreshTrigger }) {
   const todayObj = new Date();
   const [viewDate, setViewDate] = useState(new Date(todayObj.getFullYear(), todayObj.getMonth(), 1));
   // holidays: map tanggal ('YYYY-MM-DD') -> { name, isNational, id }
   const [holidays, setHolidays] = useState({});
   const [teamLeaves, setTeamLeaves] = useState({});
+  // [BARU] Daftar cuti tim setahun penuh, satu entri per pengajuan (bukan
+  // per-hari) -- sumber untuk currentMonthTeamLeaves di bawah, dipakai
+  // KaryawanCutiPanel. Lihat getTeamLeaveByYear di CutiService.js.
+  const [teamLeaveList, setTeamLeaveList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const monthNames = [
@@ -43,7 +47,9 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
         });
 
         setHolidays(holidayMap);
-        setTeamLeaves(teamLeaveData || {});
+        // [UBAH] getTeamLeaveByYear sekarang balikin { byDate, list }.
+        setTeamLeaves(teamLeaveData?.byDate || {});
+        setTeamLeaveList(teamLeaveData?.list || []);
       } catch (err) {
         console.error('Gagal memuat data kalender:', err);
         setHolidays({});
@@ -56,12 +62,18 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
     return () => window.clearInterval(refreshTimer);
   }, [currentYear, currentMonth, refreshTrigger]);
 
+  // [UBAH] Functional update (pakai nilai viewDate sebelumnya dari React,
+  // bukan currentYear/currentMonth dari closure render ini). Sebelumnya kalau
+  // tombol next/prev diklik cepat (dobel klik sebelum re-render selesai),
+  // kedua klik membaca currentMonth yang sama persis -> hanya maju/mundur 1
+  // bulan padahal diklik 2x, terasa seperti "stuck". Functional update ini
+  // selalu baca state ter-update, jadi tiap klik pasti diproses.
   const handlePrevMonth = () => {
-    setViewDate(new Date(currentYear, currentMonth - 1, 1));
+    setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
-    setViewDate(new Date(currentYear, currentMonth + 1, 1));
+    setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
   // Generator kotak tanggal kalender (42 Kotak)
@@ -144,13 +156,32 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
   // Filter hari libur khusus bulan aktif
   const currentMonthHolidays = days.filter(d => d.isCurrentMonth && d.isHoliday);
 
-  // Lapor daftar libur bulan yang sedang ditampilkan ke komponen luar (HariLiburPanel)
+  // [BARU] Filter+urutkan cuti tim yang rentangnya beririsan dengan bulan
+  // aktif (bukan cuma yang mulai di bulan ini -- cuti yang menyambung dari
+  // bulan lalu/ke bulan depan tetap ikut terhitung). Dipakai KaryawanCutiPanel.
+  const monthStart = new Date(currentYear, currentMonth, 1);
+  const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+  const currentMonthTeamLeaves = teamLeaveList
+    .filter((item) => {
+      const start = new Date(`${item.startDate}T00:00:00`);
+      const end = new Date(`${item.endDate}T00:00:00`);
+      return start <= monthEnd && end >= monthStart;
+    })
+    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+  // [UBAH] Lapor daftar libur & daftar cuti tim bulan yang sedang ditampilkan
+  // ke komponen luar. onHolidaysChange masih dipakai untuk mewarnai kalender;
+  // onTeamLeavesChange (BARU) menggantikan peran HariLiburPanel lama --
+  // sekarang mengisi KaryawanCutiPanel.
   useEffect(() => {
     if (onHolidaysChange) {
       onHolidaysChange(currentMonthHolidays);
     }
+    if (onTeamLeavesChange) {
+      onTeamLeavesChange(currentMonthTeamLeaves);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holidays, currentMonth, currentYear]);
+  }, [holidays, teamLeaveList, currentMonth, currentYear]);
 
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-full relative">

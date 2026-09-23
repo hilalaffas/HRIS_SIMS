@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import AnnouncementSection from './components/AnnouncementSection';
 import CalendarCard from './components/CalendarCard';
-import HariLiburPanel from './components/HariLiburPanel';
+import KaryawanCutiPanel from './components/KaryawanCutiPanel';
 import CutiSummaryCards from './components/CutiSummaryCards';
 import { getLeaveBalance } from '../../services/CutiService';
 import './Dashboard.css';
@@ -17,7 +17,10 @@ export default function DashboardKaryawan({ user }) {
     agenda: "Meeting Evaluasi Kuartal II - Jam 10:00"
   });
 
-  const [holidaysThisMonth, setHolidaysThisMonth] = useState([]);
+  // [UBAH] holidaysThisMonth diganti teamLeavesThisMonth -- panel "Hari Libur
+  // Bulan Ini" digantikan "Karyawan Cuti Bulan Ini" (highlight libur di
+  // kotak kalender sendiri tidak berubah, itu internal CalendarCard).
+  const [teamLeavesThisMonth, setTeamLeavesThisMonth] = useState([]);
   // [UBAH] Simpan seluruh objek balance (bukan cuma remainingAnnualLeave)
   // supaya CutiSummaryCards bisa nampilin Total (Tahunan + Sisa Cuti manual).
   const [leaveBalance, setLeaveBalance] = useState(null);
@@ -49,9 +52,9 @@ export default function DashboardKaryawan({ user }) {
         <CalendarCard
           selectedDate={selectedDate}
           onDateClick={setSelectedDate}
-          onHolidaysChange={setHolidaysThisMonth}
+          onTeamLeavesChange={setTeamLeavesThisMonth}
         />
-        <HariLiburPanel holidays={holidaysThisMonth} />
+        <KaryawanCutiPanel leaves={teamLeavesThisMonth} />
       </div>
     </div>
   );
