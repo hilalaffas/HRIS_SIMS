@@ -211,7 +211,7 @@ public class AuthController {
                 httpRequest
             );
 
-            return ResponseEntity.status(401).body("Invalid username or password");
+            return ResponseEntity.status(401).body("Akun tidak terdaftar. Periksa kembali username Anda.");
         }
 
         Employee employee = employeeRepository.findFirstByUserOrderByEmployeeIdAsc(user).orElse(null);
