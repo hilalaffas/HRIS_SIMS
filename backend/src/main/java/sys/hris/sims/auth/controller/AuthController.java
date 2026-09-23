@@ -190,6 +190,11 @@ public class AuthController {
         return ResponseEntity.ok("User successfully created");
     }
 
+    // [BARU] Batas maksimal percobaan password salah sebelum akun dikunci
+    // otomatis. Dipakai juga untuk menghitung sisa kesempatan yang
+    // ditampilkan ke user di pesan error login.
+    private static final int MAX_FAILED_ATTEMPTS = 3;
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         User user = userRepository.findByUsername(request.getUsername());
@@ -212,18 +217,39 @@ public class AuthController {
         Employee employee = employeeRepository.findFirstByUserOrderByEmployeeIdAsc(user).orElse(null);
 
         if (employee != null && !employee.getIsActive()) {
+
+            // [BARU] Sejak status karyawan (employees.is_active) ikut
+            // disinkronkan ke Nonaktif saat akun terkunci otomatis (3x salah
+            // password, lihat blok !isValid di bawah), percobaan login
+            // BERIKUTNYA setelah terkunci akan masuk ke sini duluan -- bukan
+            // ke pengecekan !user.getIsActive() lagi. Tanpa pembedaan ini,
+            // pesannya akan berubah jadi generik ("status karyawan tidak
+            // aktif") padahal penyebabnya sama: 3x salah password. Bedakan
+            // pesannya supaya user tetap diarahkan ke layar "Akun Terkunci"
+            // yang sama setiap kali mencoba login ulang, bukan cuma sekali
+            // di percobaan ke-3.
+            boolean terkunciKarenaSalahPassword =
+                    !Boolean.TRUE.equals(user.getIsActive())
+                            && user.getFailedAttempts() >= MAX_FAILED_ATTEMPTS;
+
+            String pesan = terkunciKarenaSalahPassword
+                    ? "Anda salah memasukkan password sebanyak 3 kali. "
+                            + "Akun Anda telah dinonaktifkan. Silakan hubungi HR untuk membuka kembali."
+                    : "Akun tidak dapat diakses karena status karyawan sudah tidak aktif.";
+
             activityLogService.log(
                     user.getUsername(),
                     user.getUserId(),
                     "LOGIN_BLOCKED",
                     "employees",
                     employee.getEmployeeId(),
-                    "Login ditolak: Karyawan sudah diberhentikan (Status: Non-Aktif)",
+                    terkunciKarenaSalahPassword
+                            ? "Login ditolak: akun masih terkunci akibat 3 kali gagal login sebelumnya"
+                            : "Login ditolak: Karyawan sudah diberhentikan (Status: Non-Aktif)",
                     httpRequest
             );
 
-            return ResponseEntity.status(403)
-                    .body("Akun tidak dapat diakses karena status karyawan sudah tidak aktif.");
+            return ResponseEntity.status(403).body(pesan);
         }
 
         if (!user.getIsActive()) {
@@ -247,10 +273,29 @@ public class AuthController {
         if (!isValid) {
 
             user.setFailedAttempts(user.getFailedAttempts() + 1);
+            int sisaKesempatan = MAX_FAILED_ATTEMPTS - user.getFailedAttempts();
 
-            if (user.getFailedAttempts() >= 3) {
+            // [BARU] Pesan error sekarang memberi tahu sisa kesempatan yang
+            // masih dimiliki user, supaya tidak dikunci "tiba-tiba" tanpa
+            // peringatan sebelumnya (sebelumnya selalu "Invalid username or
+            // password" apa pun jumlah percobaannya).
+            String message;
+
+            if (user.getFailedAttempts() >= MAX_FAILED_ATTEMPTS) {
 
                 user.setIsActive(false);
+
+                // [BARU] Sinkronkan juga status kepegawaian (employees.is_active)
+                // supaya konsisten dengan arah sebaliknya yang sudah ada di
+                // EmployeeController.updateKaryawan() (mengaktifkan status
+                // karyawan otomatis membuka kunci akun login). Tanpa ini, akun
+                // yang terkunci gara-gara 3x salah password tetap tampil
+                // "AKTIF" di Direktori Karyawan & modal "Manajemen Data Pegawai",
+                // padahal user tersebut sudah tidak bisa login sama sekali.
+                if (employee != null) {
+                    employee.setIsActive(false);
+                    employeeRepository.save(employee);
+                }
 
                 activityLogService.log(
                         user.getUsername(),
@@ -261,6 +306,12 @@ public class AuthController {
                         "Akun dinonaktifkan karena 3 kali gagal login",
                         httpRequest
                 );
+
+                message = "Anda salah memasukkan password sebanyak 3 kali. "
+                        + "Akun Anda telah dinonaktifkan. Silakan hubungi HR untuk membuka kembali.";
+            } else {
+                message = "Password salah. Kesempatan tersisa " + sisaKesempatan
+                        + " kali lagi sebelum akun dikunci.";
             }
 
             userRepository.save(user);
@@ -271,12 +322,12 @@ public class AuthController {
                     "LOGIN_FAILED",
                     "users",
                     null,
-                    "Gagal login",
+                    "Gagal login (percobaan ke-" + user.getFailedAttempts() + " dari " + MAX_FAILED_ATTEMPTS + ")",
                     httpRequest
             );
 
             return ResponseEntity.status(401)
-                    .body("Invalid username or password");
+                    .body(message);
         }
         if (user.getFailedAttempts() > 0) {
             user.setFailedAttempts(0);
