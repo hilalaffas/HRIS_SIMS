@@ -65,9 +65,24 @@ export default function Navbar({ toggleSidebar, user }) {
       return [];
     }
   })();
-  const lastNotificationReadAt = Number(
-    localStorage.getItem(`${notificationStorageKey}:read-at`) || 0
-  );
+  // [UBAH] lastNotificationReadAt (cutoff waktu berbasis Date.now() milik
+  // BROWSER) DIHAPUS -- sebelumnya dipakai sebagai filter tambahan di
+  // allNotifications ("sembunyikan semua yang timestamp-nya <= waktu
+  // terakhir klik Tandai Semua Dibaca"). Ini BUG: begitu satu akun pernah
+  // klik "Tandai Semua Dibaca" sekali saja, cutoff itu jadi permanen --
+  // notifikasi BARU yang dibuat setelahnya bisa saja tetap ikut
+  // tersembunyi kalau getNotificationTime() gagal mem-parsing timestamp
+  // dari backend (fallback-nya balik ke angka id yang kecil, jauh di bawah
+  // cutoff manapun). Ini persis kasus yang dilaporkan Affas: akun
+  // SuperAdmin yang pernah klik "Tandai Semua Dibaca" jadi tidak pernah
+  // lagi menerima notifikasi reset sandi baru, padahal datanya sampai
+  // dengan benar (akun HR Admin yang belum pernah klik tombol itu --
+  // cutoff-nya masih 0 -- menerima notifikasi yang sama tanpa masalah).
+  // Status "sudah dibaca" sekarang murni berbasis id lewat
+  // readNotificationIds (lihat handleMarkNotificationsRead di bawah, yang
+  // tetap menandai semua notifikasi yang SEDANG tampil sebagai sudah
+  // dibaca) -- lebih aman karena tidak bisa "menelan" notifikasi baru
+  // yang belum pernah benar-benar ditampilkan/ditandai.
 
   // [BARU] Sembunyikan SATU notifikasi saja. Dipakai tombol "×" (hapus) dan
   // dipanggil otomatis saat notifikasi diklik untuk membuka sesuatu, supaya
@@ -302,10 +317,7 @@ export default function Navbar({ toggleSidebar, user }) {
     ...notifications,
   ];
   const allNotifications = allNotificationCandidates
-    .filter((notification) => (
-      !readNotificationIds.includes(notification.id)
-      && getNotificationTime(notification) > lastNotificationReadAt
-    ))
+    .filter((notification) => !readNotificationIds.includes(notification.id))
     .sort((first, second) => getNotificationTime(second) - getNotificationTime(first));
 
   // [UBAH] Satu handler terpusat untuk semua jenis klik notifikasi:
@@ -334,8 +346,11 @@ export default function Navbar({ toggleSidebar, user }) {
     const visibleNotificationIds = allNotifications.map((notification) => notification.id);
     const updatedIds = [...new Set([...readNotificationIds, ...visibleNotificationIds])];
 
+    // [UBAH] Baris localStorage.setItem(`${notificationStorageKey}:read-at`, ...)
+    // DIHAPUS -- itu sumber bug cutoff-waktu di atas. "Tandai semua dibaca"
+    // sekarang murni menandai id-id yang SEDANG tampil (visibleNotificationIds)
+    // sebagai sudah dibaca, tidak lagi memblokir apapun berdasarkan waktu.
     localStorage.setItem(notificationStorageKey, JSON.stringify(updatedIds));
-    localStorage.setItem(`${notificationStorageKey}:read-at`, String(Date.now()));
     setReadRefreshToken((current) => current + 1);
     setNotifications([]);
   };
