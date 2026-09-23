@@ -184,7 +184,7 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
   }, [holidays, teamLeaveList, currentMonth, currentYear]);
 
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-full relative">
+    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between ">
       
       {isLoading && (
         <span className="absolute top-6 right-24 text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full animate-pulse">
