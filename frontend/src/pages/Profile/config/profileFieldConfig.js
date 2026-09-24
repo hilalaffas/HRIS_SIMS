@@ -32,7 +32,7 @@ export const EMERGENCY_CONTACT_KEY = 'nomorTeleponDarurat';
 export const EMERGENCY_RELATION_KEY = 'hubunganDarurat';
 
 // Pilihan dropdown untuk field "Hubungan" (relasi dengan kontak darurat)
-export const EMERGENCY_RELATION_OPTIONS = ['Orang Tua', 'Suami / Istri', 'Anak', 'Saudara Kandung', 'Lainnya'];
+export const EMERGENCY_RELATION_OPTIONS = ['Orang Tua', 'Suami / Istri', 'Anak', 'Saudara Kandung', 'Kerabat'];
 
 // Konfigurasi field.
 // `lockedFor`: daftar role yang TIDAK BOLEH mengedit field ini.
@@ -46,7 +46,7 @@ export const FIELD_CONFIG = [
   { key: 'email', label: 'Alamat Email', column: 'kanan', section: 'kontak' },
   { key: 'divisi', label: 'Divisi / Departemen', lockedFor: LOCKED_FOR_ALL_ROLES, column: 'kanan', section: 'kontak' },
   { key: 'nomorTelepon', label: 'Nomor Telepon Pribadi', column: 'kanan', section: 'kontak' },
-  { key: EMERGENCY_CONTACT_KEY, label: 'Nomor Telepon Darurat (Urgent) *', required: true, column: 'kanan', section: 'kontak' },
+  { key: EMERGENCY_CONTACT_KEY, label: 'Nomor Telepon Darurat', required: true, column: 'kanan', section: 'kontak' },
   {
     key: EMERGENCY_RELATION_KEY,
     label: 'Hubungan',
