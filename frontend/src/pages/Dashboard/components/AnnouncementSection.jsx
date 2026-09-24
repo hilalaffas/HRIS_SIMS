@@ -9,6 +9,7 @@ import {
   getScheduleStatus,
 } from '../../../services/announcementService';
 import Skeleton from '../../../components/Skeleton'; // [BARU]
+import { openLinksInNewTab } from '../../../utils/linkUtils'; // [BARU]
 
 // [BARU] Jumlah berita yang ditampilkan per halaman.
 const ITEMS_PER_PAGE = 3;
@@ -159,10 +160,13 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
                   gambar, tautan) ikut tampil, bukan hanya string mentahnya.
                   Aman karena pembuatan/pengeditan berita dibatasi role
                   HRD_Admin/SUPER_ADMIN saja (lihat SecurityConfig.java) --
-                  bukan konten dari sembarang user. */}
+                  bukan konten dari sembarang user.
+                  [UBAH] Semua tautan di dalam konten dipaksa target="_blank"
+                  lewat openLinksInNewTab() -- berlaku juga untuk berita LAMA
+                  yang tersimpan tanpa target, jadi tidak perlu migrasi data. */}
               <div
                 className="text-sm text-gray-500 leading-relaxed  [&_img]:h-48  [&_img]:rounded-lg [&_img]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline [&_a]:text-[var(--color-primary)]"
-                dangerouslySetInnerHTML={{ __html: item.isi }}
+                dangerouslySetInnerHTML={{ __html: openLinksInNewTab(item.isi) }}
               />
               {isAdminMode && (item.publishAt || item.expiresAt) && (
                 <p className="text-[11px] text-gray-400 mt-3">

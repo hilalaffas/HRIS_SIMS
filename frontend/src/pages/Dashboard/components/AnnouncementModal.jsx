@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Dropdown from '../../../components/Dropdown';
 import Toast from '../../../components/Toast';
 import { validateRequired, inputErrorClass } from '../../../utils/validation';
+import { normalizeUrl, openLinksInNewTab } from '../../../utils/linkUtils'; // [BARU]
 import { uploadAnnouncementImage, formatScheduleDate } from '../../../services/announcementService';
 import './AnnouncementModal.css';
 
@@ -125,9 +126,18 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
     document.execCommand(command, false, value);
   };
 
+  // [UBAH] URL dirapikan lewat normalizeUrl() sebelum disisipkan: "google.com"
+  // otomatis jadi "https://google.com" (tanpa ini jadi tautan relatif yang
+  // salah alamat), dan skema berbahaya seperti `javascript:` ditolak.
   const handleInsertLink = () => {
-    const url = window.prompt('Masukkan URL tautan:');
-    if (!url) return;
+    const rawUrl = window.prompt('Masukkan URL tautan (contoh: https://contoh.com):');
+    if (!rawUrl) return;
+
+    const url = normalizeUrl(rawUrl);
+    if (!url) {
+      showToast('Format tautan tidak valid. Contoh: https://contoh.com');
+      return;
+    }
     applyFormat('createLink', url);
   };
 
@@ -224,7 +234,9 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
       await onSubmit({
         judul,
         label,
-        isi: editorRef.current?.innerHTML || '',
+        // [UBAH] Tautan (termasuk yang di-paste dari luar editor) disimpan
+        // sudah lengkap dengan target="_blank" rel="noopener noreferrer".
+        isi: openLinksInNewTab(editorRef.current?.innerHTML || ''),
         // [BARU] "Kirim Sekarang" dicentang -> publishAt dikirim kosong,
         // backend otomatis mengisi waktu sekarang (lihat
         // NewsServiceImpl.applyDefaultSchedule()). Kalau tidak dicentang,
