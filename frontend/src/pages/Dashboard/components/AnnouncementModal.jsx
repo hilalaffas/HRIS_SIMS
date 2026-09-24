@@ -3,10 +3,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import Dropdown from '../../../components/Dropdown';
 import Toast from '../../../components/Toast';
 import { validateRequired, inputErrorClass } from '../../../utils/validation';
-import { uploadAnnouncementImage } from '../../../services/announcementService';
+import { uploadAnnouncementImage, formatScheduleDate } from '../../../services/announcementService';
 import './AnnouncementModal.css';
 
-const DEFAULT_MASA_TAYANG_HARI = 30;
+// [UBAH] Default masa tayang: Selesai otomatis = Dikirim + 7 hari, baik untuk
+// "Kirim Sekarang" maupun berita yang dijadwalkan (sebelumnya 30 hari). Ini
+// hanya nilai awal -- HR bebas mengubah "Selesai" manual sesudahnya. Nilai
+// yang sama dipakai backend sebagai fallback kalau "Selesai" dikosongkan
+// (NewsServiceImpl.DEFAULT_MASA_TAYANG_HARI).
+const DEFAULT_MASA_TAYANG_HARI = 7;
+// [BARU] Masa tayang minimal (selisih "Dikirim" -> "Selesai"). Aturan yang
+// sama juga dicek di backend (NewsServiceImpl.applyDefaultSchedule()).
+const MIN_MASA_TAYANG_MS = 60 * 1000;
 
 // [BARU] <input type="datetime-local"> butuh format "YYYY-MM-DDTHH:mm" --
 // tanpa detik, tanpa timezone. Dipakai baik untuk pre-fill dari ISO string
@@ -49,7 +57,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
   const [kirimSekarang, setKirimSekarang] = useState(true);
   const [dikirimPada, setDikirimPada] = useState('');
   const [selesaiPada, setSelesaiPada] = useState('');
-  // Supaya auto-isi "Selesai = Dikirim + 30 hari" tidak menimpa tanggal yang
+  // Supaya auto-isi "Selesai = Dikirim + 7 hari" tidak menimpa tanggal yang
   // SUDAH sengaja diubah manual oleh user.
   const selesaiDiubahManual = useRef(false);
 
@@ -144,8 +152,27 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
   };
 
   // ----- Jadwal tayang -----
+  // [BARU] Centang/lepas "Kirim Sekarang" ikut menyesuaikan default Selesai
+  // (selalu 7 hari, hanya titik awalnya yang beda):
+  //   - dicentang -> sekarang + 7 hari
+  //   - dilepas   -> Dikirim + 7 hari
+  // Dilewati kalau HR sudah mengubah "Selesai" manual, dan di mode Edit
+  // (Selesai berisi jadwal tersimpan yang tidak boleh tertimpa diam-diam).
+  const handleKirimSekarangChange = (checked) => {
+    setKirimSekarang(checked);
+    if (errors.selesaiPada) setErrors((prev) => ({ ...prev, selesaiPada: undefined }));
+    if (initialData || selesaiDiubahManual.current) return;
+    if (checked) {
+      setSelesaiPada(toDatetimeLocalValue(plusDays(new Date(), DEFAULT_MASA_TAYANG_HARI)));
+    } else if (dikirimPada) {
+      setSelesaiPada(toDatetimeLocalValue(plusDays(dikirimPada, DEFAULT_MASA_TAYANG_HARI)));
+    }
+  };
+
   const handleDikirimChange = (value) => {
     setDikirimPada(value);
+    // [BARU] Ubah jadwal apa pun menghapus tanda merah "Selesai" -- dicek ulang saat submit.
+    if (errors.selesaiPada) setErrors((prev) => ({ ...prev, selesaiPada: undefined }));
     if (!selesaiDiubahManual.current && value) {
       setSelesaiPada(toDatetimeLocalValue(plusDays(value, DEFAULT_MASA_TAYANG_HARI)));
     }
@@ -154,6 +181,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
   const handleSelesaiChange = (value) => {
     selesaiDiubahManual.current = true;
     setSelesaiPada(value);
+    if (errors.selesaiPada) setErrors((prev) => ({ ...prev, selesaiPada: undefined }));
   };
 
   const handleSubmit = async (e) => {
@@ -173,6 +201,22 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
       showToast('Tanggal & waktu pengiriman perlu diisi, atau centang "Kirim Sekarang".');
       return;
     }
+
+    // [BARU] Validasi masa tayang minimal 1 menit. Titik awal = waktu submit
+    // kalau "Kirim Sekarang" dicentang, atau jam "Dikirim" yang dipilih.
+    // "Selesai" yang kosong tidak dicek di sini -- backend mengisinya
+    // otomatis (Dikirim + 7 hari). Waktu "paling cepat" di pesan dibulatkan
+    // ke atas per menit karena input datetime-local hanya bisa memilih menit.
+    if (selesaiPada) {
+      const startTime = kirimSekarang ? Date.now() : new Date(dikirimPada).getTime();
+      const endTime = new Date(selesaiPada).getTime();
+      if (Number.isNaN(endTime) || endTime - startTime < MIN_MASA_TAYANG_MS) {
+        const earliest = new Date(Math.ceil((startTime + MIN_MASA_TAYANG_MS) / 60000) * 60000);
+        setErrors((prev) => ({ ...prev, selesaiPada: true }));
+        showToast(`Masa tayang minimal 1 menit. Waktu "Selesai" paling cepat ${formatScheduleDate(earliest)}.`);
+        return;
+      }
+    }
     setErrors({});
 
     setIsSubmitting(true);
@@ -190,6 +234,12 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
       });
       resetForm();
       onClose();
+    } catch (err) {
+      // [BARU] Sebelumnya tidak ada catch: kalau backend menolak (mis. masa
+      // tayang < 1 menit), error hanya jadi unhandled rejection dan form diam
+      // saja. Sekarang pesan dari backend tampil sebagai toast & modal tetap
+      // terbuka supaya HR bisa langsung memperbaiki.
+      showToast(err.message || 'Gagal menyimpan berita.');
     } finally {
       setIsSubmitting(false);
     }
@@ -303,14 +353,15 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
           </div>
 
           {/* [BARU] Opsi penayangan: kirim sekarang, atau jadwalkan kapan
-              mulai & berhenti tampil. Default masa tayang 30 hari sejak
-              dikirim (lihat DEFAULT_MASA_TAYANG_HARI & handleDikirimChange). */}
+              mulai & berhenti tampil. Default masa tayang 7 hari sejak
+              dikirim (lihat DEFAULT_MASA_TAYANG_HARI, handleDikirimChange &
+              handleKirimSekarangChange). */}
           <div className="border border-gray-200 rounded-lg p-3 flex flex-col gap-3">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={kirimSekarang}
-                onChange={(e) => setKirimSekarang(e.target.checked)}
+                onChange={(e) => handleKirimSekarangChange(e.target.checked)}
                 className="w-4 h-4 accent-[var(--color-primary)]"
               />
               Kirim Sekarang
@@ -337,12 +388,12 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
                   type="datetime-local"
                   value={selesaiPada}
                   onChange={(e) => handleSelesaiChange(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]"
+                  className={inputErrorClass(errors.selesaiPada, 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)]')}
                 />
               </div>
             </div>
             <p className="text-xs text-gray-400">
-              Default masa tayang {DEFAULT_MASA_TAYANG_HARI} hari sejak dikirim -- ubah "Selesai" kalau perlu tanggal lain.
+              Default masa tayang {DEFAULT_MASA_TAYANG_HARI} hari sejak dikirim -- ubah "Selesai" kalau perlu tanggal lain. Masa tayang minimal 1 menit.
             </p>
           </div>
 

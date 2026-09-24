@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
 import './LeaveFormHr.css';
+// [BARU] Popup konfirmasi yang sama dengan form Ajukan Cuti karyawan.
+import LeaveConfirmModal from '../../Cuti/applycuti/components/LeaveConfirmModal';
 import { getLeaveTypes, getApprovers, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles';
 import { getAllHolidays } from '../../../services/holidayService';
@@ -84,6 +86,11 @@ const SESSION_CODE_BY_LABEL = {
   'Setengah Hari (Siang)': 'SIANG',
 };
 
+// [BARU] Cari nama approver (untuk popup konfirmasi) dari daftar opsi
+// dropdown berdasarkan employeeId yang dipilih.
+const findApproverName = (options, employeeId) =>
+  options.find((approver) => String(approver.employeeId) === String(employeeId))?.fullName || '-';
+
 const initialFormState = {
   karyawanId: '',
   leaveTypeId: '',
@@ -110,6 +117,12 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   // feedback "Memuat approver..." tiap kali ganti karyawan.
   const [isLoadingApprovers, setIsLoadingApprovers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // [BARU] Gate SINKRON anti klik ganda pada tombol konfirmasi (state
+  // isSubmitting baru berubah di render berikutnya).
+  const isSubmittingRef = useRef(false);
+  // [BARU] Snapshot { payload, summary } yang menunggu konfirmasi HR di
+  // LeaveConfirmModal. null = popup tidak tampil.
+  const [pendingSubmission, setPendingSubmission] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   // [BARU] Field mana saja yang kosong/salah -- dipakai untuk border merah
   // (lihat inputErrorClass/dropdownErrorClass), berdampingan dengan
@@ -360,36 +373,79 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     }
     setErrors({});
 
+    // [UBAH] Semua validasi lolos. Sebelumnya di titik ini data LANGSUNG
+    // dikirim ke backend. Sekarang hanya disiapkan sebagai snapshot dan
+    // ditampilkan di LeaveConfirmModal supaya HR bisa mengecek ulang; kirim
+    // ke backend dipindah ke handleConfirmSubmit() di bawah.
+    const payload = {
+      karyawanId: formData.karyawanId,
+      leaveTypeId: formData.leaveTypeId,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      alasan: formData.alasan,
+      pekerjaanTertunda: formData.pekerjaanTertunda,
+      dicoverOleh: formData.dicoverOleh,
+      // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
+      // Hari -- jenis cuti lain selalu null, konsisten dengan
+      // submitCuti()/ApplyCuti.jsx (CutiService.js sudah mendukung field
+      // ini di submitUrgentCuti(), tinggal dikirim dari sini).
+      session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[formData.durasiSesi] || 'PAGI') : null,
+      leaderEmployeeId: selectedIsApproverLevel ? null : formData.leaderEmployeeId,
+      spvEmployeeId: selectedIsApproverLevel ? null : formData.spvEmployeeId,
+      managerEmployeeId: formData.managerEmployeeId,
+    };
+
+    // [BARU] Ringkasan tampilan popup. Baris "Karyawan" ikut ditampilkan
+    // karena HR mengajukan atas nama karyawan lain. Leader & SPV hanya muncul
+    // kalau karyawan bukan level approver (sama dengan aturan payload).
+    const summary = {
+      employeeName: selectedKaryawan?.fullName,
+      jenisCuti: selectedLeaveType?.name,
+      sessionLabel: isHalfDayLeave ? formData.durasiSesi : '',
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      totalDays: jumlahHariCuti,
+      isCalendarDays: isMelahirkan && isFemale,
+      approvers: [
+        ...(selectedIsApproverLevel ? [] : [
+          { role: 'Leader', name: findApproverName(leaderOptions, formData.leaderEmployeeId) },
+          { role: 'SPV', name: findApproverName(spvOptions, formData.spvEmployeeId) },
+        ]),
+        { role: 'Manager', name: findApproverName(managerOptions, formData.managerEmployeeId) },
+      ],
+      reason: formData.alasan,
+      pendingWork: formData.pekerjaanTertunda,
+      coveredBy: formData.dicoverOleh,
+    };
+
+    setPendingSubmission({ payload, summary });
+  };
+
+  // [BARU] Konfirmasi di popup: kirim ke backend. Isinya dipindah dari bagian
+  // akhir handleSubmit lama (submitUrgentCuti, reset form, callback ke
+  // parent, dan pesan error) -- perilakunya sama persis seperti sebelumnya.
+  const handleConfirmSubmit = async () => {
+    if (!pendingSubmission || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       // Submit langsung ke backend (POST /api/cuti/urgent). Endpoint ini
       // otomatis auto-ACC di sisi server, khusus untuk role HR Admin/Super Admin.
-      const created = await submitUrgentCuti({
-        karyawanId: formData.karyawanId,
-        leaveTypeId: formData.leaveTypeId,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        alasan: formData.alasan,
-        pekerjaanTertunda: formData.pekerjaanTertunda,
-        dicoverOleh: formData.dicoverOleh,
-        // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
-        // Hari -- jenis cuti lain selalu null, konsisten dengan
-        // submitCuti()/ApplyCuti.jsx (CutiService.js sudah mendukung field
-        // ini di submitUrgentCuti(), tinggal dikirim dari sini).
-        session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[formData.durasiSesi] || 'PAGI') : null,
-        leaderEmployeeId: selectedIsApproverLevel ? null : formData.leaderEmployeeId,
-        spvEmployeeId: selectedIsApproverLevel ? null : formData.spvEmployeeId,
-        managerEmployeeId: formData.managerEmployeeId,
-      });
+      const created = await submitUrgentCuti(pendingSubmission.payload);
 
+      setPendingSubmission(null);
       setFormData(initialFormState);
       setErrors({});
       // [UBAH] leaveRequestId diteruskan lagi ke parent (sempat hilang saat
       // merge) supaya Karyawan.jsx bisa buka langsung modal Detail dari toast sukses.
       if (onSubmit) onSubmit({ karyawanNama: selectedKaryawan?.fullName, leaveRequestId: created?.leaveRequestId });
     } catch (error) {
+      // Tutup popup supaya pesan error di form terlihat; isian form tetap
+      // utuh sehingga HR bisa memperbaiki lalu kirim lagi.
+      setPendingSubmission(null);
       setErrorMessage(error?.message || 'Gagal memproses cuti susulan. Coba lagi.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -629,6 +685,18 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
           </button>
         </div>
       </form>
+
+      {/* [BARU] Popup konfirmasi sebelum cuti susulan diproses. */}
+      <LeaveConfirmModal
+        isOpen={Boolean(pendingSubmission)}
+        summary={pendingSubmission?.summary}
+        title="Konfirmasi Cuti Susulan"
+        notice="Cuti susulan akan langsung berstatus Disetujui (auto-ACC), tanpa menunggu persetujuan Leader/SPV/Manager."
+        confirmLabel="Ya, Proses Cuti Susulan"
+        isSubmitting={isSubmitting}
+        onConfirm={handleConfirmSubmit}
+        onCancel={() => setPendingSubmission(null)}
+      />
     </div>
   );
 };

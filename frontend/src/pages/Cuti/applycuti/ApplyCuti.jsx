@@ -7,6 +7,7 @@ import { hariLiburNasional, hitungBatasMinTanggal } from '../../../utils/dateUti
 import LeaveHistory from './components/LeaveHistory';
 import FormCuti from '../approve/components/Form';
 import NotifModal from './components/NotifModal';
+import LeaveConfirmModal from './components/LeaveConfirmModal'; // [BARU]
 import { getAllHolidays } from '../../../services/holidayService';
 import { isEmpty } from '../../../utils/validation';
 import './ApplyCuti.css';
@@ -168,6 +169,14 @@ const ApplyCuti = ({ user }) => {
   // Lihat handleEditInModal/handleCancelModalEdit/handleModalEditSubmit.
   const [isModalEditing, setIsModalEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // [BARU] Gate SINKRON anti klik ganda pada tombol konfirmasi -- state
+  // isSubmitting baru berubah di render berikutnya, jadi dua klik cepat bisa
+  // sama-sama lolos kalau hanya mengandalkan state.
+  const isSubmittingRef = useRef(false);
+  // [BARU] Snapshot pengajuan yang menunggu konfirmasi user di
+  // LeaveConfirmModal: { payload, summary, resubmitId }. null = popup
+  // konfirmasi tidak tampil.
+  const [pendingSubmission, setPendingSubmission] = useState(null);
   const [editingId, setEditingId] = useState(null);
   // [BARU/FIX] Kumpulan tanggal individual yang sudah tercakup pengajuan
   // APPROVED/PENDING/DIKEMBALIKAN lain milik user ini -- dipakai
@@ -418,43 +427,100 @@ const ApplyCuti = ({ user }) => {
       setInvalidField('managerEmployeeId');
       return false;
     }
+    // [UBAH] Semua validasi lolos. Sebelumnya di titik ini data LANGSUNG
+    // dikirim ke backend. Sekarang data hanya disiapkan sebagai snapshot
+    // (`pendingSubmission`) dan ditampilkan di LeaveConfirmModal supaya user
+    // bisa mengecek ulang. Pengiriman sebenarnya ada di handleConfirmSubmit()
+    // di bawah, setelah user menekan tombol konfirmasi.
+    //
+    // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
+    // Hari -- jenis cuti lain selalu null, konsisten dengan komentar
+    // backend "diabaikan untuk jenis cuti selain setengah hari".
+    const payload = {
+      leaveTypeId: type.leaveTypeId,
+      startDate,
+      endDate,
+      reason,
+      pendingWork,
+      coveredBy,
+      session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[durasiSesi] || 'PAGI') : null,
+      leaderEmployeeId: atasan || !leaderEmployeeId ? null : Number(leaderEmployeeId),
+      spvEmployeeId: atasan || !spvEmployeeId ? null : Number(spvEmployeeId),
+      managerEmployeeId: Number(managerEmployeeId)
+    };
+
+    // [BARU] Ringkasan untuk tampilan popup. Leader & SPV hanya muncul untuk
+    // non-atasan (sama dengan aturan payload di atas); nama approver diambil
+    // dari employeeLookup (map employeeId -> nama lengkap).
+    const summary = {
+      jenisCuti,
+      sessionLabel: isHalfDayLeave ? durasiSesi : '',
+      startDate,
+      endDate,
+      totalDays: jumlahHariCuti,
+      isCalendarDays: String(jenisCuti || '').toLowerCase().includes('melahirkan') && isFemale,
+      approvers: [
+        ...(atasan ? [] : [
+          { role: 'Leader', name: employeeLookup[leaderEmployeeId] || '-' },
+          { role: 'SPV', name: employeeLookup[spvEmployeeId] || '-' },
+        ]),
+        { role: 'Manager', name: employeeLookup[managerEmployeeId] || '-' },
+      ],
+      reason,
+      pendingWork,
+      coveredBy,
+    };
+
+    setPendingSubmission({ payload, summary, resubmitId: editingId });
+    // [UBAH] true = validasi lolos & popup konfirmasi dibuka. Data BELUM
+    // terkirim di titik ini.
+    return true;
+  };
+
+  // [BARU] Batal di popup konfirmasi: tutup popup saja. Form (dan mode edit,
+  // kalau sedang aktif) dibiarkan apa adanya supaya user bisa memperbaiki data.
+  const handleCancelConfirm = () => setPendingSubmission(null);
+
+  // [BARU] Konfirmasi di popup: kirim pengajuan ke backend. Isinya dipindah
+  // dari bagian akhir handleSubmit lama (try/catch/finally submitCuti &
+  // resubmitCuti) -- logika kirim, reset form, dan pesan sukses/errornya
+  // sama persis seperti sebelumnya.
+  const handleConfirmSubmit = async () => {
+    if (!pendingSubmission || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
+
+    const { payload, resubmitId } = pendingSubmission;
     try {
-      // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
-      // Hari -- jenis cuti lain selalu null, konsisten dengan komentar
-      // backend "diabaikan untuk jenis cuti selain setengah hari".
-      const payload = { 
-        leaveTypeId: type.leaveTypeId, 
-        startDate, 
-        endDate, 
-        reason, 
-        pendingWork, 
-        coveredBy,
-        session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[durasiSesi] || 'PAGI') : null,
-        leaderEmployeeId: atasan || !leaderEmployeeId ? null : Number(leaderEmployeeId), 
-        spvEmployeeId: atasan || !spvEmployeeId ? null : Number(spvEmployeeId), 
-        managerEmployeeId: Number(managerEmployeeId) 
-      };
-      
-      if (editingId) {
-        await resubmitCuti(editingId, payload);
+      if (resubmitId) {
+        await resubmitCuti(resubmitId, payload);
       } else {
         await submitCuti(payload);
       }
+      setPendingSubmission(null);
       setReason(''); setPendingWork(''); setCoveredBy(''); setLeaderEmployeeId(''); setSpvEmployeeId(''); setManagerEmployeeId(''); setEditingId(null);
       setInvalidField('');
-      await load(); 
-      alert(editingId ? 'Perbaikan cuti berhasil diajukan kembali.' : 'Pengajuan cuti berhasil dikirim.');
-      return true;
+      await load();
+      alert(resubmitId ? 'Perbaikan cuti berhasil diajukan kembali.' : 'Pengajuan cuti berhasil dikirim.');
+      // [PINDAH] Sebelumnya ditutup di handleModalEditSubmit setelah
+      // handleSubmit sukses. Sekarang di sini, karena "sukses" baru
+      // diketahui setelah user konfirmasi.
+      if (isModalEditing) {
+        setIsModalEditing(false);
+        setSelectedDetail(null);
+      }
     } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message ||err.message ||"Gagal");
-        return false;
-    } finally { 
-          setIsSubmitting(false); 
-        }
+      console.error(err);
+      // Tutup popup konfirmasi supaya NotifModal error terlihat; data form
+      // tetap terisi sehingga user bisa memperbaiki lalu kirim lagi.
+      setPendingSubmission(null);
+      setError(err.response?.data?.message || err.message || "Gagal");
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
-  
+
   const handleOpenDetail = async (item) => {
     setSelectedDetail({
       id: item.id, karyawan: { nama: item.userName || 'Pemohon' }, jenisCuti: item.jenisCuti,
@@ -567,17 +633,13 @@ const ApplyCuti = ({ user }) => {
 
   // [BARU] Submit KHUSUS untuk form edit di dalam modal. Memanggil
   // handleSubmit yang sama persis dipakai form utama (jadi semua validasi &
-  // logika pengiriman tetap satu sumber kebenaran) -- modal baru ditutup &
-  // kembali ke mode lihat detail JIKA submit-nya berhasil. Kalau gagal
-  // (validasi/error server), modal TETAP di mode edit supaya user bisa
-  // langsung perbaiki, dan pesan errornya tetap tampil lewat NotifModal.
-  const handleModalEditSubmit = async (event) => {
-    const success = await handleSubmit(event);
-    if (success) {
-      setIsModalEditing(false);
-      setSelectedDetail(null);
-    }
-  };
+  // logika pengiriman tetap satu sumber kebenaran).
+  // [UBAH] Sebelumnya modal ditutup di sini setelah handleSubmit sukses.
+  // Sekarang handleSubmit hanya membuka popup konfirmasi, jadi modal edit
+  // ditutup oleh handleConfirmSubmit() setelah pengiriman benar-benar
+  // berhasil. Kalau user Batal / server menolak, modal TETAP di mode edit
+  // supaya bisa langsung diperbaiki.
+  const handleModalEditSubmit = (event) => handleSubmit(event);
 
   return <div className="form-wrapper" ref={formTopRef}>
     <div className="applycuti-summary-wrapper">
@@ -589,6 +651,15 @@ const ApplyCuti = ({ user }) => {
         (NotifModal) yang selalu tampil di tengah layar dan WAJIB ditutup
         lewat tombol "OK". */}
     <NotifModal type="error" message={error} onClose={() => setError('')} />
+    {/* [BARU] Popup konfirmasi sebelum pengajuan cuti dikirim. */}
+    <LeaveConfirmModal
+      isOpen={Boolean(pendingSubmission)}
+      summary={pendingSubmission?.summary}
+      isEditing={Boolean(pendingSubmission?.resubmitId)}
+      isSubmitting={isSubmitting}
+      onConfirm={handleConfirmSubmit}
+      onCancel={handleCancelConfirm}
+    />
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit, invalidField }}

@@ -1,6 +1,8 @@
 package sys.hris.sims.news.service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,7 +19,20 @@ public class NewsServiceImpl implements NewsService {
 
     // [BARU] Default masa tayang berita kalau HR tidak mengisi tanggal
     // "Selesai" secara manual di form.
-    private static final long DEFAULT_MASA_TAYANG_HARI = 30;
+    // [UBAH] 7 hari (sebelumnya 30), sama dengan default di
+    // AnnouncementModal.jsx -- berlaku untuk "Kirim Sekarang" maupun berita
+    // yang dijadwalkan.
+    private static final long DEFAULT_MASA_TAYANG_HARI = 7;
+
+    // [BARU] Zona waktu acuan jadwal tayang. Frontend mengirim jam dinding
+    // (tanpa timezone) dari <input type="datetime-local"> yang diisi HR di
+    // WIB, jadi "sekarang" untuk perbandingan HARUS jam WIB juga -- bukan jam
+    // JVM server yang di Render = UTC. Pola sama dengan LeaveService
+    // (LocalDate.now(ZoneId.of("Asia/Jakarta"))).
+    private static final ZoneId APP_ZONE = ZoneId.of("Asia/Jakarta");
+
+    // [BARU] Masa tayang minimal (selisih publishAt -> expiresAt).
+    private static final Duration MIN_DISPLAY_DURATION = Duration.ofMinutes(1);
 
     private final NewsRepository newsRepository;
 
@@ -28,14 +43,25 @@ public class NewsServiceImpl implements NewsService {
     // [BARU] Mengisi publishAt & expiresAt kalau kosong dari frontend:
     //   - publishAt kosong -> tayang mulai sekarang (setara checkbox
     //     "Kirim Sekarang" dicentang, atau HR memang tidak mengisi jadwal).
-    //   - expiresAt kosong -> otomatis publishAt + 30 hari.
+    //   - expiresAt kosong -> otomatis publishAt + 7 hari.
     // Dipanggil di createNews() maupun updateNews() supaya perilakunya
     // konsisten di kedua alur.
+    //
+    // [BARU] Setelah default terisi, masa tayang divalidasi minimal 1 menit
+    // (expiresAt >= publishAt + 1 menit). Dilempar sebagai
+    // IllegalArgumentException -> GlobalExceptionHandler membalas 400 dengan
+    // pesannya, dan frontend menampilkannya sebagai toast.
     private void applyDefaultSchedule(News news, NewsRequest request) {
-        LocalDateTime publishAt = request.getPublishAt() != null ? request.getPublishAt() : LocalDateTime.now();
+        // [UBAH] Pakai jam WIB, bukan LocalDateTime.now() (jam JVM).
+        LocalDateTime publishAt = request.getPublishAt() != null ? request.getPublishAt() : LocalDateTime.now(APP_ZONE);
         LocalDateTime expiresAt = request.getExpiresAt() != null
                 ? request.getExpiresAt()
                 : publishAt.plusDays(DEFAULT_MASA_TAYANG_HARI);
+
+        if (expiresAt.isBefore(publishAt.plus(MIN_DISPLAY_DURATION))) {
+            throw new IllegalArgumentException(
+                    "Masa tayang berita minimal 1 menit. Waktu selesai harus minimal 1 menit setelah waktu dikirim.");
+        }
 
         news.setPublishAt(publishAt);
         news.setExpiresAt(expiresAt);
@@ -69,7 +95,8 @@ public class NewsServiceImpl implements NewsService {
         // findActiveAndPublished() -- berita yang belum waktunya tayang
         // (dijadwalkan) atau sudah lewat expiresAt otomatis tidak muncul di
         // sini tanpa perlu job/scheduler terpisah.
-        return newsRepository.findActiveAndPublished()
+        // [UBAH] Kirim waktu WIB ke query (lihat NewsRepository).
+        return newsRepository.findActiveAndPublished(LocalDateTime.now(APP_ZONE))
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
