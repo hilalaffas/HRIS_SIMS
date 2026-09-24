@@ -152,6 +152,8 @@ public class LeaveService {
             throw new RuntimeException("Karyawan pemohon wajib diisi");
         }
 
+        validateCoveredBy(cuti.getCoveredBy(), requester);
+
         // [FIX] cuti.getLeaveType() pada titik ini masih objek mentah hasil
         // deserialize JSON body (cuma leaveTypeId terisi, name = null --
         // frontend cuma kirim { leaveTypeId }). Kalau tidak di-fetch ulang
@@ -201,6 +203,7 @@ public class LeaveService {
         Employee hrActor = getEmployeeByUsername(hrUsername);
 
         cuti.setEmployee(targetEmployee);
+        validateCoveredBy(cuti.getCoveredBy(), targetEmployee);
         // [FIX] Sama seperti createCuti(): cuti.getLeaveType() di titik ini
         // masih objek mentah dari JSON body (leaveTypeId saja, name = null).
         // Tanpa fetch ulang ini, calculateLeaveDays() & validateCutiXxxLimit()
@@ -598,6 +601,7 @@ public class LeaveService {
         existingCuti.setSession(updatedCuti.getSession());
         existingCuti.setReason(updatedCuti.getReason());
         existingCuti.setPendingWork(updatedCuti.getPendingWork());
+        validateCoveredBy(updatedCuti.getCoveredBy(), requester);
         existingCuti.setCoveredBy(updatedCuti.getCoveredBy());
         existingCuti.setLeaderEmployeeId(updatedCuti.getLeaderEmployeeId());
         existingCuti.setSpvEmployeeId(updatedCuti.getSpvEmployeeId());
@@ -1035,6 +1039,23 @@ public class LeaveService {
         }
 
         return employee;
+    }
+
+    private void validateCoveredBy(String coveredBy, Employee requester) {
+        if (coveredBy == null || coveredBy.isBlank()) {
+            throw new RuntimeException("Dicover oleh wajib dipilih");
+        }
+        String requesterRole = normalizeApproverRole(requester.getUser().getRoleId().getRoleName());
+        boolean validCover = karyawanRepository.findByFullNameContainingIgnoreCase(coveredBy.trim()).stream()
+                .filter(employee -> Boolean.TRUE.equals(employee.getIsActive()))
+                .filter(employee -> employee.getFullName().equalsIgnoreCase(coveredBy.trim()))
+                .filter(employee -> employee.getDivisi() != null && requester.getDivisi() != null
+                        && employee.getDivisi().getId().equals(requester.getDivisi().getId()))
+                .anyMatch(employee -> requesterRole.equals(normalizeApproverRole(
+                        employee.getUser().getRoleId().getRoleName())));
+        if (!validCover) {
+            throw new RuntimeException("Dicover oleh harus karyawan aktif dengan jenjang dan divisi yang sama");
+        }
     }
 
     private int calculateWorkingDays(LocalDate startDate, LocalDate endDate) {

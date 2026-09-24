@@ -157,6 +157,8 @@ public class SecurityConfig {
                         .authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/approvers")
                         .authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/karyawan/cover-options")
+                        .authenticated()
                         
 
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/**")

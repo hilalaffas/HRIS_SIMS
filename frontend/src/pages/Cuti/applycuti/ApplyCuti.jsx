@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getApprovers, getLeaveBalance, getLeaveTypes, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../services/CutiService';
+import { getApprovers, getCoverOptions, getLeaveBalance, getLeaveTypes, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../services/CutiService';
 import CutiSummaryCards from '../../Dashboard/components/CutiSummaryCards';
 import LeaveForm from './components/LeaveForm';
 import { hariLiburNasional, hitungBatasMinTanggal } from '../../../utils/dateUtils'; // sesuaikan path file Anda
@@ -133,6 +133,7 @@ const ApplyCuti = ({ user }) => {
   const isFemale = isFemaleUser(user?.gender || user?.jenisKelamin);
   const [types, setTypes] = useState([]);
   const [approvers, setApprovers] = useState({ LEADER: [], SPV: [], MANAGER: [] });
+  const [coverOptions, setCoverOptions] = useState([]);
   // [UBAH] Sekarang nyimpen objek balance lengkap (bukan cuma angka
   // remainingAnnualLeave) supaya CutiSummaryCards bisa nampilin Total.
   const [balance, setBalance] = useState(null);
@@ -223,12 +224,13 @@ const ApplyCuti = ({ user }) => {
 
   const load = useCallback(async () => {
     try {
-      const [leaveTypes, leader, spv, manager, leaveBalance, records, holidays] = await Promise.all([
-        getLeaveTypes(), getApprovers('LEADER'), getApprovers('SPV'), getApprovers('MANAGER'), getLeaveBalance(), getRiwayatByUser(),
+      const [leaveTypes, leader, spv, manager, covers, leaveBalance, records, holidays] = await Promise.all([
+        getLeaveTypes(), getApprovers('LEADER'), getApprovers('SPV'), getApprovers('MANAGER'), getCoverOptions(), getLeaveBalance(), getRiwayatByUser(),
         getAllHolidays(),
       ]);
       setTypes(leaveTypes); setJenisCuti(current => current || leaveTypes[0]?.name || '');
       setApprovers({ LEADER: leader, SPV: spv, MANAGER: manager });
+      setCoverOptions(covers || []);
       // [UBAH] Sebelumnya ada koreksi "legacyHalfDayCorrection" di sini untuk
       // menambal Cuti setengah hari yang totalDays mentahnya masih 1 (bukan
       // 0.5). Akar masalahnya sudah dibetulkan di backend (LeaveService.java
@@ -662,7 +664,7 @@ const ApplyCuti = ({ user }) => {
     />
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
-      pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit, invalidField }}
+      pendingWork, setPendingWork, coveredBy, setCoveredBy, coverOptions, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit, invalidField }}
       leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
@@ -678,7 +680,7 @@ const ApplyCuti = ({ user }) => {
     editForm={isModalEditing ? (
       <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
         reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
-        pendingWork, setPendingWork, coveredBy, setCoveredBy, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
+        pendingWork, setPendingWork, coveredBy, setCoveredBy, coverOptions, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
         isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true, invalidField }}
         leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
     ) : null}

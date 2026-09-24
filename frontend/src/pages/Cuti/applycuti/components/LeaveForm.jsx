@@ -15,6 +15,7 @@ const LeaveForm = ({
   managerEmployeeId, setManagerEmployeeId,
   pendingWork, setPendingWork,
   coveredBy, setCoveredBy,
+  coverOptions = [],
   dinamisBatasMinStr,
   handleSubmit,
   isSubmitting,
@@ -82,6 +83,7 @@ const LeaveForm = ({
           reason={reason} setReason={setReason}
           pendingWork={pendingWork} setPendingWork={setPendingWork}
           coveredBy={coveredBy} setCoveredBy={setCoveredBy}
+          coverOptions={coverOptions}
           invalidField={invalidField}
         />
 

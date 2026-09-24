@@ -112,6 +112,37 @@ public class EmployeeController {
         return ResponseEntity.ok(response);
     }
 
+    // Daftar rekan aktif dengan divisi dan jenjang yang sama untuk pilihan
+    // "Dicover Oleh" pada form pengajuan cuti.
+    @GetMapping("/cover-options")
+    public ResponseEntity<List<Map<String, Object>>> getCoverOptions(
+            @RequestParam(required = false) Long employeeId,
+            Authentication authentication) {
+        Employee requester = karyawanService.getKaryawanByUsername(authentication.getName());
+        Employee divisionSource = requester;
+        if (employeeId != null) {
+            String roleName = requester.getUser().getRoleId().getRoleName();
+            boolean isPrivileged = "HRD_ADMIN".equalsIgnoreCase(roleName)
+                    || "SUPER_ADMIN".equalsIgnoreCase(roleName);
+            if (!isPrivileged) {
+                throw new RuntimeException("Tidak memiliki akses untuk memilih cover atas nama karyawan lain");
+            }
+            divisionSource = karyawanService.getKaryawanById(employeeId);
+        }
+
+        String role = divisionSource.getUser().getRoleId().getRoleName();
+        Long divisionId = divisionSource.getDivisi() == null ? null : divisionSource.getDivisi().getId();
+        List<Map<String, Object>> response = karyawanService.getCoverOptions(role, divisionId).stream()
+                .map(employee -> Map.<String, Object>of(
+                        "employeeId", employee.getEmployeeId(),
+                        "fullName", employee.getFullName(),
+                        "roleName", employee.getUser().getRoleId().getRoleName(),
+                        "divisiId", employee.getDivisi().getId(),
+                        "namaDivisi", employee.getDivisi().getNamaDivisi()))
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
     // GET profil karyawan milik user yang sedang login (dipakai halaman Profile).
     // Mempertahankan method ini dari file pertama.
     @GetMapping("/me")

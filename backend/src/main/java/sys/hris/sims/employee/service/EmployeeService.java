@@ -39,6 +39,16 @@ public class EmployeeService {
                 .toList();
     }
 
+    public List<Employee> getCoverOptions(String role, Long divisiId) {
+        if (divisiId == null) {
+            throw new RuntimeException("Divisi pemohon belum ditentukan");
+        }
+        return getApproversByRole(role).stream()
+                .filter(employee -> employee.getDivisi() != null)
+                .filter(employee -> divisiId.equals(employee.getDivisi().getId()))
+                .toList();
+    }
+
     public Employee getKaryawanById(Long id) {
         return karyawanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Karyawan tidak ditemukan"));

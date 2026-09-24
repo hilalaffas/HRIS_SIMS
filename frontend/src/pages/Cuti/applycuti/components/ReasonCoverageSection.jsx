@@ -1,6 +1,7 @@
 import React from 'react';
 import './LeaveForm.css';
 import { inputErrorClass } from '../../../../utils/validation';
+import Dropdown from '../../../../components/Dropdown';
 
 /**
  * Bagian: ALASAN/KETERANGAN, PEKERJAAN TERTUNDA, DICOVER OLEH (BACKUP PIC)
@@ -9,6 +10,7 @@ const ReasonCoverageSection = ({
   reason, setReason,
   pendingWork, setPendingWork,
   coveredBy, setCoveredBy,
+  coverOptions = [],
   invalidField = '',
 }) => {
   return (
@@ -25,7 +27,17 @@ const ReasonCoverageSection = ({
 
       <div className="form-group">
         <label className="form-label">DICOVER OLEH*</label>
-        <input type="text" value={coveredBy} onChange={(e) => setCoveredBy(e.target.value)} placeholder="Nama rekan kerja yang mem-backup pekerjaan Anda..." className={inputErrorClass(invalidField === 'coveredBy', 'form-control')} />
+        <Dropdown
+          name="coveredBy"
+          value={coveredBy}
+          onChange={(event) => setCoveredBy(event.target.value)}
+          options={coverOptions.map((person) => ({ value: person.fullName, label: person.fullName }))}
+          placeholder="Cari nama rekan satu divisi dan jenjang..."
+          searchable
+          required
+          className={invalidField === 'coveredBy' ? 'dropdown--invalid' : ''}
+          ariaLabel="Pilih karyawan yang meng-cover pekerjaan"
+        />
       </div>
     </>
   );

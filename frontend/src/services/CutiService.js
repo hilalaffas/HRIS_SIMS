@@ -87,6 +87,11 @@ export const getApprovers = (role, employeeId) => {
   return api.get(`/api/karyawan/approvers?${query}`);
 };
 
+export const getCoverOptions = (employeeId) => {
+  const query = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : '';
+  return api.get(`/api/karyawan/cover-options${query}`);
+};
+
 export const getLeaveTypes = () => api.get('/api/jenis-cuti');
 export const getCalendarLeaves = (year) => api.get(`/api/cuti/calendar?year=${year}`);
 

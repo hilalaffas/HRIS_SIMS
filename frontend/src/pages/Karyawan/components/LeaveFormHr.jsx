@@ -3,7 +3,7 @@ import Dropdown from '../../../components/Dropdown';
 import './LeaveFormHr.css';
 // [BARU] Popup konfirmasi yang sama dengan form Ajukan Cuti karyawan.
 import LeaveConfirmModal from '../../Cuti/applycuti/components/LeaveConfirmModal';
-import { getLeaveTypes, getApprovers, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
+import { getLeaveTypes, getApprovers, getCoverOptions, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles';
 import { getAllHolidays } from '../../../services/holidayService';
 import { validateRequired, inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
@@ -113,6 +113,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   const [leaderOptions, setLeaderOptions] = useState([]);
   const [spvOptions, setSpvOptions] = useState([]);
   const [managerOptions, setManagerOptions] = useState([]);
+  const [coverOptions, setCoverOptions] = useState([]);
   // [BARU] Loading approver terpisah dari isSubmitting, supaya bisa kasih
   // feedback "Memuat approver..." tiap kali ganti karyawan.
   const [isLoadingApprovers, setIsLoadingApprovers] = useState(false);
@@ -207,6 +208,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       setLeaderOptions([]);
       setSpvOptions([]);
       setManagerOptions([]);
+      setCoverOptions([]);
       return;
     }
 
@@ -214,21 +216,24 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     (async () => {
       setIsLoadingApprovers(true);
       try {
-        const [leaders, spvs, managers] = await Promise.all([
+        const [leaders, spvs, managers, covers] = await Promise.all([
           getApprovers('LEADER', formData.karyawanId),
           getApprovers('SPV', formData.karyawanId),
           getApprovers('MANAGER', formData.karyawanId),
+          getCoverOptions(formData.karyawanId),
         ]);
         if (isCancelled) return;
         setLeaderOptions(leaders || []);
         setSpvOptions(spvs || []);
         setManagerOptions(managers || []);
+        setCoverOptions(covers || []);
       } catch (error) {
         if (isCancelled) return;
         console.error('Gagal memuat daftar approver untuk karyawan ini:', error);
         setLeaderOptions([]);
         setSpvOptions([]);
         setManagerOptions([]);
+        setCoverOptions([]);
         setErrorMessage('Karyawan ini belum punya divisi, atau tidak ada approver satu divisi. Hubungi Super Admin untuk melengkapi data divisi.');
       } finally {
         if (!isCancelled) setIsLoadingApprovers(false);
@@ -672,7 +677,17 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
 
         <div className="form-group_leaveFormHr">
           <label>DICOVER OLEH *</label>
-          <input type="text" name="dicoverOleh" placeholder="Nama rekan kerja yang mem-backup..." value={formData.dicoverOleh} onChange={handleInputChange} className={inputErrorClass(errors.dicoverOleh)} />
+          <Dropdown
+            name="dicoverOleh"
+            value={formData.dicoverOleh}
+            onChange={handleInputChange}
+            options={coverOptions.map((person) => ({ value: person.fullName, label: person.fullName }))}
+            placeholder="Cari nama rekan satu divisi dan jenjang..."
+            searchable
+            required
+            className={dropdownErrorClass(errors.dicoverOleh)}
+            ariaLabel="Pilih karyawan yang meng-cover pekerjaan"
+          />
         </div>
 
         {errorMessage && (
