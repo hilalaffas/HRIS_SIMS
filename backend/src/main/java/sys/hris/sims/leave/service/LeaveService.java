@@ -979,11 +979,22 @@ public class LeaveService {
                 ? ""
                 : leaveTypeName.trim().toLowerCase(Locale.ROOT);
 
-        if ("cuti setengah hari".equals(normalizedLeaveTypeName)) {
+        if ("cuti setengah hari".equals(normalizedLeaveTypeName) || isUrgentHalfDay(cuti)) {
             return "Rentang cuti harus memiliki minimal setengah hari kerja";
         }
 
         return "Rentang cuti harus memiliki minimal satu hari kerja";
+    }
+
+    // [BARU] true kalau pengajuan ini "Cuti Urgent" DAN sesi (PAGI/SIANG)
+    // terisi -- artinya user memilih "Cuti Setengah Hari" di dropdown
+    // "DURASI CUTI URGENT" pada frontend. Jenis cuti lain (selain "Cuti
+    // Setengah Hari" yang sudah dicek terpisah) tidak pernah mengirim
+    // session, jadi tidak terpengaruh oleh perubahan ini.
+    private boolean isUrgentHalfDay(LeaveRequest cuti) {
+        String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
+        String normalized = leaveTypeName == null ? "" : leaveTypeName.trim().toLowerCase(Locale.ROOT);
+        return "cuti urgent".equals(normalized) && cuti.getSession() != null && !cuti.getSession().isBlank();
     }
 
     private BigDecimal calculateLeaveDays(LeaveRequest cuti) {
@@ -995,7 +1006,13 @@ public class LeaveService {
         // penuh, bukan 0,5.
         String normalizedLeaveTypeName = leaveTypeName == null ? "" : leaveTypeName.trim().toLowerCase(Locale.ROOT);
 
-        if ("cuti setengah hari".equals(normalizedLeaveTypeName)) {
+        // [BARU] "Cuti Urgent" sekarang juga bisa setengah hari -- frontend
+        // (LeaveTypeDateSection.jsx, dropdown "DURASI CUTI URGENT") mengirim
+        // kode sesi ("PAGI"/"SIANG") persis seperti "Cuti Setengah Hari"
+        // ketika opsi ini dipilih. isUrgentHalfDay() mendeteksinya dari
+        // kombinasi nama jenis cuti "cuti urgent" + session terisi, supaya
+        // jenis cuti lain (session selalu null) tidak ikut terpengaruh.
+        if ("cuti setengah hari".equals(normalizedLeaveTypeName) || isUrgentHalfDay(cuti)) {
             if (!cuti.getStartDate().equals(cuti.getEndDate())) {
                 throw new RuntimeException("Cuti setengah hari hanya dapat diajukan untuk satu tanggal");
             }

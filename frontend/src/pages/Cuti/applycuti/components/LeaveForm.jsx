@@ -7,6 +7,9 @@ import ReasonCoverageSection from './ReasonCoverageSection';
 const LeaveForm = ({
   jenisCuti, setJenisCuti,
   durasiSesi, setDurasiSesi,
+  // [BARU] Durasi Cuti Urgent (Full Sehari / Setengah Hari) -- lihat
+  // LeaveTypeDateSection.jsx.
+  urgentDurasi, setUrgentDurasi,
   startDate, setStartDate,
   endDate, setEndDate,
   reason, setReason,
@@ -63,6 +66,7 @@ const LeaveForm = ({
         <LeaveTypeDateSection
           jenisCuti={jenisCuti} setJenisCuti={setJenisCuti}
           durasiSesi={durasiSesi} setDurasiSesi={setDurasiSesi}
+          urgentDurasi={urgentDurasi} setUrgentDurasi={setUrgentDurasi}
           startDate={startDate} setStartDate={setStartDate}
           endDate={endDate} setEndDate={setEndDate}
           dinamisBatasMinStr={dinamisBatasMinStr}

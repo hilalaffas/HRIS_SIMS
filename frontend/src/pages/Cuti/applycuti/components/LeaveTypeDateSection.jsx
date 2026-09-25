@@ -83,6 +83,12 @@ const generate35Days = (viewDate) => {
 const LeaveTypeDateSection = ({
   jenisCuti, setJenisCuti,
   durasiSesi, setDurasiSesi,
+  // [BARU] Durasi Cuti Urgent: "Cuti Full Sehari" (default) atau "Cuti
+  // Setengah Hari". Kalau "Cuti Setengah Hari" dipilih, dropdown sesi
+  // Pagi/Siang di bawah ikut muncul & tanggal SAMPAI ikut diklem sama
+  // dengan tanggal DARI -- sistemnya disamakan persis dengan jenis cuti
+  // "Cuti Setengah Hari" (lihat isHalfDayLeave).
+  urgentDurasi, setUrgentDurasi,
   startDate, setStartDate,
   endDate, setEndDate,
   dinamisBatasMinStr,
@@ -113,7 +119,17 @@ const LeaveTypeDateSection = ({
   const normalizedLeaveType = String(jenisCuti || '').trim().toLowerCase();
   const isCutiMeninggal = normalizedLeaveType.includes('meninggal');
   const isMendesak = ['cuti urgent', 'cuti berduka'].includes(normalizedLeaveType) || isCutiMeninggal;
-  const isHalfDayLeave = normalizedLeaveType === 'cuti setengah hari';
+  // [BARU] Cuti Urgent sekarang bisa dipilih setengah hari lewat dropdown
+  // "DURASI CUTI URGENT" (lihat render di bawah). isHalfDayLeave jadi juga
+  // true untuk kombinasi ini, supaya perilakunya (klem tanggal SAMPAI =
+  // tanggal DARI, durasi 0,5 hari) otomatis sama seperti jenis cuti
+  // "Cuti Setengah Hari" -- TAPI dropdown sesi Pagi/Siang TIDAK ikut
+  // ditampilkan untuk Cuti Urgent (lihat isActualHalfDayType di bawah,
+  // dipakai khusus untuk itu).
+  const isCutiUrgent = normalizedLeaveType === 'cuti urgent';
+  const isUrgentHalfDay = isCutiUrgent && urgentDurasi === 'Cuti Setengah Hari';
+  const isActualHalfDayType = normalizedLeaveType === 'cuti setengah hari';
+  const isHalfDayLeave = isActualHalfDayType || isUrgentHalfDay;
   // [BARU/FIX] Deteksi apakah rentang tanggal yang dipilih tumpang tindih
   // dengan pengajuan lain yang sudah ACC/masih diproses -- dipakai untuk
   // menjelaskan KENAPA durasi pengajuan jadi 0 hari kerja (bukan cuma
@@ -277,7 +293,26 @@ const LeaveTypeDateSection = ({
         />
       </div>
 
-      {isHalfDayLeave && (
+      {/* [BARU] Muncul hanya untuk "Cuti Urgent" -- pilih apakah pengajuan
+          urgent ini full sehari (perilaku lama, default) atau setengah
+          hari. Beda dengan "Cuti Setengah Hari" biasa, di sini TIDAK ada
+          dropdown sesi Pagi/Siang tambahan -- cukup dua opsi ini saja. */}
+      {isCutiUrgent && (
+        <div className="form-group">
+          <label className="form-label">DURASI CUTI URGENT *</label>
+          <Dropdown
+            name="urgentDurasi"
+            value={urgentDurasi}
+            onChange={(e) => setUrgentDurasi(e.target.value)}
+            options={[
+              { value: 'Cuti Full Sehari', label: 'Cuti Full Sehari' },
+              { value: 'Cuti Setengah Hari', label: 'Cuti Setengah Hari' },
+            ]}
+          />
+        </div>
+      )}
+
+      {isActualHalfDayType && (
         <div className="form-group">
           <label className="form-label">DURASI SESI SETENGAH HARI *</label>
           <Dropdown

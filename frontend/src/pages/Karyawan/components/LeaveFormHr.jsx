@@ -42,10 +42,10 @@ const addMonthsToDateStr = (dateStr, months) => {
   d.setMonth(d.getMonth() + months);
   return toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
 };
-const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false, bookedDates = new Set()) => {
+const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale = false, bookedDates = new Set(), isHalfDayOverride = false) => {
   if (!startDate || !endDate || startDate > endDate) return 0;
   const normalized = String(jenisCuti || '').trim().toLowerCase();
-  if (normalized === 'cuti setengah hari') {
+  if (normalized === 'cuti setengah hari' || isHalfDayOverride) {
     const d = new Date(`${startDate}T00:00:00`);
     const key = toDateKey(d.getFullYear(), d.getMonth(), d.getDate());
     return d.getDay() !== 0 && d.getDay() !== 6 && !holidayDates.has(key) && !bookedDates.has(key) ? 0.5 : 0;
@@ -85,6 +85,13 @@ const SESSION_CODE_BY_LABEL = {
   'Setengah Hari (Pagi)': 'PAGI',
   'Setengah Hari (Siang)': 'SIANG',
 };
+// [BARU] Cuti Urgent setengah hari (lewat dropdown "DURASI CUTI URGENT" di
+// bawah) tidak punya pilihan sesi jam Pagi/Siang -- disamakan dengan
+// ApplyCuti.jsx. Kode netral ini dikirim di kolom `session` supaya backend
+// (LeaveService.isUrgentHalfDay()) tahu pengajuannya setengah hari, tapi
+// tidak match "PAGI"/"SIANG" di SESSION_LABELS (CutiService.js) -- jadi
+// tidak muncul teks "Sesi Pagi/Siang" yang salah di Riwayat/Approve.
+const URGENT_HALF_DAY_SESSION_CODE = 'HALF';
 
 const initialFormState = {
   karyawanId: '',
@@ -92,6 +99,9 @@ const initialFormState = {
   // [BARU] Default sesi cuti setengah hari, hanya relevan/terkirim kalau
   // jenis cuti yang dipilih adalah "Cuti Setengah Hari" (lihat isHalfDayLeave).
   durasiSesi: 'Setengah Hari (Pagi)',
+  // [BARU] Durasi Cuti Urgent: "Cuti Full Sehari" (default, perilaku lama)
+  // atau "Cuti Setengah Hari" -- lihat dropdown "DURASI CUTI URGENT".
+  urgentDurasi: 'Cuti Full Sehari',
   startDate: '',
   endDate: '',
   alasan: '',
@@ -222,7 +232,16 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     () => leaveTypes.find((type) => String(type.leaveTypeId) === String(formData.leaveTypeId)),
     [leaveTypes, formData.leaveTypeId]
   );
-  const isHalfDayLeave = String(selectedLeaveType?.name || '').trim().toLowerCase() === 'cuti setengah hari';
+  const isActualHalfDayType = String(selectedLeaveType?.name || '').trim().toLowerCase() === 'cuti setengah hari';
+  // [BARU] Cuti Urgent sekarang bisa dipilih setengah hari lewat dropdown
+  // "DURASI CUTI URGENT" (disamakan dengan ApplyCuti.jsx). isHalfDayLeave
+  // jadi juga true untuk kombinasi ini, supaya perilakunya (klem SAMPAI
+  // TANGGAL = DARI TANGGAL, durasi 0,5 hari) otomatis sama seperti "Cuti
+  // Setengah Hari" -- TAPI dropdown sesi Pagi/Siang TIDAK ikut ditampilkan
+  // untuk Cuti Urgent (lihat isActualHalfDayType, dipakai khusus untuk itu).
+  const isCutiUrgent = String(selectedLeaveType?.name || '').trim().toLowerCase() === 'cuti urgent';
+  const isUrgentHalfDay = isCutiUrgent && formData.urgentDurasi === 'Cuti Setengah Hari';
+  const isHalfDayLeave = isActualHalfDayType || isUrgentHalfDay;
   const selectedEmployeeGender = selectedKaryawan?.gender || selectedKaryawan?.jenisKelamin || '';
   const isFemale = isFemaleEmployee(selectedEmployeeGender);
   const normalizedLeaveType = String(selectedLeaveType?.name || '').trim().toLowerCase();
@@ -262,7 +281,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       setFormData((current) => ({ ...current, endDate: maxEndDate }));
     }
   }
-  const jumlahHariCuti = countWorkingDays(formData.startDate, formData.endDate, holidayDates, selectedLeaveType?.name, isFemale, bookedDates);
+  const jumlahHariCuti = countWorkingDays(formData.startDate, formData.endDate, holidayDates, selectedLeaveType?.name, isFemale, bookedDates, isUrgentHalfDay);
   const hasBookedDateInRange = useMemo(() => {
     if (!formData.startDate || !formData.endDate) return false;
     for (const d = new Date(`${formData.startDate}T00:00:00`); d <= new Date(`${formData.endDate}T00:00:00`); d.setDate(d.getDate() + 1)) {
@@ -340,11 +359,13 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       alasan: formData.alasan,
       pekerjaanTertunda: formData.pekerjaanTertunda,
       dicoverOleh: formData.dicoverOleh,
-      // [BARU] Kirim kode sesi ("PAGI"/"SIANG") HANYA untuk Cuti Setengah
-      // Hari -- jenis cuti lain selalu null, konsisten dengan
-      // submitCuti()/ApplyCuti.jsx (CutiService.js sudah mendukung field
-      // ini di submitUrgentCuti(), tinggal dikirim dari sini).
-      session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[formData.durasiSesi] || 'PAGI') : null,
+      // [BARU] Kirim kode sesi ("PAGI"/"SIANG") untuk Cuti Setengah Hari,
+      // atau kode netral "HALF" untuk Cuti Urgent setengah hari (tidak ada
+      // pilihan sesi jam) -- lihat URGENT_HALF_DAY_SESSION_CODE. Jenis
+      // cuti lain (termasuk Cuti Urgent full sehari) selalu null.
+      session: isActualHalfDayType
+        ? (SESSION_CODE_BY_LABEL[formData.durasiSesi] || 'PAGI')
+        : (isHalfDayLeave ? URGENT_HALF_DAY_SESSION_CODE : null),
     };
 
     // [UBAH] Ringkasan tampilan popup. Baris "Karyawan" ikut ditampilkan
@@ -353,7 +374,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     const summary = {
       employeeName: selectedKaryawan?.fullName,
       jenisCuti: selectedLeaveType?.name,
-      sessionLabel: isHalfDayLeave ? formData.durasiSesi : '',
+      sessionLabel: isActualHalfDayType ? formData.durasiSesi : (isHalfDayLeave ? formData.urgentDurasi : ''),
       startDate: formData.startDate,
       endDate: formData.endDate,
       totalDays: jumlahHariCuti,
@@ -495,9 +516,31 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
           </div>
         </div>
 
+        {/* [BARU] Muncul hanya untuk "Cuti Urgent" -- pilih apakah
+            pengajuan urgent ini full sehari (perilaku lama, default) atau
+            setengah hari. Beda dengan "Cuti Setengah Hari" biasa, di sini
+            TIDAK ada dropdown sesi Pagi/Siang tambahan -- cukup dua opsi
+            ini saja. */}
+        {isCutiUrgent && (
+          <div className="form-group_leaveFormHr">
+            <label>DURASI CUTI URGENT *</label>
+            <Dropdown
+              name="urgentDurasi"
+              value={formData.urgentDurasi}
+              onChange={handleInputChange}
+              options={[
+                { value: 'Cuti Full Sehari', label: 'Cuti Full Sehari' },
+                { value: 'Cuti Setengah Hari', label: 'Cuti Setengah Hari' },
+              ]}
+              placeholder="Pilih..."
+              required
+            />
+          </div>
+        )}
+
         {/* [BARU] Muncul hanya untuk "Cuti Setengah Hari" -- sistemnya sama
             dengan LeaveTypeDateSection.jsx pada form Ajukan Cuti karyawan. */}
-        {isHalfDayLeave && (
+        {isActualHalfDayType && (
           <div className="form-group_leaveFormHr">
             <label>DURASI SESI SETENGAH HARI *</label>
             <Dropdown
