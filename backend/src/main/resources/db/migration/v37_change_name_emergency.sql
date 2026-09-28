@@ -1,0 +1,1 @@
+UPDATE emergency_contact_relationships SET name = 'Kerabat' WHERE name = 'Lainnya';
