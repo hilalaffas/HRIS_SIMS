@@ -208,18 +208,6 @@ export default function Absensi() {
 
   return (
     <div className="absensi-page">
-      <div className="abs-page-heading">
-        <div>
-          <p className="abs-eyebrow-title">Kehadiran karyawan</p>
-          <h1>Absensi</h1>
-          <p className="abs-subheading">Catat kehadiran Anda dengan cepat dan mudah.</p>
-        </div>
-        <div className="abs-date-chip">
-          <CalendarDays aria-hidden="true" />
-          <span>{todayLabel}</span>
-        </div>
-      </div>
-
       {/* [UBAH] Tabel riwayat sekarang di SAMPING (bukan di bawah) kartu
           absensi -- lihat Absensi.css .abs-attendance-grid (2 kolom) &
           .abs-attendance-left (kartu ditumpuk vertikal di kolom kiri). */}
