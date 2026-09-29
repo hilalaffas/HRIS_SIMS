@@ -1,0 +1,104 @@
+/**
+ * Absensi.css
+ * ------------------------------------------------------------------
+ * Token lokal + layout untuk modul Absensi. Warna diambil dari
+ * styles/tokens.css (brand hijau --color-primary dkk) supaya konsisten
+ * dengan Karyawan.css / ApproveLeave -- BUKAN warna biru dari draft
+ * desain awal. Didefinisikan pada scope `.absensi-page` supaya
+ * diwarisi semua komponen anak (AttendanceCameraCard,
+ * AttendanceTodayCard, AttendanceHistoryTable, AttendanceCameraModal).
+ * ------------------------------------------------------------------
+ */
+
+.absensi-page {
+  --abs-navy: var(--color-primary);
+  --abs-primary-soft: var(--color-primary-soft);
+  --abs-primary-tint: var(--color-primary-tint);
+  --abs-soft-blue: var(--color-primary-tint);
+  --abs-border: var(--color-border);
+  --abs-border-dashed: #c9dcd4;
+  --abs-muted-ink: var(--color-text-secondary);
+  --abs-muted-ink-2: var(--color-text-muted);
+
+  max-width: var(--page-max-width, 1280px);
+  margin: 0 auto;
+}
+
+.absensi-page .abs-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 22px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.absensi-page .abs-eyebrow-title {
+  color: var(--abs-primary-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  margin: 0 0 6px;
+}
+
+.absensi-page .abs-page-heading h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  color: var(--abs-navy);
+}
+
+.absensi-page .abs-subheading {
+  margin: 0;
+  color: var(--abs-muted-ink);
+  font-size: 13px;
+}
+
+.absensi-page .abs-date-chip {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  color: var(--abs-muted-ink);
+  font-size: 11px;
+  background: var(--color-surface);
+  border: 1px solid var(--abs-border);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.absensi-page .abs-date-chip svg {
+  width: 15px;
+  height: 15px;
+  color: var(--abs-primary-soft);
+}
+
+/* [UBAH] Layout diubah dari "kartu berdampingan lalu tabel di bawah,
+   full-width" menjadi 2 kolom: kiri (tombol absensi + status hari ini,
+   ditumpuk vertikal) dan kanan (tabel riwayat, sejajar di samping,
+   tinggi mengikuti kolom kiri). Lihat .abs-attendance-left di bawah. */
+.absensi-page .abs-attendance-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.absensi-page .abs-attendance-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* [BARU] Toast global (components/Toast.jsx) dipakai apa adanya untuk
+   notifikasi sukses absen -- lihat absensi.jsx -- jadi tidak perlu lagi
+   ".success-banner" kustom seperti di draft desain awal. */
+
+@media (max-width: 900px) {
+  .absensi-page .abs-attendance-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .absensi-page .abs-page-heading { display: block; }
+  .absensi-page .abs-date-chip { margin-top: 18px; width: max-content; }
+  .absensi-page .abs-page-heading h1 { font-size: 22px; }
+}

@@ -1,0 +1,381 @@
+/* src/pages/Absensi/components/AttendanceCameraModal.css */
+
+.abs-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(19, 34, 56, 0.6);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 1000;
+  /* [BARU] Fade-in halus untuk backdrop saat modal dibuka */
+  animation: abs-backdrop-in 0.18s ease both;
+}
+
+.abs-camera-modal {
+  width: min(460px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg, 14px);
+  padding: 22px;
+  box-shadow: 0 20px 50px rgba(19, 34, 56, 0.25);
+  /* [BARU] Modal masuk dengan scale+fade, terasa lebih hidup dibanding
+     modal-modal lama di project ini yang langsung muncul tanpa transisi. */
+  animation: abs-modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.abs-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 17px;
+}
+
+.abs-modal-header h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+  color: var(--abs-navy);
+}
+
+.abs-modal-header .abs-eyebrow {
+  margin: 0;
+  color: var(--abs-primary-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.abs-modal-header > button {
+  border: 0;
+  background: transparent;
+  color: #8994a5;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.abs-modal-header > button:hover {
+  color: var(--abs-navy);
+}
+
+.abs-video-frame,
+.abs-captured-image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+  background: #182433;
+  position: relative;
+}
+
+.abs-video-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.abs-face-guide {
+  position: absolute;
+  inset: 17% 28%;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 45%;
+}
+
+.abs-captured-image {
+  display: block;
+  /* [BARU] Foto hasil jepretan muncul dengan sedikit efek "zoom-in" */
+  animation: abs-photo-in 0.25s ease both;
+}
+
+.abs-camera-error {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  color: var(--abs-muted-ink);
+  font-size: 12px;
+}
+
+.abs-camera-error svg {
+  color: var(--abs-primary-soft);
+  width: 30px;
+  height: 30px;
+}
+
+.abs-camera-error p {
+  max-width: 290px;
+  line-height: 1.5;
+}
+
+.abs-upload-button {
+  background: var(--abs-soft-blue);
+  color: var(--abs-primary-soft);
+  border-radius: var(--radius-sm, 6px);
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.abs-upload-button:hover {
+  background: #ddeee7;
+}
+
+.abs-upload-button input {
+  display: none;
+}
+
+.abs-attendance-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.abs-attendance-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.abs-attendance-form legend,
+.abs-note-field,
+.abs-location-field > div > span {
+  color: #6d817a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.abs-reason-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.abs-reason-option {
+  border: 1px solid #d9e8e0;
+  border-radius: var(--radius-sm, 8px);
+  background: #fff;
+  color: #526c63;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.abs-reason-option:hover {
+  transform: translateY(-1px);
+}
+
+.abs-reason-option.is-selected {
+  border-color: var(--abs-primary-soft);
+  background: var(--abs-primary-tint);
+  color: var(--abs-primary-soft);
+}
+
+.abs-note-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.abs-note-field span {
+  color: var(--color-danger);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.abs-note-field textarea {
+  resize: vertical;
+  min-height: 58px;
+  border: 1px solid #d9e8e0;
+  border-radius: var(--radius-sm, 8px);
+  padding: 10px 12px;
+  color: var(--abs-navy);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.abs-note-field textarea:focus {
+  border-color: var(--abs-primary-soft);
+  box-shadow: 0 0 0 3px rgba(33, 122, 91, 0.11);
+}
+
+.abs-location-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #d9e8e0;
+  border-radius: var(--radius-sm, 8px);
+  padding: 10px 12px;
+  background: #f7fbf9;
+}
+
+.abs-location-field > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.abs-location-field strong {
+  color: var(--abs-navy);
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* [BARU] Link "Buka di Google Maps" + peringatan lokasi belum aktif */
+.abs-maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  color: var(--abs-primary-soft);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.abs-maps-link:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.abs-maps-link svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.abs-location-warning {
+  color: var(--color-danger);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.abs-location-field button {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--abs-primary-soft);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.abs-location-field button:disabled {
+  color: #9cafaa;
+  cursor: not-allowed;
+}
+
+.abs-modal-footer {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 18px;
+}
+
+.abs-modal-footer .abs-primary-button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-sm, 6px);
+  padding: 11px 17px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--abs-primary-soft);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.abs-modal-footer .abs-primary-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.abs-modal-footer .abs-primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.abs-modal-footer .abs-primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.abs-modal-footer .abs-outline-button {
+  border: 1px solid #dfe5ee;
+  color: #607089;
+  background: var(--color-surface);
+  padding: 9px 12px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.abs-capture-button {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 4px solid #d6ebe5;
+  background: var(--abs-primary-soft);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.abs-capture-button:hover {
+  transform: scale(1.05);
+}
+
+.abs-capture-button:active {
+  transform: scale(0.95);
+}
+
+.abs-capture-button span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+@keyframes abs-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes abs-modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes abs-photo-in {
+  from { opacity: 0; transform: scale(1.03); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 480px) {
+  .abs-camera-modal { padding: 18px; }
+}

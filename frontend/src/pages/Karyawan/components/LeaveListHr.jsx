@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import './LeaveListHr.css';
 import FilterStatusDropdown from './FilterStatusDropdown'; // Pastikan path ini benar di project Anda
+import { SORT_DIRECTION, sortRows, toDateTimestamp } from '../../../utils/tableSort';
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "Semua Status" },
@@ -24,17 +25,87 @@ const STATUS_BADGE_LABEL = {
   DITOLAK: "Ditolak",
 };
 
+// [BARU] Kolom yang bisa diklik untuk sortir. Kolom "Aksi" sengaja tidak
+// ada di sini karena isinya hanya tombol (tidak ada nilai untuk disortir).
+const SORT_COLUMNS = [
+  { key: "employeeName", label: "Karyawan Pemohon" },
+  { key: "leaveDate", label: "Detail Cuti" },
+  { key: "remainingLeave", label: "Sisa Cuti" },
+  { key: "status", label: "Status Berkas", className: "leaveList__colStatus_leaveListHr" },
+];
+
+// [BARU] Default: tanggal cuti terbaru -> terlama.
+const DEFAULT_SORT = { key: "leaveDate", direction: SORT_DIRECTION.desc };
+
+// [BARU] Ikon panah atas/bawah; panah yang aktif lebih gelap.
+const SortIcon = ({ direction }) => (
+  <svg className="leaveList__sortIcon_leaveListHr" width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">
+    <path d="M5 1 1 5h8L5 1Z" fill="currentColor" className={direction === SORT_DIRECTION.asc ? "is-active" : ""} />
+    <path d="M5 13 9 9H1l4 4Z" fill="currentColor" className={direction === SORT_DIRECTION.desc ? "is-active" : ""} />
+  </svg>
+);
+
 const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUserRole, onRevokeLeave }) => {
   const [statusFilter, setStatusFilter] = useState("ALL");
   
   // State untuk modal revoke
   const [revokeItem, setRevokeItem] = useState(null);
 
+  // [BARU] State sortir: kolom aktif + arah (asc/desc)
+  const [sortConfig, setSortConfig] = useState(DEFAULT_SORT);
+
   const filteredData = useMemo(() => {
     if (!data) return [];
     if (statusFilter === "ALL") return data;
     return data.filter((item) => item.statusBerkas === statusFilter);
   }, [data, statusFilter]);
+
+  // [BARU] Ambil nilai yang dibandingkan untuk tiap kolom.
+  const getSortValue = (item, key) => {
+    switch (key) {
+      case "employeeName":
+        return item.karyawan?.nama;
+      case "leaveDate":
+        return toDateTimestamp(item.startDate);
+      case "remainingLeave": {
+        const value = balanceAfterByLeaveId[item.id];
+        return value === undefined || value === null ? null : Number(value);
+      }
+      case "status":
+        return STATUS_BADGE_LABEL[item.statusBerkas];
+      default:
+        return null;
+    }
+  };
+
+  // [BARU] Data yang ditampilkan = hasil filter, lalu disortir.
+  // Sortir pertama (id terbaru di atas) jadi tie-breaker, karena sortRows stabil:
+  // baris dengan nilai sama tetap urut dari pengajuan terbaru.
+  const sortedData = useMemo(() => {
+    const byNewestId = sortRows(filteredData, (item) => Number(item.id), SORT_DIRECTION.desc);
+    return sortRows(byNewestId, (item) => getSortValue(item, sortConfig.key), sortConfig.direction);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredData, sortConfig, balanceAfterByLeaveId]);
+
+  // [BARU] Klik kolom yang sama -> balik arah. Klik kolom lain -> mulai dari
+  // asc (khusus tanggal mulai dari desc/terbaru dulu).
+  const handleSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return {
+          key,
+          direction: prev.direction === SORT_DIRECTION.asc ? SORT_DIRECTION.desc : SORT_DIRECTION.asc,
+        };
+      }
+      return { key, direction: key === "leaveDate" ? SORT_DIRECTION.desc : SORT_DIRECTION.asc };
+    });
+  };
+
+  const getSortAriaLabel = (label, isActive) => {
+    if (!isActive) return `Urutkan berdasarkan ${label}`;
+    const current = sortConfig.direction === SORT_DIRECTION.asc ? "naik" : "turun";
+    return `Urutkan berdasarkan ${label}, saat ini urut ${current}`;
+  };
 
   const canRevoke = currentUserRole === 'hrd_karyawan' || currentUserRole === 'hrd_admin' || currentUserRole === 'superadmin' || currentUserRole === 'admin';
 
@@ -59,14 +130,29 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
       ) : (
         <div className="leaveList__table_leaveListHr">
           <div className="leaveList__row_leaveListHr leaveList__row--head_leaveListHr">
-            <div>Karyawan Pemohon</div>
-            <div>Detail Cuti</div>
-            <div>Sisa Cuti</div>
-            <div className="leaveList__colStatus_leaveListHr">Status Berkas</div>
+            {/* [UBAH] Header statis diganti header yang bisa diklik untuk sortir */}
+            {SORT_COLUMNS.map(({ key, label, className }) => {
+              const isActive = sortConfig.key === key;
+              return (
+                <div key={key} className={className}>
+                  <button
+                    type="button"
+                    className={`leaveList__sortBtn_leaveListHr${isActive ? " is-active" : ""}`}
+                    onClick={() => handleSort(key)}
+                    aria-label={getSortAriaLabel(label, isActive)}
+                    title="Klik untuk mengurutkan"
+                  >
+                    {label}
+                    <SortIcon direction={isActive ? sortConfig.direction : null} />
+                  </button>
+                </div>
+              );
+            })}
             <div className="leaveList__colLog_leaveListHr">Aksi</div>
           </div>
 
-          {filteredData.map((item) => {
+          {/* [UBAH] filteredData.map -> sortedData.map */}
+          {sortedData.map((item) => {
             // [UBAH] Sisa cuti sekarang PER BARIS (saldo setelah cuti ini
             // disetujui, urut waktu approval) -- lihat balanceAfterByLeaveId
             // di Karyawan.jsx & utils/leaveBalanceTimeline.js. Baris yang

@@ -6,6 +6,27 @@
 .leaveList__row_leaveListHr { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr 1.5fr; gap: 16px; padding: 16px; border-bottom: 1px solid #e5e7eb; align-items: center; }
 .leaveList__row_leaveListHr:last-child { border-bottom: none; }
 .leaveList__row--head_leaveListHr { background-color: #f3f4f6; font-size: 12px; font-weight: 700; color: #4b5563; text-transform: uppercase; }
+/* [BARU] Header kolom yang bisa diklik untuk sortir */
+.leaveList__sortBtn_leaveListHr {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.leaveList__sortBtn_leaveListHr:hover,
+.leaveList__sortBtn_leaveListHr.is-active { color: #111827; }
+.leaveList__sortBtn_leaveListHr:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; border-radius: 4px; }
+.leaveList__sortIcon_leaveListHr { flex-shrink: 0; }
+.leaveList__sortIcon_leaveListHr path { opacity: 0.3; transition: opacity 0.2s; }
+.leaveList__sortIcon_leaveListHr path.is-active { opacity: 1; }
 .leaveList__name_leaveListHr { font-weight: 600; font-size: 14px; color: #111827; }
 .leaveList__code_leaveListHr, .leaveList__duration_leaveListHr { font-size: 13px; color: #6b7280; margin-top: 4px; }
 .leaveList__type_leaveListHr { font-size: 14px; color: #374151; font-weight: 500; }

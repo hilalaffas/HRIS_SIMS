@@ -1,0 +1,240 @@
+/* src/pages/Absensi/components/AttendanceHistoryTable.css */
+
+.abs-history-section {
+  background: var(--color-surface);
+  border: 1px solid var(--abs-border);
+  border-radius: var(--radius-md, 10px);
+  padding: 24px 27px 18px;
+  box-shadow: var(--shadow-sm);
+  animation: abs-fade-up 0.35s ease both;
+  animation-delay: 0.1s;
+  /* [UBAH] Tabel sekarang jadi kolom kanan di layout 2-kolom (lihat
+     Absensi.css .abs-attendance-grid) -- tinggi mengisi penuh sisi
+     kanan sejajar dengan kartu kamera + status hari ini di kiri. */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.abs-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.abs-section-heading h2 {
+  margin: 0 0 6px;
+  color: var(--abs-navy);
+  font-size: 17px;
+}
+
+.abs-section-heading p {
+  margin: 0;
+  color: var(--abs-muted-ink);
+  font-size: 11px;
+}
+
+.abs-outline-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dfe5ee;
+  color: #607089;
+  background: var(--color-surface);
+  padding: 9px 12px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+
+.abs-outline-button:hover {
+  background: #f4f6fa;
+}
+
+.abs-outline-button svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.abs-outline-button svg.is-flipped {
+  transform: rotate(180deg);
+}
+
+.abs-table-wrap {
+  overflow: auto;
+  margin-top: 22px;
+  flex: 1;
+}
+
+table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  color: var(--abs-muted-ink-2);
+  text-align: left;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  padding: 0 10px 12px;
+}
+
+td {
+  border-top: 1px solid #f0f2f5;
+  color: var(--abs-muted-ink);
+  font-size: 11px;
+  padding: 12px 10px;
+  vertical-align: top;
+}
+
+td strong {
+  color: var(--abs-navy);
+  font-size: 11px;
+}
+
+.abs-empty-row {
+  text-align: center;
+  color: var(--abs-muted-ink-2);
+  padding: 26px 10px;
+}
+
+.abs-empty-cell {
+  color: var(--abs-muted-ink-2);
+}
+
+/* [BARU] Status per hari: Hadir / Telat / Cuti / Absen -- masing-masing
+   warna berbeda supaya cepat dipindai secara visual. */
+.abs-record-status {
+  padding: 5px 9px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.abs-status-hadir {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.abs-status-telat {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.abs-status-cuti {
+  color: #a9670a;
+  background: #fdf4e3;
+}
+
+.abs-status-absen {
+  color: var(--color-danger);
+  background: #fdecec;
+}
+
+/* [BARU] Link "Peta" (Google Maps) / "Selfie" (foto) -- bisa tampil 2
+   (Masuk & Keluar) ditumpuk vertikal per baris. */
+.abs-link-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.abs-maps-pin,
+.abs-photo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--abs-primary-soft);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.abs-maps-pin:hover,
+.abs-photo-link:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.abs-maps-pin svg,
+.abs-photo-link svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* [BARU] Setiap baris tabel muncul dengan fade+geser kecil, dijeda
+   bertahap lewat inline style animationDelay (lihat JSX). Berlaku juga
+   saat pindah halaman karena <tbody> di-remount via key={...}. */
+.abs-tbody-page tr {
+  animation: abs-row-in 0.28s ease both;
+}
+
+@keyframes abs-row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.abs-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 0 6px;
+}
+
+.abs-page-nav {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--abs-border);
+  background: var(--color-surface);
+  color: var(--abs-navy);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.abs-page-nav:hover:not(:disabled) {
+  background: var(--abs-primary-tint);
+  transform: translateY(-1px);
+}
+
+.abs-page-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.abs-page-nav svg {
+  width: 15px;
+  height: 15px;
+}
+
+.abs-page-indicator {
+  font-size: 11px;
+  color: var(--abs-muted-ink);
+  font-weight: 600;
+}
+
+@keyframes abs-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 760px) {
+  .abs-history-section { padding: 20px; overflow: hidden; height: auto; }
+  .abs-section-heading { align-items: center; }
+}

@@ -1,119 +1,265 @@
-import React, { useState } from 'react';
-
-const attendanceData = [
-  { id: 'A001', name: 'Andi Saputra', dept: 'Engineering', date: '22 Jun 2026', in: '08:02', out: '17:10', status: 'Hadir', initials: 'AS', avatarColor: 'bg-cyan-500', deptColor: 'text-blue-600 bg-blue-50' },
-  { id: 'A002', name: 'Dewi Lestari', dept: 'Marketing', date: '22 Jun 2026', in: '08:45', out: '17:30', status: 'Terlambat', initials: 'DL', avatarColor: 'bg-purple-600', deptColor: 'text-pink-600 bg-pink-50' },
-  { id: 'A003', name: 'Budi Hartono', dept: 'Finance', date: '22 Jun 2026', in: '07:58', out: '17:00', status: 'Hadir', initials: 'BH', avatarColor: 'bg-indigo-500', deptColor: 'text-emerald-600 bg-emerald-50' },
-  { id: 'A004', name: 'Sari Indah', dept: 'HR', date: '22 Jun 2026', in: '-', out: '-', status: 'Izin', initials: 'SI', avatarColor: 'bg-indigo-600', deptColor: 'text-yellow-600 bg-yellow-50' },
-  { id: 'A005', name: 'Reza Firmansyah', dept: 'Engineering', date: '22 Jun 2026', in: '08:05', out: '18:20', status: 'Hadir', initials: 'RF', avatarColor: 'bg-emerald-500', deptColor: 'text-blue-600 bg-blue-50' },
-  { id: 'A006', name: 'Nina Oktavia', dept: 'Design', date: '22 Jun 2026', in: '09:15', out: '17:45', status: 'Terlambat', initials: 'NO', avatarColor: 'bg-pink-500', deptColor: 'text-purple-600 bg-purple-50' },
-  { id: 'A007', name: 'Fajar Nugroho', dept: 'Operations', date: '22 Jun 2026', in: '-', out: '-', status: 'Alfa', initials: 'FN', avatarColor: 'bg-cyan-500', deptColor: 'text-cyan-600 bg-cyan-50' },
-  { id: 'A008', name: 'Laila Putri', dept: 'Marketing', date: '22 Jun 2026', in: '07:55', out: '17:00', status: 'Hadir', initials: 'LP', avatarColor: 'bg-indigo-500', deptColor: 'text-pink-600 bg-pink-50' },
-];
-
-const filters = ['Semua', 'Hadir', 'Terlambat', 'Izin', 'Alfa'];
+// src/pages/Absensi/absensi.jsx
+//
+// Realisasi halaman "Absensi": kartu ambil foto (Masuk/Keluar/Sakit),
+// kartu status hari ini, tabel riwayat (sekarang di SAMPING kartu
+// absensi, bukan di bawahnya -- lihat Absensi.css .abs-attendance-grid),
+// dan modal kamera. Dipecah per komponen di pages/Absensi/components/
+// mengikuti pola pages/Cuti/applycuti/.
+//
+// Sidebar & topbar TIDAK digambar ulang di sini -- sudah disediakan
+// layouts/MainLayout.jsx + components/Sidebar.jsx/Navbar.jsx untuk semua
+// halaman. Halaman ini hanya mengisi <Outlet />.
+//
+// [UBAH] Sebelumnya modul ini memakai localStorage sebagai penyimpanan
+// sementara (backend Absensi belum ada). Backend sekarang sudah ada
+// (lihat backend/.../attendance/ dan services/attendanceService.js) --
+// riwayat diambil lewat GET /api/absensi/me, dan absensi dikirim lewat
+// POST /api/absensi/me (multipart: foto + koordinat GPS + field lain).
+// Jam yang tercatat adalah jam SERVER (lihat Attendance.prePersist() di
+// backend), bukan jam perangkat, supaya tidak bisa dimanipulasi klien.
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarDays } from 'lucide-react';
+import Toast from '../../components/Toast';
+import AttendanceCameraCard from './components/AttendanceCameraCard';
+import AttendanceTodayCard from './components/AttendanceTodayCard';
+import AttendanceHistoryTable from './components/AttendanceHistoryTable';
+import AttendanceCameraModal from './components/AttendanceCameraModal';
+import {
+  getMyAttendanceHistory,
+  submitAttendance,
+  dataUrlToBlob,
+  toActionCode,
+  toReasonCode,
+  toDisplayRecord,
+} from '../../services/attendanceService';
+import './Absensi.css';
 
 export default function Absensi() {
-  const [activeFilter, setActiveFilter] = useState('Semua');
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'Hadir': return 'text-emerald-500 bg-emerald-50 border-emerald-100';
-      case 'Terlambat': return 'text-amber-500 bg-amber-50 border-amber-100';
-      case 'Izin': return 'text-blue-500 bg-blue-50 border-blue-100';
-      case 'Alfa': return 'text-rose-500 bg-rose-50 border-rose-100';
-      default: return 'text-gray-500 bg-gray-50 border-gray-100';
+  const [records, setRecords] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [captured, setCaptured] = useState('');
+  const [cameraError, setCameraError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const [attendanceAction, setAttendanceAction] = useState('Masuk');
+  const [reason, setReason] = useState('Absen');
+  const [note, setNote] = useState('');
+  const [location, setLocation] = useState('Lokasi belum diambil');
+  const [coords, setCoords] = useState(null); // { lat, lng } -- angka mentah, wajib ada untuk kirim
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const todayDate = useMemo(() => new Date(), []);
+  const todayLabel = useMemo(
+    () => todayDate.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }),
+    [todayDate],
+  );
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    window.setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  // ===================== AMBIL RIWAYAT DARI BACKEND =====================
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await getMyAttendanceHistory();
+      setRecords((data || []).map(toDisplayRecord));
+    } catch (error) {
+      showToast(error?.message || 'Gagal memuat riwayat absensi.', 'error');
+    } finally {
+      setHistoryLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  useEffect(() => () => stopCamera(), []);
+
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }
+
+  // ===================== KAMERA & LOKASI =====================
+  async function openCamera(action, presetReason = 'Absen') {
+    setAttendanceAction(action);
+    setReason(presetReason);
+    setNote('');
+    setCoords(null);
+    setLocation('Lokasi belum diambil');
+    setCameraError('');
+    setCaptured('');
+    setCameraOpen(true);
+    setLocationLoading(true);
+
+    navigator.geolocation?.getCurrentPosition(
+      ({ coords: pos }) => {
+        setCoords({ lat: pos.latitude, lng: pos.longitude });
+        setLocation(`${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`);
+        setLocationLoading(false);
+      },
+      () => {
+        setCoords(null);
+        setLocation('Lokasi tidak tersedia');
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch {
+      setCameraError('Kamera tidak dapat diakses. Pastikan izin kamera telah diberikan, atau unggah foto dari perangkat Anda.');
+    }
+  }
+
+  function takePhoto() {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setCaptured(canvas.toDataURL('image/jpeg', 0.82));
+  }
+
+  function handleUploadFallback(event) {
+    const file = event.target.files?.[0];
+    if (file) setCaptured(URL.createObjectURL(file));
+  }
+
+  function closeCamera() {
+    if (submitting) return; // jangan bisa ditutup di tengah proses kirim
+    setCameraOpen(false);
+    setCaptured('');
+    setCameraError('');
+    stopCamera();
+  }
+
+  // ===================== SUBMIT ABSENSI (ke backend) =====================
+  async function confirmAttendance() {
+    if (!captured || !coords || (reason !== 'Absen' && !note.trim()) || submitting) return;
+    setSubmitting(true);
+    try {
+      const photoBlob = await dataUrlToBlob(captured);
+      const response = await submitAttendance({
+        action: toActionCode(attendanceAction),
+        reason: toReasonCode(reason),
+        note,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        photoBlob,
+      });
+      setRecords((current) => [toDisplayRecord(response), ...current]);
+      showToast(`${attendanceAction} berhasil dicatat.`, 'success');
+      stopCamera();
+      setCameraOpen(false);
+      setCaptured('');
+    } catch (error) {
+      // [BARU] Modal TETAP TERBUKA kalau gagal (mis. "Anda sudah check-in
+      // hari ini" dari backend) supaya user bisa lihat pesannya dan coba
+      // lagi/ambil ulang foto, bukan hilang begitu saja seperti sebelumnya.
+      setCameraError(error?.message || 'Gagal mengirim absensi. Silakan coba lagi.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ===================== STATUS HARI INI =====================
+  const todayKey = useMemo(() => {
+    const y = todayDate.getFullYear();
+    const m = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const d = String(todayDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, [todayDate]);
+
+  const todayCheckIn = useMemo(
+    () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'MASUK'),
+    [records, todayKey],
+  );
+  const todayCheckOut = useMemo(
+    () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'KELUAR'),
+    [records, todayKey],
+  );
+
+  // Sudah checked-in hari ini (baik Absen biasa maupun Sakit) -> tombol
+  // Masuk & Sakit sama-sama abu-abu (satu-satunya record "Masuk" per hari).
+  const disabledMasuk = Boolean(todayCheckIn);
+  const disabledSakit = Boolean(todayCheckIn);
+  // Keluar abu-abu kalau belum check-in, ATAU sudah check-out (proses
+  // hari itu selesai).
+  const disabledKeluar = !todayCheckIn || Boolean(todayCheckOut);
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+    <div className="absensi-page">
+      <div className="abs-page-heading">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-1">Absensi Karyawan</h2>
-          <p className="text-sm text-gray-500">Rekap kehadiran harian seluruh karyawan</p>
+          <p className="abs-eyebrow-title">Kehadiran karyawan</p>
+          <h1>Absensi</h1>
+          <p className="abs-subheading">Catat kehadiran Anda dengan cepat dan mudah.</p>
         </div>
-        <button className="bg-[#1e345e] hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-          <i className="fa-solid fa-plus"></i> Tambah Absensi
-        </button>
+        <div className="abs-date-chip">
+          <CalendarDays aria-hidden="true" />
+          <span>{todayLabel}</span>
+        </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="relative">
-          <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
-          <input 
-            type="text" 
-            placeholder="Cari karyawan..." 
-            className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* [UBAH] Tabel riwayat sekarang di SAMPING (bukan di bawah) kartu
+          absensi -- lihat Absensi.css .abs-attendance-grid (2 kolom) &
+          .abs-attendance-left (kartu ditumpuk vertikal di kolom kiri). */}
+      <section className="abs-attendance-grid">
+        <div className="abs-attendance-left">
+          <AttendanceCameraCard
+            onOpenCamera={openCamera}
+            disabledMasuk={disabledMasuk}
+            disabledKeluar={disabledKeluar}
+            disabledSakit={disabledSakit}
+          />
+          <AttendanceTodayCard
+            todayLabel={todayLabel}
+            checkInRecord={todayCheckIn}
+            checkOutRecord={todayCheckOut}
           />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {filters.map(filter => (
-            <button 
-              key={filter}
-              onClick={() => setActiveFilter(filter)}
-              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                activeFilter === filter 
-                  ? 'bg-[#1e345e] text-white font-medium' 
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="text-[11px] uppercase text-gray-500 font-bold border-b border-gray-200">
-              <th className="px-6 py-4 font-semibold">#</th>
-              <th className="px-6 py-4 font-semibold">KARYAWAN</th>
-              <th className="px-6 py-4 font-semibold">DEPARTEMEN</th>
-              <th className="px-6 py-4 font-semibold">TANGGAL</th>
-              <th className="px-6 py-4 font-semibold">MASUK</th>
-              <th className="px-6 py-4 font-semibold">KELUAR</th>
-              <th className="px-6 py-4 font-semibold">STATUS</th>
-            </tr>
-          </thead>
-          <tbody className="text-sm">
-            {attendanceData.map((data) => (
-              <tr key={data.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 text-xs text-gray-400">{data.id}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full ${data.avatarColor} text-white flex items-center justify-center text-[10px] font-bold`}>
-                      {data.initials}
-                    </div>
-                    <div className="font-semibold text-gray-800 text-sm">{data.name}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${data.deptColor}`}>
-                    {data.dept}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-xs text-gray-500">{data.date}</td>
-                <td className="px-6 py-4 text-xs font-medium text-gray-600">
-                  <span className="text-emerald-500 mr-1">→</span> {data.in}
-                </td>
-                <td className="px-6 py-4 text-xs font-medium text-gray-600">
-                  <span className="text-rose-500 mr-1">←</span> {data.out}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded text-[10px] font-bold border ${getStatusColor(data.status)}`}>
-                    {data.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <AttendanceHistoryTable records={historyLoading ? [] : records} />
+      </section>
+
+      {cameraOpen && (
+        <AttendanceCameraModal
+          attendanceAction={attendanceAction}
+          videoRef={videoRef}
+          captured={captured}
+          cameraError={cameraError}
+          reason={reason}
+          note={note}
+          location={location}
+          coords={coords}
+          locationLoading={locationLoading}
+          submitting={submitting}
+          onReasonChange={setReason}
+          onNoteChange={setNote}
+          onRefreshLocation={() => openCamera(attendanceAction, reason)}
+          onTakePhoto={takePhoto}
+          onRetake={() => setCaptured('')}
+          onUploadFallback={handleUploadFallback}
+          onConfirm={confirmAttendance}
+          onClose={closeCamera}
+        />
+      )}
+
+      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   );
-} 
+}

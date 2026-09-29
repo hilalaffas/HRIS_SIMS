@@ -380,6 +380,10 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     // per baris (urut waktu approval). deductsQuota false = jenis cuti yang
     // tidak memotong saldo (mis. sakit).
     approvedAt: item.approvedAt || null,
+    // [BARU] Tanggal cuti mentah (bukan teks terformat) -- dipakai
+    // LeaveListHr.jsx untuk sortir kolom "Detail Cuti" berdasarkan tanggal.
+    startDate: item.startDate || null,
+    endDate: item.endDate || null,
     totalDays,
     deductsQuota: item.leaveType?.deductsAnnualQuota !== false,
     karyawan: { nama: item.employee?.fullName, kode: item.employee?.nikKaryawan || '-' },

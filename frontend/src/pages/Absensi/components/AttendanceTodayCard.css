@@ -1,0 +1,117 @@
+/* src/pages/Absensi/components/AttendanceTodayCard.css */
+
+.abs-today-card {
+  background: var(--color-surface);
+  border: 1px solid var(--abs-border);
+  border-radius: var(--radius-md, 10px);
+  padding: 25px 27px;
+  box-shadow: var(--shadow-sm);
+  animation: abs-fade-up 0.35s ease both;
+  animation-delay: 0.05s;
+}
+
+.abs-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.abs-eyebrow {
+  color: var(--abs-primary-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  margin: 0;
+}
+
+.abs-today-card h2 {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: var(--abs-navy);
+}
+
+.abs-status-badge {
+  color: #c68520;
+  background: #fff5df;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 10px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.abs-status-badge.is-done {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.abs-time-row {
+  display: flex;
+  align-items: center;
+  margin: 29px 0 25px;
+}
+
+.abs-time-row > div:not(.abs-time-divider) {
+  flex: 1;
+}
+
+.abs-time-row span {
+  display: block;
+  color: var(--abs-muted-ink-2);
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.abs-time-row strong {
+  display: block;
+  color: var(--abs-navy);
+  font-size: 25px;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.abs-time-row small {
+  color: var(--abs-muted-ink-2);
+  display: block;
+  font-size: 10px;
+  margin-top: 7px;
+}
+
+.abs-time-divider {
+  width: 1px;
+  height: 47px;
+  background: var(--abs-border);
+  margin: 0 25px;
+}
+
+.abs-work-summary {
+  border-top: 1px solid var(--abs-border);
+  padding-top: 17px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--abs-muted-ink);
+  font-size: 11px;
+}
+
+.abs-work-summary > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.abs-work-summary svg {
+  width: 16px;
+  height: 16px;
+  color: var(--abs-primary-soft);
+}
+
+.abs-work-summary strong {
+  color: var(--abs-navy);
+  font-size: 13px;
+}
+
+@keyframes abs-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

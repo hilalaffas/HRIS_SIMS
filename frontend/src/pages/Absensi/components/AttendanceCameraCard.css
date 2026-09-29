@@ -1,0 +1,188 @@
+/* src/pages/Absensi/components/AttendanceCameraCard.css */
+
+.abs-camera-card {
+  background: linear-gradient(125deg, #ffffff 0%, var(--abs-primary-tint) 100%);
+  border: 1px solid var(--abs-border);
+  border-radius: var(--radius-md, 10px);
+  padding: 25px 27px 20px;
+  box-shadow: var(--shadow-sm);
+  /* [BARU] Animasi masuk halus saat kartu pertama kali dirender */
+  animation: abs-fade-up 0.35s ease both;
+}
+
+.abs-card-kicker {
+  font-size: 10px;
+  color: var(--abs-primary-soft);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.abs-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  animation: abs-pulse 1.6s ease-in-out infinite;
+}
+
+.abs-camera-card h2 {
+  font-size: 20px;
+  color: var(--abs-navy);
+  margin: 15px 0 7px;
+}
+
+.abs-camera-card > p {
+  color: var(--abs-muted-ink);
+  font-size: 12px;
+  line-height: 1.65;
+  max-width: 390px;
+  margin: 0 0 19px;
+}
+
+.abs-camera-placeholder {
+  height: 105px;
+  border: 1px dashed var(--abs-border-dashed);
+  background: var(--abs-primary-tint);
+  border-radius: var(--radius-sm, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 9px;
+  color: var(--abs-muted-ink);
+  font-size: 11px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.abs-camera-icon {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #d8eee9;
+  color: var(--abs-primary-soft);
+}
+
+.abs-camera-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.abs-attendance-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: nowrap;
+  margin-top: 15px;
+}
+
+.abs-primary-button,
+.abs-secondary-button,
+.abs-tertiary-button {
+  /* [UBAH] Presisi ukuran tombol Masuk/Keluar/Sakit: sebelumnya tinggi cuma
+     mengandalkan padding vertikal (bisa beda 1-2px tergantung metric font
+     browser). Sekarang tinggi tombol di-fix eksplisit + box-sizing
+     border-box + flex:1 rata untuk ketiganya, jadi ukurannya identik apa
+     pun isinya dan sejajar sempurna dalam satu baris. */
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-sm, 6px);
+  padding: 0 14px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.abs-primary-button svg,
+.abs-secondary-button svg,
+.abs-tertiary-button svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.abs-primary-button {
+  color: #fff;
+  background: var(--abs-primary-soft);
+  box-shadow: 0 3px 8px rgba(7, 91, 80, 0.15);
+}
+
+.abs-primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(7, 91, 80, 0.22);
+}
+
+.abs-secondary-button {
+  border-color: #b9d3c8;
+  background: #eef7f2;
+  color: #1f6c53;
+}
+
+.abs-secondary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #e3f1ea;
+}
+
+/* [BARU] Tombol "Sakit" -- warna amber, dibedakan dari Masuk/Keluar
+   (hijau brand) tapi ukuran & bentuknya identik (lihat rule gabungan
+   di atas). */
+.abs-tertiary-button {
+  border-color: #f0d9ad;
+  background: #fdf4e3;
+  color: #a9670a;
+}
+
+.abs-tertiary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #faecce;
+}
+
+.abs-primary-button:active:not(:disabled),
+.abs-secondary-button:active:not(:disabled),
+.abs-tertiary-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.abs-primary-button:disabled,
+.abs-secondary-button:disabled,
+.abs-tertiary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.abs-camera-card small {
+  display: block;
+  text-align: center;
+  margin-top: 13px;
+  color: var(--abs-muted-ink-2);
+  font-size: 10px;
+}
+
+.abs-camera-card small span {
+  color: var(--color-success);
+}
+
+@keyframes abs-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes abs-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
