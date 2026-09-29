@@ -53,3 +53,9 @@
   width: 24px;  /* Ubah dari 20px menjadi 24px atau 28px */
   height: 24px; /* Ubah dari 20px menjadi 24px atau 28px */
 }
+
+/* [BARU] Tombol nonaktif saat proses ekspor berjalan */
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -27,6 +27,9 @@ const KARYAWAN_POLL_INTERVAL_MS = 15000;
 import FormCuti from '../Cuti/approve/components/Form';
 import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService';
 import { getSystemLogs } from '../../services/logService'; 
+// [BARU] Ekspor CSV per tab menu
+import { downloadCsv } from '../../utils/csvExport';
+import { KARYAWAN_EXPORT_CONFIG } from '../../config/karyawanExportConfig';
 
 
 const Karyawan = ({ user }) => {
@@ -74,6 +77,9 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   
   // [BARU] State untuk mengontrol Tab Menu yang sedang aktif
   const [activeTab, setActiveTab] = useState('List Karyawan');
+
+  // [BARU] Mencegah klik ganda tombol Ekspor CSV selama data diproses
+  const [isExporting, setIsExporting] = useState(false);
 
   // [UBAH] Memisahkan state Form Tambah dan Modal Edit agar sesuai dengan UI design
   const [showAddForm, setShowAddForm] = useState(false); 
@@ -392,6 +398,39 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     }
   };
 
+  // [BARU] Ekspor CSV mengikuti tab yang sedang aktif. Definisi kolom & isi
+  // tiap tab ada di config/karyawanExportConfig.js.
+  const handleExportCsv = async () => {
+    const exportConfig = KARYAWAN_EXPORT_CONFIG[activeTab];
+    if (!exportConfig || isExporting) return;
+
+    setIsExporting(true);
+    try {
+      const rows = await exportConfig.buildRows({
+        karyawanList,
+        riwayatCuti,
+        balanceAfterByLeaveId,
+        logList,
+      });
+
+      if (rows.length === 0) {
+        triggerToast(exportConfig.emptyMessage, 'error');
+        return;
+      }
+
+      downloadCsv({
+        headers: exportConfig.headers,
+        rows,
+        fileNamePrefix: exportConfig.fileNamePrefix,
+      });
+    } catch (error) {
+      console.error('Gagal mengekspor CSV:', error);
+      triggerToast('Gagal mengekspor data. Silakan coba lagi.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="karyawan-page">
       {/* [BARU] Toast sukses/gagal (mis. hasil submit Cuti Susulan) */}
@@ -406,7 +445,13 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
       {/* [UBAH] Headline mungkin tidak perlu props stats jika mengikuti UI referensi, 
           tapi saya biarkan jika Anda masih membutuhkannya di dalam komponennya */}
-      <HeadlineKaryawan data={karyawanList} />
+      {/* [UBAH] Tidak lagi menerima data={karyawanList}; ekspor ditangani
+          handleExportCsv sesuai tab aktif */}
+      <HeadlineKaryawan
+        onExport={handleExportCsv}
+        exportTitle={`Ekspor ${activeTab} ke CSV`}
+        isExporting={isExporting}
+      />
 
       {/* [BARU] Render Tab Menu */}
       <TabMenuKaryawan activeTab={activeTab} setActiveTab={setActiveTab} />
