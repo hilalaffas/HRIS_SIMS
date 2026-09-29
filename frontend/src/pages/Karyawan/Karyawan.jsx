@@ -29,7 +29,7 @@ import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService'
 import { getSystemLogs } from '../../services/logService'; 
 // [BARU] Ekspor CSV per tab menu
 import { downloadCsv } from '../../utils/csvExport';
-import { KARYAWAN_EXPORT_CONFIG } from '../../config/karyawanExportConfig';
+import { KARYAWAN_EXPORT_CONFIG, getExportFormats } from '../../config/karyawanExportConfig';
 
 
 const Karyawan = ({ user }) => {
@@ -400,19 +400,28 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   // [BARU] Ekspor CSV mengikuti tab yang sedang aktif. Definisi kolom & isi
   // tiap tab ada di config/karyawanExportConfig.js.
-  const handleExportCsv = async () => {
+  const handleExport = async (format = 'csv') => {
     const exportConfig = KARYAWAN_EXPORT_CONFIG[activeTab];
     if (!exportConfig || isExporting) return;
 
     setIsExporting(true);
     try {
-      const rows = await exportConfig.buildRows({
-        karyawanList,
-        riwayatCuti,
-        balanceAfterByLeaveId,
-        logList,
-      });
+      const exportContext = { karyawanList, riwayatCuti, balanceAfterByLeaveId, logList };
 
+      if (format === 'pdf' && exportConfig.pdf) {
+        const { pdf } = exportConfig;
+        const pivot = pdf.buildPivot(exportContext);
+        if (pivot.groups.length === 0) {
+          triggerToast(pdf.emptyMessage, 'error');
+          return;
+        }
+        // Import dinamis: library PDF baru diunduh saat pertama kali dipakai
+        const { downloadPivotPdf } = await import('../../utils/pdfExport');
+        downloadPivotPdf({ title: pdf.title, fileNamePrefix: pdf.fileNamePrefix, pivot });
+        return;
+      }
+
+      const rows = await exportConfig.buildRows(exportContext);
       if (rows.length === 0) {
         triggerToast(exportConfig.emptyMessage, 'error');
         return;
@@ -424,7 +433,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
         fileNamePrefix: exportConfig.fileNamePrefix,
       });
     } catch (error) {
-      console.error('Gagal mengekspor CSV:', error);
+      console.error('Gagal mengekspor data:', error);
       triggerToast('Gagal mengekspor data. Silakan coba lagi.', 'error');
     } finally {
       setIsExporting(false);
@@ -448,8 +457,9 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
       {/* [UBAH] Tidak lagi menerima data={karyawanList}; ekspor ditangani
           handleExportCsv sesuai tab aktif */}
       <HeadlineKaryawan
-        onExport={handleExportCsv}
-        exportTitle={`Ekspor ${activeTab} ke CSV`}
+        onExport={handleExport}
+        exportFormats={getExportFormats(activeTab)}
+        exportTitle={`Ekspor ${activeTab}`}
         isExporting={isExporting}
       />
 

@@ -4,12 +4,20 @@
 // Tab baru = cukup tambah satu entri di sini, tanpa menyentuh komponen lain.
 
 import { getAllDivisi } from '../services/divisiService';
+import { buildLeavePivot } from '../utils/leavePivot';
 
 const LEAVE_STATUS_LABEL = {
   PROSES: 'Proses',
   DISETUJUI: 'Disetujui',
   DIKEMBALIKAN: 'Dikembalikan',
   DITOLAK: 'Ditolak',
+};
+
+// Format ekspor yang tersedia untuk sebuah tab (CSV selalu ada, PDF opsional).
+export const getExportFormats = (tabName) => {
+  const exportConfig = KARYAWAN_EXPORT_CONFIG[tabName];
+  if (!exportConfig) return [];
+  return exportConfig.pdf ? ['csv', 'pdf'] : ['csv'];
 };
 
 export const KARYAWAN_EXPORT_CONFIG = {
@@ -56,6 +64,14 @@ export const KARYAWAN_EXPORT_CONFIG = {
         balanceAfterByLeaveId[item.id],
         LEAVE_STATUS_LABEL[item.statusBerkas] || item.statusBerkas,
       ]),
+    // Opsional: tab yang punya blok `pdf` otomatis menampilkan pilihan CSV / PDF.
+    pdf: {
+      title: 'Rekap Cuti Karyawan',
+      fileNamePrefix: 'Rekap_Cuti_Karyawan',
+      emptyMessage: 'Tidak ada data cuti karyawan untuk diekspor.',
+      buildPivot: ({ riwayatCuti, balanceAfterByLeaveId }) =>
+        buildLeavePivot(riwayatCuti, balanceAfterByLeaveId),
+    },
   },
 
   'Data Divisi': {
