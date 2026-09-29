@@ -18,6 +18,11 @@ import RiwayatCuti from '../pages/Cuti/RiwayatCuti';
 // ke config/menuConfig.js, jadi tidak muncul di Sidebar mana pun. Cuma bisa
 // diakses dengan mengetik path-nya langsung (lihat rute di bawah).
 import DevSettings from '../pages/DevSettings/DevSettings';
+// [BARU] Halaman Absensi -- sebelumnya placeholder <div> statis, sekarang
+// terhubung ke pages/Absensi/absensi.jsx (kartu Masuk/Keluar/Sakit,
+// status hari ini, riwayat harian di samping, modal kamera, backend
+// nyata). Lihat pages/Absensi/README.md.
+import Absensi from '../pages/Absensi/absensi';
 
 
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
@@ -54,13 +59,10 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
               sekarang RiwayatCuti.jsx (role-aware, real-time, berpaginasi) */}
           <Route path="/history-cuti" element={<RiwayatCuti user={user} />} />
 
-          {/* Wadah Halaman Absensi */}
-          <Route path="/absensi" element={
-            <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100 min-h-50">
-              <h3 className="text-base font-bold text-gray-800 mb-2">Pencatatan Absensi Karyawan</h3>
-              <p className="text-sm text-gray-500">Wadah halaman pencatatan kehadiran karyawan.</p>
-            </div>
-          } />
+          {/* [UBAH] Wadah Halaman Absensi -- sebelumnya placeholder statis,
+              sekarang Absensi.jsx (fungsional: kamera, riwayat harian,
+              backend nyata; lihat pages/Absensi/README.md) */}
+          <Route path="/absensi" element={<Absensi />} />
 
           {/* Wadah Halaman Manajemen Karyawan */}
           <Route path="/karyawan" element={<Karyawan user={user} />} />
