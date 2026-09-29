@@ -29,6 +29,14 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
       // Menampilkan dot merah statis/notifikasi sesuai Gambar 1 (Karyawan) jika diperlukan
       hasDot: notificationCounts?.leaveRequest ?? false
     });
+    mainMenuItems.push({ 
+      path: '/absensi', 
+      name: 'Absensi saya', 
+      icon: 'fa-regular fa-clock',
+      // Menampilkan dot merah statis/notifikasi sesuai Gambar 1 (Karyawan) jika diperlukan
+      hasDot: notificationCounts?.leaveRequest ?? false
+    });
+    
   }
 
   // Menu Khusus Manager (Gambar 2)
