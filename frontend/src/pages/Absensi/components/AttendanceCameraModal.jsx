@@ -2,7 +2,7 @@
 //
 // [BARU] Modal "Ambil foto Anda" -- membuka kamera perangkat, mengambil
 // snapshot sebagai bukti kehadiran, lalu melengkapi jenis absensi
-// (Absen/Sakit/Izin), keterangan, dan titik lokasi sebelum dikirim.
+// (Absen/Sakit), keterangan, dan titik lokasi sebelum dikirim.
 // Semua logic kamera & geolocation di-lift ke absensi.jsx (parent) dan
 // modal ini murni presentational + form lokal (reason/note), supaya
 // mengikuti pola form terpisah seperti LeaveForm.jsx di modul Cuti.
@@ -10,7 +10,7 @@ import React, { useEffect, useRef } from 'react';
 import { Camera, Check, MapPin, X } from 'lucide-react';
 import './AttendanceCameraModal.css';
 
-const REASON_OPTIONS = ['Absen', 'Sakit', 'Izin'];
+const REASON_OPTIONS = ['Absen', 'Sakit'];
 
 export default function AttendanceCameraModal({
   attendanceAction,

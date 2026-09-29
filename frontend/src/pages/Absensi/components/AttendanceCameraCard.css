@@ -126,6 +126,21 @@
   box-shadow: 0 6px 14px rgba(7, 91, 80, 0.22);
 }
 
+/* Tombol utama saat mode "Keluar" */
+.abs-attendance-actions .abs-primary-button.is-checkout {
+  background: var(--abs-navy);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+}
+
+/* Tombol utama saat absensi hari ini selesai: abu-abu, tidak bisa diklik.
+   Di-scope ke kartu ini supaya tombol "Kirim Absensi" di modal tidak ikut. */
+.abs-attendance-actions .abs-primary-button:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  box-shadow: none;
+  opacity: 1;
+}
+
 .abs-secondary-button {
   border-color: #b9d3c8;
   background: #eef7f2;

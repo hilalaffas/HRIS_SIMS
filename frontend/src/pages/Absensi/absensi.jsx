@@ -1,6 +1,6 @@
 // src/pages/Absensi/absensi.jsx
 //
-// Realisasi halaman "Absensi": kartu ambil foto (Masuk/Keluar/Sakit),
+// Realisasi halaman "Absensi": kartu ambil foto (Masuk/Keluar dalam satu tombol, dan Sakit),
 // kartu status hari ini, tabel riwayat (sekarang di SAMPING kartu
 // absensi, bukan di bawahnya -- lihat Absensi.css .abs-attendance-grid),
 // dan modal kamera. Dipecah per komponen di pages/Absensi/components/
@@ -54,7 +54,15 @@ export default function Absensi() {
   const [coords, setCoords] = useState(null); // { lat, lng } -- angka mentah, wajib ada untuk kirim
   const [locationLoading, setLocationLoading] = useState(false);
 
-  const todayDate = useMemo(() => new Date(), []);
+  const [todayDate, setTodayDate] = useState(() => new Date());
+
+  // Reset otomatis saat pergantian hari, walau halaman dibiarkan terbuka
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timerId = window.setTimeout(() => setTodayDate(new Date()), nextMidnight - now);
+    return () => window.clearTimeout(timerId);
+  }, [todayDate]);
   const todayLabel = useMemo(
     () => todayDate.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }),
     [todayDate],
@@ -193,13 +201,10 @@ export default function Absensi() {
     [records, todayKey],
   );
 
-  // Sudah checked-in hari ini (baik Absen biasa maupun Sakit) -> tombol
-  // Masuk & Sakit sama-sama abu-abu (satu-satunya record "Masuk" per hari).
-  const disabledMasuk = Boolean(todayCheckIn);
+  // idle -> tombol "Masuk", checkedIn -> tombol "Keluar", done -> abu-abu.
+  const attendanceStatus = todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
+  // Sakit hanya bisa dipakai sebelum check-in hari ini.
   const disabledSakit = Boolean(todayCheckIn);
-  // Keluar abu-abu kalau belum check-in, ATAU sudah check-out (proses
-  // hari itu selesai).
-  const disabledKeluar = !todayCheckIn || Boolean(todayCheckOut);
 
   return (
     <div className="absensi-page">
@@ -222,8 +227,7 @@ export default function Absensi() {
         <div className="abs-attendance-left">
           <AttendanceCameraCard
             onOpenCamera={openCamera}
-            disabledMasuk={disabledMasuk}
-            disabledKeluar={disabledKeluar}
+            attendanceStatus={attendanceStatus}
             disabledSakit={disabledSakit}
           />
           <AttendanceTodayCard
