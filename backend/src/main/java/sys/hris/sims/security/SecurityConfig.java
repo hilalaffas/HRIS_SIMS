@@ -303,6 +303,24 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN_ROLES)
 
                         // ==========================
+                        // ABSENSI (Attendance)
+                        // ==========================
+                        // [BARU] Karyawan biasa hanya boleh lihat & kirim
+                        // absensi MILIKNYA SENDIRI ("/me"). Ditaruh SEBELUM
+                        // catch-all "/api/absensi" (tanpa /me) di bawah,
+                        // yang dibatasi ADMIN_ROLES untuk rekap semua
+                        // karyawan (dipakai HR, pola sama seperti
+                        // "GET /api/cuti/balance/all").
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/me")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/api/absensi/me")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/absensi")
+                        .hasAnyRole(ADMIN_ROLES)
+
+                        // ==========================
                         // LEAVE TYPE
                         // ==========================
                         .requestMatchers(HttpMethod.GET,

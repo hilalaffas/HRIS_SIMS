@@ -116,4 +116,51 @@ public class CloudinaryService {
         );
         return uploadResult.get("secure_url").toString();
     }
+
+    // [BARU] Upload foto selfie bukti kehadiran (modul Absensi). Folder
+    // "attendance" terpisah dari "employees" (foto profil) dan "news"
+    // (gambar pengumuman). publicId SUDAH unik per pengajuan (dibuat di
+    // AttendanceService: "attendance-{employeeId}-{tanggal}-{uuid}") dan
+    // TIDAK di-overwrite -- beda dari foto profil, setiap absensi adalah
+    // bukti historis sendiri-sendiri, bukan avatar yang boleh ditimpa.
+    private static final long MAX_ATTENDANCE_PHOTO_SIZE_BYTES = 3L * 1024L * 1024L; // 3MB
+    private static final List<String> ALLOWED_ATTENDANCE_PHOTO_TYPES = List.of("image/jpeg", "image/png", "image/webp");
+    private static final List<String> ALLOWED_ATTENDANCE_PHOTO_EXTENSIONS = List.of(".jpg", ".jpeg", ".png", ".webp");
+
+    private void validateAttendancePhoto(MultipartFile file) {
+        if (file.getSize() > MAX_ATTENDANCE_PHOTO_SIZE_BYTES) {
+            throw new IllegalArgumentException("Ukuran foto absensi melebihi batas maksimal 3MB.");
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        String originalFilename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        String extension = originalFilename.contains(".")
+                ? originalFilename.substring(originalFilename.lastIndexOf('.'))
+                : "";
+
+        // [BARU] Foto hasil jepretan kamera (canvas.toDataURL -> Blob) sering
+        // tidak punya nama file asli yang jelas -- kalau ekstensi kosong,
+        // cukup andalkan content-type saja (tetap divalidasi, tidak dilewatkan).
+        boolean contentTypeOk = ALLOWED_ATTENDANCE_PHOTO_TYPES.contains(contentType);
+        boolean extensionOk = extension.isEmpty() || ALLOWED_ATTENDANCE_PHOTO_EXTENSIONS.contains(extension);
+
+        if (!contentTypeOk || !extensionOk) {
+            throw new IllegalArgumentException("Tipe file tidak didukung. Hanya JPG, PNG, atau WEBP yang diperbolehkan.");
+        }
+    }
+
+    public String uploadAttendancePhoto(MultipartFile file, String publicId) throws IOException {
+        validateAttendancePhoto(file);
+
+        Map uploadResult = cloudinary.uploader().upload(
+            file.getBytes(),
+            ObjectUtils.asMap(
+                "folder", "attendance",
+                "public_id", publicId,
+                "overwrite", false,
+                "resource_type", "image"
+            )
+        );
+        return uploadResult.get("secure_url").toString();
+    }
 }
