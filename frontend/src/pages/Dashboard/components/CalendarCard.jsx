@@ -124,8 +124,15 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
         isHoliday: !!holidayInfo,
         isNational: holidayInfo?.isNational || false,
         holidayId: holidayInfo?.id || null,
+        // [UBAH] isTeamLeave (dipakai untuk warna kotak kalender) tetap
+        // kalah prioritas dari Libur/Weekend seperti sebelumnya -- itu murni
+        // soal tampilan warna. teamLeaveList (data mentah siapa saja yang
+        // cuti) SEKARANG SELALU diisi apa adanya -- sebelumnya ikut
+        // dikosongkan di hari Libur/Weekend, sehingga saat tanggal itu
+        // diklik, panel "Cuti Tanggal ..." di Dashboard salah menampilkan
+        // kosong padahal ada karyawan yang cuti di hari itu.
         isTeamLeave: teamLeaveList.length > 0 && !holidayInfo && !isWeekend,
-        teamLeaveList: !holidayInfo && !isWeekend ? teamLeaveList : [],
+        teamLeaveList,
         agenda: holidayInfo?.name || ""
       });
     }

@@ -24,7 +24,7 @@ const STATUS_BADGE_LABEL = {
   DITOLAK: "Ditolak",
 };
 
-const LeaveListHr = ({ data, sisaCutiByEmployeeId = {}, onOpenDetail, currentUserRole, onRevokeLeave }) => {
+const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUserRole, onRevokeLeave }) => {
   const [statusFilter, setStatusFilter] = useState("ALL");
   
   // State untuk modal revoke
@@ -67,10 +67,11 @@ const LeaveListHr = ({ data, sisaCutiByEmployeeId = {}, onOpenDetail, currentUse
           </div>
 
           {filteredData.map((item) => {
-            // [UBAH] Sisa cuti sekarang di-lookup per-karyawan lewat
-            // employeeId (bukan satu angka dummy yang sama untuk semua
-            // baris) -- lihat sisaCutiByEmployeeId di Karyawan.jsx.
-            const sisaHari = sisaCutiByEmployeeId[item.employeeId];
+            // [UBAH] Sisa cuti sekarang PER BARIS (saldo setelah cuti ini
+            // disetujui, urut waktu approval) -- lihat balanceAfterByLeaveId
+            // di Karyawan.jsx & utils/leaveBalanceTimeline.js. Baris yang
+            // ditolak/proses/dikembalikan tidak punya angka -> tampil "-".
+            const sisaHari = balanceAfterByLeaveId[item.id];
             const hasSisaHari = sisaHari !== undefined && sisaHari !== null;
             const isDitolak = item.statusBerkas === 'DITOLAK';
 

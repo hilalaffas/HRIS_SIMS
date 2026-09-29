@@ -8,6 +8,7 @@ import FormKaryawan from './components/FormKaryawan';
 import ModalDetailKaryawan from './components/ModalDetailKaryawan'; // [BARU] Import komponen modal baru
 import ConfirmDeleteModal from './components/ConfirmDeleteModal';
 import { isSuperAdmin, isHrAdmin } from '../../utils/roles';
+import { buildLeaveBalanceTimeline } from '../../utils/leaveBalanceTimeline'; // [BARU] sisa cuti per baris riwayat
 import DataDivisi from './components/DataDivisi';
 import LogSistem from './components/LogSistem';
 import LeaveFormHr from './components/LeaveFormHr';
@@ -109,6 +110,14 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
       karyawanList.map((k) => [k.employeeId, k.totalRemainingLeave])
     ),
     [karyawanList]
+  );
+
+  // [BARU] Peta leaveId -> sisa cuti SETELAH cuti itu disetujui (urut waktu
+  // approval, cuti ditolak/proses tidak memotong). Dipakai kolom "Sisa Cuti"
+  // di LeaveListHr.jsx supaya HRD bisa melacak pengurangan saldo.
+  const balanceAfterByLeaveId = useMemo(
+    () => buildLeaveBalanceTimeline(riwayatCuti, sisaCutiByEmployeeId),
+    [riwayatCuti, sisaCutiByEmployeeId]
   );
 
   // [UBAH] Fungsi handler disesuaikan dengan pemisahan state
@@ -431,13 +440,11 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
             
             <LeaveListHr 
               data={riwayatCuti} 
-              // [UBAH] Sebelumnya sisaCuti={{ totalHari: 12 }} -- dummy sama
-              // rata untuk semua karyawan. Sekarang pakai sisaCutiByEmployeeId
-              // (peta employeeId -> totalRemainingLeave asli dari backend,
-              // sumber sama dengan kolom TOTAL CUTI di TableKaryawan.jsx &
-              // Dashboard karyawan), supaya tiap baris menampilkan sisa cuti
-              // milik karyawan yang bersangkutan, bukan angka yang sama semua.
-              sisaCutiByEmployeeId={sisaCutiByEmployeeId}
+              // [UBAH] Sebelumnya sisaCutiByEmployeeId (satu angka saldo
+              // terkini yang sama untuk semua baris milik karyawan itu).
+              // Sekarang balanceAfterByLeaveId: saldo per baris, mengikuti
+              // urutan approval.
+              balanceAfterByLeaveId={balanceAfterByLeaveId}
               currentUserRole={currentUserRole}
               onOpenDetail={(item) => setDetailCutiTarget(item)}
               onRevokeLeave={handleRevokeCuti}

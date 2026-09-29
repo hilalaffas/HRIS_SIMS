@@ -6,6 +6,7 @@ import KaryawanCutiPanel from './components/KaryawanCutiPanel';
 import CutiSummaryCards from './components/CutiSummaryCards';
 import { getLeaveBalance } from '../../services/CutiService';
 import './Dashboard.css';
+import { formatSelectedDayLabel } from '../../utils/dateUtils'; // [BARU] label judul panel "Cuti Tanggal ..."
 
 export default function DashboardKaryawan({ user }) {
   const [selectedDate, setSelectedDate] = useState({
@@ -55,6 +56,17 @@ export default function DashboardKaryawan({ user }) {
           onTeamLeavesChange={setTeamLeavesThisMonth}
         />
         <KaryawanCutiPanel leaves={teamLeavesThisMonth} />
+
+        {/* [BARU] Daftar karyawan yang cuti PADA TANGGAL yang diklik di
+            kalender -- terpisah dari panel "Bulan Ini" di atas. Sumber
+            datanya selectedDate.teamLeaveList, ikut ter-update tiap kali
+            CalendarCard memanggil onDateClick (lihat CalendarCard.jsx). */}
+        <KaryawanCutiPanel
+          title={`Cuti Tanggal ${formatSelectedDayLabel(selectedDate)}`}
+          leaves={selectedDate.teamLeaveList || []}
+          emptyMessage="Tidak ada karyawan yang cuti pada tanggal ini."
+          showDateRange={false}
+        />
       </div>
     </div>
   );

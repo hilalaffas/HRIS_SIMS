@@ -1,12 +1,19 @@
 // src/pages/Dashboard/components/KaryawanCutiPanel.jsx
-// [BARU] Menggantikan HariLiburPanel.jsx. Menampilkan daftar karyawan yang
-// cuti pada bulan yang sedang aktif di kalender, dengan paging 5 per
-// halaman. Data `leaves` didapat dari callback onTeamLeavesChange milik
-// CalendarCard, dan otomatis ikut berubah tiap kali bulan di kalender
-// diganti (lihat currentMonthTeamLeaves di CalendarCard.jsx).
+// Menggantikan HariLiburPanel.jsx. Menampilkan daftar karyawan yang cuti
+// pada rentang tertentu, dengan paging 5 per halaman.
+//
+// [UBAH] Sebelumnya hanya dipakai untuk "Karyawan Cuti Bulan Ini" (data
+// dari onTeamLeavesChange milik CalendarCard). Sekarang komponen ini dibuat
+// lebih generik lewat props title/emptyMessage/showDateRange, supaya bisa
+// dipakai ULANG untuk panel kedua "Cuti Tanggal ..." (daftar karyawan yang
+// cuti PADA TANGGAL yang diklik di kalender) tanpa menduplikasi komponen.
+// Ditambah juga kotak pencarian nama (searchable) untuk kedua pemakaian.
 //
 // Bentuk tiap item leaves: { id, nama, jenisCuti, status, statusCode, startDate, endDate }
-import React, { useState } from 'react';
+// [UBAH] formatSelectedDayLabel() dipindah ke utils/dateUtils.js (bukan
+// diekspor dari sini) supaya file ini tetap hanya berisi komponen React --
+// menghindari peringatan lint react-refresh/only-export-components.
+import React, { useMemo, useState } from 'react';
 
 const PAGE_SIZE = 5;
 
@@ -21,11 +28,20 @@ const formatRentang = (item) => {
   return `${formatTanggal(item.startDate)} - ${formatTanggal(item.endDate)}`;
 };
 
-export default function KaryawanCutiPanel({ leaves = [] }) {
+export default function KaryawanCutiPanel({
+  leaves = [],
+  // [BARU] title/emptyMessage/showDateRange -- lihat catatan di atas.
+  title = 'Karyawan Cuti Bulan Ini',
+  emptyMessage = 'Tidak ada karyawan yang cuti bulan ini.',
+  showDateRange = true,
+  searchable = true,
+}) {
   const [page, setPage] = useState(1);
+  // [BARU] Kata kunci pencarian nama karyawan.
+  const [search, setSearch] = useState('');
 
-  // [UBAH] Reset ke halaman 1 saat ISI daftar berubah (ganti bulan di
-  // kalender, atau status suatu cuti berubah) -- bukan tiap kali referensi
+  // [UBAH] Reset ke halaman 1 saat ISI daftar berubah (ganti bulan/tanggal
+  // di kalender, atau status suatu cuti berubah) -- bukan tiap kali referensi
   // array `leaves` berubah. CalendarCard polling tiap 30 detik selalu
   // membuat array baru walau isinya persis sama, jadi dipakai signature
   // dari id-nya. Reset dilakukan langsung saat render (bukan lewat
@@ -38,27 +54,57 @@ export default function KaryawanCutiPanel({ leaves = [] }) {
     setPage(1);
   }
 
-  const totalPages = Math.max(1, Math.ceil(leaves.length / PAGE_SIZE));
+  // [BARU] Daftar yang sudah disaring pencarian nama (case-insensitive).
+  const filteredLeaves = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return leaves;
+    return leaves.filter((item) => (item.nama || '').toLowerCase().includes(keyword));
+  }, [leaves, search]);
+
+  const handleSearchChange = (event) => {
+    setSearch(event.target.value);
+    setPage(1);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeaves.length / PAGE_SIZE));
 
   const startIndex = (page - 1) * PAGE_SIZE;
-  const pageItems = leaves.slice(startIndex, startIndex + PAGE_SIZE);
+  const pageItems = filteredLeaves.slice(startIndex, startIndex + PAGE_SIZE);
+
+  // [BARU] Bedakan "memang tidak ada cuti" vs "ada cuti, tapi tidak ada
+  // yang cocok dengan kata kunci pencarian" -- supaya pesannya jelas.
+  const isSearchMiss = leaves.length > 0 && filteredLeaves.length === 0;
 
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
       <h4 className="font-bold text-sm text-gray-800 pb-3 border-b border-gray-100">
-        Karyawan Cuti Bulan Ini
+        {title}
       </h4>
 
-      {leaves.length > 0 ? (
+      {searchable && leaves.length > 0 && (
+        <div className="relative mt-3">
+          <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Cari nama karyawan..."
+            className="w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          />
+        </div>
+      )}
+
+      {filteredLeaves.length > 0 ? (
         <>
-          <div className="flex flex-col divide-y divide-gray-100">
-            {pageItems.map((item) => (
-              <div key={item.id} className="py-3">
+          <div className="flex flex-col divide-y divide-gray-100 mt-1">
+            {pageItems.map((item, index) => (
+              <div key={item.id ?? index} className="py-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-sm text-gray-800">{item.nama}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {item.jenisCuti} &middot; {formatRentang(item)}
+                      {item.jenisCuti}
+                      {showDateRange ? <> &middot; {formatRentang(item)}</> : null}
                     </p>
                   </div>
                   <span
@@ -86,7 +132,7 @@ export default function KaryawanCutiPanel({ leaves = [] }) {
                 &lt;
               </button>
               <span className="text-[10px] text-gray-400">
-                Halaman {page} dari {totalPages} &middot; {leaves.length} karyawan
+                Halaman {page} dari {totalPages} &middot; {filteredLeaves.length} karyawan
               </span>
               <button
                 type="button"
@@ -101,7 +147,7 @@ export default function KaryawanCutiPanel({ leaves = [] }) {
         </>
       ) : (
         <p className="text-xs text-gray-400 italic pt-3">
-          Tidak ada karyawan yang cuti bulan ini.
+          {isSearchMiss ? 'Tidak ada karyawan dengan nama tersebut.' : emptyMessage}
         </p>
       )}
     </div>

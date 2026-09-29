@@ -260,9 +260,15 @@ export async function getTeamLeaveByYear(year, config = {}) {
         if (date.getFullYear() !== Number(year)) continue;
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         (byDate[key] ??= []).push({
+          // [BARU] id & statusCode disamakan dengan `list` di atas, supaya
+          // KaryawanCutiPanel.jsx bisa dipakai ulang untuk daftar cuti PER
+          // TANGGAL (saat sebuah tanggal diklik di kalender), bukan cuma
+          // per bulan, tanpa perlu komponen terpisah.
+          id: item.id ?? `${item.employee?.fullName || 'karyawan'}-${cleanStart}`,
           nama: item.employee?.fullName || 'Karyawan',
           jenisCuti: item.leaveType?.name || 'Cuti',
           status: statusLabel(rawStatus),
+          statusCode: statusCode(rawStatus),
         });
       }
     });
@@ -370,6 +376,12 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     // bisa di-lookup per-karyawan dari data balance backend asli, bukan lagi
     // pakai satu angka dummy yang sama untuk semua orang.
     employeeId: item.employee?.employeeId,
+    // [BARU] Dipakai utils/leaveBalanceTimeline.js untuk menghitung Sisa Cuti
+    // per baris (urut waktu approval). deductsQuota false = jenis cuti yang
+    // tidak memotong saldo (mis. sakit).
+    approvedAt: item.approvedAt || null,
+    totalDays,
+    deductsQuota: item.leaveType?.deductsAnnualQuota !== false,
     karyawan: { nama: item.employee?.fullName, kode: item.employee?.nikKaryawan || '-' },
     jenisCuti: item.leaveType?.name || 'Cuti',
     // [UBAH] Sesi Pagi/Siang disisipkan di sini juga, supaya konsisten

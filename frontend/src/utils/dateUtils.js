@@ -18,3 +18,13 @@ export const hitungBatasMinTanggal = (jumlahHariKerja, daftarHariLibur = []) => 
   }
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
+
+// [BARU] Format objek `selectedDate` milik CalendarCard.jsx
+// ({ day, month (0-indexed), year }) menjadi label tanggal berbahasa
+// Indonesia. Dipakai Dashboard*.jsx untuk judul panel "Cuti Tanggal ...".
+export const formatSelectedDayLabel = ({ day, month, year } = {}) => {
+  if (day == null || month == null || year == null) return '-';
+  const parsed = new Date(year, month, day);
+  if (isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+};
