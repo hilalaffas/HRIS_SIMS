@@ -1,18 +1,17 @@
 // src/pages/Dashboard/components/KaryawanCutiPanel.jsx
-// Menggantikan HariLiburPanel.jsx. Menampilkan daftar karyawan yang cuti
-// pada rentang tertentu, dengan paging 5 per halaman.
+// Menggantikan HariLiburPanel.jsx. Menampilkan daftar karyawan yang cuti,
+// dengan paging 5 per halaman.
 //
-// [UBAH] Sebelumnya hanya dipakai untuk "Karyawan Cuti Bulan Ini" (data
-// dari onTeamLeavesChange milik CalendarCard). Sekarang komponen ini dibuat
-// lebih generik lewat props title/emptyMessage/showDateRange, supaya bisa
-// dipakai ULANG untuk panel kedua "Cuti Tanggal ..." (daftar karyawan yang
-// cuti PADA TANGGAL yang diklik di kalender) tanpa menduplikasi komponen.
-// Ditambah juga kotak pencarian nama (searchable) untuk kedua pemakaian.
+// [UBAH] Sekarang SATU panel dengan 2 tab, bukan 2 panel terpisah:
+//   - "Bulan Ini"       -> monthLeaves (dari onTeamLeavesChange CalendarCard)
+//   - <label tanggal>   -> dayLeaves (dari selectedDate.teamLeaveList, isi
+//                          hari yang diklik di kalender -- lihat CalendarCard.jsx)
+// Klik tanggal BARU di kalender otomatis memindahkan tab aktif ke
+// "Tanggal Terpilih" (deteksi lewat perubahan dayLabel). Pencarian nama
+// berlaku untuk tab yang sedang aktif, dan direset saat pindah tab supaya
+// tidak membingungkan.
 //
 // Bentuk tiap item leaves: { id, nama, jenisCuti, status, statusCode, startDate, endDate }
-// [UBAH] formatSelectedDayLabel() dipindah ke utils/dateUtils.js (bukan
-// diekspor dari sini) supaya file ini tetap hanya berisi komponen React --
-// menghindari peringatan lint react-refresh/only-export-components.
 import React, { useMemo, useState } from 'react';
 
 const PAGE_SIZE = 5;
@@ -28,38 +27,52 @@ const formatRentang = (item) => {
   return `${formatTanggal(item.startDate)} - ${formatTanggal(item.endDate)}`;
 };
 
-export default function KaryawanCutiPanel({
-  leaves = [],
-  // [BARU] title/emptyMessage/showDateRange -- lihat catatan di atas.
-  title = 'Karyawan Cuti Bulan Ini',
-  emptyMessage = 'Tidak ada karyawan yang cuti bulan ini.',
-  showDateRange = true,
-  searchable = true,
-}) {
+export default function KaryawanCutiPanel({ monthLeaves = [], dayLeaves = [], dayLabel = '' }) {
+  // [BARU] Tab aktif: 'month' (Bulan Ini) atau 'day' (Tanggal Terpilih).
+  const [mode, setMode] = useState('month');
   const [page, setPage] = useState(1);
   // [BARU] Kata kunci pencarian nama karyawan.
   const [search, setSearch] = useState('');
 
-  // [UBAH] Reset ke halaman 1 saat ISI daftar berubah (ganti bulan/tanggal
-  // di kalender, atau status suatu cuti berubah) -- bukan tiap kali referensi
-  // array `leaves` berubah. CalendarCard polling tiap 30 detik selalu
-  // membuat array baru walau isinya persis sama, jadi dipakai signature
-  // dari id-nya. Reset dilakukan langsung saat render (bukan lewat
-  // useEffect), mengikuti pola resmi React "Adjusting state when a prop
-  // changes": https://react.dev/learn/you-might-not-need-an-effect
-  const leavesSignature = leaves.map((item) => item.id).join('|');
-  const [trackedSignature, setTrackedSignature] = useState(leavesSignature);
-  if (leavesSignature !== trackedSignature) {
-    setTrackedSignature(leavesSignature);
+  // [BARU] Saat dayLabel berubah -- artinya user benar-benar mengklik
+  // tanggal baru di kalender (bukan sekadar re-render/polling) -- pindah
+  // otomatis ke tab "Tanggal Terpilih" & reset halaman+pencarian. Mengikuti
+  // pola resmi React "Adjusting state when a prop changes" (setState
+  // langsung di badan render, bukan lewat useEffect):
+  // https://react.dev/learn/you-might-not-need-an-effect
+  const [trackedDayLabel, setTrackedDayLabel] = useState(dayLabel);
+  if (dayLabel !== trackedDayLabel) {
+    setTrackedDayLabel(dayLabel);
+    setMode('day');
+    setPage(1);
+    setSearch('');
+  }
+
+  const activeLeaves = mode === 'month' ? monthLeaves : dayLeaves;
+
+  // [UBAH] Reset ke halaman 1 saat ISI daftar tab aktif berubah (status
+  // suatu cuti berubah lewat polling 30 detik) -- bukan tiap kali referensi
+  // array berubah, makanya dibandingkan lewat signature id-nya.
+  const activeSignature = `${mode}:${activeLeaves.map((item) => item.id).join('|')}`;
+  const [trackedSignature, setTrackedSignature] = useState(activeSignature);
+  if (activeSignature !== trackedSignature) {
+    setTrackedSignature(activeSignature);
     setPage(1);
   }
+
+  const handleModeChange = (nextMode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    setPage(1);
+    setSearch('');
+  };
 
   // [BARU] Daftar yang sudah disaring pencarian nama (case-insensitive).
   const filteredLeaves = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    if (!keyword) return leaves;
-    return leaves.filter((item) => (item.nama || '').toLowerCase().includes(keyword));
-  }, [leaves, search]);
+    if (!keyword) return activeLeaves;
+    return activeLeaves.filter((item) => (item.nama || '').toLowerCase().includes(keyword));
+  }, [activeLeaves, search]);
 
   const handleSearchChange = (event) => {
     setSearch(event.target.value);
@@ -67,21 +80,52 @@ export default function KaryawanCutiPanel({
   };
 
   const totalPages = Math.max(1, Math.ceil(filteredLeaves.length / PAGE_SIZE));
-
   const startIndex = (page - 1) * PAGE_SIZE;
   const pageItems = filteredLeaves.slice(startIndex, startIndex + PAGE_SIZE);
 
   // [BARU] Bedakan "memang tidak ada cuti" vs "ada cuti, tapi tidak ada
   // yang cocok dengan kata kunci pencarian" -- supaya pesannya jelas.
-  const isSearchMiss = leaves.length > 0 && filteredLeaves.length === 0;
+  const isSearchMiss = activeLeaves.length > 0 && filteredLeaves.length === 0;
+  const emptyMessage =
+    mode === 'month'
+      ? 'Tidak ada karyawan yang cuti bulan ini.'
+      : 'Tidak ada karyawan yang cuti pada tanggal ini.';
+  const dayTabLabel = dayLabel && dayLabel !== '-' ? dayLabel : 'Tanggal Terpilih';
 
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
       <h4 className="font-bold text-sm text-gray-800 pb-3 border-b border-gray-100">
-        {title}
+        Karyawan Cuti
       </h4>
 
-      {searchable && leaves.length > 0 && (
+      {/* [BARU] Tab switcher Bulan Ini / Tanggal Terpilih */}
+      <div className="flex gap-1 mt-3 p-1 bg-gray-50 rounded-lg">
+        <button
+          type="button"
+          onClick={() => handleModeChange('month')}
+          className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-colors cursor-pointer ${
+            mode === 'month'
+              ? 'bg-white text-[var(--color-primary)] shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Bulan Ini
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange('day')}
+          className={`flex-1 text-[11px] font-semibold py-1.5 rounded-md transition-colors cursor-pointer truncate px-1 ${
+            mode === 'day'
+              ? 'bg-white text-[var(--color-primary)] shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+          title={dayTabLabel}
+        >
+          {dayTabLabel}
+        </button>
+      </div>
+
+      {activeLeaves.length > 0 && (
         <div className="relative mt-3">
           <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
           <input
@@ -104,7 +148,9 @@ export default function KaryawanCutiPanel({
                     <p className="font-semibold text-sm text-gray-800">{item.nama}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {item.jenisCuti}
-                      {showDateRange ? <> &middot; {formatRentang(item)}</> : null}
+                      {/* [UBAH] Rentang tanggal cuma relevan di tab Bulan Ini --
+                          di tab Tanggal Terpilih tanggalnya sudah jelas dari tab-nya sendiri. */}
+                      {mode === 'month' ? <> &middot; {formatRentang(item)}</> : null}
                     </p>
                   </div>
                   <span

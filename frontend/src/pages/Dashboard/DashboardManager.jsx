@@ -53,17 +53,13 @@ export default function DashboardManager({ user }) {
           onDateClick={setSelectedDate}
           onTeamLeavesChange={setTeamLeavesThisMonth}
         />
-        <KaryawanCutiPanel leaves={teamLeavesThisMonth} />
-
-        {/* [BARU] Daftar karyawan yang cuti PADA TANGGAL yang diklik di
-            kalender -- terpisah dari panel "Bulan Ini" di atas. Sumber
-            datanya selectedDate.teamLeaveList, ikut ter-update tiap kali
-            CalendarCard memanggil onDateClick (lihat CalendarCard.jsx). */}
+        {/* [UBAH] Satu panel dgn 2 tab: "Bulan Ini" & tanggal yang
+            diklik di kalender (bukan 2 panel terpisah) -- lihat tab
+            switcher di dalam KaryawanCutiPanel.jsx. */}
         <KaryawanCutiPanel
-          title={`Cuti Tanggal ${formatSelectedDayLabel(selectedDate)}`}
-          leaves={selectedDate.teamLeaveList || []}
-          emptyMessage="Tidak ada karyawan yang cuti pada tanggal ini."
-          showDateRange={false}
+          monthLeaves={teamLeavesThisMonth}
+          dayLeaves={selectedDate.teamLeaveList || []}
+          dayLabel={formatSelectedDayLabel(selectedDate)}
         />
       </div>
     </div>
