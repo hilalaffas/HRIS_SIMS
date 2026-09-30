@@ -87,6 +87,12 @@ export const KARYAWAN_EXPORT_CONFIG = {
         karyawanList.filter((emp) => emp.divisi?.namaDivisi === divisi.namaDivisi).length,
       ]);
     },
+    // PDF tabel biasa: memakai headers & buildRows di atas (tidak perlu buildPivot).
+    pdf: {
+      title: 'Data Divisi',
+      fileNamePrefix: 'Data_Divisi',
+      rightAlignedColumns: [2], // kolom "Jumlah Karyawan"
+    },
   },
 
   'Log Sistem': {

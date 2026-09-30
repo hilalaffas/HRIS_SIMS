@@ -24,6 +24,50 @@ const formatDate = (value) => {
   return year && month && day ? `${day}/${month}/${year}` : '-';
 };
 
+// [BARU] PDF tabel sederhana (header + baris) untuk tab yang bukan pivot,
+// mis. Data Divisi. Kolom di rightAlignedColumns (indeks 0-based) rata kanan.
+export const downloadTablePdf = ({ title, fileNamePrefix, headers, rows, rightAlignedColumns = [] }) => {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const today = new Date();
+
+  doc.setFontSize(14);
+  doc.setTextColor(...TEXT_DARK);
+  doc.text(title, 14, 15);
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    `Dicetak: ${today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+    14,
+    20
+  );
+
+  const alignmentStyles = Object.fromEntries(
+    rightAlignedColumns.map((columnIndex) => [columnIndex, { halign: 'right' }])
+  );
+
+  autoTable(doc, {
+    head: [headers],
+    body: rows.map((row) => row.map((cell) => (cell === null || cell === undefined || cell === '' ? '-' : String(cell)))),
+    startY: 24,
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 2.5, textColor: TEXT_DARK, lineColor: GRID_COLOR, lineWidth: 0.2 },
+    headStyles: { fillColor: HEADER_FILL, textColor: TEXT_DARK, fontStyle: 'bold' },
+    columnStyles: alignmentStyles,
+    didParseCell: ({ section, column, cell }) => {
+      if (section === 'head' && rightAlignedColumns.includes(column.index)) cell.styles.halign = 'right';
+    },
+    didDrawPage: () => {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Halaman ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 14, pageHeight - 8, { align: 'right' });
+    },
+  });
+
+  doc.save(`${fileNamePrefix}_${today.toISOString().split('T')[0]}.pdf`);
+};
+
 export const downloadPivotPdf = ({ title, fileNamePrefix, pivot }) => {
   const { statusColumns, groups, grandTotalByStatus, grandTotal } = pivot;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });

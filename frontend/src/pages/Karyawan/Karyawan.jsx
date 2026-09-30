@@ -189,8 +189,15 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     const response = await getSystemLogs();
     const logsData = response.data || response || [];
     
+    // [BARU] Tampilkan hanya aksi yang mengubah data (tambah, ubah, hapus,
+    // ajukan/setujui cuti, dst). Aksi "GET_..." (sekadar melihat menu/data)
+    // dibuang. Ini pengaman tambahan bila backend belum menyaring.
+    const activityLogs = logsData.filter(
+      (log) => !String(log.action || '').toUpperCase().startsWith('GET_')
+    );
+
     // Melakukan mapping data dari backend ke format yang dimengerti LogSistem
-    const formattedLogs = logsData.map(log => {
+    const formattedLogs = activityLogs.map(log => {
       // Memisahkan tanggal dan jam dari createdAt (LocalDateTime)
       const dateObj = new Date(log.createdAt);
       
@@ -410,14 +417,33 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
       if (format === 'pdf' && exportConfig.pdf) {
         const { pdf } = exportConfig;
-        const pivot = pdf.buildPivot(exportContext);
-        if (pivot.groups.length === 0) {
-          triggerToast(pdf.emptyMessage, 'error');
+        // Import dinamis: library PDF baru diunduh saat pertama kali dipakai
+        const { downloadPivotPdf, downloadTablePdf } = await import('../../utils/pdfExport');
+
+        // [UBAH] Ada dua jenis PDF: pivot (buildPivot, mis. Cuti Karyawan)
+        // dan tabel biasa (memakai headers + buildRows CSV, mis. Data Divisi).
+        if (pdf.buildPivot) {
+          const pivot = pdf.buildPivot(exportContext);
+          if (pivot.groups.length === 0) {
+            triggerToast(pdf.emptyMessage || exportConfig.emptyMessage, 'error');
+            return;
+          }
+          downloadPivotPdf({ title: pdf.title, fileNamePrefix: pdf.fileNamePrefix, pivot });
           return;
         }
-        // Import dinamis: library PDF baru diunduh saat pertama kali dipakai
-        const { downloadPivotPdf } = await import('../../utils/pdfExport');
-        downloadPivotPdf({ title: pdf.title, fileNamePrefix: pdf.fileNamePrefix, pivot });
+
+        const rows = await exportConfig.buildRows(exportContext);
+        if (rows.length === 0) {
+          triggerToast(exportConfig.emptyMessage, 'error');
+          return;
+        }
+        downloadTablePdf({
+          title: pdf.title,
+          fileNamePrefix: pdf.fileNamePrefix,
+          headers: exportConfig.headers,
+          rows,
+          rightAlignedColumns: pdf.rightAlignedColumns,
+        });
         return;
       }
 
