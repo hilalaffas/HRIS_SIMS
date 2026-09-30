@@ -65,7 +65,7 @@ public class DivisiController {
             "CREATE_DIVISI",
             "divisi",
             created.getId(),
-            "Membuat divisi baru: " + created.getNamaDivisi(),
+            "Membuat divisi baru: " + created.getNamaDivisi() + " (" + created.getTipeDivisi() + ")",
             httpRequest
         );
         
@@ -86,7 +86,7 @@ public class DivisiController {
             "UPDATE_DIVISI",
             "divisi",
             id,
-            "Mengupdate divisi: " + updated.getNamaDivisi(),
+            "Mengupdate divisi: " + updated.getNamaDivisi() + " (" + updated.getTipeDivisi() + ")",
             httpRequest
         );
         

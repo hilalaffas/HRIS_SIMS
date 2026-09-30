@@ -15,12 +15,14 @@ export const getAllDivisi = async () => {
   return api.get('/api/divisi');
 };
 
-export const createDivisi = async (namaDivisi) => {
-  return api.post('/api/divisi', { namaDivisi });
+// [UBAH] Tambah parameter tipeDivisi: 'REGULAR' | 'SHIFTING' (default REGULAR).
+// GET /api/divisi sekarang mengembalikan [{ id, namaDivisi, tipeDivisi }].
+export const createDivisi = async (namaDivisi, tipeDivisi = 'REGULAR') => {
+  return api.post('/api/divisi', { namaDivisi, tipeDivisi });
 };
 
-export const updateDivisi = async (id, namaDivisi) => {
-  return api.put(`/api/divisi/${id}`, { namaDivisi });
+export const updateDivisi = async (id, namaDivisi, tipeDivisi = 'REGULAR') => {
+  return api.put(`/api/divisi/${id}`, { namaDivisi, tipeDivisi });
 };
 
 export const deleteDivisi = async (id) => {

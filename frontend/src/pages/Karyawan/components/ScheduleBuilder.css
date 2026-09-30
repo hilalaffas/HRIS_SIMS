@@ -1,0 +1,209 @@
+/* =========================================
+   BUILDER JADWAL ABSENSI (BULANAN)
+   ========================================= */
+.card_schedule_builder {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid #dfe8e8;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(13, 53, 50, 0.06);
+  margin-top: 20px;
+  padding: 22px;
+}
+
+.heading_schedule_builder {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+
+.icon_schedule_builder {
+  color: var(--color-primary-soft, #217A5B);
+  margin-top: 2px;
+  flex: none;
+}
+
+.heading_schedule_builder h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  color: #111827;
+}
+
+.heading_schedule_builder p {
+  margin: 0;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+.form_schedule_builder {
+  margin-top: 18px;
+  border: 1px solid #d8e3ec;
+  background: #f8fafc;
+  border-radius: 9px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.form_schedule_builder label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #193350;
+  font-weight: 700;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.form_schedule_builder select,
+.form_schedule_builder input {
+  min-height: 36px;
+  border: 1px solid #c8d5e3;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #31465a;
+  padding: 0 11px;
+  font: inherit;
+  font-weight: 400;
+  min-width: 0;
+}
+
+.form_schedule_builder select:focus,
+.form_schedule_builder input:focus {
+  outline: none;
+  border-color: #41b98d;
+  box-shadow: 0 0 0 3px #dff6eb;
+}
+
+.btn-generate_schedule_builder {
+  grid-column: 1 / -1;
+  background: var(--color-primary, #124231);
+  color: #ffffff;
+  border: 0;
+  border-radius: 5px;
+  padding: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-generate_schedule_builder:hover:not(:disabled) {
+  background: var(--color-primary-hover, #0E3427);
+}
+
+.btn-generate_schedule_builder:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.preview-label_schedule_builder {
+  font-size: 13px;
+  margin: 18px 0 8px;
+  color: #111827;
+}
+
+.notice_schedule_builder {
+  background: var(--color-warning-bg, #fffbeb);
+  border: 1px solid var(--color-warning-border, #fde68a);
+  color: #92400e;
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+/* Tabel bulanan: kolom nama menempel saat digulir ke samping */
+.table-wrap_schedule_builder {
+  overflow-x: auto;
+  border-top: 1px solid #dbe3ec;
+}
+
+.table_schedule_builder {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+  color: #193350;
+}
+
+.table_schedule_builder th,
+.table_schedule_builder td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf0f4;
+  text-align: left;
+  white-space: nowrap;
+  background: #ffffff;
+}
+
+.table_schedule_builder th {
+  background: #f1f5f9;
+  color: #385069;
+  font-weight: 700;
+}
+
+.table_schedule_builder th.off-head_schedule_builder {
+  color: #b91c1c;
+}
+
+.sticky-col_schedule_builder {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 140px;
+  box-shadow: 1px 0 0 #edf0f4;
+}
+
+.tag-shift_schedule_builder {
+  display: inline-block;
+  color: #4653cb;
+  background: #e7e9ff;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+.tag-off_schedule_builder {
+  color: #7e8998;
+}
+
+.btn-publish_schedule_builder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  margin-top: 13px;
+  border: 0;
+  background: var(--color-primary-soft, #217A5B);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 0 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-publish_schedule_builder:hover:not(:disabled) {
+  background: var(--color-primary, #124231);
+}
+
+.btn-publish_schedule_builder:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .card_schedule_builder {
+    padding: 16px;
+  }
+
+  .form_schedule_builder {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-generate_schedule_builder {
+    grid-column: auto;
+  }
+
+  .btn-publish_schedule_builder {
+    width: 100%;
+  }
+}

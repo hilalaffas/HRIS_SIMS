@@ -1,4 +1,13 @@
 /* =========================================
+   WRAPPER HALAMAN (3 kartu: Divisi, Jam Shift, Builder Jadwal)
+   Kartu Jam Shift & Builder punya CSS sendiri
+   (DivisiShiftSettings.css, ScheduleBuilder.css).
+   ========================================= */
+.page_data_divisi {
+  display: block;
+}
+
+/* =========================================
    CONTAINER & HEADER UTAMA
    ========================================= */
 .card_data_divisi {
@@ -41,6 +50,7 @@
 .icon_data_divisi {
   display: flex;
   align-items: center;
+  color: var(--color-primary-soft, #217A5B);
 }
 
 .header-info_data_divisi p {
@@ -106,19 +116,30 @@
 }
 
 .btn-add_data_divisi {
-  background-color: #064e3b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  white-space: nowrap;
+  background-color: var(--color-primary, #124231);
   color: #ffffff;
   border: none;
   border-radius: 6px;
-  padding: 10px 20px;
+  padding: 0 18px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.btn-add_data_divisi:hover {
-  background-color: #022c22;
+.btn-add_data_divisi:hover:not(:disabled) {
+  background-color: var(--color-primary-hover, #0E3427);
+}
+
+.btn-add_data_divisi:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* =========================================
@@ -157,6 +178,29 @@
 
 .row-name_data_divisi {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Badge tipe divisi */
+.badge-tipe_data_divisi {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-tipe_data_divisi--regular {
+  color: #08765a;
+  background: #e6f8ef;
+}
+
+.badge-tipe_data_divisi--shifting {
+  color: #9a6500;
+  background: #fff4d8;
 }
 
 .divisi-name-text_data_divisi {
@@ -245,24 +289,30 @@
 }
 
 .modal-header-edit_data_divisi {
-  background-color: #1a4d33;
-  padding: 16px 24px;
+  background-color: #ffffff;
+  padding: 22px 24px 0;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .modal-header-edit_data_divisi h3 {
-  color: #ffffff;
-  font-size: 16px;
+  color: #111827;
+  font-size: 19px;
   font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.modal-header-edit_data_divisi p {
   margin: 0;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
 }
 
 .btn-close-modal_data_divisi {
   background: transparent;
   border: none;
-  color: #ffffff;
+  color: #78909a;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -273,7 +323,7 @@
 }
 
 .modal-body-edit_data_divisi {
-  padding: 24px;
+  padding: 22px 24px 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -282,8 +332,11 @@
 .modal-body-edit_data_divisi label {
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
+  color: #193350;
+}
+
+.modal-body-edit_data_divisi .label-tipe_data_divisi {
+  margin-top: 8px;
 }
 
 .modal-body-edit_data_divisi input {
@@ -297,7 +350,9 @@
 }
 
 .modal-footer-edit_data_divisi {
-  padding: 0 24px 24px;
+  margin: 14px 24px 0;
+  padding: 16px 0 22px;
+  border-top: 1px solid #edf1f1;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -360,7 +415,12 @@
   cursor: pointer;
 }
 
-.btn-simpan-modal_data_divisi { background-color: #1a4d33; }
+.btn-simpan-modal_data_divisi { background-color: var(--color-primary, #124231); }
+
+.btn-simpan-modal_data_divisi:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .btn-confirm-delete_data_divisi { background-color: #059669; }
 
 /* =========================================
@@ -414,6 +474,11 @@
 
   .btn-add_data_divisi {
     width: 100%;
+  }
+
+  .header-actions_data_divisi .toggle_divisi_type {
+    width: 100%;
+    min-width: 0;
   }
 
   .list-header_data_divisi,

@@ -194,6 +194,21 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN_ROLES)
 
                         // ==========================
+                        // SHIFT & JADWAL KERJA (Data Divisi)
+                        // ==========================
+                        .requestMatchers(HttpMethod.GET, "/api/shift")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.PUT, "/api/shift/**")
+                        .hasAnyRole(ADMIN_ROLES)
+
+                        .requestMatchers(HttpMethod.GET, "/api/jadwal")
+                        .hasAnyRole(ADMIN_ROLES)
+
+                        .requestMatchers(HttpMethod.POST, "/api/jadwal/publish")
+                        .hasAnyRole(ADMIN_ROLES)
+
+                        // ==========================
                         // LEAVE
                         // ==========================
                         .requestMatchers(HttpMethod.GET,

@@ -19,4 +19,8 @@ public class Divisi {
 
     @Column(nullable = false, unique = true)
     private String namaDivisi;
+
+    // [BARU] REGULAR atau SHIFTING (Non Regular). Default REGULAR.
+    @Column(name = "tipe_divisi", nullable = false, length = 20)
+    private String tipeDivisi = "REGULAR";
 }

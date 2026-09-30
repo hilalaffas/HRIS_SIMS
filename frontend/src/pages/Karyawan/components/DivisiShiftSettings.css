@@ -1,0 +1,131 @@
+/* =========================================
+   PENGATURAN DIVISI & JAM KERJA SHIFT
+   ========================================= */
+.card_shift_settings {
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid #dfe8e8;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(13, 53, 50, 0.06);
+  margin-top: 26px;
+  padding: 22px;
+}
+
+.header_shift_settings {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.title-wrapper_shift_settings {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+
+.icon_shift_settings {
+  color: var(--color-primary-soft, #217A5B);
+  margin-top: 2px;
+  flex: none;
+}
+
+.title-wrapper_shift_settings h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  color: #111827;
+}
+
+.title-wrapper_shift_settings p {
+  margin: 0;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 13px;
+}
+
+.btn-more_shift_settings {
+  border: 0;
+  background: transparent;
+  color: #78909a;
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.btn-more_shift_settings:hover,
+.btn-more_shift_settings--active {
+  background: var(--color-primary-tint, #EEF7F4);
+  color: var(--color-primary, #124231);
+}
+
+.hint_shift_settings {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--color-primary-soft, #217A5B);
+  font-weight: 600;
+}
+
+.empty-state_shift_settings {
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.grid_shift_settings {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.card-shift_shift_settings {
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+
+.card-shift_shift_settings:disabled {
+  opacity: 1;
+}
+
+.card-shift_shift_settings strong {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-shift_shift_settings span {
+  font-size: 12px;
+}
+
+.card-shift_shift_settings--editable {
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.card-shift_shift_settings--editable:hover {
+  box-shadow: 0 3px 8px rgba(13, 53, 50, 0.12);
+  transform: translateY(-1px);
+}
+
+.tone-mint { background: #edfbf4; border-color: #7ce0b2; color: #08765a; }
+.tone-yellow { background: #fffbec; border-color: #f7d269; color: #a46500; }
+.tone-blue { background: #eff2ff; border-color: #a9b9ff; color: #283b9a; }
+
+@media (max-width: 768px) {
+  .card_shift_settings {
+    padding: 16px;
+  }
+
+  .grid_shift_settings {
+    grid-template-columns: 1fr;
+  }
+}

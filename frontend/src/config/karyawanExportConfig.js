@@ -77,13 +77,14 @@ export const KARYAWAN_EXPORT_CONFIG = {
   'Data Divisi': {
     fileNamePrefix: 'Data_Divisi',
     emptyMessage: 'Tidak ada data divisi untuk diekspor.',
-    headers: ['No', 'Nama Divisi', 'Jumlah Karyawan'],
+    headers: ['No', 'Nama Divisi', 'Tipe Divisi', 'Jumlah Karyawan'],
     // Async: daftar divisi diambil langsung dari backend (state-nya ada di DataDivisi.jsx)
     buildRows: async ({ karyawanList }) => {
       const divisiList = (await getAllDivisi()) || [];
       return divisiList.map((divisi, index) => [
         index + 1,
         divisi.namaDivisi,
+        divisi.tipeDivisi === 'SHIFTING' ? 'Non Regular (Shifting)' : 'Regular',
         karyawanList.filter((emp) => emp.divisi?.namaDivisi === divisi.namaDivisi).length,
       ]);
     },
@@ -91,7 +92,7 @@ export const KARYAWAN_EXPORT_CONFIG = {
     pdf: {
       title: 'Data Divisi',
       fileNamePrefix: 'Data_Divisi',
-      rightAlignedColumns: [2], // kolom "Jumlah Karyawan"
+      rightAlignedColumns: [3], // kolom "Jumlah Karyawan"
     },
   },
 

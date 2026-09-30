@@ -1,0 +1,54 @@
+/* =========================================
+   TOGGLE TIPE DIVISI (Regular / Non Regular)
+   ========================================= */
+.toggle_divisi_type {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 42px;
+  min-width: 220px;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid #c9d9d9;
+  border-radius: 7px;
+  background: #f7fbf9;
+  box-sizing: border-box;
+}
+
+.toggle_divisi_type--full {
+  width: 100%;
+}
+
+.toggle_divisi_type button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #69817d;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.toggle_divisi_type button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.toggle_divisi_type button.selected {
+  background: #dff6eb;
+  color: var(--color-primary, #124231);
+  box-shadow: 0 1px 2px rgba(18, 66, 49, 0.08);
+}
+
+.toggle_divisi_type button.selected.shifting {
+  background: #fff4d8;
+  color: #9a6500;
+}
+
+.toggle_divisi_type span {
+  font-weight: 600;
+}
