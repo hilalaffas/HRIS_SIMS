@@ -22,6 +22,11 @@ public class ActivityLogService {
     // dan tidak ditampilkan di Log Sistem.
     private static final String VIEW_ACTION_PREFIX = "GET_";
 
+    // [BARU] Sync libur nasional otomatis oleh "System" tidak ditampilkan
+    // (log lama yang sudah tersimpan di database ikut disembunyikan).
+    private static final String HIDDEN_ACTOR = "System";
+    private static final String HIDDEN_ACTION = "SYNC_HOLIDAY";
+
     public void log(String username, Long userId, String action,
                     String entity, Long entityId, String description,
                     HttpServletRequest request) {
@@ -45,14 +50,14 @@ public class ActivityLogService {
         activityLogRepository.save(log);
     }
 
-    // [UBAH] Sebelumnya findAllByOrderByCreatedAtDesc(): sekarang log GET_* lama
-    // yang sudah terlanjur tersimpan di database ikut disembunyikan.
+    // [UBAH] Memakai findVisibleLogs: log GET_* dan sync libur otomatis milik
+    // "System" yang sudah terlanjur tersimpan di database ikut disembunyikan.
     public List<ActivityLog> getAllLogs() {
-        return activityLogRepository.findAllExcludingActionPrefix(VIEW_ACTION_PREFIX);
+        return activityLogRepository.findVisibleLogs(VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION);
     }
 
     public List<ActivityLog> getLogsByUser(Long userId) {
-        return activityLogRepository.findByUserIdExcludingActionPrefix(userId, VIEW_ACTION_PREFIX);
+        return activityLogRepository.findVisibleLogsByUserId(userId, VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION);
     }
 
     // Cron: 0 0 0 1 * * artinya setiap jam 00:00:00 di tanggal 1 setiap bulan

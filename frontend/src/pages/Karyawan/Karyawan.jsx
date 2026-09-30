@@ -192,9 +192,13 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     // [BARU] Tampilkan hanya aksi yang mengubah data (tambah, ubah, hapus,
     // ajukan/setujui cuti, dst). Aksi "GET_..." (sekadar melihat menu/data)
     // dibuang. Ini pengaman tambahan bila backend belum menyaring.
-    const activityLogs = logsData.filter(
-      (log) => !String(log.action || '').toUpperCase().startsWith('GET_')
-    );
+    // [UBAH] Sync libur nasional otomatis oleh "System" juga dibuang.
+    const activityLogs = logsData.filter((log) => {
+      const action = String(log.action || '').toUpperCase();
+      const isViewOnly = action.startsWith('GET_');
+      const isAutoHolidaySync = log.username === 'System' && action === 'SYNC_HOLIDAY';
+      return !isViewOnly && !isAutoHolidaySync;
+    });
 
     // Melakukan mapping data dari backend ke format yang dimengerti LogSistem
     const formattedLogs = activityLogs.map(log => {

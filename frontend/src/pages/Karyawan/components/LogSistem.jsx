@@ -66,13 +66,14 @@ const LogSistem = ({ logList = [] }) => {
             key={log.id} 
             className={`log-item_log_sistem ${log.type === 'system' ? 'item-system_log_sistem' : 'item-normal_log_sistem'}`}
           >
+            {/* [UBAH] Tiga kolom terpisah (waktu | aktor | aksi) supaya rata
+                dan presisi di semua baris, tidak lagi satu blok teks. */}
             <div className="log-time_log_sistem">
-              <span>{log.tanggal}</span>
-              <span>{log.jam}</span>
+              <span className="log-date_log_sistem">{log.tanggal}</span>
+              <span className="log-clock_log_sistem">{log.jam}</span>
             </div>
-            <div className="log-content_log_sistem">
-              <strong>{log.aktor}</strong> {log.aksi}
-            </div>
+            <strong className="log-actor_log_sistem" title={log.aktor}>{log.aktor}</strong>
+            <span className="log-action_log_sistem">{log.aksi}</span>
           </div>
         ))}
 

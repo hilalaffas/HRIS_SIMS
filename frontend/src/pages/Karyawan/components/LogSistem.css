@@ -75,9 +75,13 @@
 }
 
 .log-item_log_sistem {
-  display: flex;
+  /* [UBAH] Grid 3 kolom: waktu | aktor | aksi. Lebar kolom waktu & aktor
+     dikunci supaya semua baris sejajar. */
+  display: grid;
+  grid-template-columns: 170px 140px minmax(0, 1fr);
+  column-gap: 20px;
   align-items: center;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-radius: 8px;
   border: 1px solid transparent;
 }
@@ -92,7 +96,8 @@
   color: #94a3b8;
 }
 
-.item-normal_log_sistem .log-content_log_sistem {
+.item-normal_log_sistem .log-actor_log_sistem,
+.item-normal_log_sistem .log-action_log_sistem {
   color: #334155;
 }
 
@@ -106,7 +111,8 @@
   color: #10b981;
 }
 
-.item-system_log_sistem .log-content_log_sistem {
+.item-system_log_sistem .log-actor_log_sistem,
+.item-system_log_sistem .log-action_log_sistem {
   color: #047857;
 }
 
@@ -114,19 +120,41 @@
 .log-time_log_sistem {
   display: flex;
   flex-direction: column;
+  gap: 2px;
   font-size: 13px;
   font-weight: 500;
-  min-width: 120px;
   line-height: 1.4;
   font-family: monospace, sans-serif;
+  white-space: nowrap;
 }
 
-.log-content_log_sistem {
+.log-actor_log_sistem {
   font-size: 14px;
+  font-weight: 600;
+  /* Nama panjang dipotong "..." agar kolom aksi tidak bergeser */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.log-content_log_sistem strong {
-  font-weight: 600;
+.log-action_log_sistem {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Layar sempit: susun ke bawah supaya tidak terpotong */
+@media (max-width: 768px) {
+  .log-item_log_sistem {
+    grid-template-columns: 1fr;
+    row-gap: 4px;
+    align-items: start;
+  }
+
+  .log-time_log_sistem {
+    flex-direction: row;
+    gap: 8px;
+  }
 }
 
 /* EMPTY STATE */

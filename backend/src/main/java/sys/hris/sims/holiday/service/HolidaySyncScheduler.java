@@ -6,7 +6,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.holiday.dto.HolidaySyncResult;
 import sys.hris.sims.holiday.service.HolidayService;
 
@@ -18,7 +17,6 @@ import java.time.LocalDate;
 public class HolidaySyncScheduler implements ApplicationRunner {
 
     private final HolidayService holidayService;
-    private final ActivityLogService activityLogService;
 
     /**
      * Dijalankan SEKALI saat aplikasi selesai start (misal saat deploy pertama).
@@ -50,11 +48,10 @@ public class HolidaySyncScheduler implements ApplicationRunner {
             HolidaySyncResult result = holidayService.syncNationalHolidays(year, null);
             log.info("Sync libur nasional tahun {} selesai (insert: {}, update: {}, skip: {})",
                     year, result.getInserted(), result.getUpdated(), result.getSkipped());
-
-            activityLogService.log("System", null, "SYNC_HOLIDAY", "holidays", null,
-                    "Sync libur nasional tahun " + year + " (insert: " + result.getInserted()
-                            + ", update: " + result.getUpdated() + ", skip: " + result.getSkipped() + ")",
-                    null);
+            // [UBAH] Sync otomatis (startup & cron harian) tidak lagi dicatat ke
+            // Log Sistem karena bukan aksi user dan hasilnya sering "insert 0,
+            // update 0". Cukup log.info di atas. Sync manual oleh user lewat
+            // HolidayController tetap tercatat.
         } catch (Exception e) {
             log.error("Gagal sync libur nasional tahun {}: {}", year, e.getMessage(), e);
         }
