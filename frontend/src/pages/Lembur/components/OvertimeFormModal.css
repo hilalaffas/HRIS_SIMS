@@ -1,0 +1,127 @@
+/* src/pages/Lembur/components/OvertimeFormModal.css */
+
+.lmb-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.lmb-modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md, 10px);
+  padding: 22px 24px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+
+.lmb-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lmb-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--color-primary);
+}
+
+.lmb-modal-close {
+  display: inline-flex;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.lmb-modal-close:hover:not(:disabled) { background: #f4f6fa; }
+.lmb-modal-close svg { width: 18px; height: 18px; }
+
+.lmb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.lmb-field > span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.lmb-field input,
+.lmb-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.lmb-field textarea { resize: vertical; }
+
+.lmb-field input:focus,
+.lmb-field textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-soft);
+  box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.lmb-field-row { display: flex; gap: 12px; }
+
+.lmb-total-hint {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.lmb-total-hint strong { color: var(--color-primary); }
+
+.lmb-form-error {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.lmb-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.lmb-outline-button {
+  border: 1px solid #dfe5ee;
+  background: var(--color-surface);
+  color: #607089;
+  padding: 11px 16px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lmb-outline-button:hover:not(:disabled) { background: #f4f6fa; }
+.lmb-outline-button:disabled { opacity: 0.6; cursor: not-allowed; }

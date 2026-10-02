@@ -326,7 +326,7 @@ td strong {
 .abs-heading-actions .abs-outline-button svg:not(.is-flipped) { width: 14px; height: 14px; }
 
 /* Tabel log bulanan (scoped supaya tidak menggeser tabel lain). */
-.abs-history-section .abs-log-table { min-width: 900px; }
+.abs-history-section .abs-log-table { min-width: 1000px; }
 
 .abs-history-section .abs-log-table th {
   background: #f6f8fa;
@@ -353,6 +353,29 @@ td strong {
 
 .abs-duration-cell { font-family: inherit; white-space: normal; }
 .abs-photo-link svg { color: var(--color-success); }
+
+/* [BARU] Kolom Lembur: durasi + badge status pengajuan (ACC / Menunggu / Ditolak). */
+.abs-overtime-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.abs-overtime-stack strong { color: var(--abs-navy); white-space: nowrap; }
+
+.abs-overtime-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.abs-overtime-approved { background: var(--color-success-bg); color: var(--color-success); }
+.abs-overtime-pending { background: var(--color-warning-bg); color: var(--color-warning); }
+.abs-overtime-rejected { background: var(--color-danger-bg); color: var(--color-danger); }
 
 /* [BARU] Footer mode "Lihat semua": pilihan jumlah baris per halaman (kiri),
    paginasi (tengah), info rentang baris (kanan). */

@@ -23,6 +23,8 @@ import DevSettings from '../pages/DevSettings/DevSettings';
 // status hari ini, riwayat harian di samping, modal kamera, backend
 // nyata). Lihat pages/Absensi/README.md.
 import Absensi from '../pages/Absensi/absensi';
+// [BARU] Halaman Pengajuan Lembur (menu di bawah Absensi saya)
+import Lembur from '../pages/Lembur/Lembur';
 
 
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
@@ -63,6 +65,9 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
               sekarang Absensi.jsx (fungsional: kamera, riwayat harian,
               backend nyata; lihat pages/Absensi/README.md) */}
           <Route path="/absensi" element={<Absensi />} />
+
+          {/* [BARU] Wadah Halaman Pengajuan Lembur */}
+          <Route path="/lembur" element={<Lembur />} />
 
           {/* Wadah Halaman Manajemen Karyawan */}
           <Route path="/karyawan" element={<Karyawan user={user} />} />

@@ -32,6 +32,8 @@ import {
   toReasonCode,
   toDisplayRecord,
 } from '../../services/attendanceService';
+// [BARU] Data lembur untuk kolom "Lembur" di tabel riwayat
+import { getMyOvertime, toDisplayOvertime } from '../../services/overtimeService';
 import './Absensi.css';
 
 export default function Absensi() {
@@ -39,6 +41,7 @@ export default function Absensi() {
   const streamRef = useRef(null);
 
   const [records, setRecords] = useState([]);
+  const [overtimeRecords, setOvertimeRecords] = useState([]); // [BARU]
   const [historyLoading, setHistoryLoading] = useState(true);
 
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -77,8 +80,15 @@ export default function Absensi() {
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
-      const data = await getMyAttendanceHistory();
+      // [UBAH] Riwayat absensi + data lembur diambil bersamaan. Kegagalan
+      // lembur sengaja tidak menggagalkan riwayat absensi (kolom Lembur
+      // cukup menampilkan "-").
+      const [data, overtimeData] = await Promise.all([
+        getMyAttendanceHistory(),
+        getMyOvertime().catch(() => []),
+      ]);
       setRecords((data || []).map(toDisplayRecord));
+      setOvertimeRecords((overtimeData || []).map(toDisplayOvertime));
     } catch (error) {
       showToast(error?.message || 'Gagal memuat riwayat absensi.', 'error');
     } finally {
@@ -225,7 +235,10 @@ export default function Absensi() {
           />
         </div>
 
-        <AttendanceHistoryTable records={historyLoading ? [] : records} />
+        <AttendanceHistoryTable
+          records={historyLoading ? [] : records}
+          overtimeRecords={historyLoading ? [] : overtimeRecords}
+        />
       </section>
 
       {cameraOpen && (

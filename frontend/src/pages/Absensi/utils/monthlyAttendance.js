@@ -14,6 +14,7 @@
 // diidentifikasi lewat bulan AKHIR-nya ({ year, month }, month = 0-11).
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { formatDateLabel } from '../../../services/attendanceService';
+import { getOvertimeStatus } from '../../../services/overtimeService';
 
 export const SHIFT_LABEL = 'Shift Normal (08:00 - 17:00)';
 const SHIFT_START_MINUTES = 8 * 60; // dasar hitung "Terlambat N Menit"
@@ -198,6 +199,46 @@ export function buildMonthlyRows(records, year, month, now = new Date()) {
   return rows.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
+// [BARU] Tempelkan data lembur (dari Pengajuan Lembur) ke baris per hari.
+// Dipakai di semua baris -- termasuk akhir pekan/libur tanpa absensi, karena
+// lembur justru sering terjadi di hari tersebut. Bila satu tanggal punya >1
+// pengajuan (mis. yang ditolak lalu diajukan ulang), yang dipakai prioritas
+// APPROVED > PENDING > REJECTED.
+const OVERTIME_PRIORITY = { APPROVED: 3, PENDING: 2, REJECTED: 1 };
+
+export function attachOvertime(rows, overtimeRecords = []) {
+  const byDate = new Map();
+  overtimeRecords.forEach((record) => {
+    const current = byDate.get(record.date);
+    const currentRank = OVERTIME_PRIORITY[current?.statusCode] || 0;
+    const nextRank = OVERTIME_PRIORITY[record.statusCode] || 0;
+    if (!current || nextRank > currentRank) byDate.set(record.date, record);
+  });
+
+  return rows.map((row) => {
+    const record = byDate.get(row.date);
+    if (!record) return { ...row, overtime: null };
+    const status = getOvertimeStatus(record.statusCode);
+    return {
+      ...row,
+      overtime: {
+        minutes: record.totalMinutes,
+        duration: record.duration,
+        statusLabel: status.shortLabel,
+        tone: status.tone,
+      },
+    };
+  });
+}
+
+// Teks lembur untuk CSV & PDF: "2 Jam (ACC)" / "Ditolak" / "-"
+function toOvertimeText(overtime) {
+  if (!overtime) return '-';
+  if (overtime.tone === 'rejected') return 'Ditolak';
+  return `${overtime.duration} (${overtime.statusLabel})`;
+}
+
+// [UBAH] Urutan kolom: ... Status Presence, Lokasi & Foto, Lembur, Keterangan / Catatan
 export const REPORT_HEADERS = [
   'Tanggal',
   'Jadwal Shift',
@@ -205,8 +246,9 @@ export const REPORT_HEADERS = [
   'Jam Pulang',
   'Durasi',
   'Status Presence',
+  'Lokasi & Foto',
+  'Lembur',
   'Keterangan / Catatan',
-  'Bukti / Foto',
 ];
 
 // Baris teks untuk CSV & PDF (kolom sama dengan tabel di layar).
@@ -219,7 +261,8 @@ export function toReportRows(rows, { includeUrl = false } = {}) {
     row.checkOut || '-',
     row.duration || '-',
     row.status,
-    row.note,
     row.photoUrl ? (includeUrl ? row.photoUrl : row.proofLabel) : '-',
+    toOvertimeText(row.overtime),
+    row.note,
   ]);
 }

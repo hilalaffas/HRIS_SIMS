@@ -36,7 +36,12 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
       // Menampilkan dot merah statis/notifikasi sesuai Gambar 1 (Karyawan) jika diperlukan
       hasDot: notificationCounts?.leaveRequest ?? false
     });
-    
+    // [BARU] Pengajuan Lembur -- tepat di bawah "Absensi saya"
+    mainMenuItems.push({
+      path: '/lembur',
+      name: 'Pengajuan Lembur',
+      icon: 'fa-solid fa-business-time',
+    });
   }
 
   // Menu Khusus Manager (Gambar 2)

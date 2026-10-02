@@ -1,0 +1,68 @@
+/* src/pages/Lembur/components/OvertimeHistoryTable.css */
+
+.lmb-table-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 10px);
+  padding: 20px 20px 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.lmb-table-card h2 {
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f0f2f5;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+}
+
+.lmb-table-wrap { overflow-x: auto; }
+
+.lmb-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.lmb-table th {
+  background: #f6f8fa;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.lmb-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #f0f2f5;
+  font-size: 12px;
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.lmb-center { text-align: center; }
+.lmb-strong { font-weight: 700; }
+.lmb-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+
+.lmb-empty-row {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 28px 12px !important;
+}
+
+.lmb-status {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lmb-status-approved { background: var(--color-success-bg); color: var(--color-success); }
+.lmb-status-pending { background: var(--color-warning-bg); color: var(--color-warning); }
+.lmb-status-rejected { background: var(--color-danger-bg); color: var(--color-danger); }

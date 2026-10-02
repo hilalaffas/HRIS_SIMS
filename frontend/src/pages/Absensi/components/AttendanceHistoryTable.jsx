@@ -9,6 +9,10 @@
 // Kontrol "Lihat semua / Ringkas" + paginasi TETAP dipertahankan; di mode
 // "Lihat semua" ada pilihan jumlah baris per halaman (10 / 20 / 30).
 //
+// [UBAH] Urutan kolom sekarang: Tanggal, Jadwal Shift, Jam Masuk, Jam Pulang,
+// Durasi, Status Presence, LOKASI & FOTO (dulu "Bukti / Foto"), LEMBUR (baru,
+// dari menu Pengajuan Lembur), Keterangan / Catatan.
+//
 // Header kolom bisa diklik untuk sort naik/turun (asc/desc); nilai kosong ("-")
 // selalu diurutkan paling bawah, apa pun arahnya.
 //
@@ -28,6 +32,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight
 import { downloadCsv } from '../../../utils/csvExport';
 import {
   REPORT_HEADERS,
+  attachOvertime,
   buildMonthlyRows,
   formatPeriodLabel,
   getCurrentPeriod,
@@ -47,8 +52,9 @@ const COLUMNS = [
   { key: 'checkOut', label: 'JAM PULANG', value: (row) => row.checkOut },
   { key: 'duration', label: 'DURASI', value: (row) => row.durationMinutes },
   { key: 'status', label: 'STATUS PRESENCE', value: (row) => (row.tone ? row.status : null) },
-  { key: 'note', label: 'KETERANGAN / CATATAN', value: (row) => row.note, sortable : false },
-  { key: 'proof', label: 'BUKTI / FOTO', value: (row) => (row.photoUrl ? row.proofLabel : null), sortable: false },
+  { key: 'proof', label: 'LOKASI & FOTO', value: (row) => (row.photoUrl ? row.proofLabel : null), sortable: false },
+  { key: 'overtime', label: 'LEMBUR', value: (row) => (row.overtime && row.overtime.tone !== 'rejected' ? row.overtime.minutes : null) },
+  { key: 'note', label: 'KETERANGAN / CATATAN', value: (row) => row.note, sortable: false },
 ];
 
 const isBlank = (value) => value === null || value === undefined || value === '' || value === '-';
@@ -75,7 +81,21 @@ function BuktiCell({ row }) {
   );
 }
 
-export default function AttendanceHistoryTable({ records }) {
+// [BARU] Sel kolom Lembur: durasi + badge status (ACC / Menunggu / Ditolak).
+function OvertimeCell({ overtime }) {
+  if (!overtime) return <span className="abs-empty-cell">-</span>;
+  if (overtime.tone === 'rejected') {
+    return <span className="abs-overtime-badge abs-overtime-rejected">{overtime.statusLabel}</span>;
+  }
+  return (
+    <div className="abs-overtime-stack">
+      <strong>{overtime.duration}</strong>
+      <span className={`abs-overtime-badge abs-overtime-${overtime.tone}`}>{overtime.statusLabel}</span>
+    </div>
+  );
+}
+
+export default function AttendanceHistoryTable({ records, overtimeRecords = [] }) {
   const currentPeriod = useMemo(() => getCurrentPeriod(new Date()), []);
   const [period, setPeriod] = useState(currentPeriod);
   const [expanded, setExpanded] = useState(false);
@@ -88,8 +108,8 @@ export default function AttendanceHistoryTable({ records }) {
   const periodLabel = formatPeriodLabel(period.year, period.month);
 
   const dailyRows = useMemo(
-    () => buildMonthlyRows(records, period.year, period.month),
-    [records, period.year, period.month],
+    () => attachOvertime(buildMonthlyRows(records, period.year, period.month), overtimeRecords),
+    [records, overtimeRecords, period.year, period.month],
   );
 
   // Urutan di layar mengikuti sort; ekspor CSV/PDF tetap urut tanggal
@@ -253,7 +273,7 @@ export default function AttendanceHistoryTable({ records }) {
           <tbody key={`${period.year}-${period.month}-${sort.key}-${sort.dir}-${pageSize}-${expanded ? `page-${safePage}` : 'collapsed'}`} className="abs-tbody-page">
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={8} className="abs-empty-row">Belum ada riwayat absensi pada periode ini.</td>
+                <td colSpan={9} className="abs-empty-row">Belum ada riwayat absensi pada periode ini.</td>
               </tr>
             )}
             {visibleRows.map((row, index) => (
@@ -271,8 +291,9 @@ export default function AttendanceHistoryTable({ records }) {
                     ? <span className={`abs-record-status abs-status-${row.tone}`}>{row.status}</span>
                     : <span className="abs-empty-cell">-</span>}
                 </td>
-                <td>{row.note === '-' ? <span className="abs-empty-cell">-</span> : row.note}</td>
                 <td><BuktiCell row={row} /></td>
+                <td><OvertimeCell overtime={row.overtime} /></td>
+                <td>{row.note === '-' ? <span className="abs-empty-cell">-</span> : row.note}</td>
               </tr>
             ))}
           </tbody>

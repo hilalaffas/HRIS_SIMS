@@ -336,6 +336,16 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN_ROLES)
 
                         // ==========================
+                        // PENGAJUAN LEMBUR (Overtime)
+                        // ==========================
+                        // [BARU] Karyawan hanya lihat & kirim lembur MILIKNYA ("/me").
+                        .requestMatchers(HttpMethod.GET, "/api/lembur/me")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/api/lembur/me")
+                        .authenticated()
+
+                        // ==========================
                         // LEAVE TYPE
                         // ==========================
                         .requestMatchers(HttpMethod.GET,
