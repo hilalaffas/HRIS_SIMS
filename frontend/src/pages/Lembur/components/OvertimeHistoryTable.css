@@ -44,6 +44,12 @@
   vertical-align: middle;
 }
 
+.lmb-table th:first-child,
+.lmb-table td:first-child { width: 56px; }   /* NO */
+
+.lmb-table th:last-child,
+.lmb-table td:last-child { width: 160px; }   /* STATUS ACC */
+
 .lmb-center { text-align: center; }
 .lmb-strong { font-weight: 700; }
 .lmb-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }

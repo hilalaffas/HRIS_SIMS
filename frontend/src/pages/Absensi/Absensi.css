@@ -20,7 +20,7 @@
   --abs-muted-ink: var(--color-text-secondary);
   --abs-muted-ink-2: var(--color-text-muted);
 
-  max-width: var(--page-max-width, 1280px);
+  max-width: 1440px;
   margin: 0 auto;
 }
 
@@ -78,7 +78,7 @@
    tinggi mengikuti kolom kiri). Lihat .abs-attendance-left di bawah. */
 .absensi-page .abs-attendance-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) 1fr;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   gap: 20px;
   align-items: stretch;
 }
