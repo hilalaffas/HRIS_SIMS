@@ -74,6 +74,11 @@ public class Attendance {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    // [BARU] 'NOT_REQUIRED' (absensi biasa), atau untuk reason SAKIT:
+    // 'PENDING' -> 'APPROVED' / 'REJECTED' (diputuskan SuperAdmin).
+    @Column(name = "approval_status", nullable = false, length = 20)
+    private String approvalStatus;
+
     // [BARU] Jam & tanggal SELALU diisi di sini (server), tidak pernah
     // diterima dari request client -- lihat AttendanceSubmitRequest yang
     // sengaja TIDAK punya field jam/tanggal sama sekali.
@@ -83,5 +88,8 @@ public class Attendance {
         this.recordedAt = now;
         this.attendanceDate = now.toLocalDate();
         this.createdAt = now;
+        if (this.approvalStatus == null) {
+            this.approvalStatus = "NOT_REQUIRED";
+        }
     }
 }

@@ -7,7 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +20,7 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
 import sys.hris.sims.attendance.service.AttendanceService;
+import sys.hris.sims.common.dto.ApprovalDecisionRequest;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
@@ -70,6 +74,35 @@ public class AttendanceController {
     // ADMIN_ROLES di SecurityConfig. Disiapkan untuk pengembangan lanjutan
     // (dihubungkan ke Direktori Karyawan / rekap bersama data Cuti), belum
     // dipakai halaman frontend mana pun saat ini.
+    // [BARU] GET daftar pengajuan Sakit untuk halaman persetujuan -- hanya SuperAdmin
+    // (dibatasi di SecurityConfig).
+    @GetMapping("/approvals/sakit")
+    public ResponseEntity<List<AttendanceResponse>> getSickApprovals() {
+        return ResponseEntity.ok(attendanceService.getSickApprovals());
+    }
+
+    // [BARU] PUT setujui/tolak pengajuan Sakit -- body: { "status": "APPROVED" | "REJECTED" }
+    @PutMapping("/{attendanceId}/approval")
+    public ResponseEntity<AttendanceResponse> decideSick(
+            @PathVariable Long attendanceId,
+            @RequestBody ApprovalDecisionRequest request,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        AttendanceResponse response = attendanceService.decideSick(attendanceId, request.getStatus());
+
+        activityLogService.log(
+                authentication.getName(),
+                getCurrentUserId(authentication),
+                "APPROVED".equals(response.getApprovalStatus()) ? "APPROVE_SAKIT" : "REJECT_SAKIT",
+                "attendances",
+                response.getAttendanceId(),
+                "Pengajuan sakit " + response.getEmployeeName() + " "
+                        + ("APPROVED".equals(response.getApprovalStatus()) ? "disetujui" : "ditolak"),
+                httpRequest);
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     public ResponseEntity<List<AttendanceResponse>> getAllHistory(Authentication authentication, HttpServletRequest httpRequest) {
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_ALL_ABSENSI", "attendances", null, "Melihat semua data absensi", httpRequest);

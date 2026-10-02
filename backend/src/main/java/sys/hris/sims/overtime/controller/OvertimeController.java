@@ -5,7 +5,9 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.common.dto.ApprovalDecisionRequest;
 import sys.hris.sims.overtime.dto.OvertimeResponse;
 import sys.hris.sims.overtime.dto.OvertimeSubmitRequest;
 import sys.hris.sims.overtime.service.OvertimeService;
@@ -38,6 +41,35 @@ public class OvertimeController {
     @GetMapping("/me")
     public ResponseEntity<List<OvertimeResponse>> getMyOvertime(Authentication authentication) {
         return ResponseEntity.ok(overtimeService.getMyOvertime(authentication.getName()));
+    }
+
+    // [BARU] GET semua pengajuan lembur untuk halaman persetujuan -- hanya SuperAdmin
+    // (dibatasi di SecurityConfig).
+    @GetMapping("/approvals")
+    public ResponseEntity<List<OvertimeResponse>> getAllForApproval() {
+        return ResponseEntity.ok(overtimeService.getAllForApproval());
+    }
+
+    // [BARU] PUT setujui/tolak lembur -- body: { "status": "APPROVED" | "REJECTED" }
+    @PutMapping("/{overtimeId}/approval")
+    public ResponseEntity<OvertimeResponse> decideOvertime(
+            @PathVariable Long overtimeId,
+            @RequestBody ApprovalDecisionRequest request,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        OvertimeResponse response = overtimeService.decide(overtimeId, request.getStatus());
+
+        activityLogService.log(
+                authentication.getName(),
+                getCurrentUserId(authentication),
+                "APPROVED".equals(response.getStatus()) ? "APPROVE_LEMBUR" : "REJECT_LEMBUR",
+                "overtime_requests",
+                response.getOvertimeId(),
+                "Lembur " + response.getEmployeeName() + " tanggal " + response.getOvertimeDate() + " "
+                        + ("APPROVED".equals(response.getStatus()) ? "disetujui" : "ditolak"),
+                httpRequest);
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/me")

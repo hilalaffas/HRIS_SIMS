@@ -3,6 +3,7 @@ package sys.hris.sims.overtime.service;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 
@@ -30,6 +31,31 @@ public class OvertimeService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    // [BARU] Semua pengajuan lembur untuk halaman persetujuan SuperAdmin.
+    public List<OvertimeResponse> getAllForApproval() {
+        return overtimeRepository.findAllByOrderByOvertimeDateDescOvertimeIdDesc()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // [BARU] Setujui / tolak lembur. Hanya yang masih PENDING yang bisa diputuskan.
+    public OvertimeResponse decide(Long overtimeId, String decision) {
+        String status = decision == null ? "" : decision.trim().toUpperCase(Locale.ROOT);
+        if (!status.equals("APPROVED") && !status.equals("REJECTED")) {
+            throw new IllegalArgumentException("Keputusan tidak valid. Gunakan APPROVED atau REJECTED.");
+        }
+
+        OvertimeRequest overtime = overtimeRepository.findById(overtimeId)
+                .orElseThrow(() -> new IllegalArgumentException("Pengajuan lembur tidak ditemukan."));
+        if (!"PENDING".equals(overtime.getStatus())) {
+            throw new IllegalStateException("Pengajuan ini sudah diproses.");
+        }
+
+        overtime.setStatus(status);
+        return toResponse(overtimeRepository.save(overtime));
     }
 
     public OvertimeResponse submit(String username, OvertimeSubmitRequest request) {

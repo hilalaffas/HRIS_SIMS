@@ -1,0 +1,106 @@
+/* src/pages/Persetujuan/components/ApprovalTable.css */
+
+.apv-table-wrap { overflow-x: auto; }
+
+.apv-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.apv-table th {
+  background: #f6f8fa;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 13px 12px;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+.apv-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #f0f2f5;
+  font-size: 12px;
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.apv-center { text-align: center; }
+.apv-name { font-weight: 700; }
+.apv-date { color: var(--color-text-secondary); white-space: nowrap; }
+.apv-muted { color: var(--color-text-muted); }
+
+.apv-subdetail {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.apv-empty-row {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 30px 12px !important;
+}
+
+/* Badge tipe permohonan */
+.apv-type {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.apv-type-sakit { background: var(--color-info-bg); color: var(--color-info); }
+.apv-type-lembur { background: var(--color-warning-bg); color: var(--color-warning); }
+
+.apv-proof {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-success);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.apv-proof:hover { text-decoration: underline; }
+.apv-proof svg { width: 13px; height: 13px; }
+
+/* Tombol aksi */
+.apv-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.apv-btn {
+  border: none;
+  border-radius: 5px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.apv-btn:hover:not(:disabled) { opacity: 0.88; }
+.apv-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.apv-btn-approve { background: var(--color-success); }
+.apv-btn-reject { background: var(--color-danger); }
+
+/* Hasil keputusan (baris yang sudah diproses) */
+.apv-decided {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.apv-decided-approved { background: var(--color-success-bg); color: var(--color-success); }
+.apv-decided-rejected { background: var(--color-danger-bg); color: var(--color-danger); }

@@ -39,4 +39,7 @@ public class AttendanceResponse {
 
     private LocalDateTime recordedAt;
     private LocalDate attendanceDate;
+
+    // [BARU] NOT_REQUIRED / PENDING / APPROVED / REJECTED
+    private String approvalStatus;
 }

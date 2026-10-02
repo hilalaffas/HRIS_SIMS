@@ -17,6 +17,16 @@ export async function getMyAttendanceHistory() {
   return api.get('/api/absensi/me');
 }
 
+// [BARU] Persetujuan Sakit (SuperAdmin): daftar pengajuan & keputusan.
+// status: 'APPROVED' | 'REJECTED'
+export async function getSickApprovals() {
+  return api.get('/api/absensi/approvals/sakit');
+}
+
+export async function decideSickApproval(attendanceId, status) {
+  return api.put(`/api/absensi/${attendanceId}/approval`, { status });
+}
+
 // POST catat absensi. `photoBlob` WAJIB, `latitude`/`longitude` WAJIB --
 // backend menolak tanpa GPS/foto (lihat AttendanceService.submit()).
 export async function submitAttendance({ action, reason, note, latitude, longitude, photoBlob }) {
@@ -107,6 +117,7 @@ export function toDisplayRecord(item) {
     longitude: item.longitude,
     mapsUrl: item.mapsUrl || null,
     attendanceDate: item.attendanceDate,
+    approvalStatus: String(item.approvalStatus || '').toUpperCase(), // [BARU]
     recordedAt,
     time: formatTimeLabel(recordedAt),
   };

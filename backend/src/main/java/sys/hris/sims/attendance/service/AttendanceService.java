@@ -105,6 +105,7 @@ public class AttendanceService {
                 .reason(reason)
                 .status(resolveStatus(action, reason))
                 .note(request.getNote())
+                .approvalStatus(reason.equals("SAKIT") ? "PENDING" : "NOT_REQUIRED")
                 .photoUrl(photoUrl)
                 .latitude(BigDecimal.valueOf(request.getLatitude()))
                 .longitude(BigDecimal.valueOf(request.getLongitude()))
@@ -112,6 +113,35 @@ public class AttendanceService {
 
         Attendance saved = attendanceRepository.save(attendance);
         return toResponse(saved);
+    }
+
+    // [BARU] Daftar pengajuan Sakit untuk halaman persetujuan SuperAdmin.
+    public List<AttendanceResponse> getSickApprovals() {
+        return attendanceRepository.findByReasonAndActionOrderByRecordedAtDesc("SAKIT", "MASUK")
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // [BARU] Setujui / tolak pengajuan Sakit. Hanya yang masih PENDING yang
+    // bisa diputuskan, supaya keputusan tidak bolak-balik tanpa jejak.
+    public AttendanceResponse decideSick(Long attendanceId, String decision) {
+        String status = normalize(decision);
+        if (!status.equals("APPROVED") && !status.equals("REJECTED")) {
+            throw new IllegalArgumentException("Keputusan tidak valid. Gunakan APPROVED atau REJECTED.");
+        }
+
+        Attendance attendance = attendanceRepository.findById(attendanceId)
+                .orElseThrow(() -> new IllegalArgumentException("Data absensi tidak ditemukan."));
+        if (!"SAKIT".equals(attendance.getReason())) {
+            throw new IllegalArgumentException("Hanya pengajuan Sakit yang bisa diputuskan.");
+        }
+        if (!"PENDING".equals(attendance.getApprovalStatus())) {
+            throw new IllegalStateException("Pengajuan ini sudah diproses.");
+        }
+
+        attendance.setApprovalStatus(status);
+        return toResponse(attendanceRepository.save(attendance));
     }
 
     private String resolveStatus(String action, String reason) {
@@ -147,6 +177,7 @@ public class AttendanceService {
                 .mapsUrl(buildMapsUrl(attendance.getLatitude(), attendance.getLongitude()))
                 .recordedAt(attendance.getRecordedAt())
                 .attendanceDate(attendance.getAttendanceDate())
+                .approvalStatus(attendance.getApprovalStatus())
                 .build();
     }
 

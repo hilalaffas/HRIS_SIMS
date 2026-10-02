@@ -231,6 +231,18 @@ div.profile-avatar {
   border-bottom-left-radius: 12px;
 }
 
+/* [BARU] Menu nonaktif (tampil tapi tidak bisa diklik) */
+.menu-link.menu-link-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.menu-link.menu-link-disabled:hover {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.75);
+}
+
 /* Ikon di dalam Menu */
 .menu-link i {
   width: 1.25rem; 

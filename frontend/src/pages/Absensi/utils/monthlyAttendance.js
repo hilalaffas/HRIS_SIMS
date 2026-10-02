@@ -126,12 +126,18 @@ function resolveRow(key, entry, todayKey) {
   // Sakit / Izin: tidak bekerja, jam & durasi tidak ditampilkan.
   if (checkIn?.reasonCode === 'SAKIT' || checkIn?.reasonCode === 'IZIN') {
     const isSick = checkIn.reasonCode === 'SAKIT';
+    // [BARU] Keterangan ikut menunjukkan status persetujuan SuperAdmin.
+    // Keputusan "Ditolak" SEMENTARA hanya informasi -- belum mengubah status
+    // hari itu (aturan bisnisnya belum dikonfirmasi).
+    const approvalSuffix = isSick
+      ? ({ PENDING: ' (Menunggu Persetujuan)', REJECTED: ' (Ditolak)' }[checkIn.approvalStatus] || '')
+      : '';
     return {
       ...base,
       ...empty,
       status: isSick ? 'SAKIT' : 'CUTI',
       tone: isSick ? 'sakit' : 'cuti',
-      note: checkIn.note || (isSick ? 'Sakit' : 'Izin'),
+      note: `${checkIn.note || (isSick ? 'Sakit' : 'Izin')}${approvalSuffix}`,
       ...proof,
       proofLabel: 'Foto Bukti',
     };

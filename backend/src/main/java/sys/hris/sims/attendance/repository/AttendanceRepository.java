@@ -24,4 +24,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // [BARU] Dipakai HR/Super Admin (nanti, saat modul ini dihubungkan ke
     // Direktori Karyawan) untuk melihat absensi semua karyawan.
     List<Attendance> findAllByOrderByRecordedAtDesc();
+
+    // [BARU] Semua pengajuan Sakit (check-in dengan reason SAKIT), terbaru
+    // duluan -- dipakai halaman Persetujuan Sakit & Lembur (SuperAdmin).
+    List<Attendance> findByReasonAndActionOrderByRecordedAtDesc(String reason, String action);
 }

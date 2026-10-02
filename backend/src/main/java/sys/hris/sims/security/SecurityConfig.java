@@ -335,6 +335,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi")
                         .hasAnyRole(ADMIN_ROLES)
 
+                        // [BARU] Persetujuan Sakit -- SEMENTARA hanya SUPER_ADMIN
+                        // (HRD belum dikonfirmasi, menunya di sidebar juga dinonaktifkan).
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/approvals/sakit")
+                        .hasRole("SUPER_ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/absensi/*/approval")
+                        .hasRole("SUPER_ADMIN")
+
                         // ==========================
                         // PENGAJUAN LEMBUR (Overtime)
                         // ==========================
@@ -344,6 +352,13 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST, "/api/lembur/me")
                         .authenticated()
+
+                        // [BARU] Persetujuan Lembur -- SEMENTARA hanya SUPER_ADMIN.
+                        .requestMatchers(HttpMethod.GET, "/api/lembur/approvals")
+                        .hasRole("SUPER_ADMIN")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/lembur/*/approval")
+                        .hasRole("SUPER_ADMIN")
 
                         // ==========================
                         // LEAVE TYPE

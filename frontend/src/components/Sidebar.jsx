@@ -58,11 +58,16 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
   // Menu Khusus HRD (Gambar 3)
   const hrMenuItems = [
     { path: '/karyawan', name: 'Kelola Karyawan (HR)', icon: 'fa-solid fa-users' },
+    // [BARU] Tampil tapi NONAKTIF untuk HR -- kebutuhan akses HR belum dikonfirmasi.
+    // Hapus `disabled` (dan ubah rule di SecurityConfig) kalau HR sudah boleh.
+    { path: '/persetujuan', name: 'Persetujuan Sakit & Lembur', icon: 'fa-solid fa-clipboard-check', disabled: true },
   ];
 
   // Menu Khusus Super Admin (Gambar 4)
   const superAdminMenuItems = [
     { path: '/karyawan', name: 'Pengaturan Akun', icon: 'fa-solid fa-gear' },
+    // [BARU] Hanya SuperAdmin yang bisa mengklik menu ini.
+    { path: '/persetujuan', name: 'Persetujuan Sakit & Lembur', icon: 'fa-solid fa-clipboard-check' },
   ];
 
   // LOGIKA HELPER INDIVIDU
@@ -73,6 +78,21 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
 
   const renderLinks = (items) => {
     return items.map((item) => {
+      // [BARU] Menu nonaktif: tampil tapi tidak bisa diklik (bukan <Link>)
+      if (item.disabled) {
+        return (
+          <span
+            key={item.path}
+            className="menu-link inactive menu-link-disabled"
+            aria-disabled="true"
+            title="Belum tersedia untuk role Anda"
+          >
+            <i className={item.icon}></i>
+            <span style={{ flex: 1 }}>{item.name}</span>
+          </span>
+        );
+      }
+
       const isActive = location.pathname.startsWith(item.path) || (item.path === '/dashboard' && location.pathname === '/');
       return (
         <Link

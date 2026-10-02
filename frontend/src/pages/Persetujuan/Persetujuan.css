@@ -1,0 +1,95 @@
+/* src/pages/Persetujuan/Persetujuan.css -- layout halaman, header, filter */
+
+.persetujuan-page {
+  max-width: var(--page-max-width, 1280px);
+  margin: 0 auto;
+}
+
+.apv-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 20px 24px 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.apv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.apv-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-size: 17px;
+  color: var(--color-primary);
+}
+
+.apv-header h1 svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-success);
+}
+
+.apv-header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.apv-area-badge {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.apv-filter {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 14px;
+}
+
+.apv-filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dfe5ee;
+  background: var(--color-surface);
+  color: #607089;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.apv-filter-button:hover { background: #f4f6fa; }
+
+.apv-filter-button.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.apv-filter-count {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+}

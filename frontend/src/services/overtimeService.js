@@ -15,6 +15,16 @@ export async function submitOvertime({ overtimeDate, startTime, endTime, reason 
   return api.post('/api/lembur/me', { overtimeDate, startTime, endTime, reason });
 }
 
+// [BARU] Persetujuan Lembur (SuperAdmin): daftar semua pengajuan & keputusan.
+// status: 'APPROVED' | 'REJECTED'
+export async function getOvertimeApprovals() {
+  return api.get('/api/lembur/approvals');
+}
+
+export async function decideOvertimeApproval(overtimeId, status) {
+  return api.put(`/api/lembur/${overtimeId}/approval`, { status });
+}
+
 export const OVERTIME_STATUS = {
   PENDING: { label: 'MENUNGGU ACC', shortLabel: 'MENUNGGU', tone: 'pending' },
   APPROVED: { label: 'APPROVED (ACC)', shortLabel: 'ACC', tone: 'approved' },
@@ -41,6 +51,7 @@ const toClockLabel = (time) => (time ? String(time).slice(0, 5) : '-');
 export function toDisplayOvertime(item) {
   return {
     id: item.overtimeId,
+    employeeName: item.employeeName || '-', // [BARU] dipakai halaman Persetujuan
     date: item.overtimeDate, // "2026-09-28"
     startTime: toClockLabel(item.startTime),
     endTime: toClockLabel(item.endTime),
