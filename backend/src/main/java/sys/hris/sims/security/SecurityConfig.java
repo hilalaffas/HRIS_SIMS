@@ -335,13 +335,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi")
                         .hasAnyRole(ADMIN_ROLES)
 
-                        // [BARU] Persetujuan Sakit -- SEMENTARA hanya SUPER_ADMIN
-                        // (HRD belum dikonfirmasi, menunya di sidebar juga dinonaktifkan).
+                        // [UBAH] Persetujuan Sakit -- Leader, SPV, Manager (tab "Izin Sakit"
+                        // di Persetujuan Cuti). Cakupan per divisi dicek di AttendanceService.
                         .requestMatchers(HttpMethod.GET, "/api/absensi/approvals/sakit")
-                        .hasRole("SUPER_ADMIN")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER")
 
                         .requestMatchers(HttpMethod.PUT, "/api/absensi/*/approval")
-                        .hasRole("SUPER_ADMIN")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER")
 
                         // ==========================
                         // PENGAJUAN LEMBUR (Overtime)
@@ -353,12 +353,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/lembur/me")
                         .authenticated()
 
-                        // [BARU] Persetujuan Lembur -- SEMENTARA hanya SUPER_ADMIN.
+                        // [UBAH] Persetujuan Lembur -- Leader, SPV, Manager, SuperAdmin.
+                        // Cakupan per divisi dicek di OvertimeService.
                         .requestMatchers(HttpMethod.GET, "/api/lembur/approvals")
-                        .hasRole("SUPER_ADMIN")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN")
 
                         .requestMatchers(HttpMethod.PUT, "/api/lembur/*/approval")
-                        .hasRole("SUPER_ADMIN")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN")
 
                         // ==========================
                         // LEAVE TYPE

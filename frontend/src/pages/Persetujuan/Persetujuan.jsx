@@ -1,16 +1,13 @@
 // src/pages/Persetujuan/Persetujuan.jsx
 //
-// Halaman "Persetujuan Sakit & Lembur" (menu SuperAdmin). Menggabungkan dua
-// sumber jadi satu tabel:
-//   - Izin Sakit : absensi dengan reason SAKIT (services/attendanceService.js)
-//   - Lembur     : Pengajuan Lembur (services/overtimeService.js)
-// SEMENTARA hanya SuperAdmin yang bisa membuka halaman ini (route +
-// SecurityConfig); akses HRD belum dikonfirmasi.
+// [UBAH] Halaman "Persetujuan Lembur" untuk Leader, SPV, Manager, dan SuperAdmin.
+// Data dari services/overtimeService.js; cakupan per divisi ditentukan backend
+// (OvertimeService + ApprovalScopeService). Persetujuan Izin Sakit sudah
+// dipindah ke tab "Izin Sakit" di halaman Persetujuan Cuti (ApproveLeave).
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleCheck } from 'lucide-react';
 import Toast from '../../components/Toast';
-import ApprovalTable from './components/ApprovalTable';
-import { decideSickApproval, getSickApprovals } from '../../services/attendanceService';
+import ApprovalTable from '../../components/ApprovalTable';
 import {
   decideOvertimeApproval,
   formatOvertimeDuration,
@@ -25,28 +22,14 @@ const FILTERS = [
 
 const clockLabel = (time) => (time ? String(time).slice(0, 5) : '-');
 
-// Bentuk baris seragam untuk tabel (satu bentuk untuk Sakit & Lembur).
-const toSickRow = (item) => ({
-  rowKey: `sakit-${item.attendanceId}`,
-  kind: 'sakit',
-  id: item.attendanceId,
-  employeeName: item.employeeName || '-',
-  date: item.attendanceDate,
-  detail: item.note || 'Sakit',
-  subDetail: '',
-  proofUrl: item.photoUrl || '',
-  status: String(item.approvalStatus || '').toUpperCase(),
-});
-
+// Bentuk baris untuk tabel persetujuan.
 const toOvertimeRow = (item) => ({
   rowKey: `lembur-${item.overtimeId}`,
-  kind: 'lembur',
   id: item.overtimeId,
   employeeName: item.employeeName || '-',
   date: item.overtimeDate,
   detail: item.reason || '-',
   subDetail: `${clockLabel(item.startTime)} - ${clockLabel(item.endTime)} (${formatOvertimeDuration(item.totalMinutes)})`,
-  proofUrl: '',
   status: String(item.status || '').toUpperCase(),
 });
 
@@ -74,13 +57,10 @@ export default function Persetujuan() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getSickApprovals(), getOvertimeApprovals()])
-      .then(([sickData, overtimeData]) => {
+    getOvertimeApprovals()
+      .then((overtimeData) => {
         if (cancelled) return;
-        setRows([
-          ...(sickData || []).map(toSickRow),
-          ...(overtimeData || []).map(toOvertimeRow),
-        ].sort(sortRows));
+        setRows((overtimeData || []).map(toOvertimeRow).sort(sortRows));
       })
       .catch((error) => {
         if (!cancelled) showToast(error?.message || 'Gagal memuat data persetujuan.', 'error');
@@ -104,11 +84,7 @@ export default function Persetujuan() {
     processingLock.current = true;
     setProcessingKey(row.rowKey);
     try {
-      if (row.kind === 'sakit') {
-        await decideSickApproval(row.id, status);
-      } else {
-        await decideOvertimeApproval(row.id, status);
-      }
+      await decideOvertimeApproval(row.id, status);
       // Baris tetap ada di daftar "Semua" dengan status baru; di filter
       // "Menunggu" otomatis hilang karena bukan PENDING lagi.
       setRows((current) => current
@@ -130,9 +106,9 @@ export default function Persetujuan() {
           <div>
             <h1>
               <CircleCheck aria-hidden="true" />
-              Persetujuan Sakit &amp; Lembur
+              Persetujuan Lembur
             </h1>
-            <p>Konfirmasi izin sakit dan pengajuan lembur karyawan.</p>
+            <p>Konfirmasi pengajuan lembur karyawan.</p>
           </div>
           <span className="apv-area-badge">Area Persetujuan</span>
         </header>

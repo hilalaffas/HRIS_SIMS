@@ -74,11 +74,11 @@ public class AttendanceController {
     // ADMIN_ROLES di SecurityConfig. Disiapkan untuk pengembangan lanjutan
     // (dihubungkan ke Direktori Karyawan / rekap bersama data Cuti), belum
     // dipakai halaman frontend mana pun saat ini.
-    // [BARU] GET daftar pengajuan Sakit untuk halaman persetujuan -- hanya SuperAdmin
-    // (dibatasi di SecurityConfig).
+    // [UBAH] GET daftar pengajuan Sakit untuk tab "Izin Sakit" di Persetujuan Cuti --
+    // Leader, SPV, Manager (dibatasi di SecurityConfig; cakupan datanya di AttendanceService).
     @GetMapping("/approvals/sakit")
-    public ResponseEntity<List<AttendanceResponse>> getSickApprovals() {
-        return ResponseEntity.ok(attendanceService.getSickApprovals());
+    public ResponseEntity<List<AttendanceResponse>> getSickApprovals(Authentication authentication) {
+        return ResponseEntity.ok(attendanceService.getSickApprovals(authentication));
     }
 
     // [BARU] PUT setujui/tolak pengajuan Sakit -- body: { "status": "APPROVED" | "REJECTED" }
@@ -88,7 +88,7 @@ public class AttendanceController {
             @RequestBody ApprovalDecisionRequest request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
-        AttendanceResponse response = attendanceService.decideSick(attendanceId, request.getStatus());
+        AttendanceResponse response = attendanceService.decideSick(attendanceId, request.getStatus(), authentication);
 
         activityLogService.log(
                 authentication.getName(),

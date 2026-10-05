@@ -17,7 +17,8 @@ export async function getMyAttendanceHistory() {
   return api.get('/api/absensi/me');
 }
 
-// [BARU] Persetujuan Sakit (SuperAdmin): daftar pengajuan & keputusan.
+// [UBAH] Persetujuan Sakit (Leader/SPV/Manager, tab "Izin Sakit" di Persetujuan Cuti):
+// daftar pengajuan bawahan di divisi yang sama & keputusan.
 // status: 'APPROVED' | 'REJECTED'
 export async function getSickApprovals() {
   return api.get('/api/absensi/approvals/sakit');

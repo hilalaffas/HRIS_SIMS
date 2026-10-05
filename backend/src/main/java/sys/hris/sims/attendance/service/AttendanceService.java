@@ -8,9 +8,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import sys.hris.sims.common.service.ApprovalScopeService;
+import sys.hris.sims.common.service.ApprovalScopeService.ApprovalScope;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
 import sys.hris.sims.attendance.entity.Attendance;
@@ -30,6 +33,8 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
     private final CloudinaryService cloudinaryService;
+    // [BARU] Aturan siapa boleh melihat / memutuskan sakit siapa.
+    private final ApprovalScopeService approvalScopeService;
 
     public List<AttendanceResponse> getMyHistory(String username) {
         Employee employee = resolveEmployee(username);
@@ -115,17 +120,20 @@ public class AttendanceService {
         return toResponse(saved);
     }
 
-    // [BARU] Daftar pengajuan Sakit untuk halaman persetujuan SuperAdmin.
-    public List<AttendanceResponse> getSickApprovals() {
+    // [UBAH] Daftar pengajuan Sakit untuk tab "Izin Sakit" di Persetujuan Cuti:
+    // hanya bawahan di divisi approver (lihat ApprovalScopeService).
+    public List<AttendanceResponse> getSickApprovals(Authentication authentication) {
+        ApprovalScope scope = approvalScopeService.resolve(authentication);
         return attendanceRepository.findByReasonAndActionOrderByRecordedAtDesc("SAKIT", "MASUK")
                 .stream()
+                .filter(attendance -> scope.canHandle(attendance.getEmployee()))
                 .map(this::toResponse)
                 .toList();
     }
 
     // [BARU] Setujui / tolak pengajuan Sakit. Hanya yang masih PENDING yang
     // bisa diputuskan, supaya keputusan tidak bolak-balik tanpa jejak.
-    public AttendanceResponse decideSick(Long attendanceId, String decision) {
+    public AttendanceResponse decideSick(Long attendanceId, String decision, Authentication authentication) {
         String status = normalize(decision);
         if (!status.equals("APPROVED") && !status.equals("REJECTED")) {
             throw new IllegalArgumentException("Keputusan tidak valid. Gunakan APPROVED atau REJECTED.");
@@ -135,6 +143,10 @@ public class AttendanceService {
                 .orElseThrow(() -> new IllegalArgumentException("Data absensi tidak ditemukan."));
         if (!"SAKIT".equals(attendance.getReason())) {
             throw new IllegalArgumentException("Hanya pengajuan Sakit yang bisa diputuskan.");
+        }
+        // [BARU] Cegah memutuskan sakit di luar divisi / jenjang / milik sendiri.
+        if (!approvalScopeService.resolve(authentication).canHandle(attendance.getEmployee())) {
+            throw new IllegalStateException("Anda tidak berwenang memproses pengajuan sakit ini.");
         }
         if (!"PENDING".equals(attendance.getApprovalStatus())) {
             throw new IllegalStateException("Pengajuan ini sudah diproses.");

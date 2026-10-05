@@ -12,6 +12,8 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
   const isSuperAdmin = userRole.includes('super_admin');
   const isHRAdmin = userRole.includes('hrd_admin') || userRole.includes('admin') && !isSuperAdmin;
   const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader') ||userRole.includes('hrd_karyawan');
+  // [BARU] Hanya Leader/SPV/Manager (bukan hrd_karyawan) yang punya persetujuan lembur.
+  const isLeaderSpvManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader');
 
   // 1. DAFTAR MENU BERDASARKAN HAK AKSES (MENYESUAIKAN GAMBAR)
   
@@ -55,19 +57,26 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
     },
   ];
 
+  // [BARU] Persetujuan Lembur: Leader/SPV/Manager (di bawah "Persetujuan Cuti").
+  // Persetujuan Sakit ada sebagai tab di halaman Persetujuan Cuti.
+  if (isLeaderSpvManager) {
+    approvalMenuItems.push({
+      path: '/persetujuan',
+      name: 'Persetujuan Lembur',
+      icon: 'fa-solid fa-clipboard-check',
+    });
+  }
+
   // Menu Khusus HRD (Gambar 3)
   const hrMenuItems = [
     { path: '/karyawan', name: 'Kelola Karyawan (HR)', icon: 'fa-solid fa-users' },
-    // [BARU] Tampil tapi NONAKTIF untuk HR -- kebutuhan akses HR belum dikonfirmasi.
-    // Hapus `disabled` (dan ubah rule di SecurityConfig) kalau HR sudah boleh.
-    { path: '/persetujuan', name: 'Persetujuan Sakit & Lembur', icon: 'fa-solid fa-clipboard-check', disabled: true },
   ];
 
   // Menu Khusus Super Admin (Gambar 4)
   const superAdminMenuItems = [
     { path: '/karyawan', name: 'Pengaturan Akun', icon: 'fa-solid fa-gear' },
-    // [BARU] Hanya SuperAdmin yang bisa mengklik menu ini.
-    { path: '/persetujuan', name: 'Persetujuan Sakit & Lembur', icon: 'fa-solid fa-clipboard-check' },
+    // [UBAH] SuperAdmin hanya punya Persetujuan Lembur (semua divisi).
+    { path: '/persetujuan', name: 'Persetujuan Lembur', icon: 'fa-solid fa-clipboard-check' },
   ];
 
   // LOGIKA HELPER INDIVIDU

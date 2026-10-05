@@ -5,9 +5,12 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import sys.hris.sims.common.service.ApprovalScopeService;
+import sys.hris.sims.common.service.ApprovalScopeService.ApprovalScope;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.overtime.dto.OvertimeResponse;
@@ -23,6 +26,8 @@ public class OvertimeService {
 
     private final OvertimeRepository overtimeRepository;
     private final EmployeeRepository employeeRepository;
+    // [BARU] Aturan siapa boleh melihat / memutuskan lembur siapa.
+    private final ApprovalScopeService approvalScopeService;
 
     public List<OvertimeResponse> getMyOvertime(String username) {
         Employee employee = resolveEmployee(username);
@@ -33,16 +38,19 @@ public class OvertimeService {
                 .toList();
     }
 
-    // [BARU] Semua pengajuan lembur untuk halaman persetujuan SuperAdmin.
-    public List<OvertimeResponse> getAllForApproval() {
+    // [UBAH] Pengajuan lembur untuk halaman persetujuan: SuperAdmin melihat
+    // semua, Leader/SPV/Manager hanya bawahan di divisinya (lihat ApprovalScopeService).
+    public List<OvertimeResponse> getAllForApproval(Authentication authentication) {
+        ApprovalScope scope = approvalScopeService.resolve(authentication);
         return overtimeRepository.findAllByOrderByOvertimeDateDescOvertimeIdDesc()
                 .stream()
+                .filter(overtime -> scope.canHandle(overtime.getEmployee()))
                 .map(this::toResponse)
                 .toList();
     }
 
     // [BARU] Setujui / tolak lembur. Hanya yang masih PENDING yang bisa diputuskan.
-    public OvertimeResponse decide(Long overtimeId, String decision) {
+    public OvertimeResponse decide(Long overtimeId, String decision, Authentication authentication) {
         String status = decision == null ? "" : decision.trim().toUpperCase(Locale.ROOT);
         if (!status.equals("APPROVED") && !status.equals("REJECTED")) {
             throw new IllegalArgumentException("Keputusan tidak valid. Gunakan APPROVED atau REJECTED.");
@@ -50,6 +58,10 @@ public class OvertimeService {
 
         OvertimeRequest overtime = overtimeRepository.findById(overtimeId)
                 .orElseThrow(() -> new IllegalArgumentException("Pengajuan lembur tidak ditemukan."));
+        // [BARU] Cegah memutuskan lembur di luar divisi / jenjang / milik sendiri.
+        if (!approvalScopeService.resolve(authentication).canHandle(overtime.getEmployee())) {
+            throw new IllegalStateException("Anda tidak berwenang memproses pengajuan lembur ini.");
+        }
         if (!"PENDING".equals(overtime.getStatus())) {
             throw new IllegalStateException("Pengajuan ini sudah diproses.");
         }

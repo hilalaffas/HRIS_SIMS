@@ -27,7 +27,7 @@ import Absensi from '../pages/Absensi/absensi';
 import Lembur from '../pages/Lembur/Lembur';
 // [BARU] Halaman Persetujuan Sakit & Lembur (SuperAdmin)
 import Persetujuan from '../pages/Persetujuan/Persetujuan';
-import { isSuperAdmin } from '../utils/roles';
+import { isManagerOrSpv, isSuperAdmin } from '../utils/roles';
 
 
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
@@ -72,11 +72,11 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           {/* [BARU] Wadah Halaman Pengajuan Lembur */}
           <Route path="/lembur" element={<Lembur />} />
 
-          {/* [BARU] Persetujuan Sakit & Lembur -- SEMENTARA hanya SuperAdmin;
+          {/* [UBAH] Persetujuan Lembur -- Leader, SPV, Manager, dan SuperAdmin;
               role lain dialihkan ke dashboard (backend juga menolak 403). */}
           <Route
             path="/persetujuan"
-            element={isSuperAdmin(user) ? <Persetujuan /> : <Navigate to="/dashboard" replace />}
+            element={isManagerOrSpv(user) || isSuperAdmin(user) ? <Persetujuan /> : <Navigate to="/dashboard" replace />}
           />
 
           {/* Wadah Halaman Manajemen Karyawan */}

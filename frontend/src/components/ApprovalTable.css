@@ -45,19 +45,7 @@
   padding: 30px 12px !important;
 }
 
-/* Badge tipe permohonan */
-.apv-type {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.apv-type-sakit { background: var(--color-info-bg); color: var(--color-info); }
-.apv-type-lembur { background: var(--color-warning-bg); color: var(--color-warning); }
-
+/* Tautan foto bukti (Izin Sakit) */
 .apv-proof {
   display: inline-flex;
   align-items: center;

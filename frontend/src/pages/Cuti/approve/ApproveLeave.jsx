@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom'; // [BARU] baca query param dari notifikasi cuti
 import './ApproveLeave.css';
 
@@ -7,8 +7,11 @@ import TabMenu from './components/TabMenu';
 import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
+import SickApprovalSection from './components/SickApprovalSection'; // [BARU] tab Izin Sakit
 import ActionReasonModal from './components/ActionReasonModal';
 import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
+import { decideSickApproval, getSickApprovals } from '../../../services/attendanceService'; // [BARU]
+import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
 
 /**
  * ApproveLeaving.jsx
@@ -31,7 +34,7 @@ import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingA
  * reusable & mudah di-test.
  * ------------------------------------------------------------------
  */
-const ApproveLeaving = () => {
+const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim AppRoutes)
   const [activeTab, setActiveTab] = useState("proses"); // 'proses' | 'list'
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU]
@@ -79,6 +82,51 @@ const ApproveLeaving = () => {
     } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
   }, [mergeSisaCutiPemohon]);
   useEffect(() => { loadData(); }, [loadData]);
+
+  // [BARU] Izin Sakit -- hanya untuk Leader/SPV/Manager. Backend sudah memfilter
+  // bawahan di divisi yang sama (AttendanceService + ApprovalScopeService).
+  const canApproveSick = isManagerOrSpv(user);
+  const [sickItems, setSickItems] = useState([]);
+  const [sickLoading, setSickLoading] = useState(canApproveSick);
+  const [sickProcessingKey, setSickProcessingKey] = useState('');
+  // Gerbang sinkron anti klik ganda (state saja terlambat satu render).
+  const sickProcessingLock = useRef(false);
+
+  useEffect(() => {
+    if (!canApproveSick) return undefined;
+    let cancelled = false;
+    getSickApprovals()
+      .then((data) => {
+        if (!cancelled) setSickItems(data || []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'Gagal memuat data izin sakit.');
+      })
+      .finally(() => {
+        if (!cancelled) setSickLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canApproveSick]);
+
+  const handleSickDecision = async (row, status) => {
+    if (sickProcessingLock.current) return;
+    sickProcessingLock.current = true;
+    setSickProcessingKey(row.rowKey);
+    try {
+      await decideSickApproval(row.id, status);
+      // Baris tetap tampil dengan status baru (Disetujui / Ditolak).
+      setSickItems((current) => current.map((item) => (
+        item.attendanceId === row.id ? { ...item, approvalStatus: status } : item
+      )));
+    } catch (err) {
+      alert(err.message || 'Izin sakit gagal diproses.');
+    } finally {
+      sickProcessingLock.current = false;
+      setSickProcessingKey('');
+    }
+  };
 
   // Permohonan yang sedang menunggu alasan dari approver.
   // Bentuknya { item, action } | null. Selama ini bernilai isi,
@@ -146,12 +194,16 @@ const ApproveLeaving = () => {
     } catch (err) { alert(err.message || 'Aksi cuti gagal diproses.'); }
   };
 
+  const sickPendingCount = sickItems.filter((item) => item.approvalStatus === 'PENDING').length;
+
+  // [UBAH] Tab "Izin Sakit" hanya muncul untuk Leader/SPV/Manager.
   const tabs = useMemo(
     () => [
       { key: "proses", label: "Perlu Diproses", badge: pendingCount },
       { key: "list", label: "List Cuti", badge: 0 },
+      ...(canApproveSick ? [{ key: "sakit", label: "Izin Sakit", badge: sickPendingCount }] : []),
     ],
-    [pendingCount]
+    [pendingCount, canApproveSick, sickPendingCount]
   );
 
   return (
@@ -162,14 +214,23 @@ const ApproveLeaving = () => {
         {error && <div className="approvalSection__empty">{error}</div>}
         <TabMenu tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
       
-        {activeTab === "proses" ? (
+        {activeTab === "proses" && (
           <ApproveSection
             data={pending}
             onRequestAction={handleRequestAction}
             onOpenDetail={handleOpenDetail}
           />
-        ) : (
+        )}
+        {activeTab === "list" && (
           <ListCutiSection data={history} onOpenDetail={handleOpenDetail} />
+        )}
+        {activeTab === "sakit" && canApproveSick && (
+          <SickApprovalSection
+            items={sickItems}
+            loading={sickLoading}
+            processingKey={sickProcessingKey}
+            onDecision={handleSickDecision}
+          />
         )}
       </div>
       {/*Bagian popup detail riwayat (FormCuti)*/}

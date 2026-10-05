@@ -43,11 +43,11 @@ public class OvertimeController {
         return ResponseEntity.ok(overtimeService.getMyOvertime(authentication.getName()));
     }
 
-    // [BARU] GET semua pengajuan lembur untuk halaman persetujuan -- hanya SuperAdmin
-    // (dibatasi di SecurityConfig).
+    // [UBAH] GET pengajuan lembur untuk halaman persetujuan -- SuperAdmin, Leader,
+    // SPV, Manager (dibatasi di SecurityConfig; cakupan datanya di OvertimeService).
     @GetMapping("/approvals")
-    public ResponseEntity<List<OvertimeResponse>> getAllForApproval() {
-        return ResponseEntity.ok(overtimeService.getAllForApproval());
+    public ResponseEntity<List<OvertimeResponse>> getAllForApproval(Authentication authentication) {
+        return ResponseEntity.ok(overtimeService.getAllForApproval(authentication));
     }
 
     // [BARU] PUT setujui/tolak lembur -- body: { "status": "APPROVED" | "REJECTED" }
@@ -57,7 +57,7 @@ public class OvertimeController {
             @RequestBody ApprovalDecisionRequest request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
-        OvertimeResponse response = overtimeService.decide(overtimeId, request.getStatus());
+        OvertimeResponse response = overtimeService.decide(overtimeId, request.getStatus(), authentication);
 
         activityLogService.log(
                 authentication.getName(),
