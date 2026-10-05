@@ -9,12 +9,14 @@ const SUPERSECRET_USERNAME = 'supersecret';
 const SUPERSECRET_PATH = '/supersecret';
 
 const ProtectedRoute = () => {
-  // Mengecek apakah token ada di localStorage
+  // Preview Vite development dapat melihat dashboard tanpa login.
+  // Build production tetap menggunakan autentikasi normal.
+  const isPreviewMode = import.meta.env.DEV;
   const token = localStorage.getItem('token');
   const location = useLocation();
 
   // Jika token TIDAK ada, arahkan (redirect) ke halaman login
-  if (!token) {
+  if (!token && !isPreviewMode) {
     // Simpan URL yang sedang coba diakses (mis. user buka bookmark/link
     // langsung ke halaman protected setelah lama tidak aktif) supaya
     // App.jsx bisa mengembalikan user ke sini lagi setelah login ulang,
