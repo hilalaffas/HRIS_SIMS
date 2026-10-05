@@ -1,28 +1,21 @@
 /* src/pages/Dashboard/components/CutiSummaryCards.css */
 
-.cuti-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
 .cuti-card {
   position: relative;
-  min-height: 122px;
-  border-radius: 12px;
-  padding: 16px 15px;
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 3px;
+  gap: 1px;
   overflow: hidden;
-  color: #ffffff;
+  height: 30%;
 }
 
-.cuti-card--cuti { background-color: var(--color-primary); }
-.cuti-card--kehadiran { background-color: #66707a; }
-.cuti-card--terlambat { background-color: #114f43; }
-.cuti-card--izin { background-color: #dc3545; }
+/* Card gelap (hijau tua) - Sisa Cuti Tahunan */
+.cuti-card--dark {
+  background-color: var(--color-primary); /* disamakan dgn brand green, sebelumnya #14532d */
+  color: #ffffff;
+}
 
 .cuti-card__label {
   font-size: 0.7rem;
@@ -39,7 +32,7 @@
 }
 
 .cuti-card__number {
-  font-size: 2rem;
+  font-size: 3rem;
   font-weight: 800;
   line-height: 1;
   color: #ffffff;
@@ -58,7 +51,6 @@
 
 .cuti-card__icon {
   position: absolute;
-<<<<<<< HEAD
   right: 20px;
   bottom: 16px;
   font-size: 3.5rem;
@@ -97,26 +89,4 @@
   right: 16px;
   bottom: 10px;
   font-size: 2.5rem;
-=======
-  right: 14px;
-  bottom: 12px;
-  font-size: 2.4rem;
-  color: rgba(255, 255, 255, 0.14);
-}
-
-@media (max-width: 639px) {
-  .cuti-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
-  }
-
-  .cuti-card {
-    min-height: 112px;
-    padding: 14px 13px;
-  }
-
-  .cuti-card__number {
-    font-size: 1.8rem;
-  }
->>>>>>> b01fc7bc26d1991e62be2d932d19d4d3c7162788
 }
