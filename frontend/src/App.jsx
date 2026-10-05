@@ -23,7 +23,11 @@ const AppContent = () => {
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
   // Gunakan state untuk user agar UI langsung ter-update saat login/logout
-  const [currentUser, setCurrentUser] = useState({ name: 'Guest', role: 'Guest' });
+  const [currentUser, setCurrentUser] = useState(() => (
+    import.meta.env.DEV
+      ? { name: 'Demo Karyawan', role: 'Karyawan', gender: 'Laki-laki' }
+      : { name: 'Guest', role: 'Guest' }
+  ));
 
   // Ambil data user dari localStorage hanya saat aplikasi pertama kali dimuat
   useEffect(() => {

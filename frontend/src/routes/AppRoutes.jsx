@@ -33,8 +33,8 @@ import { isManagerOrSpv, isSuperAdmin } from '../utils/roles';
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
   return (
     <Routes>
-      {/* 1. HALAMAN UTAMA: Otomatis lempar ke halaman login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* 1. HALAMAN UTAMA: Preview development langsung membuka dashboard. */}
+      <Route path="/" element={<Navigate to={import.meta.env.DEV ? "/dashboard" : "/login"} replace />} />
 
       {/* 2. RUTE PUBLIC: Hanya bisa diakses jika BELUM login */}
       <Route element={<PublicRoute />}>
