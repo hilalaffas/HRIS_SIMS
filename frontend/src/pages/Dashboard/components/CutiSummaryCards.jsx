@@ -21,22 +21,20 @@ const formatTanggal = (isoDate) => {
  * <CutiSummaryCards balance={balance} />
  */
 export default function CutiSummaryCards({ balance, isLoading = false }) {
-  // [BARU] Selagi balance belum datang dari backend, tampilkan skeleton
-  // dengan bentuk kartu yang sama persis -- sebelumnya kartu ini langsung
-  // menampilkan "0 Hari" (angka default saat balance masih null), yang
-  // menyesatkan karena terlihat seperti data asli padahal belum tentu 0.
+  const totalSisa = balance?.totalRemainingLeave ?? 0;
+
   if (isLoading) {
     return (
-      <div className="cuti-card cuti-card--dark" aria-hidden="true">
-        <Skeleton className="skeleton--onDark" width={110} height={11} style={{ marginBottom: 10 }} />
-        <Skeleton className="skeleton--onDark" width={90} height={38} style={{ marginBottom: 10 }} />
-        <Skeleton className="skeleton--onDark" width="80%" height={11} />
-        <i className="fa-regular fa-calendar cuti-card__icon" aria-hidden="true"></i>
+      <div className="cuti-summary-grid" aria-label="Memuat ringkasan informasi">
+        {["cuti", "kehadiran", "terlambat", "izin"].map((type) => (
+          <div className={`cuti-card cuti-card--${type}`} key={type} aria-hidden="true">
+            <Skeleton className="skeleton--onDark" width={100} height={10} style={{ marginBottom: 10 }} />
+            <Skeleton className="skeleton--onDark" width={64} height={32} />
+          </div>
+        ))}
       </div>
     );
   }
-
-  const totalSisa = balance?.totalRemainingLeave ?? 0;
   const sisaManual = balance?.remainingManualLeave ?? 0;
   const tanggalRefresh = formatTanggal(balance?.annualPeriodEnd);
   const tanggalMulaiBerhak = formatTanggal(balance?.annualEligibleFrom);
@@ -57,19 +55,26 @@ export default function CutiSummaryCards({ balance, isLoading = false }) {
     catatan += ` • Defisit cuti tahunan ${Math.abs(Number(balance.remainingAnnualLeave))} hari akan mengurangi kuota pada reset berikutnya`;
   }
 
+  const cards = [
+    { type: 'cuti', label: 'TOTAL SISA CUTI', value: totalSisa, unit: 'Hari', icon: 'fa-calendar', note: catatan },
+    { type: 'kehadiran', label: 'TOTAL KEHADIRAN', value: 0, unit: 'Hari', icon: 'fa-user-check', note: 'Periode berjalan' },
+    { type: 'terlambat', label: 'TERLAMBAT', value: 0, unit: 'Kali', icon: 'fa-triangle-exclamation', note: 'Periode berjalan' },
+    { type: 'izin', label: 'IZIN / CUTI', value: 0, unit: 'Hari', icon: 'fa-file-lines', note: 'Periode berjalan' },
+  ];
+
   return (
-    <div className="cuti-card cuti-card--dark">
-      <span className="cuti-card__label">TOTAL SISA CUTI</span>
-
-      <div className="cuti-card__value">
-        <span className="cuti-card__number">{totalSisa}</span>
-        <span className="cuti-card__unit">Hari</span>
-      </div>
-
-      <span className="cuti-card__note">{catatan}</span>
-
-      {/* Ikon kalender dekoratif */}
-      <i className="fa-regular fa-calendar cuti-card__icon" aria-hidden="true"></i>
+    <div className="cuti-summary-grid" aria-label="Ringkasan informasi karyawan">
+      {cards.map(({ type, label, value, unit, icon, note }) => (
+        <article className={`cuti-card cuti-card--${type}`} key={type}>
+          <span className="cuti-card__label">{label}</span>
+          <div className="cuti-card__value">
+            <span className="cuti-card__number">{value}</span>
+            <span className="cuti-card__unit">{unit}</span>
+          </div>
+          <span className="cuti-card__note">{note}</span>
+          <i className={`fa-regular ${icon} cuti-card__icon`} aria-hidden="true"></i>
+        </article>
+      ))}
     </div>
   );
 }
