@@ -56,3 +56,37 @@
   font-size: 3.5rem;
   color: rgba(255, 255, 255, 0.08);
 }
+
+/* [BARU] Varian ringkas khusus card Total Sisa Cuti di Dashboard: padding,
+   angka, ikon, dan catatan dikecilkan supaya card tidak terlalu tinggi.
+   Memakai modifier class sehingga base .cuti-card (dan card lain / halaman
+   Apply Cuti) tidak berubah. */
+.cuti-card--compact {
+  height: auto;
+  padding: 14px 18px;
+  gap: 2px;
+}
+
+.cuti-card--compact .cuti-card__number {
+  font-size: 2rem;
+}
+
+.cuti-card--compact .cuti-card__unit {
+  font-size: 0.9rem;
+}
+
+.cuti-card--compact .cuti-card__note {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding-right: 48px; /* ruang untuk ikon dekoratif */
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.cuti-card--compact .cuti-card__icon {
+  right: 16px;
+  bottom: 10px;
+  font-size: 2.5rem;
+}

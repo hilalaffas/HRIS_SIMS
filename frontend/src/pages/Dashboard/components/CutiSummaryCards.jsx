@@ -10,6 +10,15 @@ const formatTanggal = (isoDate) => {
   });
 };
 
+// [BARU] Versi ringkas (mis. "5 Okt 2027") untuk catatan di card, supaya
+// catatan cukup 1-2 baris dan card tidak membesar ke bawah.
+const formatTanggalSingkat = (isoDate) => {
+  if (!isoDate) return null;
+  return new Date(`${isoDate}T00:00:00`).toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+};
+
 /**
  * Card ringkasan sisa cuti.
  * [UBAH] Sekarang menerima objek `balance` langsung dari response
@@ -27,10 +36,10 @@ export default function CutiSummaryCards({ balance, isLoading = false }) {
   // menyesatkan karena terlihat seperti data asli padahal belum tentu 0.
   if (isLoading) {
     return (
-      <div className="cuti-card cuti-card--dark" aria-hidden="true">
-        <Skeleton className="skeleton--onDark" width={110} height={11} style={{ marginBottom: 10 }} />
-        <Skeleton className="skeleton--onDark" width={90} height={38} style={{ marginBottom: 10 }} />
-        <Skeleton className="skeleton--onDark" width="80%" height={11} />
+      <div className="cuti-card cuti-card--dark cuti-card--compact" aria-hidden="true">
+        <Skeleton className="skeleton--onDark" width={110} height={10} style={{ marginBottom: 6 }} />
+        <Skeleton className="skeleton--onDark" width={80} height={28} style={{ marginBottom: 6 }} />
+        <Skeleton className="skeleton--onDark" width="70%" height={10} />
         <i className="fa-regular fa-calendar cuti-card__icon" aria-hidden="true"></i>
       </div>
     );
@@ -38,27 +47,34 @@ export default function CutiSummaryCards({ balance, isLoading = false }) {
 
   const totalSisa = balance?.totalRemainingLeave ?? 0;
   const sisaManual = balance?.remainingManualLeave ?? 0;
-  const tanggalRefresh = formatTanggal(balance?.annualPeriodEnd);
-  const tanggalMulaiBerhak = formatTanggal(balance?.annualEligibleFrom);
+  const tanggalRefresh = formatTanggalSingkat(balance?.annualPeriodEnd);
+  const tanggalMulaiBerhak = formatTanggalSingkat(balance?.annualEligibleFrom);
 
-  // [BARU] Catatan tanggal menyesuaikan status karyawan: kalau belum genap
-  // 1 tahun kerja, kasih tau kapan cuti tahunannya mulai berlaku. Kalau
-  // sudah berhak, kasih tau kapan kuotanya refresh berikutnya.
+  // [UBAH] Catatan dipersingkat. Sebelumnya kalimat panjang ("Dapat
+  // digunakan hingga 5 Oktober 2027 (termasuk 2 hari cuti lama) • Defisit
+  // ...") membungkus jadi 3-4 baris sehingga card membesar ke bawah.
+  // Teks lengkap tetap tersedia lewat tooltip (atribut title).
   let catatan = '-';
+  let catatanLengkap = '-';
   if (tanggalMulaiBerhak) {
-    catatan = `Cuti tahunan mulai berlaku ${tanggalMulaiBerhak}`;
+    catatan = `Berlaku mulai ${tanggalMulaiBerhak}`;
+    catatanLengkap = `Cuti tahunan mulai berlaku ${formatTanggal(balance?.annualEligibleFrom)}`;
   } else if (tanggalRefresh) {
-    catatan = `Dapat digunakan hingga ${tanggalRefresh}`;
+    catatan = `Berlaku s/d ${tanggalRefresh}`;
+    catatanLengkap = `Dapat digunakan hingga ${formatTanggal(balance?.annualPeriodEnd)}`;
   }
   if (sisaManual > 0) {
-    catatan += ` (termasuk ${sisaManual} hari cuti lama)`;
+    catatan += ` • incl. ${sisaManual} hari lama`;
+    catatanLengkap += ` (termasuk ${sisaManual} hari cuti lama)`;
   }
-  if (Number(balance?.remainingAnnualLeave ?? 0) < 0) {
-    catatan += ` • Defisit cuti tahunan ${Math.abs(Number(balance.remainingAnnualLeave))} hari akan mengurangi kuota pada reset berikutnya`;
+  const defisit = Number(balance?.remainingAnnualLeave ?? 0);
+  if (defisit < 0) {
+    catatan += ` • Defisit ${Math.abs(defisit)} hari`;
+    catatanLengkap += ` • Defisit cuti tahunan ${Math.abs(defisit)} hari akan mengurangi kuota pada reset berikutnya`;
   }
 
   return (
-    <div className="cuti-card cuti-card--dark">
+    <div className="cuti-card cuti-card--dark cuti-card--compact">
       <span className="cuti-card__label">TOTAL SISA CUTI</span>
 
       <div className="cuti-card__value">
@@ -66,7 +82,7 @@ export default function CutiSummaryCards({ balance, isLoading = false }) {
         <span className="cuti-card__unit">Hari</span>
       </div>
 
-      <span className="cuti-card__note">{catatan}</span>
+      <span className="cuti-card__note" title={catatanLengkap}>{catatan}</span>
 
       {/* Ikon kalender dekoratif */}
       <i className="fa-regular fa-calendar cuti-card__icon" aria-hidden="true"></i>

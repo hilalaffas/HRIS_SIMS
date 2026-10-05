@@ -193,18 +193,23 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between ">
       
-      {isLoading && (
-        <span className="absolute top-6 right-24 text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full animate-pulse">
-          Menyinkronkan...
-        </span>
-      )}
-
       <div>
         {/* Header Navigasi */}
         <div className="flex justify-between items-center mb-4">
-          <h4 className="font-bold text-sm text-gray-800">
-            {monthNames[currentMonth]} {currentYear}
-          </h4>
+          {/* [UBAH] Badge "Menyinkronkan..." dipindah ke dalam header card
+              (sebelumnya absolute tanpa parent relative, jadi nyasar ke
+              luar card, menimpa navbar). Sekarang inline di samping judul
+              bulan, tidak menggeser tombol < >. */}
+          <div className="flex items-center gap-2 min-w-0">
+            <h4 className="font-bold text-sm text-gray-800 whitespace-nowrap">
+              {monthNames[currentMonth]} {currentYear}
+            </h4>
+            {isLoading && (
+              <span className="shrink-0 whitespace-nowrap text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full animate-pulse">
+                Menyinkronkan...
+              </span>
+            )}
+          </div>
           <div className="flex gap-1">
             <button type="button" onClick={handlePrevMonth} className="p-1 px-2 border border-gray-200 rounded-md text-xs hover:bg-gray-50 text-gray-600 font-bold cursor-pointer">&lt;</button>
             <button type="button" onClick={handleNextMonth} className="p-1 px-2 border border-gray-200 rounded-md text-xs hover:bg-gray-50 text-gray-600 font-bold cursor-pointer">&gt;</button>
