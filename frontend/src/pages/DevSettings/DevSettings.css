@@ -73,6 +73,12 @@
   transition: background-color 0.2s ease;
 }
 
+/* [BARU] Saat sedang menyimpan ke server. */
+.devsettings-switch:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .devsettings-switch.is-on {
   background-color: var(--color-primary);
 }
@@ -115,4 +121,11 @@
   margin: var(--space-2) 0 0;
   font-size: 0.75rem;
   color: var(--color-text-muted);
+}
+
+/* [BARU] Pesan gagal simpan ke server. */
+.devsettings-error {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8rem;
+  color: var(--color-danger);
 }

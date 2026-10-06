@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import ThemeToggle from '../components/ThemeToggle'; // [BARU]
 import useTheme from '../hooks/useTheme'; // [BARU]
 import useFeatureFlag from '../hooks/useFeatureFlag'; // [BARU]
+import useServerFeatureFlags from '../hooks/useServerFeatureFlags'; // [BARU]
 import { isThemeToggleEnabled } from '../utils/featureFlags'; // [BARU]
 import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
@@ -22,10 +23,12 @@ export default function MainLayout({ onLogout, user }) {
   const location = useLocation();
   // [BARU] Tema terang/gelap (disimpan di localStorage, lihat hooks/useTheme.js)
   const { theme, isDark, toggleTheme } = useTheme();
-  // [BARU] Saklar fitur dari /supersecret. Kalau MATI, tombol hilang dan tema
+  // [UBAH] Saklar fitur dari /supersecret (disimpan di server). Kalau MATI, tombol hilang dan tema
   // dipaksa terang supaya user yang sebelumnya memilih gelap tidak "terkunci"
   // di mode gelap tanpa tombol. Pilihan tersimpannya TIDAK dihapus, jadi saat
   // fitur dinyalakan lagi tema pilihan user kembali seperti semula.
+  // [BARU] Muat & segarkan flag dari server (berlaku di semua browser).
+  useServerFeatureFlags();
   const isThemeToggleOn = useFeatureFlag(isThemeToggleEnabled);
   const activeTheme = isThemeToggleOn ? theme : 'light';
 

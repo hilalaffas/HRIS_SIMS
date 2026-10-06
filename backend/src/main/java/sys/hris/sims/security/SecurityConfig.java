@@ -209,6 +209,18 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN_ROLES)
 
                         // ==========================
+                        // FEATURE FLAG (saklar fitur global, dikelola dari /supersecret)
+                        // ==========================
+                        // [BARU] GET: semua user login (dibaca frontend tiap sesi).
+                        // PUT: SUPER_ADMIN saja di sini; pembatasan ke username
+                        // 'supersecret' dilakukan lagi di FeatureFlagController.
+                        .requestMatchers(HttpMethod.GET, "/api/feature-flags")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.PUT, "/api/feature-flags/**")
+                        .hasRole("SUPER_ADMIN")
+
+                        // ==========================
                         // LEAVE
                         // ==========================
                         .requestMatchers(HttpMethod.GET,
