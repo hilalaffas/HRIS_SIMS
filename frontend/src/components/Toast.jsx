@@ -23,7 +23,19 @@ const ICON_PATHS = {
 };
 
 export default function Toast({ show = true, message, type = 'success', actionLabel, onAction }) {
-  const isSuccess = type === 'success';
+  // [BARU] Snapshot isi toast terakhir yang benar-benar tampil. Banyak
+  // pemanggil mengosongkan message/type SAAT menyembunyikan toast (App.jsx:
+  // message '', Absensi/Lembur/FormKaryawan: toast = null). Tanpa snapshot,
+  // animasi keluar (200ms) merender kotak KOSONG berwarna error. Selama
+  // `show` false, isi yang dirender diambil dari snapshot ini.
+  // actionLabel/onAction sengaja tidak jadi pemicu update: onAction biasanya
+  // lambda inline (identitas baru tiap render) dan bisa memicu loop render.
+  const [snapshot, setSnapshot] = useState({ message, type, actionLabel, onAction });
+  if (show && (snapshot.message !== message || snapshot.type !== type || snapshot.actionLabel !== actionLabel)) {
+    setSnapshot({ message, type, actionLabel, onAction });
+  }
+  const view = show ? { message, type, actionLabel, onAction } : snapshot;
+  const isSuccess = view.type === 'success';
 
   // mounted: apakah node toast masih ada di DOM sama sekali.
   // Dipisah dari `show` supaya saat show berubah jadi false, node TETAP
@@ -32,12 +44,15 @@ export default function Toast({ show = true, message, type = 'success', actionLa
   const [mounted, setMounted] = useState(show);
   const exitTimerRef = useRef(null);
 
+  // [UBAH] setMounted(true) dipindah keluar dari useEffect (pola "adjust state
+  // during render") -- menghapus error lint react-hooks/set-state-in-effect
+  // dan menghindari satu render ekstra. Perilakunya sama persis.
+  if (show && !mounted) setMounted(true);
+
   useEffect(() => {
     window.clearTimeout(exitTimerRef.current);
 
-    if (show) {
-      setMounted(true);
-    } else if (mounted) {
+    if (!show && mounted) {
       exitTimerRef.current = window.setTimeout(() => setMounted(false), EXIT_DURATION);
     }
 
@@ -57,16 +72,16 @@ export default function Toast({ show = true, message, type = 'success', actionLa
         <svg className="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={ICON_PATHS[isSuccess ? 'success' : 'error']} />
         </svg>
-        <span className="toast-message">{message}</span>
+        <span className="toast-message">{view.message}</span>
       </div>
 
       {/* Link aksi opsional (mis. "Detail") -- lihat Toast.css untuk gaya
           .toast-action yang SEBELUMNYA dipakai di sini tapi tidak pernah
           benar-benar punya CSS (tombolnya tampil polos/default browser). */}
-      {actionLabel && onAction && (
-        <button type="button" className="toast-action" onClick={onAction}>
+      {view.actionLabel && view.onAction && (
+        <button type="button" className="toast-action" onClick={view.onAction}>
           <span className="toast-action-dot" />
-          {actionLabel}
+          {view.actionLabel}
         </button>
       )}
     </div>

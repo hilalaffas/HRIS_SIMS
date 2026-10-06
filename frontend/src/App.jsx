@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import Toast from './components/Toast';
@@ -20,7 +20,12 @@ const AppContent = () => {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   // [BARU] null = modal sesi habis tersembunyi; string = tampil dengan pesan ini
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(null);
-  const [toast, setToast] = useState({ show: false, message: '', type: '' });
+  // [UBAH] type default 'success' (sebelumnya '') + tambah `id` supaya setiap
+  // toast baru dikenali sebagai toast baru (dipakai sebagai `key` di <Toast>).
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success', id: 0 });
+  // [BARU] Timer & penghitung id disimpan di ref agar bisa dibatalkan.
+  const toastTimerRef = useRef(null);
+  const toastIdRef = useRef(0);
   
   // Gunakan state untuk user agar UI langsung ter-update saat login/logout
   const [currentUser, setCurrentUser] = useState(() => (
@@ -204,9 +209,22 @@ const AppContent = () => {
   }, []);
 
   const TOAST_DURATION = 2500; // durasi toast tampil (ms), bisa disesuaikan 2000-3000
+
+  // [BARU] Bersihkan timer toast saat App di-unmount.
+  useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
+
   const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: '' }), TOAST_DURATION);
+    // [UBAH] Timer toast sebelumnya WAJIB dibatalkan. Dulu timer lama tetap
+    // jalan dan menyembunyikan toast BARU lebih cepat (mis. toast
+    // "Selamat datang" 2.5 dtk lalu logout -> toast logout ikut hilang).
+    window.clearTimeout(toastTimerRef.current);
+    toastIdRef.current += 1;
+    setToast({ show: true, message, type, id: toastIdRef.current });
+    // [UBAH] Saat disembunyikan cukup show:false; message/type DIPERTAHANKAN
+    // supaya animasi keluar tetap menampilkan isi toast (bukan kotak kosong).
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast((current) => ({ ...current, show: false }));
+    }, TOAST_DURATION);
   };
 
   const handleLoginSuccess = (userData) => {
@@ -311,7 +329,7 @@ const AppContent = () => {
 
       {/* Global Toast Notification -- selalu di-render (lihat Toast.jsx),
           visibilitas & animasi masuk/keluar dikendalikan lewat prop `show`. */}
-      <Toast show={toast.show} message={toast.message} type={toast.type} />
+      <Toast key={toast.id} show={toast.show} message={toast.message} type={toast.type} />
 
       <AppRoutes 
         user={currentUser} 
