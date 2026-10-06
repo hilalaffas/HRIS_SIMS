@@ -16,8 +16,12 @@ export const FEATURE_FLAG_CHANGE_EVENT = 'sims:feature-flag-changed';
 // loading per-halaman (Karyawan/Cuti/Profile/Dashboard) sudah cukup untuk
 // menunjukkan "sedang memuat", jadi splash logo dijadikan opsional, aktifkan
 // manual lewat halaman tersembunyi kalau memang diinginkan.
+// [BARU] themeToggle: tombol tema terang/gelap di footer (components/ThemeToggle.jsx).
+// Default NYALA. Kalau dimatikan lewat /supersecret, tombol hilang dan tampilan
+// dikembalikan ke tema terang untuk semua akun di browser ini.
 const DEFAULTS = {
   loadingScreen: false,
+  themeToggle: true,
 };
 
 function readFlag(key) {
@@ -33,3 +37,6 @@ function writeFlag(key, value) {
 
 export const isLoadingScreenEnabled = () => readFlag('loadingScreen');
 export const setLoadingScreenEnabled = (value) => writeFlag('loadingScreen', value);
+// [BARU] Flag tombol tema terang/gelap.
+export const isThemeToggleEnabled = () => readFlag('themeToggle');
+export const setThemeToggleEnabled = (value) => writeFlag('themeToggle', value);

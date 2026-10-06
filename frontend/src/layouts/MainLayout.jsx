@@ -3,6 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import ThemeToggle from '../components/ThemeToggle'; // [BARU]
+import useTheme from '../hooks/useTheme'; // [BARU]
+import useFeatureFlag from '../hooks/useFeatureFlag'; // [BARU]
+import { isThemeToggleEnabled } from '../utils/featureFlags'; // [BARU]
 import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
 import { getCurrentUser } from '../services/authService';
@@ -16,6 +20,14 @@ export default function MainLayout({ onLogout, user }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [approvalCount, setApprovalCount] = useState(0);
   const location = useLocation();
+  // [BARU] Tema terang/gelap (disimpan di localStorage, lihat hooks/useTheme.js)
+  const { theme, isDark, toggleTheme } = useTheme();
+  // [BARU] Saklar fitur dari /supersecret. Kalau MATI, tombol hilang dan tema
+  // dipaksa terang supaya user yang sebelumnya memilih gelap tidak "terkunci"
+  // di mode gelap tanpa tombol. Pilihan tersimpannya TIDAK dihapus, jadi saat
+  // fitur dinyalakan lagi tema pilihan user kembali seperti semula.
+  const isThemeToggleOn = useFeatureFlag(isThemeToggleEnabled);
+  const activeTheme = isThemeToggleOn ? theme : 'light';
 
   // [UBAH] Akun 'supersecret' sekarang berperan sebagai SuperAdmin (lihat
   // migration V35 & ProtectedRoute.jsx) dan boleh berpindah ke halaman lain
@@ -55,8 +67,10 @@ export default function MainLayout({ onLogout, user }) {
     return () => window.clearInterval(intervalId);
   }, [canApproveLeave]);
 
+  // [UBAH] data-theme dipasang di root layout: token warna gelap di
+  // styles/tokens.css hanya aktif di dalam area ini (Login dsb. tidak terpengaruh).
   return (
-    <div className="layout-container">
+    <div className="layout-container" data-theme={activeTheme}>
       
       {/* [UBAH] Sidebar disembunyikan khusus saat berada di /supersecret. */}
       {!isOnSupersecretPage && (
@@ -96,8 +110,16 @@ export default function MainLayout({ onLogout, user }) {
         </section>
 
         {/* 3. FOOTER (Bawah) */}
-        <footer className="footer-wrapper">
-          <p>© {new Date().getFullYear()} SYS Indonesia. All rights reserved.</p>
+        {/* [UBAH] Modifier --centered dipakai saat toggle dimatikan, supaya teks
+            kembali terpusat di mobile seperti semula. */}
+        <footer className={`footer-wrapper ${isThemeToggleOn ? '' : 'footer-wrapper--centered'}`}>
+          <p className="footer-copyright">© {new Date().getFullYear()} SYS Indonesia. All rights reserved.</p>
+          {/* [UBAH] Toggle tema terang/gelap -- hanya dirender kalau fitur NYALA */}
+          {isThemeToggleOn && (
+            <div className="footer-actions">
+              <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
+            </div>
+          )}
         </footer>
         
       </main>

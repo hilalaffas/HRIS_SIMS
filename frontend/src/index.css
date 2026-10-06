@@ -2,6 +2,11 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
 
+/* [BARU] Varian Tailwind `dark:` mengikuti atribut data-theme="dark" (bukan
+   setelan OS), supaya class seperti `dark:bg-slate-900` bisa dipakai saat
+   komponen lama dimigrasi ke tema gelap. Belum ada yang memakainya. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* CSS tambahan untuk animasi transisi dasar jika diperlukan */
 body {
   margin: 0;

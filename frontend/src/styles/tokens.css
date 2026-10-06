@@ -45,6 +45,7 @@
   --color-text-muted: #9ca3af;
   --color-border: #e5e7eb;
   --color-bg-page: #f8fafc;
+  --color-bg-content: #F4F7F6;      /* latar area konten utama (MainLayout) */
   --color-surface: #ffffff;
 
   /* ============ SPACING SCALE (dipakai untuk compact layout) ============ */
@@ -64,4 +65,38 @@
 
   /* ============ LAYOUT ============ */
   --page-max-width: 1440px;
+}
+
+/**
+ * ============ TEMA GELAP ============
+ * Aktif saat sebuah elemen punya atribut data-theme="dark" (saat ini dipasang
+ * di root layouts/MainLayout.jsx, lewat hooks/useTheme.js). Cuma token yang
+ * BERUBAH yang ditulis di sini; token lain (brand hijau, warna status solid,
+ * spacing, radius) tetap diwarisi dari :root.
+ *
+ * Komponen baru wajib memakai token ini (bukan hex langsung) supaya otomatis
+ * ikut tema. Komponen lama yang masih hardcode warna belum ikut berubah.
+ */
+[data-theme='dark'] {
+  --color-text: #e5e7eb;
+  --color-text-secondary: #a3afa9;
+  --color-text-muted: #8a9690;
+  --color-border: #2a3a33;
+  --color-bg-page: #0f1714;
+  --color-bg-content: #0f1714;
+  --color-surface: #16211d;
+
+  --color-primary-tint: #1a2b25;
+
+  --color-success-bg: #0f2a20;
+  --color-success-border: #14532d;
+  --color-warning-bg: #2a2008;
+  --color-warning-border: #5c4a12;
+  --color-danger-bg: #2d1218;
+  --color-danger-border: #6b1d2c;
+  --color-info-bg: #0f1f3d;
+  --color-info-border: #1e3a6e;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
 }

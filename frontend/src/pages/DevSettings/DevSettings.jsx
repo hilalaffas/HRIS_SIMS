@@ -12,25 +12,37 @@
 // di sini SUDAH DIHAPUS, jadi akun ini tidak lagi punya jalan pintas UI ke
 // Dashboard/Karyawan/Cuti dari halaman ini.
 //
-// Saat ini cuma satu flag: splash logo loading screen (lihat
-// utils/featureFlags.js + components/LoadingScreen.jsx). Kalau nanti ada
-// flag lain, tambahkan baris baru di FEATURES di bawah -- tidak perlu ubah
-// struktur halaman.
+// [UBAH] Sekarang ada dua flag (lihat utils/featureFlags.js):
+//   1. splash logo loading screen (components/LoadingScreen.jsx)
+//   2. tombol tema terang/gelap di footer (components/ThemeToggle.jsx,
+//      dipakai layouts/MainLayout.jsx)
 import React, { useState } from 'react';
 import {
   isLoadingScreenEnabled,
   setLoadingScreenEnabled,
+  isThemeToggleEnabled,
+  setThemeToggleEnabled,
 } from '../../utils/featureFlags';
 import './DevSettings.css';
 
 export default function DevSettings() {
   const [loadingScreenOn, setLoadingScreenOn] = useState(isLoadingScreenEnabled());
   const [previewing, setPreviewing] = useState(false);
+  // [BARU] Saklar tombol tema terang/gelap
+  const [themeToggleOn, setThemeToggleOn] = useState(isThemeToggleEnabled());
 
   const handleToggle = () => {
     const next = !loadingScreenOn;
     setLoadingScreenEnabled(next);
     setLoadingScreenOn(next);
+  };
+
+  // [BARU] Mematikan = tombol tema hilang dari footer semua role di browser
+  // ini, dan tampilan dipaksa terang (lihat layouts/MainLayout.jsx).
+  const handleThemeToggleSwitch = () => {
+    const next = !themeToggleOn;
+    setThemeToggleEnabled(next);
+    setThemeToggleOn(next);
   };
 
   // [BARU] Simulasikan satu siklus loading (tanpa perlu benar-benar fetch
@@ -85,6 +97,29 @@ export default function DevSettings() {
         {!loadingScreenOn && (
           <p className="devsettings-hint">Aktifkan switch di atas dulu untuk mencoba pratinjaunya.</p>
         )}
+
+        {/* [BARU] Saklar tombol tema terang/gelap */}
+        <div className="devsettings-row devsettings-row--spaced">
+          <div>
+            <p className="devsettings-row__label">Tombol Tema Terang/Gelap</p>
+            <p className="devsettings-row__desc">
+              Tombol matahari/bulan di footer. Jika dimatikan, tombol hilang untuk semua role dan
+              tampilan kembali ke tema terang. Pilihan tema yang pernah disimpan user tidak
+              dihapus, jadi kembali berlaku saat fitur dinyalakan lagi. Pengaturan ini berlaku
+              per browser, bukan per akun.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={themeToggleOn}
+            aria-label="Tombol tema terang/gelap"
+            className={`devsettings-switch ${themeToggleOn ? 'is-on' : ''}`}
+            onClick={handleThemeToggleSwitch}
+          >
+            <span className="devsettings-switch__knob" />
+          </button>
+        </div>
       </div>
     </div>
   );

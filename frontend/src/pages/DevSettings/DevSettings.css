@@ -53,6 +53,11 @@
   max-width: 380px;
 }
 
+/* [BARU] Jarak antar baris saklar (baris kedua dst). */
+.devsettings-row--spaced {
+  margin-top: var(--space-5);
+}
+
 /* Toggle switch sederhana -- bukan <input type="checkbox"> supaya bebas
    di-styling penuh, tapi tetap pakai role="switch" + aria-checked di JSX
    supaya screen reader tetap paham ini kontrol on/off. */
