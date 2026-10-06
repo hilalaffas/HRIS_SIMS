@@ -19,6 +19,7 @@
 // backend), bukan jam perangkat, supaya tidak bisa dimanipulasi klien.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom'; // [BARU] baca state dari tombol Dashboard
 import Toast from '../../components/Toast';
 import AttendanceCameraCard from './components/AttendanceCameraCard';
 import AttendanceTodayCard from './components/AttendanceTodayCard';
@@ -37,6 +38,8 @@ import { getMyOvertime, toDisplayOvertime } from '../../services/overtimeService
 import './Absensi.css';
 
 export default function Absensi() {
+  const routeLocation = useLocation(); // [BARU] (bukan `location`: nama itu sudah dipakai state lokasi GPS)
+  const navigate = useNavigate(); // [BARU]
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -226,6 +229,22 @@ export default function Absensi() {
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
   // Sakit hanya bisa dipakai sebelum check-in hari ini.
   const disabledSakit = Boolean(todayCheckIn);
+
+  // [BARU] Tombol "Absen Masuk/Keluar (Selfie)" di Dashboard membuka halaman ini
+  // dengan state { autoOpenCamera: true }. Kamera dibuka SEKALI setelah riwayat
+  // selesai dimuat (supaya statusnya akurat), lalu state dihapus agar tidak
+  // terbuka lagi saat halaman di-refresh.
+  useEffect(() => {
+    if (!routeLocation.state?.autoOpenCamera || historyLoading) return undefined;
+    // Ditunda 1 tick supaya tidak memanggil setState langsung di dalam effect.
+    const timerId = window.setTimeout(() => {
+      navigate(routeLocation.pathname, { replace: true, state: null });
+      if (attendanceStatus === 'idle') openCamera('Masuk');
+      else if (attendanceStatus === 'checkedIn') openCamera('Keluar');
+    }, 0);
+    return () => window.clearTimeout(timerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya bereaksi pada state navigasi & selesainya loading
+  }, [routeLocation.state, historyLoading]);
 
   return (
     <div className="absensi-page">

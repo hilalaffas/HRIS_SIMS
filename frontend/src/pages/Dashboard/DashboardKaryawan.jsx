@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import AnnouncementSection from './components/AnnouncementSection';
 import CalendarCard from './components/CalendarCard';
 import KaryawanCutiPanel from './components/KaryawanCutiPanel';
-import CutiSummaryCards from './components/CutiSummaryCards';
+import DashboardSummaryCard from './components/DashboardSummaryCard'; // [UBAH] menggantikan CutiSummaryCards di Dashboard
 import { getLeaveBalance } from '../../services/CutiService';
 import './Dashboard.css';
 import { formatSelectedDayLabel } from '../../utils/dateUtils'; // [BARU] label judul panel "Cuti Tanggal ..."
@@ -41,7 +41,7 @@ export default function DashboardKaryawan({ user }) {
 
       {/* Kolom Kiri: Card Sisa Cuti + Pengumuman */}
       <div className="dashboard__announcements">
-        <CutiSummaryCards balance={leaveBalance} isLoading={isLoadingBalance} />
+        <DashboardSummaryCard balance={leaveBalance} isLoadingBalance={isLoadingBalance} />
 
         <h2 className="dashboard__section-title">PENGUMUMAN &amp; PORTAL BERITA</h2>
         <AnnouncementSection />

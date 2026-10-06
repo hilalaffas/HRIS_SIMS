@@ -44,6 +44,21 @@
   background-color: #F4F7F6;
 }
 
+/* [BARU] Transisi masuk halaman saat berpindah route (hanya opacity & transform) */
+.route-transition {
+  min-height: 100%;
+  animation: routeFadeIn 0.28s ease-out;
+}
+
+@keyframes routeFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-transition { animation: none; }
+}
+
 /* Responsif padding untuk content-outlet — dipadatkan satu tingkat dari sebelumnya */
 @media (min-width: 768px) {
   .content-outlet { padding: var(--space-4, 1rem); } /* was 1.5rem */

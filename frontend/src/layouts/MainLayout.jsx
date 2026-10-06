@@ -89,7 +89,10 @@ export default function MainLayout({ onLogout, user }) {
 
         {/* MAIN CONTENT / OUTLET (Tengah) */}
         <section className="content-outlet">
-          <Outlet />
+          {/* [BARU] key = pathname -> animasi masuk halus setiap pindah halaman */}
+          <div key={location.pathname} className="route-transition">
+            <Outlet />
+          </div>
         </section>
 
         {/* 3. FOOTER (Bawah) */}

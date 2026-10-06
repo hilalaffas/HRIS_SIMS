@@ -1,0 +1,351 @@
+/* src/pages/Dashboard/components/DashboardSummaryCard.css */
+
+/* [BARU] Kartu utama Dashboard -- gradasi hijau lembut, ringkas.
+   Animasi hanya memakai transform & opacity (ringan untuk GPU). */
+
+.dashSummary {
+  position: relative;
+  isolation: isolate;
+  container-type: inline-size; /* kolom tile menyesuaikan lebar KARTU, bukan lebar layar */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(18, 66, 49, 0.1);
+  background: linear-gradient(135deg, #f4fbf8 0%, #e5f4ed 48%, #d6ece0 100%);
+  box-shadow: 0 2px 10px rgba(18, 66, 49, 0.06);
+  animation: dashSummaryFadeUp 0.45s ease-out backwards;
+}
+
+/* ---------- Dekorasi gradasi bergerak (di belakang konten) ---------- */
+.dashSummary__blob {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.dashSummary__blob--a {
+  top: -90px;
+  right: -60px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(33, 122, 91, 0.2), transparent 70%);
+  animation: dashSummaryDriftA 14s ease-in-out infinite alternate;
+}
+
+.dashSummary__blob--b {
+  bottom: -110px;
+  left: 18%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(167, 243, 208, 0.55), transparent 70%);
+  animation: dashSummaryDriftB 18s ease-in-out infinite alternate;
+}
+
+/* ---------- 4 kartu mini ---------- */
+.dashSummary__tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@container (min-width: 620px) {
+  .dashSummary__tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.dashSummary__tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1px solid rgba(18, 66, 49, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: dashSummaryFadeUp 0.45s ease-out backwards;
+  animation-delay: calc(var(--i, 0) * 70ms + 80ms);
+}
+
+.dashSummary__tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(18, 66, 49, 0.1);
+}
+
+.dashSummary__tileIcon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  transition: transform 0.25s ease;
+}
+
+.dashSummary__tile:hover .dashSummary__tileIcon {
+  transform: scale(1.1) rotate(-6deg);
+}
+
+.dashSummary__tileBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.dashSummary__tileLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashSummary__tileValue {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 1px 0;
+}
+
+.dashSummary__tileValue strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dashSummary__tileValue span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.dashSummary__tileNote {
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Warna ikon -- sengaja lembut & sedikit (hijau, amber, abu-biru) */
+.dashSummary__tile--leave .dashSummary__tileIcon { background: rgba(18, 66, 49, 0.1); color: var(--color-primary); }
+.dashSummary__tile--present .dashSummary__tileIcon { background: var(--color-success-bg); color: var(--color-success); }
+.dashSummary__tile--late .dashSummary__tileIcon { background: var(--color-warning-bg); color: var(--color-warning); }
+.dashSummary__tile--permit .dashSummary__tileIcon { background: #eef2f7; color: #475569; }
+
+/* ---------- Baris status hari ini ---------- */
+.dashSummary__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(18, 66, 49, 0.08);
+  animation: dashSummaryFadeUp 0.45s ease-out backwards;
+  animation-delay: calc(var(--i, 0) * 70ms + 80ms);
+}
+
+.dashSummary__statusInfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-width: 0;
+}
+
+.dashSummary__statusHead,
+.dashSummary__statusMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.dashSummary__statusLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+}
+
+.dashSummary__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.dashSummary__badge--warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.dashSummary__badge--success { background: var(--color-success-bg); color: var(--color-success); }
+.dashSummary__badge--info { background: var(--color-info-bg); color: var(--color-info); }
+
+.dashSummary__pulse {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dashSummary__pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dashSummaryPulse 1.8s ease-out infinite;
+}
+
+.dashSummary__clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dashSummary__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--color-primary-soft);
+  background: rgba(33, 122, 91, 0.1);
+  border: 1px solid rgba(33, 122, 91, 0.18);
+  white-space: nowrap;
+}
+
+/* ---------- Tombol ---------- */
+.dashSummary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto; /* rata kanan saat sebaris dengan info status */
+}
+
+.dashSummary__btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.dashSummary__btn:hover:not(:disabled) { transform: translateY(-1px); }
+.dashSummary__btn:active:not(:disabled) { transform: scale(0.97); }
+
+.dashSummary__btn:focus-visible {
+  outline: 2px solid var(--color-primary-soft);
+  outline-offset: 2px;
+}
+
+.dashSummary__btn--ghost {
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(18, 66, 49, 0.2);
+}
+
+.dashSummary__btn--ghost:hover { background: #ffffff; box-shadow: 0 4px 10px rgba(18, 66, 49, 0.1); }
+
+.dashSummary__btn--primary {
+  color: #ffffff;
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.dashSummary__btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  box-shadow: 0 6px 14px rgba(18, 66, 49, 0.25);
+}
+
+/* Kilau yang menyapu tombol utama saat hover */
+.dashSummary__btn--primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+}
+
+.dashSummary__btn--primary:hover:not(:disabled)::after {
+  animation: dashSummaryShine 0.7s ease;
+}
+
+.dashSummary__btn:disabled {
+  cursor: not-allowed;
+  color: #6b7280;
+  background: #e5e7eb;
+  border-color: #e5e7eb;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes dashSummaryFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dashSummaryDriftA {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-40px, 30px, 0) scale(1.15); }
+}
+
+@keyframes dashSummaryDriftB {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(50px, -24px, 0) scale(1.1); }
+}
+
+@keyframes dashSummaryPulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes dashSummaryShine {
+  from { left: -60%; }
+  to { left: 130%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashSummary,
+  .dashSummary__tile,
+  .dashSummary__status,
+  .dashSummary__blob,
+  .dashSummary__pulse::after,
+  .dashSummary__btn--primary::after {
+    animation: none;
+  }
+
+  .dashSummary__tile,
+  .dashSummary__tileIcon,
+  .dashSummary__btn { transition: none; }
+}
