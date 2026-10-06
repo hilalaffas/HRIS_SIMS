@@ -193,7 +193,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
 
   return (
     <div className="form-card_formkaryawan">
-      {toast && <Toast message={toast.message} type={toast.type} />}
+      <Toast show={!!toast} message={toast?.message} type={toast?.type} />
       
       <div className="form-header-soft_formkaryawan">
         <div className="icon-user-add_formkaryawan">

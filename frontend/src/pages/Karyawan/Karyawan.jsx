@@ -472,15 +472,16 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   return (
     <div className="karyawan-page">
-      {/* [BARU] Toast sukses/gagal (mis. hasil submit Cuti Susulan) */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          actionLabel={toast.action?.label}
-          onAction={toast.action?.onClick}
-        />
-      )}
+      {/* Toast sukses/gagal (mis. hasil submit Cuti Susulan) -- selalu
+          di-render (lihat Toast.jsx), visibilitas & animasi dikendalikan
+          lewat prop `show`. */}
+      <Toast
+        show={!!toast}
+        message={toast?.message}
+        type={toast?.type}
+        actionLabel={toast?.action?.label}
+        onAction={toast?.action?.onClick}
+      />
 
       {/* [UBAH] Headline mungkin tidak perlu props stats jika mengikuti UI referensi, 
           tapi saya biarkan jika Anda masih membutuhkannya di dalam komponennya */}

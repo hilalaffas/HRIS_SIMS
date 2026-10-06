@@ -295,7 +295,7 @@ export default function Absensi() {
         />
       )}
 
-      {toast && <Toast message={toast.message} type={toast.type} />}
+      <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </div>
   );
 }

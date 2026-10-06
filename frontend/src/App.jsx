@@ -309,8 +309,9 @@ const AppContent = () => {
           dirender sekali di sini, tidak perlu prop apa pun. */}
       <LoadingScreen />
 
-      {/* Global Toast Notification */}
-      {toast.show && <Toast message={toast.message} type={toast.type} />}
+      {/* Global Toast Notification -- selalu di-render (lihat Toast.jsx),
+          visibilitas & animasi masuk/keluar dikendalikan lewat prop `show`. */}
+      <Toast show={toast.show} message={toast.message} type={toast.type} />
 
       <AppRoutes 
         user={currentUser} 

@@ -147,7 +147,7 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
           </div>
         </form>
       </div>
-      {toast && <Toast message={toast.message} type={toast.type} />}
+      <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </div>
   );
 }

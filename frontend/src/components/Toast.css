@@ -1,44 +1,170 @@
 /* src/components/Toast.css */
-
-/* Animasi bounce bawaan Tailwind */
-@keyframes toast-bounce {
-  0%, 100% {
-    transform: translateY(-25%);
-    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
-  }
-  50% {
-    transform: translateY(0);
-    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
-  }
-}
+/*
+ * [UBAH] Toast global -- satu-satunya sumber gaya toast di seluruh
+ * aplikasi (lihat Toast.jsx). Sebelumnya warna di-hardcode (#009A66,
+ * #1f2937) terpisah dari styles/tokens.css, dan animasi masuk/keluar
+ * belum ada (cuma ada @keyframes toast-bounce yang di-comment, tidak
+ * pernah dipakai). Sekarang:
+ *   - warna memakai design token global (--color-success, --color-text)
+ *     supaya otomatis konsisten dengan brand di seluruh app
+ *   - animasi masuk (toast-in) & keluar (toast-out) presisi, dengan
+ *     micro-animation ikon, dan menghormati prefers-reduced-motion
+ */
 
 .toast-base {
   position: fixed;
-  bottom: 1.5rem; /* top-6 */
-  right: 1.5rem; /* right-6 */
-  z-index: 100;
-  padding: 0.75rem 1.25rem; /* py-3 dan px-5 */
-  border-radius: 0.5rem; /* rounded-lg */
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); /* shadow-xl */
-  font-size: 13px;
-  font-weight: 600; /* font-semibold */
-  color: #ffffff; /* text-white */
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 1000;
   display: flex;
-  align-items: center;
-  gap: 0.5rem; /* gap-2 */
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); /* transition-all */
-  /* animation: toast-bounce 1s infinite; /* animate-bounce */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: min(380px, calc(100vw - 2 * var(--space-6)));
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), 0 20px 25px -8px rgba(15, 23, 42, 0.18);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #ffffff;
+  will-change: transform, opacity;
+  transform-origin: bottom right;
 }
 
 .toast-success {
-  background-color: #009A66;
+  background-color: var(--color-success);
 }
 
 .toast-error {
-  background-color: #1f2937; /* warna standar dari bg-gray-800 Tailwind */
+  background-color: var(--color-text);
+}
+
+.toast-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toast-message {
+  word-break: break-word;
 }
 
 .toast-icon {
-  width: 1.25rem; /* w-5 */
-  height: 1.25rem; /* h-5 */
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  animation: toast-icon-pop 420ms var(--toast-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) 90ms both;
+}
+
+/* [BARU] Gaya tombol aksi (mis. "Detail") -- sebelumnya dirender di
+   Toast.jsx tapi TIDAK PERNAH punya CSS, jadi tampil sebagai tombol
+   default browser di atas background berwarna. */
+.toast-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  opacity: 0.9;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.toast-action:hover,
+.toast-action:focus-visible {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.toast-action:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.toast-action-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: currentColor;
+  flex-shrink: 0;
+}
+
+/* ===================== ANIMASI ===================== */
+
+@keyframes toast-in {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.92);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+}
+
+@keyframes toast-icon-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 420ms cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+/* Durasi ini HARUS sinkron dengan EXIT_DURATION di Toast.jsx, supaya
+   komponennya di-unmount TEPAT setelah animasi selesai (tidak lebih
+   cepat/lama). */
+.toast-exit {
+  animation: toast-out 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter,
+  .toast-exit,
+  .toast-icon {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .toast-base {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+    max-width: none;
+  }
 }

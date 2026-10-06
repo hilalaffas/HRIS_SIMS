@@ -4,14 +4,18 @@ import { FIELD_CONFIG } from './config/profileFieldConfig';
 import { useProfileForm } from './hooks/useProfileForm';
 import ProfileViewSection from './components/ProfileViewSection';
 import ProfileEditModal from './components/ProfileEditModal';
-import ProfileToast from './components/ProfileToast';
+import Toast from '../../components/Toast';
 import ProfileSkeleton from './components/ProfileSkeleton'; // [BARU]
 
 // Komponen inti — dipakai bersama oleh ProfileStaff, ProfileSPV, ProfileManager, ProfileAdmin.
 // Semua logic/state ada di hook `useProfileForm`. Tampilan dipecah jadi:
 //   - ProfileViewSection : mode baca (banner, avatar, nama, grid info)
 //   - ProfileEditModal   : mode edit (popup form, termasuk ProfileFieldInput & ProfilePasswordSection)
-//   - ProfileToast       : notifikasi setelah simpan
+//   - Toast              : notifikasi setelah simpan
+//   [UBAH] Sebelumnya pakai ProfileToast.jsx sendiri (duplikat gaya & CSS
+//   terpisah dari toast di halaman lain). Sekarang pakai komponen Toast
+//   global yang sama dipakai seluruh app (lihat components/Toast.jsx),
+//   supaya semua notifikasi toast tampil identik.
 // Yang beda per role hanya: `currentUserRole` (untuk aturan lock field) dan `mockData` (data profil awal).
 const ProfilePageBase = ({ currentUserRole, mockData }) => {
   // Helper: cek apakah field boleh diedit oleh role yang sedang login
@@ -87,7 +91,7 @@ const ProfilePageBase = ({ currentUserRole, mockData }) => {
         />
       )}
 
-      <ProfileToast show={toast} />
+      <Toast show={toast} message="Data profil berhasil diperbarui!" type="success" />
     </div>
   );
 };

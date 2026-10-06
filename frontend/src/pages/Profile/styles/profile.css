@@ -623,55 +623,8 @@ select.form-input-profile:disabled {
 }
 
 
-/* ===================================================== */
-/* TOAST NOTIFIKASI (kanan bawah)                          */
-/* ===================================================== */
-
-.profile-toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background-color: #1e6244;
-  border: none;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.25);
-  border-radius: 14px;
-  padding: 14px 22px;
-  width: fit-content;
-  opacity: 0;
-  transform: translateY(12px);
-  pointer-events: none;
-  transition: opacity 250ms ease, transform 250ms ease;
-  z-index: 1000;
-}
-
-.profile-toast-show {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.profile-toast-icon {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1.5px solid #ffffff;
-  background-color: transparent;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
-}
-
-.profile-toast-text {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #ffffff;
-  white-space: nowrap;
-}
+/* [UBAH] Blok "TOAST NOTIFIKASI" (profile-toast / ProfileToast.jsx) yang
+   sebelumnya ada di sini SUDAH DIHAPUS -- ProfilePageBase.jsx sekarang
+   memakai komponen Toast global (components/Toast.jsx/.css) yang sama
+   dipakai di seluruh app, supaya tidak ada lagi gaya toast ganda yang
+   berbeda-beda. */

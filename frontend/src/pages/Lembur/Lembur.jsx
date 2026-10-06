@@ -75,7 +75,7 @@ export default function Lembur() {
         <OvertimeFormModal onClose={() => setModalOpen(false)} onSubmit={handleSubmit} />
       )}
 
-      {toast && <Toast message={toast.message} type={toast.type} />}
+      <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </div>
   );
 }
