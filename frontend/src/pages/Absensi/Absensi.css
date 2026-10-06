@@ -72,29 +72,32 @@
   color: var(--abs-primary-soft);
 }
 
-/* [UBAH] Layout diubah dari "kartu berdampingan lalu tabel di bawah,
-   full-width" menjadi 2 kolom: kiri (tombol absensi + status hari ini,
-   ditumpuk vertikal) dan kanan (tabel riwayat, sejajar di samping,
-   tinggi mengikuti kolom kiri). Lihat .abs-attendance-left di bawah. */
+/* [UBAH] Layout dikembalikan ke "kartu di atas, tabel full-width di bawah".
+   Sebelumnya 2 kolom (kartu kiri 300-360px, tabel kanan) sehingga tabel
+   9 kolom (min-width 1000px) terjepit di sisa lebar layar dan memunculkan
+   scroll kanan-kiri. Sekarang tabel memakai seluruh lebar konten. */
 .absensi-page .abs-attendance-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
-  align-items: stretch;
 }
 
+/* [UBAH] Kartu absensi & status hari ini berdampingan dalam 1 baris
+   (sebelumnya ditumpuk vertikal di kolom kiri). */
 .absensi-page .abs-attendance-left {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+  align-items: stretch;
 }
 
 /* [BARU] Toast global (components/Toast.jsx) dipakai apa adanya untuk
    notifikasi sukses absen -- lihat absensi.jsx -- jadi tidak perlu lagi
    ".success-banner" kustom seperti di draft desain awal. */
 
+/* [UBAH] Di layar sempit kartu ditumpuk 1 kolom. */
 @media (max-width: 900px) {
-  .absensi-page .abs-attendance-grid { grid-template-columns: 1fr; }
+  .absensi-page .abs-attendance-left { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 760px) {
