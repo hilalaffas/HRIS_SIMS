@@ -211,8 +211,19 @@ export default function Absensi() {
     [records, todayKey],
   );
 
-  // idle -> tombol "Masuk", checkedIn -> tombol "Keluar", done -> abu-abu.
-  const attendanceStatus = todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
+  // [BARU] Catatan Sakit/Izin hari ini (tersimpan sebagai MASUK dengan reason
+  // SAKIT/IZIN). Kalau ada, karyawan dianggap tidak bekerja hari ini.
+  const todaySickRecord = useMemo(
+    () => records.find((record) => record.attendanceDate === todayKey
+      && record.actionCode === 'MASUK' && record.reasonCode !== 'ABSEN'),
+    [records, todayKey],
+  );
+
+  // idle -> "Masuk", checkedIn -> "Keluar", done -> abu-abu,
+  // [BARU] sick -> abu-abu juga (Masuk/Keluar/Sakit tidak bisa diklik).
+  const attendanceStatus = todaySickRecord
+    ? 'sick'
+    : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
   // Sakit hanya bisa dipakai sebelum check-in hari ini.
   const disabledSakit = Boolean(todayCheckIn);
 
@@ -230,8 +241,9 @@ export default function Absensi() {
           />
           <AttendanceTodayCard
             todayLabel={todayLabel}
-            checkInRecord={todayCheckIn}
+            checkInRecord={todaySickRecord ? undefined : todayCheckIn} /* [UBAH] catatan sakit bukan check-in */
             checkOutRecord={todayCheckOut}
+            isSick={Boolean(todaySickRecord)} /* [BARU] */
           />
         </div>
 

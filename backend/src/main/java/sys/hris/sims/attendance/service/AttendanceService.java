@@ -95,6 +95,13 @@ public class AttendanceService {
                 && !attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employee.getEmployeeId(), today, "MASUK")) {
             throw new IllegalStateException("Anda belum melakukan check-in hari ini.");
         }
+        // [BARU] Hari ini sudah tercatat Sakit/Izin -> tidak boleh check-out
+        // (frontend sudah menonaktifkan tombol, ini pengaman di sisi server).
+        if (action.equals("KELUAR")
+                && attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndActionAndReasonIn(
+                        employee.getEmployeeId(), today, "MASUK", List.of("SAKIT", "IZIN"))) {
+            throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, check-out tidak diperlukan.");
+        }
 
         String photoUrl;
         try {

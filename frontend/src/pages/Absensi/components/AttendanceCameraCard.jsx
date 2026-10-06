@@ -19,6 +19,8 @@ const MAIN_BUTTON_CONFIG = {
   idle: { label: 'Masuk', icon: Camera, action: 'Masuk', className: '' },
   checkedIn: { label: 'Keluar', icon: LogOut, action: 'Keluar', className: 'is-checkout' },
   done: { label: 'Absensi selesai', icon: CheckCircle2, action: null, className: '' },
+  // [BARU] Karyawan sakit hari ini: tombol dikunci seperti kondisi sudah keluar.
+  sick: { label: 'Izin sakit tercatat', icon: CheckCircle2, action: null, className: '' },
 };
 
 export default function AttendanceCameraCard({
@@ -28,7 +30,7 @@ export default function AttendanceCameraCard({
 }) {
   const mainButton = MAIN_BUTTON_CONFIG[attendanceStatus] ?? MAIN_BUTTON_CONFIG.idle;
   const MainIcon = mainButton.icon;
-  const isDone = attendanceStatus === 'done';
+  const isDone = attendanceStatus === 'done' || attendanceStatus === 'sick'; // [UBAH] sick ikut terkunci
 
   return (
     <div className="abs-camera-card">
@@ -36,16 +38,8 @@ export default function AttendanceCameraCard({
         <span className="abs-live-dot" />
         ABSENSI HARI INI
       </div>
-      <h2>Sudah siap untuk mulai?</h2>
-      <p>Ambil foto sebagai bukti kehadiran. Pastikan wajah Anda terlihat jelas dan berada di area kerja.</p>
-
-      <div className="abs-camera-placeholder">
-        <div className="abs-camera-icon">
-          <Camera aria-hidden="true" />
-        </div>
-        <span>Foto Anda akan diambil melalui kamera</span>
-      </div>
-
+      {/* [UBAH] Teks "Sudah siap untuk mulai?", paragraf, dan kotak placeholder
+          foto dihapus supaya kartu ringkas sesuai referensi UI. */}
       <div className="abs-attendance-actions">
         <button
           type="button"
@@ -66,10 +60,6 @@ export default function AttendanceCameraCard({
           Sakit
         </button>
       </div>
-
-      <small>
-        <span>●</span> Kamera hanya digunakan saat absensi
-      </small>
     </div>
   );
 }

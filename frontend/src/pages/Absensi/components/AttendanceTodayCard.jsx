@@ -4,7 +4,6 @@
 // dan total jam kerja hari ini berdasarkan data absensi (todayCheckIn /
 // todayCheckOut dihitung di absensi.jsx dari daftar records).
 import React from 'react';
-import { Clock3 } from 'lucide-react';
 import './AttendanceTodayCard.css';
 
 function formatWorkedDuration(checkIn, checkOut) {
@@ -17,7 +16,7 @@ function formatWorkedDuration(checkIn, checkOut) {
   return `${hours} jam ${minutes} menit`;
 }
 
-export default function AttendanceTodayCard({ todayLabel, checkInRecord, checkOutRecord }) {
+export default function AttendanceTodayCard({ todayLabel, checkInRecord, checkOutRecord, isSick = false }) {
   const isDone = Boolean(checkInRecord && checkOutRecord);
   // [UBAH] `recordedAt` (Date asli dari backend, lihat
   // services/attendanceService.js toDisplayRecord()) dipakai langsung --
@@ -31,36 +30,35 @@ export default function AttendanceTodayCard({ todayLabel, checkInRecord, checkOu
 
   return (
     <div className="abs-today-card">
+      {/* [UBAH] Baris 1: judul + tanggal sebaris, badge di kanan -- tinggi
+          baris disamakan dengan kartu "Absensi Hari Ini" (lihat CSS). */}
       <div className="abs-card-title-row">
-        <div>
+        <div className="abs-title-inline">
           <p className="abs-eyebrow">STATUS HARI INI</p>
           <h2>{todayLabel}</h2>
         </div>
-        <span className={`abs-status-badge ${isDone ? 'is-done' : ''}`}>
-          {isDone ? 'Selesai' : 'Belum selesai'}
+        <span className={`abs-status-badge ${isDone ? 'is-done' : ''} ${isSick ? 'is-sick' : ''}`.trim()}>
+          {isSick ? 'Sakit' : isDone ? 'Selesai' : 'Belum selesai'}
         </span>
       </div>
 
+      {/* [UBAH] Baris 2: Check-in | Check-out | Total jam kerja dalam 1 baris
+          (sebelumnya "Total jam kerja" di baris terpisah di bawah). */}
       <div className="abs-time-row">
         <div>
           <span>Check-in</span>
           <strong>{checkInRecord ? checkInRecord.time : '--:-- WIB'}</strong>
-          <small>{checkInRecord ? 'Tercatat hari ini' : 'Belum melakukan check-in'}</small>
         </div>
         <div className="abs-time-divider" />
         <div>
           <span>Check-out</span>
           <strong>{checkOutRecord ? checkOutRecord.time : '--:-- WIB'}</strong>
-          <small>{checkOutRecord ? 'Tercatat hari ini' : 'Belum melakukan check-out'}</small>
         </div>
-      </div>
-
-      <div className="abs-work-summary">
+        <div className="abs-time-divider" />
         <div>
-          <Clock3 aria-hidden="true" />
           <span>Total jam kerja</span>
+          <strong>{workedLabel}</strong>
         </div>
-        <strong>{workedLabel}</strong>
       </div>
     </div>
   );
