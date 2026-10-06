@@ -244,6 +244,19 @@ const AppContent = () => {
     // lewat saveRedirectPath()). Kalau tidak ada URL tersimpan, fallback ke
     // /dashboard seperti perilaku semula.
     const redirectPath = getAndClearRedirectPath();
+
+    // [BARU] Akun 'supersecret' (lihat SUPERSECRET_USERNAME di
+    // ProtectedRoute.jsx) selalu diarahkan langsung ke panel pengaturan
+    // fitur /supersecret begitu login -- fungsinya cuma untuk dev
+    // (aktif/nonaktifkan fitur), bukan dashboard HR biasa. redirectPath
+    // tersimpan (kalau ada) SENGAJA diabaikan untuk akun ini supaya
+    // perilakunya konsisten setiap kali login, apa pun URL terakhir yang
+    // dibuka sebelumnya.
+    if (userData.username === 'supersecret') {
+      navigate('/supersecret', { replace: true });
+      return;
+    }
+
     navigate(redirectPath || '/dashboard', { replace: true });
   };
 
