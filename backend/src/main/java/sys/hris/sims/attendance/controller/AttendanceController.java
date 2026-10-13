@@ -2,6 +2,7 @@ package sys.hris.sims.attendance.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,7 +21,9 @@ import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
+import sys.hris.sims.attendance.dto.LocationNameResponse;
 import sys.hris.sims.attendance.service.AttendanceService;
+import sys.hris.sims.attendance.service.ReverseGeocodingService;
 import sys.hris.sims.common.dto.ApprovalDecisionRequest;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
@@ -37,6 +41,8 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
+    // [BARU] Nama lokasi dari koordinat (popup absen Dashboard).
+    private final ReverseGeocodingService reverseGeocodingService;
 
     private Long getCurrentUserId(Authentication authentication) {
         User user = userRepository.findByUsername(authentication.getName());
@@ -68,6 +74,26 @@ public class AttendanceController {
                 httpRequest);
 
         return ResponseEntity.ok(response);
+    }
+
+    // [BARU] GET nama lokasi dari koordinat -- dipakai popup absen di Dashboard
+    // untuk menampilkan "Titik Lokasi Anda". Hanya user login, dibatasi 15
+    // permintaan/menit per user karena memanggil API Google berbayar.
+    // `locationName` null = tidak tersedia (bukan error).
+    @GetMapping("/location-name")
+    public ResponseEntity<?> getLocationName(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            Authentication authentication) {
+        if (Double.isNaN(lat) || Double.isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            throw new IllegalArgumentException("Koordinat lokasi tidak valid.");
+        }
+        if (!reverseGeocodingService.tryAcquire(authentication.getName())) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("Terlalu banyak permintaan lokasi. Coba lagi sebentar lagi.");
+        }
+        String name = reverseGeocodingService.resolveName(lat, lng).orElse(null);
+        return ResponseEntity.ok(new LocationNameResponse(name));
     }
 
     // [BARU] GET semua riwayat absensi (HR/Super Admin) -- dibatasi

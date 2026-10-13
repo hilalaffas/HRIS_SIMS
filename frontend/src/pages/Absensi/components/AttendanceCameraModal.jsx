@@ -17,6 +17,7 @@ export default function AttendanceCameraModal({
   videoRef,
   captured,
   cameraError,
+  submitError, // [BARU] pesan gagal kirim dari backend (mis. "Anda sudah melakukan check-in hari ini.")
   reason,
   note,
   location,
@@ -140,6 +141,8 @@ export default function AttendanceCameraModal({
             </button>
           </div>
         </div>
+
+        {submitError && <p className="abs-submit-error" role="alert">{submitError}</p>}
 
         <div className="abs-modal-footer">
           {captured ? (

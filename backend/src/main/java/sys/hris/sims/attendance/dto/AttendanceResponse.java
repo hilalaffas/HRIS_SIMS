@@ -42,4 +42,7 @@ public class AttendanceResponse {
 
     // [BARU] NOT_REQUIRED / PENDING / APPROVED / REJECTED
     private String approvalStatus;
+
+    // [BARU] Nama lokasi dari reverse geocoding backend; null bila tidak tersedia.
+    private String locationName;
 }

@@ -72,7 +72,7 @@ function BuktiCell({ row }) {
         </a>
       )}
       {row.mapsUrl && (
-        <a className="abs-maps-pin" href={row.mapsUrl} target="_blank" rel="noreferrer">
+        <a className="abs-maps-pin" href={row.mapsUrl} target="_blank" rel="noreferrer" title={row.locationName || undefined}>
           <MapPin aria-hidden="true" />
           Peta
         </a>

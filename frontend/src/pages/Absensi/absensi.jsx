@@ -17,48 +17,30 @@
 // POST /api/absensi/me (multipart: foto + koordinat GPS + field lain).
 // Jam yang tercatat adalah jam SERVER (lihat Attendance.prePersist() di
 // backend), bukan jam perangkat, supaya tidak bisa dimanipulasi klien.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react'; // [UBAH] useRef tidak dipakai lagi
 import { CalendarDays } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom'; // [BARU] baca state dari tombol Dashboard
 import Toast from '../../components/Toast';
 import AttendanceCameraCard from './components/AttendanceCameraCard';
 import AttendanceTodayCard from './components/AttendanceTodayCard';
 import AttendanceHistoryTable from './components/AttendanceHistoryTable';
 import AttendanceCameraModal from './components/AttendanceCameraModal';
-import {
-  getMyAttendanceHistory,
-  submitAttendance,
-  dataUrlToBlob,
-  toActionCode,
-  toReasonCode,
-  toDisplayRecord,
-} from '../../services/attendanceService';
+import { getMyAttendanceHistory, toDisplayRecord } from '../../services/attendanceService';
+import useAttendanceCapture from './hooks/useAttendanceCapture'; // [BARU] logika kamera+GPS+kirim, dibagi dgn popup Dashboard
 // [BARU] Data lembur untuk kolom "Lembur" di tabel riwayat
 import { getMyOvertime, toDisplayOvertime } from '../../services/overtimeService';
 import './Absensi.css';
 
-export default function Absensi() {
-  const routeLocation = useLocation(); // [BARU] (bukan `location`: nama itu sudah dipakai state lokasi GPS)
-  const navigate = useNavigate(); // [BARU]
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
+// [BARU] Teks lokasi untuk modal kamera dari hasil hook.
+function describeLocation(coords, locationStatus) {
+  if (coords) return `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
+  return locationStatus === 'error' ? 'Lokasi tidak tersedia' : 'Lokasi belum diambil';
+}
 
+export default function Absensi() {
   const [records, setRecords] = useState([]);
   const [overtimeRecords, setOvertimeRecords] = useState([]); // [BARU]
   const [historyLoading, setHistoryLoading] = useState(true);
-
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [captured, setCaptured] = useState('');
-  const [cameraError, setCameraError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
-
-  const [attendanceAction, setAttendanceAction] = useState('Masuk');
-  const [reason, setReason] = useState('Absen');
-  const [note, setNote] = useState('');
-  const [location, setLocation] = useState('Lokasi belum diambil');
-  const [coords, setCoords] = useState(null); // { lat, lng } -- angka mentah, wajib ada untuk kirim
-  const [locationLoading, setLocationLoading] = useState(false);
 
   const [todayDate, setTodayDate] = useState(() => new Date());
 
@@ -103,99 +85,15 @@ export default function Absensi() {
     loadHistory();
   }, [loadHistory]);
 
-  useEffect(() => () => stopCamera(), []);
+  // ===================== KAMERA, LOKASI & SUBMIT (hook bersama) =====================
+  // [UBAH] Seluruh logika kamera/GPS/kirim dipindah ke hooks/useAttendanceCapture.js
+  // (dipakai juga oleh popup absen di Dashboard). Jam yang tercatat tetap jam SERVER.
+  const handleSubmitted = useCallback((record, action) => {
+    setRecords((current) => [record, ...current]);
+    showToast(`${action} berhasil dicatat.`, 'success');
+  }, [showToast]);
 
-  function stopCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-  }
-
-  // ===================== KAMERA & LOKASI =====================
-  async function openCamera(action, presetReason = 'Absen') {
-    setAttendanceAction(action);
-    setReason(presetReason);
-    setNote('');
-    setCoords(null);
-    setLocation('Lokasi belum diambil');
-    setCameraError('');
-    setCaptured('');
-    setCameraOpen(true);
-    setLocationLoading(true);
-
-    navigator.geolocation?.getCurrentPosition(
-      ({ coords: pos }) => {
-        setCoords({ lat: pos.latitude, lng: pos.longitude });
-        setLocation(`${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`);
-        setLocationLoading(false);
-      },
-      () => {
-        setCoords(null);
-        setLocation('Lokasi tidak tersedia');
-        setLocationLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch {
-      setCameraError('Kamera tidak dapat diakses. Pastikan izin kamera telah diberikan, atau unggah foto dari perangkat Anda.');
-    }
-  }
-
-  function takePhoto() {
-    const video = videoRef.current;
-    if (!video || video.readyState < 2) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    setCaptured(canvas.toDataURL('image/jpeg', 0.82));
-  }
-
-  function handleUploadFallback(event) {
-    const file = event.target.files?.[0];
-    if (file) setCaptured(URL.createObjectURL(file));
-  }
-
-  function closeCamera() {
-    if (submitting) return; // jangan bisa ditutup di tengah proses kirim
-    setCameraOpen(false);
-    setCaptured('');
-    setCameraError('');
-    stopCamera();
-  }
-
-  // ===================== SUBMIT ABSENSI (ke backend) =====================
-  async function confirmAttendance() {
-    if (!captured || !coords || (reason !== 'Absen' && !note.trim()) || submitting) return;
-    setSubmitting(true);
-    try {
-      const photoBlob = await dataUrlToBlob(captured);
-      const response = await submitAttendance({
-        action: toActionCode(attendanceAction),
-        reason: toReasonCode(reason),
-        note,
-        latitude: coords.lat,
-        longitude: coords.lng,
-        photoBlob,
-      });
-      setRecords((current) => [toDisplayRecord(response), ...current]);
-      showToast(`${attendanceAction} berhasil dicatat.`, 'success');
-      stopCamera();
-      setCameraOpen(false);
-      setCaptured('');
-    } catch (error) {
-      // [BARU] Modal TETAP TERBUKA kalau gagal (mis. "Anda sudah check-in
-      // hari ini" dari backend) supaya user bisa lihat pesannya dan coba
-      // lagi/ambil ulang foto, bukan hilang begitu saja seperti sebelumnya.
-      setCameraError(error?.message || 'Gagal mengirim absensi. Silakan coba lagi.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const capture = useAttendanceCapture({ onSubmitted: handleSubmitted });
 
   // ===================== STATUS HARI INI =====================
   const todayKey = useMemo(() => {
@@ -230,22 +128,6 @@ export default function Absensi() {
   // Sakit hanya bisa dipakai sebelum check-in hari ini.
   const disabledSakit = Boolean(todayCheckIn);
 
-  // [BARU] Tombol "Absen Masuk/Keluar (Selfie)" di Dashboard membuka halaman ini
-  // dengan state { autoOpenCamera: true }. Kamera dibuka SEKALI setelah riwayat
-  // selesai dimuat (supaya statusnya akurat), lalu state dihapus agar tidak
-  // terbuka lagi saat halaman di-refresh.
-  useEffect(() => {
-    if (!routeLocation.state?.autoOpenCamera || historyLoading) return undefined;
-    // Ditunda 1 tick supaya tidak memanggil setState langsung di dalam effect.
-    const timerId = window.setTimeout(() => {
-      navigate(routeLocation.pathname, { replace: true, state: null });
-      if (attendanceStatus === 'idle') openCamera('Masuk');
-      else if (attendanceStatus === 'checkedIn') openCamera('Keluar');
-    }, 0);
-    return () => window.clearTimeout(timerId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hanya bereaksi pada state navigasi & selesainya loading
-  }, [routeLocation.state, historyLoading]);
-
   return (
     <div className="absensi-page">
       {/* [UBAH] Tabel riwayat sekarang di SAMPING (bukan di bawah) kartu
@@ -254,7 +136,7 @@ export default function Absensi() {
       <section className="abs-attendance-grid">
         <div className="abs-attendance-left">
           <AttendanceCameraCard
-            onOpenCamera={openCamera}
+            onOpenCamera={capture.open}
             attendanceStatus={attendanceStatus}
             disabledSakit={disabledSakit}
           />
@@ -272,26 +154,27 @@ export default function Absensi() {
         />
       </section>
 
-      {cameraOpen && (
+      {capture.isOpen && (
         <AttendanceCameraModal
-          attendanceAction={attendanceAction}
-          videoRef={videoRef}
-          captured={captured}
-          cameraError={cameraError}
-          reason={reason}
-          note={note}
-          location={location}
-          coords={coords}
-          locationLoading={locationLoading}
-          submitting={submitting}
-          onReasonChange={setReason}
-          onNoteChange={setNote}
-          onRefreshLocation={() => openCamera(attendanceAction, reason)}
-          onTakePhoto={takePhoto}
-          onRetake={() => setCaptured('')}
-          onUploadFallback={handleUploadFallback}
-          onConfirm={confirmAttendance}
-          onClose={closeCamera}
+          attendanceAction={capture.action}
+          videoRef={capture.attachVideo} /* [UBAH] callback ref: video baru (setelah "Ambil ulang") tersambung ulang ke stream */
+          captured={capture.captured}
+          cameraError={capture.cameraError}
+          submitError={capture.submitError} /* [BARU] error kirim tampil sebagai pesan, tidak lagi menggantikan kamera */
+          reason={capture.reason}
+          note={capture.note}
+          location={describeLocation(capture.coords, capture.locationStatus)}
+          coords={capture.coords}
+          locationLoading={capture.locationStatus === 'loading'}
+          submitting={capture.isSubmitting}
+          onReasonChange={capture.setReason}
+          onNoteChange={capture.setNote}
+          onRefreshLocation={capture.refreshLocation}
+          onTakePhoto={capture.takePhoto}
+          onRetake={capture.retake}
+          onUploadFallback={capture.handleUploadFallback}
+          onConfirm={capture.submit}
+          onClose={capture.close}
         />
       )}
 

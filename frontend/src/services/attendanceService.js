@@ -17,6 +17,13 @@ export async function getMyAttendanceHistory() {
   return api.get('/api/absensi/me');
 }
 
+// [BARU] Nama lokasi dari koordinat (reverse geocoding di backend, key Google
+// tidak pernah sampai ke browser). Hasil: { locationName: string | null }.
+export async function getLocationName(latitude, longitude) {
+  const query = new URLSearchParams({ lat: String(latitude), lng: String(longitude) });
+  return api.get(`/api/absensi/location-name?${query.toString()}`);
+}
+
 // [UBAH] Persetujuan Sakit (Leader/SPV/Manager, tab "Izin Sakit" di Persetujuan Cuti):
 // daftar pengajuan bawahan di divisi yang sama & keputusan.
 // status: 'APPROVED' | 'REJECTED'
@@ -117,6 +124,7 @@ export function toDisplayRecord(item) {
     latitude: item.latitude,
     longitude: item.longitude,
     mapsUrl: item.mapsUrl || null,
+    locationName: item.locationName || '', // [BARU] hasil reverse geocoding backend
     attendanceDate: item.attendanceDate,
     approvalStatus: String(item.approvalStatus || '').toUpperCase(), // [BARU]
     recordedAt,

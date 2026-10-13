@@ -79,6 +79,10 @@ public class Attendance {
     @Column(name = "approval_status", nullable = false, length = 20)
     private String approvalStatus;
 
+    // [BARU] Nama lokasi hasil reverse geocoding (diisi backend, boleh null).
+    @Column(name = "location_name", length = 255)
+    private String locationName;
+
     // [BARU] Jam & tanggal SELALU diisi di sini (server), tidak pernah
     // diterima dari request client -- lihat AttendanceSubmitRequest yang
     // sengaja TIDAK punya field jam/tanggal sama sekali.

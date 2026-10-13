@@ -35,6 +35,8 @@ public class AttendanceService {
     private final CloudinaryService cloudinaryService;
     // [BARU] Aturan siapa boleh melihat / memutuskan sakit siapa.
     private final ApprovalScopeService approvalScopeService;
+    // [BARU] Nama lokasi dari koordinat GPS (Google Geocoding, opsional).
+    private final ReverseGeocodingService reverseGeocodingService;
 
     public List<AttendanceResponse> getMyHistory(String username) {
         Employee employee = resolveEmployee(username);
@@ -67,6 +69,13 @@ public class AttendanceService {
         }
         if (!reason.equals("ABSEN") && (request.getNote() == null || request.getNote().isBlank())) {
             throw new IllegalArgumentException("Keterangan wajib diisi untuk absensi " + (reason.equals("SAKIT") ? "Sakit" : "Izin") + ".");
+        }
+
+        // [BARU] Batas panjang keterangan = kolom DB (attendances.note VARCHAR(255)).
+        // Tanpa ini, input terlalu panjang berakhir sebagai error 500 dari database,
+        // bukan pesan yang jelas ke pengguna.
+        if (request.getNote() != null && request.getNote().trim().length() > 255) {
+            throw new IllegalArgumentException("Keterangan maksimal 255 karakter.");
         }
 
         // [BARU] Koordinat GPS WAJIB -- tanpa ini absensi tidak bisa dikirim.
@@ -103,6 +112,12 @@ public class AttendanceService {
             throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, check-out tidak diperlukan.");
         }
 
+        // [BARU] Nama lokasi dicari SERVER dari koordinat -- tidak menerima nama dari
+        // klien supaya tidak bisa dipalsukan. Gagal/kosong tidak menghalangi absensi.
+        String locationName = reverseGeocodingService
+                .resolveName(request.getLatitude(), request.getLongitude())
+                .orElse(null);
+
         String photoUrl;
         try {
             String publicId = "attendance-" + employee.getEmployeeId() + "-" + today + "-" + UUID.randomUUID();
@@ -121,6 +136,7 @@ public class AttendanceService {
                 .photoUrl(photoUrl)
                 .latitude(BigDecimal.valueOf(request.getLatitude()))
                 .longitude(BigDecimal.valueOf(request.getLongitude()))
+                .locationName(locationName)
                 .build();
 
         Attendance saved = attendanceRepository.save(attendance);
@@ -197,6 +213,7 @@ public class AttendanceService {
                 .recordedAt(attendance.getRecordedAt())
                 .attendanceDate(attendance.getAttendanceDate())
                 .approvalStatus(attendance.getApprovalStatus())
+                .locationName(attendance.getLocationName())
                 .build();
     }
 

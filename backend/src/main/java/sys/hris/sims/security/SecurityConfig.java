@@ -344,6 +344,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/absensi/me")
                         .authenticated()
 
+                        // [BARU] Nama lokasi dari koordinat (popup absen Dashboard).
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/location-name")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/api/absensi")
                         .hasAnyRole(ADMIN_ROLES)
 

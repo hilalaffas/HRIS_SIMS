@@ -3,11 +3,13 @@
 // [BARU] Kartu utama Dashboard (Karyawan & Manager): 4 kartu mini (Sisa Cuti,
 // Kehadiran, Terlambat, Izin/Cuti) + baris status absen hari ini & tombol
 // aksi, dalam satu kartu gradasi lembut yang ringkas.
+// [UBAH] Kartu mini berwarna (hijau/biru/oranye/ungu, versi lembut), tombol
+// "Buka Portal Absensi" diganti pil status absen, dan "Absen Masuk/Keluar
+// (Selfie)" kini membuka popup di Dashboard (bukan pindah halaman).
 //
 // Contoh pemakaian:
 // <DashboardSummaryCard balance={leaveBalance} isLoadingBalance={isLoadingBalance} />
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Building2,
   CalendarCheck,
@@ -16,23 +18,46 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  Fingerprint,
   LogOut,
+  Stethoscope,
   TimerOff,
+  XCircle,
 } from 'lucide-react';
 import Skeleton from '../../../components/Skeleton';
+import Toast from '../../../components/Toast'; // [BARU] konfirmasi setelah absen dari popup
 import useAttendanceSummary from '../hooks/useAttendanceSummary';
 import useCountUp from '../hooks/useCountUp';
+import useLiveClock from '../hooks/useLiveClock'; // [BARU] jam WIB berjalan
+import useAttendanceCapture from '../../Absensi/hooks/useAttendanceCapture'; // [BARU] logika selfie+GPS+kirim (dibagi dgn halaman Absensi)
+import QuickAttendanceModal from './QuickAttendanceModal'; // [BARU]
 import { buildLeaveBalanceNote } from '../../../utils/leaveBalanceNote';
 import { SHIFT_LABEL } from '../../Absensi/utils/monthlyAttendance';
 import './DashboardSummaryCard.css';
 
-// Teks & ikon status hari ini. `action` = state yang dikirim ke halaman Absensi.
+// Teks & ikon status hari ini.
+// badge/badgeTone = lencana kecil di kiri, pill* = pil status di sebelah tombol,
+// action = jenis absen yang dibuka di popup (null = tombol terkunci).
 const TODAY_STATUS_CONFIG = {
-  idle: { badge: 'Belum Absen Masuk', badgeTone: 'warning', buttonLabel: 'Absen Masuk (Selfie)', buttonIcon: Camera, canAct: true },
-  checkedIn: { badge: 'Sedang Bekerja', badgeTone: 'success', buttonLabel: 'Absen Keluar (Selfie)', buttonIcon: LogOut, canAct: true },
-  done: { badge: 'Absensi Selesai', badgeTone: 'success', buttonLabel: 'Absensi Selesai', buttonIcon: CheckCircle2, canAct: false },
-  sick: { badge: 'Izin Sakit', badgeTone: 'info', buttonLabel: 'Izin Sakit Tercatat', buttonIcon: CheckCircle2, canAct: false },
+  idle: {
+    badge: 'Belum Absen Masuk', badgeTone: 'warning',
+    pillLabel: 'Belum Absen', pillTone: 'danger', PillIcon: XCircle,
+    buttonLabel: 'Absen Masuk (Selfie)', buttonIcon: Camera, action: 'Masuk',
+  },
+  checkedIn: {
+    badge: 'Sedang Bekerja', badgeTone: 'success',
+    pillLabel: 'Sudah Absen Masuk', pillTone: 'success', PillIcon: CheckCircle2,
+    buttonLabel: 'Absen Keluar (Selfie)', buttonIcon: LogOut, action: 'Keluar',
+  },
+  done: {
+    badge: 'Absensi Selesai', badgeTone: 'success',
+    pillLabel: 'Absensi Selesai', pillTone: 'success', PillIcon: CheckCircle2,
+    buttonLabel: 'Absensi Selesai', buttonIcon: CheckCircle2, action: null,
+  },
+  sick: {
+    badge: 'Izin Sakit', badgeTone: 'info',
+    pillLabel: 'Izin Sakit', pillTone: 'info', PillIcon: Stethoscope,
+    buttonLabel: 'Izin Sakit Tercatat', buttonIcon: CheckCircle2, action: null,
+  },
 };
 
 // "Shift Normal (08:00 - 17:00)" -> "08:00 - 17:00" (teks lengkap tetap di tooltip)
@@ -51,6 +76,8 @@ function SummaryTile({ index, icon: Icon, tone, label, value, unit, note, noteTi
       <span className="dashSummary__tileIcon" aria-hidden="true">
         <Icon size={18} strokeWidth={2.2} />
       </span>
+      {/* [BARU] Ikon besar samar di pojok kanan sebagai dekorasi */}
+      <Icon className="dashSummary__tileWatermark" size={64} strokeWidth={1.6} aria-hidden="true" />
       <div className="dashSummary__tileBody">
         <span className="dashSummary__tileLabel">{label}</span>
         {isLoading ? (
@@ -67,117 +94,157 @@ function SummaryTile({ index, icon: Icon, tone, label, value, unit, note, noteTi
   );
 }
 
+// [BARU] Jam berjalan dipisah jadi komponen sendiri supaya re-render per menit
+// hanya menyentuh teks jam, bukan seluruh kartu.
+function LiveClock() {
+  return <>{useLiveClock()}</>;
+}
+
 export default function DashboardSummaryCard({ balance, isLoadingBalance = false }) {
-  const navigate = useNavigate();
   const attendance = useAttendanceSummary();
   const leave = buildLeaveBalanceNote(balance);
+  const { refresh: refreshAttendance } = attendance;
+
+  // [BARU] Toast konfirmasi setelah absen dari popup.
+  const [toast, setToast] = useState(null);
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timerId = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timerId);
+  }, [toast]);
+
+  // [BARU] Setelah absen berhasil: muat ulang rekap (status, jam masuk, angka kartu).
+  const handleSubmitted = useCallback((record, action) => {
+    refreshAttendance();
+    setToast({ message: `Absen ${action.toLowerCase()} berhasil dicatat.`, type: 'success' });
+  }, [refreshAttendance]);
+
+  const capture = useAttendanceCapture({ onSubmitted: handleSubmitted });
 
   const statusConfig = TODAY_STATUS_CONFIG[attendance.todayStatus];
   const ActionIcon = statusConfig.buttonIcon;
+  const PillIcon = statusConfig.PillIcon;
   const periodNote = attendance.periodShort ? `Periode ${attendance.periodShort}` : 'Periode berjalan';
 
   return (
-    <section className="dashSummary" aria-label="Ringkasan dashboard">
-      <span className="dashSummary__blob dashSummary__blob--a" aria-hidden="true" />
-      <span className="dashSummary__blob dashSummary__blob--b" aria-hidden="true" />
+    <>
+      <section className="dashSummary" aria-label="Ringkasan dashboard">
+        <span className="dashSummary__blob dashSummary__blob--a" aria-hidden="true" />
+        <span className="dashSummary__blob dashSummary__blob--b" aria-hidden="true" />
 
-      {/* ---------- 4 kartu mini ---------- */}
-      <div className="dashSummary__tiles">
-        <SummaryTile
-          index={0}
-          tone="leave"
-          icon={CalendarDays}
-          label="Total Sisa Cuti"
-          value={leave.total}
-          unit="Hari"
-          note={leave.note}
-          noteTitle={leave.noteFull}
-          isLoading={isLoadingBalance}
-        />
-        <SummaryTile
-          index={1}
-          tone="present"
-          icon={CalendarCheck}
-          label="Total Kehadiran"
-          value={attendance.present}
-          unit="Hari"
-          note={periodNote}
-          noteTitle={attendance.periodRange}
-          isLoading={attendance.isLoading}
-        />
-        <SummaryTile
-          index={2}
-          tone="late"
-          icon={TimerOff}
-          label="Terlambat"
-          value={attendance.late}
-          unit="Kali"
-          note={periodNote}
-          noteTitle={attendance.periodRange}
-          isLoading={attendance.isLoading}
-        />
-        <SummaryTile
-          index={3}
-          tone="permit"
-          icon={FileText}
-          label="Izin / Cuti"
-          value={attendance.permit}
-          unit="Hari"
-          note={periodNote}
-          noteTitle={`${attendance.periodRange} (izin & sakit)`}
-          isLoading={attendance.isLoading}
-        />
-      </div>
+        {/* ---------- 4 kartu mini ---------- */}
+        <div className="dashSummary__tiles">
+          <SummaryTile
+            index={0}
+            tone="leave"
+            icon={CalendarDays}
+            label="Total Sisa Cuti"
+            value={leave.total}
+            unit="Hari"
+            note={leave.note}
+            noteTitle={leave.noteFull}
+            isLoading={isLoadingBalance}
+          />
+          <SummaryTile
+            index={1}
+            tone="present"
+            icon={CalendarCheck}
+            label="Total Kehadiran"
+            value={attendance.present}
+            unit="Hari"
+            note={periodNote}
+            noteTitle={attendance.periodRange}
+            isLoading={attendance.isLoading}
+          />
+          <SummaryTile
+            index={2}
+            tone="late"
+            icon={TimerOff}
+            label="Terlambat"
+            value={attendance.late}
+            unit="Kali"
+            note={periodNote}
+            noteTitle={attendance.periodRange}
+            isLoading={attendance.isLoading}
+          />
+          <SummaryTile
+            index={3}
+            tone="permit"
+            icon={FileText}
+            label="Izin / Cuti"
+            value={attendance.permit}
+            unit="Hari"
+            note={periodNote}
+            noteTitle={`${attendance.periodRange} (izin & sakit)`}
+            isLoading={attendance.isLoading}
+          />
+        </div>
 
-      {/* ---------- Status absen hari ini + aksi ---------- */}
-      <div className="dashSummary__status" style={{ '--i': 4 }}>
-        <div className="dashSummary__statusInfo">
-          <div className="dashSummary__statusHead">
-            <span className="dashSummary__statusLabel">STATUS HARI INI</span>
-            <span className={`dashSummary__badge dashSummary__badge--${statusConfig.badgeTone}`}>
-              <i className="dashSummary__pulse" aria-hidden="true" />
-              {statusConfig.badge}
-            </span>
+        {/* ---------- Status absen hari ini + aksi ---------- */}
+        <div className="dashSummary__status" style={{ '--i': 4 }}>
+          <div className="dashSummary__statusInfo">
+            <div className="dashSummary__statusHead">
+              <span className="dashSummary__statusLabel">STATUS HARI INI</span>
+              <span className={`dashSummary__badge dashSummary__badge--${statusConfig.badgeTone}`}>
+                <i className="dashSummary__pulse" aria-hidden="true" />
+                {statusConfig.badge}
+              </span>
+            </div>
+
+            <div className="dashSummary__statusMeta">
+              <span className="dashSummary__clock" title="Waktu saat ini">
+                <Clock size={14} aria-hidden="true" />
+                <LiveClock />
+              </span>
+              {attendance.division && (
+                <span className="dashSummary__chip">
+                  <Building2 size={12} aria-hidden="true" />
+                  {attendance.division}
+                </span>
+              )}
+              <span className="dashSummary__chip" title={SHIFT_LABEL}>
+                <Clock size={12} aria-hidden="true" />
+                {SHIFT_HOURS}
+              </span>
+              {/* [BARU] Jam masuk yang tercatat (dari server) */}
+              <span className="dashSummary__checkIn">
+                Masuk: {attendance.checkInTime || '--:--'}
+              </span>
+            </div>
           </div>
 
-          <div className="dashSummary__statusMeta">
-            <span className="dashSummary__clock" title="Jam masuk">
-              <Clock size={14} aria-hidden="true" />
-              {attendance.checkInTime || '--:-- WIB'}
-            </span>
-            {attendance.division && (
-              <span className="dashSummary__chip">
-                <Building2 size={12} aria-hidden="true" />
-                {attendance.division}
+          <div className="dashSummary__actions">
+            {/* [UBAH] Menggantikan tombol "Buka Portal Absensi" */}
+            {attendance.isLoading ? (
+              <Skeleton width={118} height={30} style={{ borderRadius: 999 }} />
+            ) : (
+              <span
+                key={attendance.todayStatus}
+                className={`dashSummary__pill dashSummary__pill--${statusConfig.pillTone}`}
+                role="status"
+              >
+                <PillIcon size={14} aria-hidden="true" />
+                {statusConfig.pillLabel}
               </span>
             )}
-            <span className="dashSummary__chip" title={SHIFT_LABEL}>
-              <Clock size={12} aria-hidden="true" />
-              {SHIFT_HOURS}
-            </span>
+            <button
+              type="button"
+              className="dashSummary__btn dashSummary__btn--primary"
+              disabled={!statusConfig.action || attendance.isLoading}
+              onClick={() => capture.open(statusConfig.action)}
+            >
+              <ActionIcon size={15} aria-hidden="true" />
+              {statusConfig.buttonLabel}
+            </button>
           </div>
         </div>
+      </section>
 
-        <div className="dashSummary__actions">
-          <button
-            type="button"
-            className="dashSummary__btn dashSummary__btn--ghost"
-            onClick={() => navigate('/absensi')}
-          >
-            <Fingerprint size={15} aria-hidden="true" />
-            Buka Portal Absensi
-          </button>
-          <button
-            type="button"
-            className="dashSummary__btn dashSummary__btn--primary"
-            disabled={!statusConfig.canAct || attendance.isLoading}
-            onClick={() => navigate('/absensi', { state: { autoOpenCamera: true } })}
-          >
-            <ActionIcon size={15} aria-hidden="true" />
-            {statusConfig.buttonLabel}
-          </button>
-        </div>
-      </div>
-    </section>
+      {/* [BARU] Popup absen: di luar <section> karena kartu memakai container-type
+          (membuat position:fixed relatif ke kartu, bukan ke layar). Hanya di-mount saat terbuka. */}
+      {capture.isOpen && <QuickAttendanceModal capture={capture} shiftHours={SHIFT_HOURS} />}
+
+      <Toast show={!!toast} message={toast?.message} type={toast?.type} />
+    </>
   );
 }

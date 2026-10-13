@@ -4,7 +4,7 @@
 // berjalan (tutup buku tgl 21 - 20), status absen hari ini, dan divisi.
 // Memakai ulang buildMonthlyRows() dari modul Absensi supaya angka di
 // Dashboard SAMA PERSIS dengan tabel "Jadwal & Log Absensi Bulanan".
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react'; // [UBAH] + useCallback, useRef
 import { getMyAttendanceHistory, toDisplayRecord } from '../../../services/attendanceService';
 import { getMyProfile } from '../../../services/profileService';
 import {
@@ -53,44 +53,62 @@ function resolveTodayStatus(records, todayKey) {
   return { todayStatus, checkInTime: isSick ? '' : checkIn?.time || '' };
 }
 
+// [UBAH] Pengambilan data dipisah dari React (tidak memanggil setState) supaya
+// bisa dipakai efek awal DAN `refresh`. Mengembalikan state baru, atau null bila gagal.
+async function loadSummary() {
+  try {
+    // Profil hanya untuk nama divisi -- kegagalannya tidak boleh menggagalkan rekap.
+    const [history, profile] = await Promise.all([
+      getMyAttendanceHistory(),
+      getMyProfile().catch(() => null),
+    ]);
+
+    const now = new Date();
+    const records = (history || []).map(toDisplayRecord);
+    const { year, month } = getCurrentPeriod(now);
+    const rows = buildMonthlyRows(records, year, month, now);
+    const periodEnd = new Date(year, month, 1);
+
+    return {
+      isLoading: false,
+      hasError: false,
+      ...summarizeRows(rows),
+      periodShort: periodEnd.toLocaleDateString('id-ID', MONTH_FORMAT),
+      periodRange: formatPeriodLabel(year, month),
+      ...resolveTodayStatus(records, dateKey(now)),
+      division: profile?.divisi && profile.divisi !== '-' ? profile.divisi : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Gagal saat pertama kali -> state error; gagal saat refresh -> angka lama dipertahankan.
+const applyResult = (previous, next) => {
+  if (next) return next;
+  return previous.isLoading
+    ? { ...INITIAL_STATE, isLoading: false, hasError: true }
+    : { ...previous, hasError: true };
+};
+
 export default function useAttendanceSummary() {
   const [state, setState] = useState(INITIAL_STATE);
+  const isMountedRef = useRef(true); // [BARU] cegah setState setelah unmount
 
   useEffect(() => {
-    let isCancelled = false;
-
-    async function load() {
-      try {
-        // Profil hanya untuk nama divisi -- kegagalannya tidak boleh menggagalkan rekap.
-        const [history, profile] = await Promise.all([
-          getMyAttendanceHistory(),
-          getMyProfile().catch(() => null),
-        ]);
-        if (isCancelled) return;
-
-        const now = new Date();
-        const records = (history || []).map(toDisplayRecord);
-        const { year, month } = getCurrentPeriod(now);
-        const rows = buildMonthlyRows(records, year, month, now);
-        const periodEnd = new Date(year, month, 1);
-
-        setState({
-          isLoading: false,
-          hasError: false,
-          ...summarizeRows(rows),
-          periodShort: periodEnd.toLocaleDateString('id-ID', MONTH_FORMAT),
-          periodRange: formatPeriodLabel(year, month),
-          ...resolveTodayStatus(records, dateKey(now)),
-          division: profile?.divisi && profile.divisi !== '-' ? profile.divisi : '',
-        });
-      } catch {
-        if (!isCancelled) setState({ ...INITIAL_STATE, isLoading: false, hasError: true });
-      }
-    }
-
-    load();
-    return () => { isCancelled = true; };
+    isMountedRef.current = true;
+    loadSummary().then((next) => {
+      if (isMountedRef.current) setState((previous) => applyResult(previous, next));
+    });
+    return () => { isMountedRef.current = false; };
   }, []);
 
-  return state;
+  // [BARU] Muat ulang diam-diam (angka lama tetap tampil, tanpa skeleton),
+  // dipakai setelah absen dari popup Dashboard.
+  const refresh = useCallback(async () => {
+    const next = await loadSummary();
+    if (isMountedRef.current) setState((previous) => applyResult(previous, next));
+  }, []);
+
+  return { ...state, refresh };
 }

@@ -1,0 +1,488 @@
+/* src/pages/Dashboard/components/QuickAttendanceModal.css */
+
+/* [BARU] Popup absen di Dashboard. Warna memakai token (ikut tema gelap).
+   Animasi hanya opacity & transform. Blur latar sengaja tipis (3px). */
+
+.quickAtt__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; /* sama dengan modal lain di project */
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.38);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: quickAttBackdropIn 0.2s ease-out both;
+}
+
+.quickAtt {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(800px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 20px 24px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  outline: none;
+  animation: quickAttModalIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ---------- Header ---------- */
+.quickAtt__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.quickAtt__header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.quickAtt__header h2 svg { color: var(--color-success); }
+
+.quickAtt__close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.quickAtt__close:hover:not(:disabled) {
+  background: var(--color-border);
+  color: var(--color-text);
+  transform: rotate(90deg);
+}
+
+.quickAtt__close:disabled { cursor: not-allowed; opacity: 0.5; }
+
+/* ---------- Kamera + peta ---------- */
+.quickAtt__body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quickAtt__camera,
+.quickAtt__map {
+  position: relative;
+  min-height: 250px;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #182433;
+}
+
+.quickAtt__camera {
+  border: 2px dashed var(--color-success);
+  animation: quickAttScan 2.4s ease-in-out infinite;
+}
+
+.quickAtt__camera.is-captured {
+  border-style: solid;
+  animation: none;
+}
+
+.quickAtt__video,
+.quickAtt__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.quickAtt__video[hidden] { display: none; }
+
+.quickAtt__photo { animation: quickAttPhotoIn 0.3s ease-out both; }
+
+/* Kilatan putih singkat saat foto diambil */
+.quickAtt__flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  pointer-events: none;
+  animation: quickAttFlash 0.45s ease-out forwards;
+}
+
+.quickAtt__cameraBar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.quickAtt__cameraBar time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #6ee7b7;
+}
+
+.quickAtt__gps {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.quickAtt__gps i {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  animation: quickAttBlink 1.2s ease-in-out infinite;
+}
+
+.quickAtt__gps--ready i { background: #34d399; animation: none; }
+.quickAtt__gps--error i { background: #f87171; animation: none; }
+
+.quickAtt__cameraError {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 16px 56px;
+  text-align: center;
+  color: #e5e7eb;
+}
+
+.quickAtt__cameraError p { margin: 0; font-size: 0.78rem; line-height: 1.45; }
+
+.quickAtt__link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6ee7b7;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- Peta ---------- */
+.quickAtt__map { background: var(--color-bg-page); border: 1px solid var(--color-border); }
+
+.quickAtt__mapFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  animation: quickAttPhotoIn 0.4s ease-out both;
+}
+
+.quickAtt__mapPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--color-success);
+  background:
+    linear-gradient(90deg, transparent 49%, var(--color-border) 49% 51%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, var(--color-border) 49% 51%, transparent 51%);
+  background-size: 64px 64px;
+}
+
+.quickAtt__locationCard {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  animation: quickAttFadeUp 0.3s ease-out 0.1s both;
+}
+
+.quickAtt__locationHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.quickAtt__locationHead strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--color-text);
+}
+
+.quickAtt__locationHead strong svg { color: var(--color-success); }
+
+.quickAtt__refresh {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.quickAtt__refresh:hover:not(:disabled) { transform: scale(1.1); }
+.quickAtt__refresh:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.quickAtt__place {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* alamat Google bisa panjang */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quickAtt__coords {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.64rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quickAtt__muted,
+.quickAtt__error,
+.quickAtt__warn { margin: 0; font-size: 0.68rem; line-height: 1.4; }
+
+.quickAtt__muted { color: var(--color-text-secondary); }
+.quickAtt__error { color: var(--color-danger); font-weight: 600; }
+
+.quickAtt__warn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+/* ---------- Detail presensi ---------- */
+.quickAtt__detail {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-page);
+}
+
+.quickAtt__detail h3 {
+  margin: 0 0 3px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.quickAtt__detail p { margin: 0; font-size: 0.78rem; color: var(--color-text-secondary); }
+.quickAtt__detail p strong { color: var(--color-text); }
+
+.quickAtt__noteField {
+  display: block;
+  margin: 10px 0 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.quickAtt__noteField span { font-weight: 500; color: var(--color-text-muted); }
+
+.quickAtt__detail textarea {
+  width: 100%;
+  resize: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quickAtt__detail textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-soft);
+  box-shadow: 0 0 0 3px rgba(33, 122, 91, 0.15);
+}
+
+.quickAtt__noteMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+}
+
+.quickAtt__hint { display: inline-flex; align-items: center; gap: 4px; }
+
+.quickAtt__alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-danger-border);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 0.78rem;
+  font-weight: 600;
+  animation: quickAttFadeUp 0.25s ease-out both;
+}
+
+/* ---------- Footer & tombol ---------- */
+.quickAtt__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.quickAtt__footerActions { display: flex; gap: 8px; }
+
+.quickAtt__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.quickAtt__btn:hover:not(:disabled) { transform: translateY(-1px); }
+.quickAtt__btn:active:not(:disabled) { transform: scale(0.97); }
+.quickAtt__btn:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
+
+.quickAtt__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.quickAtt__btn--text { background: transparent; color: var(--color-text-secondary); }
+.quickAtt__btn--text:hover:not(:disabled) { color: var(--color-text); }
+
+.quickAtt__btn--outline {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+/* "Ambil Foto" biru (sesuai referensi); "Kirim Absensi" hijau (aksi final) */
+.quickAtt__btn--capture { background: var(--color-info); color: #ffffff; }
+.quickAtt__btn--capture:hover:not(:disabled) { box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3); }
+
+.quickAtt__btn--send { background: var(--color-success); color: #ffffff; }
+.quickAtt__btn--send:hover:not(:disabled) { box-shadow: 0 6px 14px rgba(5, 150, 105, 0.3); }
+
+.quickAtt__spin { animation: quickAttSpin 0.9s linear infinite; }
+
+/* ---------- Layar kecil ---------- */
+@media (max-width: 720px) {
+  .quickAtt { padding: 16px; }
+  .quickAtt__body { grid-template-columns: 1fr; }
+  .quickAtt__camera,
+  .quickAtt__map { min-height: 0; }
+  .quickAtt__map { aspect-ratio: 16 / 10; }
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes quickAttBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes quickAttModalIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes quickAttFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes quickAttPhotoIn {
+  from { opacity: 0; transform: scale(1.03); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes quickAttFlash { from { opacity: 0.85; } to { opacity: 0; } }
+
+@keyframes quickAttScan {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(5, 150, 105, 0); }
+}
+
+@keyframes quickAttBlink { 50% { opacity: 0.3; } }
+@keyframes quickAttSpin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .quickAtt__backdrop,
+  .quickAtt,
+  .quickAtt__camera,
+  .quickAtt__photo,
+  .quickAtt__flash,
+  .quickAtt__mapFrame,
+  .quickAtt__locationCard,
+  .quickAtt__alert,
+  .quickAtt__gps i { animation: none; }
+
+  .quickAtt__close,
+  .quickAtt__btn,
+  .quickAtt__refresh { transition: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quickAtt__flash { display: none; }
+}

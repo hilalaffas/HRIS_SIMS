@@ -104,6 +104,7 @@ function blankRow(key) {
     note: '-',
     photoUrl: '',
     mapsUrl: '',
+    locationName: '', // [BARU]
     proofLabel: '',
   };
 }
@@ -121,7 +122,7 @@ function resolveRow(key, entry, todayKey) {
       : { ...base, ...empty, status: 'TANPA KETERANGAN', tone: 'alpha', note: 'Tanpa Keterangan (Alpha)', photoUrl: '', mapsUrl: '', proofLabel: '' };
   }
 
-  const proof = { photoUrl: checkIn?.photoUrl || '', mapsUrl: checkIn?.mapsUrl || '' };
+  const proof = { photoUrl: checkIn?.photoUrl || '', mapsUrl: checkIn?.mapsUrl || '', locationName: checkIn?.locationName || '' }; // [UBAH] + locationName
 
   // Sakit / Izin: tidak bekerja, jam & durasi tidak ditampilkan.
   if (checkIn?.reasonCode === 'SAKIT' || checkIn?.reasonCode === 'IZIN') {
@@ -166,6 +167,7 @@ function resolveRow(key, entry, todayKey) {
     note,
     photoUrl: proof.photoUrl || checkOut?.photoUrl || '',
     mapsUrl: proof.mapsUrl || checkOut?.mapsUrl || '',
+    locationName: proof.locationName || checkOut?.locationName || '', // [BARU]
     proofLabel: 'Selfie GPS',
   };
 }
