@@ -26,6 +26,7 @@ const INITIAL_STATE = {
   periodRange: '',
   todayStatus: 'idle', // idle | checkedIn | done | sick
   checkInTime: '',
+  checkInAt: null, // [BARU] Date jam Masuk hari ini -- dasar hitung "pulang cepat"
   division: '',
 };
 
@@ -50,7 +51,11 @@ function resolveTodayStatus(records, todayKey) {
   else if (checkOut) todayStatus = 'done';
   else if (checkIn) todayStatus = 'checkedIn';
 
-  return { todayStatus, checkInTime: isSick ? '' : checkIn?.time || '' };
+  return {
+    todayStatus,
+    checkInTime: isSick ? '' : checkIn?.time || '',
+    checkInAt: isSick ? null : checkIn?.recordedAt || null, // [BARU]
+  };
 }
 
 // [UBAH] Pengambilan data dipisah dari React (tidak memanggil setState) supaya

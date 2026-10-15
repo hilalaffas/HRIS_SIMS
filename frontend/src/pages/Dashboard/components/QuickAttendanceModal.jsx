@@ -8,8 +8,13 @@
 // Sengaja TIDAK ada: tombol Sakit/Izin (diajukan lewat Absensi Saya) dan
 // unggah foto dari galeri (bukti harus selfie langsung dari kamera).
 //
+// [UBAH] Dipakai juga oleh halaman Absensi Saya. Di sana kamera yang terblokir
+// punya jalur cadangan "Unggah foto" (prop opsional onUploadFallback); di Dashboard
+// prop itu tidak diisi, jadi tetap hanya selfie langsung + tautan ke Absensi Saya.
+//
 // Contoh pemakaian:
 // <QuickAttendanceModal capture={capture} shiftHours="08:00 - 17:00" />
+// <QuickAttendanceModal capture={capture} shiftHours="08:00 - 17:00" onUploadFallback={capture.handleUploadFallback} />
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -66,7 +71,7 @@ function gpsBadgeText(locationStatus, coords) {
   return 'GPS: Mencari sinyal...';
 }
 
-export default function QuickAttendanceModal({ capture, shiftHours }) {
+export default function QuickAttendanceModal({ capture, shiftHours, onUploadFallback }) { // [UBAH] + onUploadFallback (opsional)
   const {
     action, note, captured, cameraError, submitError, coords,
     locationStatus, locationError, locationName, isLocationNameLoading, isSubmitting,
@@ -128,13 +133,21 @@ export default function QuickAttendanceModal({ capture, shiftHours }) {
         <div className="quickAtt__body">
           {/* ---------- Kamera ---------- */}
           <div className={`quickAtt__camera ${captured ? 'is-captured' : ''}`}>
-            {cameraError ? (
+            {/* [UBAH] Foto hasil unggah (cadangan) tetap tampil walau kamera error */}
+            {cameraError && !captured ? (
               <div className="quickAtt__cameraError" role="alert">
                 <Camera size={28} aria-hidden="true" />
                 <p>{cameraError}</p>
-                <button type="button" className="quickAtt__link" onClick={handleOpenAbsensiPage}>
-                  Buka Absensi Saya
-                </button>
+                {onUploadFallback ? (
+                  <label className="quickAtt__link">
+                    Unggah foto
+                    <input type="file" accept="image/*" onChange={onUploadFallback} hidden />
+                  </label>
+                ) : (
+                  <button type="button" className="quickAtt__link" onClick={handleOpenAbsensiPage}>
+                    Buka Absensi Saya
+                  </button>
+                )}
               </div>
             ) : (
               <>

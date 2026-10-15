@@ -1,0 +1,231 @@
+/* src/pages/Absensi/components/EarlyCheckoutModal.css */
+
+/* [BARU] Popup "Peringatan Pulang Cepat". Warna memakai token (ikut tema gelap),
+   aksen oranye = --color-warning. Animasi hanya opacity & transform. */
+
+.earlyOut__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; /* sama dengan modal lain di project (Toast 10000 tetap di atasnya) */
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.38);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: earlyOutBackdropIn 0.2s ease-out both;
+}
+
+.earlyOut {
+  width: min(448px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  animation: earlyOutModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ---------- Header ---------- */
+.earlyOut__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 24px 14px;
+}
+
+.earlyOut__header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.earlyOut__header p {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+/* Segitiga oranye penuh dengan tanda seru putih; bergoyang sekali saat muncul */
+.earlyOut__icon {
+  flex-shrink: 0;
+  fill: var(--color-warning);
+  stroke: #ffffff;
+  transform-origin: 50% 80%;
+  animation: earlyOutIconWobble 0.7s ease 0.25s both;
+}
+
+/* ---------- Isi ---------- */
+.earlyOut__body {
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--color-border);
+}
+
+.earlyOut__text {
+  margin: 0 0 16px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+.earlyOut__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.earlyOut__field textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 92px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.earlyOut__field textarea::placeholder { color: var(--color-text-muted); }
+
+.earlyOut__field textarea:focus {
+  outline: none;
+  border-color: var(--color-warning);
+  box-shadow: 0 0 0 3px var(--color-warning-bg);
+}
+
+.earlyOut__field textarea[aria-invalid='true'] {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-bg);
+}
+
+.earlyOut__field.is-shaking { animation: earlyOutShake 0.38s ease; }
+
+.earlyOut__error {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-danger);
+  animation: earlyOutErrorIn 0.2s ease-out both;
+}
+
+/* ---------- Footer ---------- */
+.earlyOut__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 24px 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.earlyOut__btn {
+  position: relative;
+  overflow: hidden;
+  height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.earlyOut__btn:focus-visible {
+  outline: 2px solid var(--color-warning);
+  outline-offset: 2px;
+}
+
+.earlyOut__btn--text {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.earlyOut__btn--text:hover { background: var(--color-border); color: var(--color-text); }
+
+.earlyOut__btn--warning {
+  background: var(--color-warning);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.28);
+}
+
+.earlyOut__btn--warning:hover {
+  transform: translateY(-1px);
+  background: #b45309;
+  box-shadow: 0 8px 18px rgba(217, 119, 6, 0.34);
+}
+
+.earlyOut__btn--warning:active { transform: scale(0.97); }
+
+/* Kilau yang menyapu tombol utama saat hover */
+.earlyOut__btn--warning::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+}
+
+.earlyOut__btn--warning:hover::after { animation: earlyOutShine 0.7s ease; }
+
+/* ---------- Keyframes ---------- */
+@keyframes earlyOutBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes earlyOutModalIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes earlyOutIconWobble {
+  0% { transform: scale(0.4) rotate(0); opacity: 0; }
+  45% { transform: scale(1.15) rotate(-10deg); opacity: 1; }
+  65% { transform: scale(1) rotate(8deg); }
+  85% { transform: rotate(-4deg); }
+  100% { transform: rotate(0); opacity: 1; }
+}
+
+@keyframes earlyOutShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes earlyOutErrorIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes earlyOutShine {
+  from { left: -60%; }
+  to { left: 130%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .earlyOut__backdrop,
+  .earlyOut,
+  .earlyOut__icon,
+  .earlyOut__field.is-shaking,
+  .earlyOut__error,
+  .earlyOut__btn--warning:hover::after { animation: none; }
+
+  .earlyOut__btn { transition: none; }
+}

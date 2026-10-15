@@ -17,6 +17,8 @@ import { formatDateLabel } from '../../../services/attendanceService';
 import { getOvertimeStatus } from '../../../services/overtimeService';
 
 export const SHIFT_LABEL = 'Shift Normal (08:00 - 17:00)';
+// [BARU] "Shift Normal (08:00 - 17:00)" -> "08:00 - 17:00" (dipakai popup absen)
+export const SHIFT_HOURS = SHIFT_LABEL.match(/\((.+)\)/)?.[1] ?? SHIFT_LABEL;
 const SHIFT_START_MINUTES = 8 * 60; // dasar hitung "Terlambat N Menit"
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -151,6 +153,8 @@ function resolveRow(key, entry, todayKey) {
   let note = 'Bekerja Normal';
   if (isLate) note = lateMinutes > 0 ? `Terlambat ${lateMinutes} Menit` : 'Terlambat';
   if (!checkOut) note += isToday ? ' (Sedang Bekerja)' : ' (Tidak Absen Pulang)';
+  // [BARU] Keterangan saat check-out (mis. "Pulang cepat: ...") ikut tampil di catatan.
+  if (checkOut?.note) note += ` · ${checkOut.note}`;
 
   const minutesWorked = checkIn?.recordedAt && checkOut?.recordedAt
     ? (checkOut.recordedAt.getTime() - checkIn.recordedAt.getTime()) / 60000

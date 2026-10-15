@@ -1,60 +1,72 @@
 // src/pages/Absensi/components/AttendanceCameraCard.jsx
 //
-// Kartu "ABSENSI HARI INI" -- ajakan untuk membuka kamera dan mencatat
-// kehadiran (Masuk/Keluar/Sakit). Realisasi dari desain UI/UX, dipecah
-// jadi komponen sendiri mengikuti pola pages/Cuti/applycuti/components/*.
+// Kartu "ABSENSI HARI INI" -- pil status absen, tombol utama Absen Masuk/Keluar,
+// dan tombol Sakit. Realisasi dari desain UI/UX, dipecah jadi komponen sendiri
+// mengikuti pola pages/Cuti/applycuti/components/*.
 //
-// [UBAH] Tombol Masuk & Keluar disatukan jadi SATU tombol utama yang
-// berganti Masuk -> Keluar -> "Absensi selesai" (abu-abu, disabled),
-// ditambah tombol Sakit. Statusnya datang dari prop attendanceStatus yang
-// dihitung di absensi.jsx dari data absensi hari ini, jadi otomatis
-// kembali ke "Masuk" saat ganti hari. Kedua tombol dibuat SEJAJAR &
-// UKURANNYA PRESIS lewat AttendanceCameraCard.css (flex:1, height tetap).
+// [UBAH] Tombol utama & pil status kini SAMA dengan kartu ringkasan di
+// Dashboard (teks, ikon, dan warna dari utils/todayStatusConfig.js):
+// "Absen Masuk (Selfie)" -> "Absen Keluar (Selfie)" -> "Absensi Selesai"
+// (abu-abu, disabled). Menekan tombol tidak lagi langsung membuka kamera di
+// sini; absensi.jsx yang memutuskan (popup pulang cepat -> popup kamera).
+//
+// Contoh pemakaian:
+// <AttendanceCameraCard attendanceStatus="idle" onStartAttendance={fn} onStartSick={fn} />
 import React from 'react';
-import { Camera, CheckCircle2, LogOut, Stethoscope } from 'lucide-react';
+import { Stethoscope } from 'lucide-react';
+import Skeleton from '../../../components/Skeleton';
+import { TODAY_STATUS_CONFIG } from '../utils/todayStatusConfig';
 import './AttendanceCameraCard.css';
 
-// Satu tombol utama dengan 3 kondisi: Masuk -> Keluar -> Selesai (disabled).
-const MAIN_BUTTON_CONFIG = {
-  idle: { label: 'Masuk', icon: Camera, action: 'Masuk', className: '' },
-  checkedIn: { label: 'Keluar', icon: LogOut, action: 'Keluar', className: 'is-checkout' },
-  done: { label: 'Absensi selesai', icon: CheckCircle2, action: null, className: '' },
-  // [BARU] Karyawan sakit hari ini: tombol dikunci seperti kondisi sudah keluar.
-  sick: { label: 'Izin sakit tercatat', icon: CheckCircle2, action: null, className: '' },
-};
-
 export default function AttendanceCameraCard({
-  onOpenCamera,
   attendanceStatus = 'idle',
+  isLoading = false,
   disabledSakit,
+  onStartAttendance,
+  onStartSick,
 }) {
-  const mainButton = MAIN_BUTTON_CONFIG[attendanceStatus] ?? MAIN_BUTTON_CONFIG.idle;
-  const MainIcon = mainButton.icon;
-  const isDone = attendanceStatus === 'done' || attendanceStatus === 'sick'; // [UBAH] sick ikut terkunci
+  const statusConfig = TODAY_STATUS_CONFIG[attendanceStatus] ?? TODAY_STATUS_CONFIG.idle;
+  const MainIcon = statusConfig.buttonIcon;
+  const PillIcon = statusConfig.PillIcon;
 
   return (
     <div className="abs-camera-card">
-      <div className="abs-card-kicker">
-        <span className="abs-live-dot" />
-        ABSENSI HARI INI
+      <div className="abs-card-head">
+        <div className="abs-card-kicker">
+          <span className="abs-live-dot" />
+          ABSENSI HARI INI
+        </div>
+
+        {/* [BARU] Pil status -- menggantikan tombol/teks status lama, sama seperti di Dashboard */}
+        {isLoading ? (
+          <Skeleton width={110} height={28} style={{ borderRadius: 999 }} />
+        ) : (
+          <span
+            key={attendanceStatus}
+            className={`abs-status-pill abs-status-pill--${statusConfig.pillTone}`}
+            role="status"
+          >
+            <PillIcon aria-hidden="true" />
+            {statusConfig.pillLabel}
+          </span>
+        )}
       </div>
-      {/* [UBAH] Teks "Sudah siap untuk mulai?", paragraf, dan kotak placeholder
-          foto dihapus supaya kartu ringkas sesuai referensi UI. */}
+
       <div className="abs-attendance-actions">
         <button
           type="button"
-          className={`abs-primary-button ${mainButton.className}`.trim()}
-          onClick={() => onOpenCamera(mainButton.action, 'Absen')}
-          disabled={isDone}
+          className="abs-primary-button abs-checkin-button"
+          onClick={() => onStartAttendance(statusConfig.action)}
+          disabled={!statusConfig.action || isLoading}
         >
           <MainIcon aria-hidden="true" />
-          {mainButton.label}
+          {statusConfig.buttonLabel}
         </button>
         <button
           type="button"
           className="abs-tertiary-button"
-          onClick={() => onOpenCamera('Masuk', 'Sakit')}
-          disabled={disabledSakit}
+          onClick={onStartSick}
+          disabled={disabledSakit || isLoading}
         >
           <Stethoscope aria-hidden="true" />
           Sakit

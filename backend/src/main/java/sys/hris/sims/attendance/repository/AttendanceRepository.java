@@ -2,6 +2,7 @@ package sys.hris.sims.attendance.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -24,6 +25,11 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // [BARU] Dipakai untuk memblokir check-out di hari karyawan mengajukan Sakit/Izin.
     boolean existsByEmployee_EmployeeIdAndAttendanceDateAndActionAndReasonIn(
             Long employeeId, LocalDate attendanceDate, String action, List<String> reasons);
+
+    // [BARU] Catatan Masuk hari ini -- dipakai AttendanceService.submit() untuk
+    // menghitung durasi kerja saat check-out (aturan "pulang cepat").
+    Optional<Attendance> findFirstByEmployee_EmployeeIdAndAttendanceDateAndAction(
+            Long employeeId, LocalDate attendanceDate, String action);
 
     // [BARU] Dipakai HR/Super Admin (nanti, saat modul ini dihubungkan ke
     // Direktori Karyawan) untuk melihat absensi semua karyawan.

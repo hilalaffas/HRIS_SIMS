@@ -8,6 +8,7 @@
 // Contoh pemakaian:
 // const capture = useAttendanceCapture({ onSubmitted: (record, action) => { ... } });
 // capture.open('Masuk');   // buka kamera + minta lokasi
+// capture.open('Keluar', 'Absen', 'Pulang cepat: ...'); // [BARU] dengan Keterangan terisi
 // capture.submit();        // kirim ke backend
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -127,14 +128,14 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     );
   }, [requestLocationName]);
 
-  const open = useCallback(async (nextAction, presetReason = 'Absen') => {
+  const open = useCallback(async (nextAction, presetReason = 'Absen', presetNote = '') => { // [UBAH] + presetNote
     stopCamera();
     sessionRef.current += 1;
     const session = sessionRef.current;
 
     setAction(nextAction);
     setReason(presetReason);
-    setNote('');
+    setNote(presetNote); // [UBAH] sebelumnya selalu ''
     setCaptured('');
     setCameraError('');
     setSubmitError('');

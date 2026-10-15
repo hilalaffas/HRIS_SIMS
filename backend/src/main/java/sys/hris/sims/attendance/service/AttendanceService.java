@@ -2,7 +2,9 @@ package sys.hris.sims.attendance.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +31,10 @@ public class AttendanceService {
     // [BARU] Jam batas dianggap "Tepat waktu" untuk check-in Masuk.
     // Sesuaikan kalau kebijakan jam masuk kantor berubah.
     private static final LocalTime ON_TIME_CUTOFF = LocalTime.of(8, 0);
+
+    // [BARU] Durasi kerja minimum sebelum boleh check-out TANPA alasan. Di bawah
+    // ini, keterangan (alasan pulang cepat) wajib diisi.
+    private static final Duration MIN_WORK_DURATION = Duration.ofHours(8);
 
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
@@ -110,6 +116,22 @@ public class AttendanceService {
                 && attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndActionAndReasonIn(
                         employee.getEmployeeId(), today, "MASUK", List.of("SAKIT", "IZIN"))) {
             throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, check-out tidak diperlukan.");
+        }
+
+        // [BARU] Pulang cepat: check-out sebelum 8 jam kerja WAJIB menyertakan alasan.
+        // Popup peringatan di frontend hanya UX; aturan ini menjaga agar request yang
+        // dikirim langsung ke API pun tidak bisa melewatinya. Dihitung dengan jam
+        // SERVER (sama seperti Attendance.prePersist()), bukan jam perangkat.
+        if (action.equals("KELUAR") && (request.getNote() == null || request.getNote().isBlank())) {
+            attendanceRepository
+                    .findFirstByEmployee_EmployeeIdAndAttendanceDateAndAction(employee.getEmployeeId(), today, "MASUK")
+                    .ifPresent(checkIn -> {
+                        Duration worked = Duration.between(checkIn.getRecordedAt(), LocalDateTime.now());
+                        if (worked.compareTo(MIN_WORK_DURATION) < 0) {
+                            throw new IllegalArgumentException(
+                                    "Durasi kerja Anda belum memenuhi 8 jam. Alasan pulang cepat wajib diisi.");
+                        }
+                    });
         }
 
         // [BARU] Nama lokasi dicari SERVER dari koordinat -- tidak menerima nama dari

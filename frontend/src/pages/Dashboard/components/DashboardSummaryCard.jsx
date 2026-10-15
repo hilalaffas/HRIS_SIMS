@@ -14,14 +14,9 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
-  Camera,
-  CheckCircle2,
   Clock,
   FileText,
-  LogOut,
-  Stethoscope,
   TimerOff,
-  XCircle,
 } from 'lucide-react';
 import Skeleton from '../../../components/Skeleton';
 import Toast from '../../../components/Toast'; // [BARU] konfirmasi setelah absen dari popup
@@ -30,38 +25,15 @@ import useCountUp from '../hooks/useCountUp';
 import useLiveClock from '../hooks/useLiveClock'; // [BARU] jam WIB berjalan
 import useAttendanceCapture from '../../Absensi/hooks/useAttendanceCapture'; // [BARU] logika selfie+GPS+kirim (dibagi dgn halaman Absensi)
 import QuickAttendanceModal from './QuickAttendanceModal'; // [BARU]
+import EarlyCheckoutModal from '../../Absensi/components/EarlyCheckoutModal'; // [BARU] popup "Peringatan Pulang Cepat"
+import useEarlyCheckout from '../../Absensi/hooks/useEarlyCheckout'; // [BARU]
+import { TODAY_STATUS_CONFIG } from '../../Absensi/utils/todayStatusConfig'; // [UBAH] dipindah dari file ini
 import { buildLeaveBalanceNote } from '../../../utils/leaveBalanceNote';
-import { SHIFT_LABEL } from '../../Absensi/utils/monthlyAttendance';
+import { SHIFT_HOURS, SHIFT_LABEL } from '../../Absensi/utils/monthlyAttendance'; // [UBAH] + SHIFT_HOURS
 import './DashboardSummaryCard.css';
 
-// Teks & ikon status hari ini.
-// badge/badgeTone = lencana kecil di kiri, pill* = pil status di sebelah tombol,
-// action = jenis absen yang dibuka di popup (null = tombol terkunci).
-const TODAY_STATUS_CONFIG = {
-  idle: {
-    badge: 'Belum Absen Masuk', badgeTone: 'warning',
-    pillLabel: 'Belum Absen', pillTone: 'danger', PillIcon: XCircle,
-    buttonLabel: 'Absen Masuk (Selfie)', buttonIcon: Camera, action: 'Masuk',
-  },
-  checkedIn: {
-    badge: 'Sedang Bekerja', badgeTone: 'success',
-    pillLabel: 'Sudah Absen Masuk', pillTone: 'success', PillIcon: CheckCircle2,
-    buttonLabel: 'Absen Keluar (Selfie)', buttonIcon: LogOut, action: 'Keluar',
-  },
-  done: {
-    badge: 'Absensi Selesai', badgeTone: 'success',
-    pillLabel: 'Absensi Selesai', pillTone: 'success', PillIcon: CheckCircle2,
-    buttonLabel: 'Absensi Selesai', buttonIcon: CheckCircle2, action: null,
-  },
-  sick: {
-    badge: 'Izin Sakit', badgeTone: 'info',
-    pillLabel: 'Izin Sakit', pillTone: 'info', PillIcon: Stethoscope,
-    buttonLabel: 'Izin Sakit Tercatat', buttonIcon: CheckCircle2, action: null,
-  },
-};
-
-// "Shift Normal (08:00 - 17:00)" -> "08:00 - 17:00" (teks lengkap tetap di tooltip)
-const SHIFT_HOURS = SHIFT_LABEL.match(/\((.+)\)/)?.[1] ?? SHIFT_LABEL;
+// [UBAH] Konfigurasi status hari ini (TODAY_STATUS_CONFIG) dipindah ke
+// ../../Absensi/utils/todayStatusConfig.js supaya dipakai bersama halaman Absensi Saya.
 
 const formatNumber = (value) =>
   Number(value).toLocaleString('id-ID', { maximumFractionDigits: 2 });
@@ -120,6 +92,9 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
   }, [refreshAttendance]);
 
   const capture = useAttendanceCapture({ onSubmitted: handleSubmitted });
+
+  // [BARU] Absen Keluar sebelum 8 jam kerja -> popup "Peringatan Pulang Cepat" dulu.
+  const earlyCheckout = useEarlyCheckout({ openCapture: capture.open, checkInAt: attendance.checkInAt });
 
   const statusConfig = TODAY_STATUS_CONFIG[attendance.todayStatus];
   const ActionIcon = statusConfig.buttonIcon;
@@ -231,7 +206,7 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
               type="button"
               className="dashSummary__btn dashSummary__btn--primary"
               disabled={!statusConfig.action || attendance.isLoading}
-              onClick={() => capture.open(statusConfig.action)}
+              onClick={() => earlyCheckout.startAttendance(statusConfig.action)} /* [UBAH] sebelumnya capture.open(...) */
             >
               <ActionIcon size={15} aria-hidden="true" />
               {statusConfig.buttonLabel}
@@ -243,6 +218,14 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
       {/* [BARU] Popup absen: di luar <section> karena kartu memakai container-type
           (membuat position:fixed relatif ke kartu, bukan ke layar). Hanya di-mount saat terbuka. */}
       {capture.isOpen && <QuickAttendanceModal capture={capture} shiftHours={SHIFT_HOURS} />}
+
+      {/* [BARU] Peringatan pulang cepat (portal ke <body>, jadi aman di luar <section>) */}
+      {earlyCheckout.isPromptOpen && (
+        <EarlyCheckoutModal
+          onConfirm={earlyCheckout.confirmEarlyCheckout}
+          onCancel={earlyCheckout.cancelEarlyCheckout}
+        />
+      )}
 
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </>

@@ -24,6 +24,10 @@ import AttendanceCameraCard from './components/AttendanceCameraCard';
 import AttendanceTodayCard from './components/AttendanceTodayCard';
 import AttendanceHistoryTable from './components/AttendanceHistoryTable';
 import AttendanceCameraModal from './components/AttendanceCameraModal';
+import EarlyCheckoutModal from './components/EarlyCheckoutModal'; // [BARU] popup "Peringatan Pulang Cepat"
+import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
+import useEarlyCheckout from './hooks/useEarlyCheckout'; // [BARU]
+import { SHIFT_HOURS } from './utils/monthlyAttendance'; // [BARU]
 import { getMyAttendanceHistory, toDisplayRecord } from '../../services/attendanceService';
 import useAttendanceCapture from './hooks/useAttendanceCapture'; // [BARU] logika kamera+GPS+kirim, dibagi dgn popup Dashboard
 // [BARU] Data lembur untuk kolom "Lembur" di tabel riwayat
@@ -41,6 +45,11 @@ export default function Absensi() {
   const [overtimeRecords, setOvertimeRecords] = useState([]); // [BARU]
   const [historyLoading, setHistoryLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  // [BARU] Masuk/Keluar memakai popup yang sama dgn Dashboard (QuickAttendanceModal);
+  // Sakit tetap memakai AttendanceCameraModal (form jenis absensi + keterangan wajib).
+  // Disimpan sebagai state (bukan dihitung dari `reason`) supaya popup tidak berganti
+  // sendiri ketika pilihan jenis absensi diubah di dalam popup Sakit.
+  const [captureMode, setCaptureMode] = useState('attendance'); // 'attendance' | 'sick'
 
   const [todayDate, setTodayDate] = useState(() => new Date());
 
@@ -128,6 +137,22 @@ export default function Absensi() {
   // Sakit hanya bisa dipakai sebelum check-in hari ini.
   const disabledSakit = Boolean(todayCheckIn);
 
+  // [BARU] Absen Keluar sebelum 8 jam kerja -> popup "Peringatan Pulang Cepat" dulu.
+  const earlyCheckout = useEarlyCheckout({
+    openCapture: capture.open,
+    checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
+  });
+
+  const handleStartAttendance = (action) => {
+    setCaptureMode('attendance');
+    earlyCheckout.startAttendance(action);
+  };
+
+  const handleStartSick = () => {
+    setCaptureMode('sick');
+    capture.open('Masuk', 'Sakit');
+  };
+
   return (
     <div className="absensi-page">
       {/* [UBAH] Tabel riwayat sekarang di SAMPING (bukan di bawah) kartu
@@ -136,9 +161,11 @@ export default function Absensi() {
       <section className="abs-attendance-grid">
         <div className="abs-attendance-left">
           <AttendanceCameraCard
-            onOpenCamera={capture.open}
             attendanceStatus={attendanceStatus}
+            isLoading={historyLoading} /* [BARU] status baru valid setelah riwayat termuat */
             disabledSakit={disabledSakit}
+            onStartAttendance={handleStartAttendance} /* [UBAH] sebelumnya onOpenCamera={capture.open} */
+            onStartSick={handleStartSick}
           />
           <AttendanceTodayCard
             todayLabel={todayLabel}
@@ -154,7 +181,25 @@ export default function Absensi() {
         />
       </section>
 
-      {capture.isOpen && (
+      {/* [BARU] Masuk/Keluar: popup yang sama dengan Dashboard. Kamera terblokir -> unggah foto (cadangan). */}
+      {capture.isOpen && captureMode === 'attendance' && (
+        <QuickAttendanceModal
+          capture={capture}
+          shiftHours={SHIFT_HOURS}
+          onUploadFallback={capture.handleUploadFallback}
+        />
+      )}
+
+      {/* [BARU] Peringatan pulang cepat (portal ke <body>) */}
+      {earlyCheckout.isPromptOpen && (
+        <EarlyCheckoutModal
+          onConfirm={earlyCheckout.confirmEarlyCheckout}
+          onCancel={earlyCheckout.cancelEarlyCheckout}
+        />
+      )}
+
+      {/* [UBAH] Popup lama kini khusus Sakit */}
+      {capture.isOpen && captureMode === 'sick' && (
         <AttendanceCameraModal
           attendanceAction={capture.action}
           videoRef={capture.attachVideo} /* [UBAH] callback ref: video baru (setelah "Ambil ulang") tersambung ulang ke stream */
