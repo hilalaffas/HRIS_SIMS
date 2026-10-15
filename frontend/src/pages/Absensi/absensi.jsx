@@ -24,9 +24,10 @@ import AttendanceCameraCard from './components/AttendanceCameraCard';
 import AttendanceTodayCard from './components/AttendanceTodayCard';
 import AttendanceHistoryTable from './components/AttendanceHistoryTable';
 import AttendanceCameraModal from './components/AttendanceCameraModal';
-import EarlyCheckoutModal from './components/EarlyCheckoutModal'; // [BARU] popup "Peringatan Pulang Cepat"
+import CheckoutFlowModals from './components/CheckoutFlowModals'; // [UBAH] popup "Pulang Cepat" + "Check-Out Jam Kerja (17:00+)" (sebelumnya EarlyCheckoutModal)
 import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
-import useEarlyCheckout from './hooks/useEarlyCheckout'; // [BARU]
+import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
+import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
 import { SHIFT_HOURS } from './utils/monthlyAttendance'; // [BARU]
 import { getMyAttendanceHistory, toDisplayRecord } from '../../services/attendanceService';
 import useAttendanceCapture from './hooks/useAttendanceCapture'; // [BARU] logika kamera+GPS+kirim, dibagi dgn popup Dashboard
@@ -137,15 +138,26 @@ export default function Absensi() {
   // Sakit hanya bisa dipakai sebelum check-in hari ini.
   const disabledSakit = Boolean(todayCheckIn);
 
-  // [BARU] Absen Keluar sebelum 8 jam kerja -> popup "Peringatan Pulang Cepat" dulu.
-  const earlyCheckout = useEarlyCheckout({
+  // [BARU] Setelah "Tambah Lembur" saat check-out terkirim: toast + muat ulang
+  // kolom Lembur di tabel riwayat (diam-diam, tabel tidak dikosongkan).
+  const handleOvertimeSubmitted = useCallback((saved) => {
+    showToast(describeExtensionSaved(saved), 'success');
+    getMyOvertime({ silent: true })
+      .then((data) => setOvertimeRecords((data || []).map(toDisplayOvertime)))
+      .catch(() => {}); // gagal muat ulang tidak menggagalkan lembur yang sudah tersimpan
+  }, [showToast]);
+
+  // [UBAH] Satu alur check-out: sebelum 8 jam kerja -> popup "Peringatan Pulang Cepat";
+  // setelah jam 17:00 -> popup "Check-Out Jam Kerja (17:00+)" (Tidak Lembur / Tambah Lembur, berulang).
+  const checkoutFlow = useCheckoutFlow({
     openCapture: capture.open,
     checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
+    onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 
   const handleStartAttendance = (action) => {
     setCaptureMode('attendance');
-    earlyCheckout.startAttendance(action);
+    checkoutFlow.startAttendance(action); // [UBAH] sebelumnya earlyCheckout.startAttendance
   };
 
   const handleStartSick = () => {
@@ -190,13 +202,8 @@ export default function Absensi() {
         />
       )}
 
-      {/* [BARU] Peringatan pulang cepat (portal ke <body>) */}
-      {earlyCheckout.isPromptOpen && (
-        <EarlyCheckoutModal
-          onConfirm={earlyCheckout.confirmEarlyCheckout}
-          onCancel={earlyCheckout.cancelEarlyCheckout}
-        />
-      )}
+      {/* [UBAH] Popup check-out: peringatan pulang cepat + Check-Out Jam Kerja (17:00+) (portal ke <body>) */}
+      <CheckoutFlowModals flow={checkoutFlow} />
 
       {/* [UBAH] Popup lama kini khusus Sakit */}
       {capture.isOpen && captureMode === 'sick' && (

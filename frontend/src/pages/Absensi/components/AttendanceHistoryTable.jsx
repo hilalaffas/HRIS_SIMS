@@ -106,7 +106,7 @@ function OvertimeCell({ overtime }) {
     return <span className="abs-overtime-badge abs-overtime-rejected">{overtime.statusLabel}</span>;
   }
   return (
-    <div className="abs-overtime-stack">
+    <div className="abs-overtime-stack" title={overtime.detail /* [BARU] rincian bila >1 lembur dalam sehari */}>
       <strong className="abs-overtime-value">{overtime.duration}</strong>
       {overtime.tone !== 'approved' && (
         <span className={`abs-overtime-badge abs-overtime-${overtime.tone}`}>{overtime.statusLabel}</span>

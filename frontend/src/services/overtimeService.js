@@ -6,13 +6,28 @@
 // attendanceService.js: data MENTAH dari backend, diformat di sini.
 import { api } from './api';
 
-export async function getMyOvertime() {
-  return api.get('/api/lembur/me');
+// [UBAH] + config opsional ({ silent }) -- pemuatan ulang di latar belakang
+// (mis. setelah Tambah Lembur saat check-out) tidak perlu memicu LoadingScreen global.
+export async function getMyOvertime(config = {}) {
+  return api.get('/api/lembur/me', { silent: config.silent });
 }
 
 // POST pengajuan lembur. Total jam & status dihitung backend, jadi tidak dikirim.
 export async function submitOvertime({ overtimeDate, startTime, endTime, reason }) {
   return api.post('/api/lembur/me', { overtimeDate, startTime, endTime, reason });
+}
+
+// [BARU] Tambah Lembur saat check-out (setelah 17:00).
+// Jendela jam dihitung SERVER: { overtimeDate, workEndTime, startTime, maxEndTime, canExtend, entries }.
+// `silent`: popup check-out punya indikator loading sendiri, jadi tidak perlu splash global.
+export async function getOvertimeExtensionWindow() {
+  return api.get('/api/lembur/me/extension-window', { silent: true });
+}
+
+// Hanya endTime + reason yang dikirim: tanggal = hari ini, jam mulai = lanjutan
+// lembur terakhir (diisi backend), status = PENDING.
+export async function submitOvertimeExtension({ endTime, reason }) {
+  return api.post('/api/lembur/me/extension', { endTime, reason });
 }
 
 // [BARU] Persetujuan Lembur (SuperAdmin): daftar semua pengajuan & keputusan.
@@ -59,5 +74,17 @@ export function toDisplayOvertime(item) {
     duration: formatOvertimeDuration(item.totalMinutes),
     reason: item.reason || '-',
     statusCode: String(item.status || '').toUpperCase(),
+  };
+}
+
+// [BARU] Jendela lembur tambahan -> bentuk siap tampil ("19:00:00" -> "19:00").
+export function toDisplayExtensionWindow(raw) {
+  return {
+    date: raw?.overtimeDate,
+    workEnd: toClockLabel(raw?.workEndTime),
+    start: toClockLabel(raw?.startTime),
+    maxEnd: toClockLabel(raw?.maxEndTime),
+    canExtend: Boolean(raw?.canExtend),
+    entries: (raw?.entries || []).map(toDisplayOvertime),
   };
 }

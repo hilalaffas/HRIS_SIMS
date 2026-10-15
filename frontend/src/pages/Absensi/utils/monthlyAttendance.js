@@ -14,7 +14,7 @@
 // diidentifikasi lewat bulan AKHIR-nya ({ year, month }, month = 0-11).
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { formatDateLabel } from '../../../services/attendanceService';
-import { getOvertimeStatus } from '../../../services/overtimeService';
+import { formatOvertimeDuration, getOvertimeStatus } from '../../../services/overtimeService'; // [UBAH] + formatOvertimeDuration
 
 export const SHIFT_LABEL = 'Shift Normal (08:00 - 17:00)';
 // [BARU] "Shift Normal (08:00 - 17:00)" -> "08:00 - 17:00" (dipakai popup absen)
@@ -213,31 +213,52 @@ export function buildMonthlyRows(records, year, month, now = new Date()) {
 
 // [BARU] Tempelkan data lembur (dari Pengajuan Lembur) ke baris per hari.
 // Dipakai di semua baris -- termasuk akhir pekan/libur tanpa absensi, karena
-// lembur justru sering terjadi di hari tersebut. Bila satu tanggal punya >1
-// pengajuan (mis. yang ditolak lalu diajukan ulang), yang dipakai prioritas
-// APPROVED > PENDING > REJECTED.
-const OVERTIME_PRIORITY = { APPROVED: 3, PENDING: 2, REJECTED: 1 };
-
+// lembur justru sering terjadi di hari tersebut.
+// [UBAH] Satu tanggal sekarang bisa punya BEBERAPA lembur sah (pengajuan awal +
+// "Tambah Lembur" saat check-out, mis. 17:00-19:00 lalu 19:00-20:00), jadi yang
+// tidak ditolak DIJUMLAH. Ada yang masih menunggu -> status MENUNGGU; semuanya
+// ACC -> ACC. Bila semuanya ditolak, tampil "Ditolak" seperti sebelumnya.
 export function attachOvertime(rows, overtimeRecords = []) {
   const byDate = new Map();
   overtimeRecords.forEach((record) => {
-    const current = byDate.get(record.date);
-    const currentRank = OVERTIME_PRIORITY[current?.statusCode] || 0;
-    const nextRank = OVERTIME_PRIORITY[record.statusCode] || 0;
-    if (!current || nextRank > currentRank) byDate.set(record.date, record);
+    if (!byDate.has(record.date)) byDate.set(record.date, []);
+    byDate.get(record.date).push(record);
   });
 
   return rows.map((row) => {
-    const record = byDate.get(row.date);
-    if (!record) return { ...row, overtime: null };
-    const status = getOvertimeStatus(record.statusCode);
+    const records = byDate.get(row.date);
+    if (!records) return { ...row, overtime: null };
+
+    const active = records.filter((record) => record.statusCode !== 'REJECTED');
+    if (active.length === 0) {
+      const status = getOvertimeStatus('REJECTED');
+      return {
+        ...row,
+        overtime: {
+          minutes: records[0].totalMinutes,
+          duration: records[0].duration,
+          statusLabel: status.shortLabel,
+          tone: status.tone,
+        },
+      };
+    }
+
+    const totalMinutes = active.reduce((sum, record) => sum + (record.totalMinutes || 0), 0);
+    const pendingMinutes = active
+      .filter((record) => record.statusCode === 'PENDING')
+      .reduce((sum, record) => sum + (record.totalMinutes || 0), 0);
+    const status = getOvertimeStatus(pendingMinutes > 0 ? 'PENDING' : 'APPROVED');
     return {
       ...row,
       overtime: {
-        minutes: record.totalMinutes,
-        duration: record.duration,
+        minutes: totalMinutes,
+        duration: formatOvertimeDuration(totalMinutes),
         statusLabel: status.shortLabel,
         tone: status.tone,
+        // Rincian untuk tooltip: "17:00-19:00 (ACC) | 19:00-20:00 (MENUNGGU)"
+        detail: active
+          .map((record) => `${record.startTime}-${record.endTime} (${getOvertimeStatus(record.statusCode).shortLabel})`)
+          .join(' | '),
       },
     };
   });

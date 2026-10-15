@@ -20,4 +20,10 @@ public interface OvertimeRepository extends JpaRepository<OvertimeRequest, Long>
     // Dipakai OvertimeService.submit(): satu tanggal hanya boleh punya satu
     // pengajuan yang masih aktif (PENDING/APPROVED); yang REJECTED boleh diajukan ulang.
     boolean existsByEmployee_EmployeeIdAndOvertimeDateAndStatusIn(Long employeeId, LocalDate overtimeDate, List<String> statuses);
+
+    // [BARU] Lembur aktif satu karyawan pada satu tanggal, urut jam mulai.
+    // Dipakai OvertimeService.getExtensionWindow()/submitExtension() untuk
+    // menentukan jam mulai lembur tambahan saat check-out.
+    List<OvertimeRequest> findByEmployee_EmployeeIdAndOvertimeDateAndStatusInOrderByStartTimeAscOvertimeIdAsc(
+            Long employeeId, LocalDate overtimeDate, List<String> statuses);
 }

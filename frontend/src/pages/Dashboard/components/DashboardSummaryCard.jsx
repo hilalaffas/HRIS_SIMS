@@ -25,8 +25,9 @@ import useCountUp from '../hooks/useCountUp';
 import useLiveClock from '../hooks/useLiveClock'; // [BARU] jam WIB berjalan
 import useAttendanceCapture from '../../Absensi/hooks/useAttendanceCapture'; // [BARU] logika selfie+GPS+kirim (dibagi dgn halaman Absensi)
 import QuickAttendanceModal from './QuickAttendanceModal'; // [BARU]
-import EarlyCheckoutModal from '../../Absensi/components/EarlyCheckoutModal'; // [BARU] popup "Peringatan Pulang Cepat"
-import useEarlyCheckout from '../../Absensi/hooks/useEarlyCheckout'; // [BARU]
+import CheckoutFlowModals from '../../Absensi/components/CheckoutFlowModals'; // [UBAH] popup "Pulang Cepat" + "Check-Out Jam Kerja (17:00+)" (sebelumnya EarlyCheckoutModal)
+import useCheckoutFlow from '../../Absensi/hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
+import { describeExtensionSaved } from '../../Absensi/utils/overtimeCheckout'; // [BARU]
 import { TODAY_STATUS_CONFIG } from '../../Absensi/utils/todayStatusConfig'; // [UBAH] dipindah dari file ini
 import { buildLeaveBalanceNote } from '../../../utils/leaveBalanceNote';
 import { SHIFT_HOURS, SHIFT_LABEL } from '../../Absensi/utils/monthlyAttendance'; // [UBAH] + SHIFT_HOURS
@@ -93,8 +94,18 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
 
   const capture = useAttendanceCapture({ onSubmitted: handleSubmitted });
 
-  // [BARU] Absen Keluar sebelum 8 jam kerja -> popup "Peringatan Pulang Cepat" dulu.
-  const earlyCheckout = useEarlyCheckout({ openCapture: capture.open, checkInAt: attendance.checkInAt });
+  // [BARU] Setelah "Tambah Lembur" saat check-out terkirim: toast konfirmasi.
+  const handleOvertimeSubmitted = useCallback((saved) => {
+    setToast({ message: describeExtensionSaved(saved), type: 'success' });
+  }, []);
+
+  // [UBAH] Satu alur check-out: sebelum 8 jam kerja -> popup "Peringatan Pulang Cepat";
+  // setelah jam 17:00 -> popup "Check-Out Jam Kerja (17:00+)" (Tidak Lembur / Tambah Lembur, berulang).
+  const checkoutFlow = useCheckoutFlow({
+    openCapture: capture.open,
+    checkInAt: attendance.checkInAt,
+    onOvertimeSubmitted: handleOvertimeSubmitted,
+  });
 
   const statusConfig = TODAY_STATUS_CONFIG[attendance.todayStatus];
   const ActionIcon = statusConfig.buttonIcon;
@@ -206,7 +217,7 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
               type="button"
               className="dashSummary__btn dashSummary__btn--primary"
               disabled={!statusConfig.action || attendance.isLoading}
-              onClick={() => earlyCheckout.startAttendance(statusConfig.action)} /* [UBAH] sebelumnya capture.open(...) */
+              onClick={() => checkoutFlow.startAttendance(statusConfig.action)} /* [UBAH] sebelumnya earlyCheckout.startAttendance */
             >
               <ActionIcon size={15} aria-hidden="true" />
               {statusConfig.buttonLabel}
@@ -219,13 +230,8 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
           (membuat position:fixed relatif ke kartu, bukan ke layar). Hanya di-mount saat terbuka. */}
       {capture.isOpen && <QuickAttendanceModal capture={capture} shiftHours={SHIFT_HOURS} />}
 
-      {/* [BARU] Peringatan pulang cepat (portal ke <body>, jadi aman di luar <section>) */}
-      {earlyCheckout.isPromptOpen && (
-        <EarlyCheckoutModal
-          onConfirm={earlyCheckout.confirmEarlyCheckout}
-          onCancel={earlyCheckout.cancelEarlyCheckout}
-        />
-      )}
+      {/* [UBAH] Popup check-out: peringatan pulang cepat + Check-Out Jam Kerja (17:00+) (portal ke <body>, jadi aman di luar <section>) */}
+      <CheckoutFlowModals flow={checkoutFlow} />
 
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </>

@@ -19,7 +19,8 @@ export const buildEarlyCheckoutNote = (reason) => `${EARLY_CHECKOUT_PREFIX}${rea
 // Jam server dicatat tanpa zona (LocalDateTime, WIB) lalu di-parse sebagai
 // jam lokal browser (lihat parseNaiveDateTime). Supaya sebanding, "sekarang"
 // juga dibaca sebagai jam dinding WIB, bukan zona waktu perangkat.
-function getJakartaWallClock(now) {
+// [UBAH] di-export: dipakai juga utils/overtimeCheckout.js (cek "setelah jam pulang 17:00").
+export function getJakartaWallClock(now) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Jakarta',
     year: 'numeric',

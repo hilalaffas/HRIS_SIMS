@@ -369,6 +369,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/lembur/me")
                         .authenticated()
 
+                        // [BARU] Tambah Lembur saat check-out (setelah 17:00): jendela jam + kirim.
+                        .requestMatchers(HttpMethod.GET, "/api/lembur/me/extension-window")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/api/lembur/me/extension")
+                        .authenticated()
+
                         // [UBAH] Persetujuan Lembur -- Leader, SPV, Manager, SuperAdmin.
                         // Cakupan per divisi dicek di OvertimeService.
                         .requestMatchers(HttpMethod.GET, "/api/lembur/approvals")

@@ -16,6 +16,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.common.dto.ApprovalDecisionRequest;
+import sys.hris.sims.overtime.dto.OvertimeExtensionRequest;
+import sys.hris.sims.overtime.dto.OvertimeExtensionWindowResponse;
 import sys.hris.sims.overtime.dto.OvertimeResponse;
 import sys.hris.sims.overtime.dto.OvertimeSubmitRequest;
 import sys.hris.sims.overtime.service.OvertimeService;
@@ -86,6 +88,35 @@ public class OvertimeController {
                 "overtime_requests",
                 response.getOvertimeId(),
                 "Pengajuan lembur tanggal " + response.getOvertimeDate() + " dikirim",
+                httpRequest);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // [BARU] GET jendela lembur tambahan hari ini (jam mulai, batas jam selesai,
+    // lembur yang sudah tercatat) untuk popup check-out setelah 17:00.
+    @GetMapping("/me/extension-window")
+    public ResponseEntity<OvertimeExtensionWindowResponse> getExtensionWindow(Authentication authentication) {
+        return ResponseEntity.ok(overtimeService.getExtensionWindow(authentication.getName()));
+    }
+
+    // [BARU] POST "Tambah Lembur" saat check-out -- body: { "endTime": "20:00", "reason": "..." }.
+    // Jam mulai dihitung server; hasilnya PENDING menunggu persetujuan.
+    @PostMapping("/me/extension")
+    public ResponseEntity<OvertimeResponse> submitExtension(
+            @RequestBody OvertimeExtensionRequest request,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        OvertimeResponse response = overtimeService.submitExtension(authentication.getName(), request);
+
+        activityLogService.log(
+                authentication.getName(),
+                getCurrentUserId(authentication),
+                "SUBMIT_LEMBUR",
+                "overtime_requests",
+                response.getOvertimeId(),
+                "Pengajuan lembur tambahan saat check-out tanggal " + response.getOvertimeDate() + " ("
+                        + response.getStartTime() + " - " + response.getEndTime() + ") dikirim",
                 httpRequest);
 
         return ResponseEntity.ok(response);
