@@ -9,9 +9,11 @@
 // Kontrol "Lihat semua / Ringkas" + paginasi TETAP dipertahankan; di mode
 // "Lihat semua" ada pilihan jumlah baris per halaman (10 / 20 / 30).
 //
-// [UBAH] Urutan kolom sekarang: Tanggal, Jadwal Shift, Jam Masuk, Jam Pulang,
-// Durasi, Status Presence, LOKASI & FOTO (dulu "Bukti / Foto"), LEMBUR (baru,
-// dari menu Pengajuan Lembur), Keterangan / Catatan.
+// [UBAH] Kolom tabel kini 7 (mengikuti desain referensi): Tanggal, Jadwal
+// Shift, Jam Masuk, Jam Pulang, Durasi, Lembur, Keterangan / Catatan.
+// Badge status (Hadir / Terlambat / Cuti / dst) dan link Foto & Peta
+// DIPINDAH ke dalam kolom Keterangan / Catatan (badge di atas, catatan di
+// bawahnya) -- kolom "Status Presence" dan "Lokasi & Foto" dihapus.
 //
 // Header kolom bisa diklik untuk sort naik/turun (asc/desc); nilai kosong ("-")
 // selalu diurutkan paling bawah, apa pun arahnya.
@@ -51,18 +53,19 @@ const COLUMNS = [
   { key: 'checkIn', label: 'JAM MASUK', value: (row) => row.checkIn },
   { key: 'checkOut', label: 'JAM PULANG', value: (row) => row.checkOut },
   { key: 'duration', label: 'DURASI', value: (row) => row.durationMinutes },
-  { key: 'status', label: 'STATUS PRESENCE', value: (row) => (row.tone ? row.status : null) },
-  { key: 'proof', label: 'LOKASI & FOTO', value: (row) => (row.photoUrl ? row.proofLabel : null), sortable: false },
   { key: 'overtime', label: 'LEMBUR', value: (row) => (row.overtime && row.overtime.tone !== 'rejected' ? row.overtime.minutes : null) },
-  { key: 'note', label: 'KETERANGAN / CATATAN', value: (row) => row.note, sortable: false },
+  // [UBAH] Kolom ini sekarang bisa di-sort berdasarkan teks status (badge).
+  { key: 'note', label: 'KETERANGAN / CATATAN', value: (row) => (row.tone ? row.status : null) },
 ];
 
 const isBlank = (value) => value === null || value === undefined || value === '' || value === '-';
 
 const REPORT_TITLE = 'JADWAL & LOG ABSENSI BULANAN KARYAWAN';
 
-function BuktiCell({ row }) {
-  if (!row.photoUrl && !row.mapsUrl) return <span className="abs-empty-cell">-</span>;
+// [UBAH] Dulu BuktiCell (kolom sendiri). Sekarang berupa chip kecil di bawah
+// catatan pada kolom Keterangan / Catatan.
+function ProofLinks({ row }) {
+  if (!row.photoUrl && !row.mapsUrl) return null;
   return (
     <div className="abs-link-stack">
       {row.photoUrl && (
@@ -81,7 +84,22 @@ function BuktiCell({ row }) {
   );
 }
 
-// [BARU] Sel kolom Lembur: durasi + badge status (ACC / Menunggu / Ditolak).
+// [BARU] Sel Keterangan / Catatan: badge status di atas, catatan di bawah,
+// lalu link bukti (foto & peta) bila ada.
+function NoteCell({ row }) {
+  const hasNote = row.note && row.note !== '-';
+  if (!row.tone && !hasNote) return <span className="abs-empty-cell">-</span>;
+  return (
+    <div className="abs-note-stack">
+      {row.tone && <span className={`abs-record-status abs-status-${row.tone}`}>{row.status}</span>}
+      {hasNote && <span className="abs-note-text">{row.note}</span>}
+      <ProofLinks row={row} />
+    </div>
+  );
+}
+
+// [UBAH] Sel Lembur: durasi berwarna oranye (sesuai referensi). Badge status
+// hanya muncul bila pengajuan belum ACC (Menunggu / Ditolak).
 function OvertimeCell({ overtime }) {
   if (!overtime) return <span className="abs-empty-cell">-</span>;
   if (overtime.tone === 'rejected') {
@@ -89,8 +107,10 @@ function OvertimeCell({ overtime }) {
   }
   return (
     <div className="abs-overtime-stack">
-      <strong>{overtime.duration}</strong>
-      <span className={`abs-overtime-badge abs-overtime-${overtime.tone}`}>{overtime.statusLabel}</span>
+      <strong className="abs-overtime-value">{overtime.duration}</strong>
+      {overtime.tone !== 'approved' && (
+        <span className={`abs-overtime-badge abs-overtime-${overtime.tone}`}>{overtime.statusLabel}</span>
+      )}
     </div>
   );
 }
@@ -273,11 +293,11 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [] }
           <tbody key={`${period.year}-${period.month}-${sort.key}-${sort.dir}-${pageSize}-${expanded ? `page-${safePage}` : 'collapsed'}`} className="abs-tbody-page">
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={9} className="abs-empty-row">Belum ada riwayat absensi pada periode ini.</td>
+                <td colSpan={COLUMNS.length} className="abs-empty-row">Belum ada riwayat absensi pada periode ini.</td>
               </tr>
             )}
             {visibleRows.map((row, index) => (
-              <tr key={row.date} className={row.isToday ? 'is-today' : ''} style={{ animationDelay: `${index * 0.04}s` }}>
+              <tr key={row.date} className={row.isToday ? 'is-today' : ''} style={{ '--abs-row-delay': `${index * 0.05}s` }}>
                 <td className="abs-date-cell">
                   <strong>{row.dateLabel}</strong>
                   {row.isToday && <span className="abs-today-tag"> (Hari ini)</span>}
@@ -286,14 +306,8 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [] }
                 <td className="abs-mono-cell">{row.checkIn || <span className="abs-empty-cell">{row.isToday ? '--:--:--' : '-'}</span>}</td>
                 <td className="abs-mono-cell">{row.checkOut || <span className="abs-empty-cell">{row.isToday ? '--:--:--' : '-'}</span>}</td>
                 <td className="abs-duration-cell">{row.duration || <span className="abs-empty-cell">-</span>}</td>
-                <td>
-                  {row.tone
-                    ? <span className={`abs-record-status abs-status-${row.tone}`}>{row.status}</span>
-                    : <span className="abs-empty-cell">-</span>}
-                </td>
-                <td><BuktiCell row={row} /></td>
                 <td><OvertimeCell overtime={row.overtime} /></td>
-                <td>{row.note === '-' ? <span className="abs-empty-cell">-</span> : row.note}</td>
+                <td className="abs-note-cell"><NoteCell row={row} /></td>
               </tr>
             ))}
           </tbody>
