@@ -3,9 +3,10 @@
 // [BARU] Popup "Pengajuan Izin / Surat Sakit" (dibuka tombol "Ajukan Izin / Sakit").
 // Menggantikan alur Sakit lama yang memakai kamera + GPS (AttendanceCameraModal).
 //
-//  - Izin Sakit      : lama izin (hari) + keterangan + surat dokter. Surat boleh
-//                      MENYUSUL -- tetap wajib, diunggah belakangan lewat kolom
-//                      "Keterangan / Catatan" di tabel riwayat.
+//  - Izin Sakit      : lama izin (HARI KERJA, Sabtu & Minggu tidak dihitung) +
+//                      keterangan + surat dokter. Surat boleh MENYUSUL -- tetap
+//                      wajib, diunggah belakangan lewat kolom "Keterangan / Catatan"
+//                      di tabel riwayat. Selama surat menyusul, lama izin dikunci 1 hari.
 //  - Izin Terlambat  : cukup keterangan.
 //
 // Komponen ini mengelola form-nya sendiri; pengiriman ke backend dilakukan
@@ -54,7 +55,10 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
 
   const handleDocumentLaterChange = (event) => {
     setDocumentLater(event.target.checked);
-    if (event.target.checked) setDocumentFile(null);
+    if (event.target.checked) {
+      setDocumentFile(null);
+      setDays('1'); // [BARU] surat menyusul -> lama izin dikunci 1 hari
+    }
     setErrorMessage('');
   };
 
@@ -87,7 +91,7 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
       await onSubmit({
         type,
         note: note.trim(),
-        days: Number(days),
+        days: documentLater ? 1 : Number(days),
         documentFile: isSick ? documentFile : null,
       });
     } catch (error) {
@@ -143,10 +147,16 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
                   inputMode="numeric"
                   value={days}
                   onChange={(event) => setDays(event.target.value)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || documentLater}
                 />
-                <span>hari (dihitung mulai hari ini)</span>
+                <span>hari kerja (Sabtu &amp; Minggu tidak dihitung)</span>
               </div>
+              {documentLater && (
+                <p className="abs-permission-hint">
+                  Lama izin dikunci 1 hari selama surat dokter menyusul. Lampirkan surat sekarang
+                  bila izin lebih dari 1 hari.
+                </p>
+              )}
             </div>
           )}
 

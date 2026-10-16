@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
@@ -38,7 +39,7 @@ public class AttendanceService {
     // ini, keterangan (alasan pulang cepat) wajib diisi.
     private static final Duration MIN_WORK_DURATION = Duration.ofHours(8);
 
-    // [BARU] Batas lama izin sakit dalam satu pengajuan (hari kalender).
+    // [UBAH] Batas lama izin sakit dalam satu pengajuan (HARI KERJA, Sabtu & Minggu tidak dihitung).
     private static final int MAX_SICK_DAYS = 30;
 
     private final AttendanceRepository attendanceRepository;
@@ -211,9 +212,13 @@ public class AttendanceService {
             throw new IllegalArgumentException("Keterangan maksimal 255 karakter.");
         }
 
-        int days = isSick && request.getDays() != null ? request.getDays() : 1;
+        // [UBAH] Tanpa surat dokter (surat menyusul) lama izin dikunci 1 hari. Aturan ini
+        // juga ditegakkan di sini -- bukan cuma di popup -- supaya request langsung ke API
+        // tidak bisa mengajukan banyak hari tanpa bukti.
+        boolean hasDocument = request.getDocument() != null && !request.getDocument().isEmpty();
+        int days = isSick && hasDocument && request.getDays() != null ? request.getDays() : 1;
         if (days < 1 || days > MAX_SICK_DAYS) {
-            throw new IllegalArgumentException("Lama izin sakit harus 1 sampai " + MAX_SICK_DAYS + " hari.");
+            throw new IllegalArgumentException("Lama izin sakit harus 1 sampai " + MAX_SICK_DAYS + " hari kerja.");
         }
 
         LocalDate today = LocalDate.now();
@@ -284,9 +289,10 @@ public class AttendanceService {
         }
     }
 
-    // [BARU] true bila `date` masih tercakup pengajuan Sakit (tanggal pengajuan +
-    // leaveDays - 1) yang belum ditolak. Dipakai untuk memblokir absen Masuk &
-    // pengajuan ganda di tengah masa izin sakit multi-hari.
+    // [UBAH] true bila `date` masih tercakup pengajuan Sakit yang belum ditolak.
+    // Lama izin dihitung dalam HARI KERJA (Sabtu & Minggu tidak dihitung), mulai
+    // dari tanggal pengajuan -- lihat getSickEndDate(). Hari pengajuan selalu
+    // tercakup; hari lanjutan yang jatuh di akhir pekan tidak.
     private boolean hasActiveSick(Long employeeId, LocalDate date) {
         return attendanceRepository
                 .findByEmployee_EmployeeIdAndReasonAndActionOrderByRecordedAtDesc(employeeId, "SAKIT", "MASUK")
@@ -294,9 +300,28 @@ public class AttendanceService {
                 .filter(sick -> !"REJECTED".equals(sick.getApprovalStatus()))
                 .anyMatch(sick -> {
                     LocalDate start = sick.getAttendanceDate();
+                    if (date.equals(start)) return true;
                     int days = sick.getLeaveDays() == null ? 1 : sick.getLeaveDays();
-                    return !date.isBefore(start) && !date.isAfter(start.plusDays(days - 1L));
+                    return date.isAfter(start) && !isWeekend(date) && !date.isAfter(getSickEndDate(start, days));
                 });
+    }
+
+    // [BARU] Tanggal terakhir izin sakit: hari kerja ke-`days` terhitung dari `start`.
+    // Bila `start` jatuh di akhir pekan, hitungan baru mulai Senin berikutnya.
+    // Rumus yang sama dipakai frontend (utils/monthlyAttendance.js getSickEndKey).
+    private LocalDate getSickEndDate(LocalDate start, int days) {
+        LocalDate end = start;
+        int counted = isWeekend(start) ? 0 : 1;
+        while (counted < days) {
+            end = end.plusDays(1);
+            if (!isWeekend(end)) counted++;
+        }
+        return end;
+    }
+
+    private boolean isWeekend(LocalDate date) {
+        DayOfWeek day = date.getDayOfWeek();
+        return day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
     }
 
     // [BARU] Setujui / tolak pengajuan Sakit. Hanya yang masih PENDING yang

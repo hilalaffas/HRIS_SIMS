@@ -87,7 +87,7 @@ public class Attendance {
     @Column(name = "location_name", length = 255)
     private String locationName;
 
-    // [BARU] Lama izin sakit (hari kalender) mulai dari attendanceDate. Default 1.
+    // [UBAH] Lama izin sakit (HARI KERJA, tanpa Sabtu/Minggu) mulai dari attendanceDate. Default 1.
     @Column(name = "leave_days", nullable = false)
     private Integer leaveDays;
 

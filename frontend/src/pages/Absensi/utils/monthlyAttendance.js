@@ -73,16 +73,40 @@ export function formatPeriodLabel(year, month) {
   return `${fmt(start)} - ${fmt(end)}`;
 }
 
-// [BARU] Tanggal terakhir (YYYY-MM-DD) izin sakit: tanggal pengajuan + lama izin - 1.
-function getSickEndKey(record) {
+// [UBAH] Lama izin sakit dihitung dalam HARI KERJA: Sabtu & Minggu tidak dihitung.
+// Hari pengajuan dihitung hari ke-1 bila hari kerja; bila jatuh di akhir pekan,
+// hitungan mulai Senin berikutnya. Aturan sama dengan AttendanceService.getSickEndDate().
+function addDays(date, amount) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount);
+}
+
+// Tanggal (Date) tiap HARI KERJA lanjutan izin sakit setelah hari pengajuan,
+// beserta nomor harinya ("Hari ke-N").
+function getSickFollowUpDays(record) {
   const start = parseLocalDate(record.attendanceDate);
-  return dateKey(new Date(start.getFullYear(), start.getMonth(), start.getDate() + (record.leaveDays || 1) - 1));
+  const days = [];
+  let counted = isWeekend(start) ? 0 : 1;
+  let cursor = start;
+  while (counted < (record.leaveDays || 1)) {
+    cursor = addDays(cursor, 1);
+    if (!isWeekend(cursor)) {
+      counted += 1;
+      days.push({ date: cursor, dayNumber: counted });
+    }
+  }
+  return days;
+}
+
+// Tanggal terakhir (YYYY-MM-DD) izin sakit.
+function getSickEndKey(record) {
+  const followUps = getSickFollowUpDays(record);
+  return followUps.length > 0 ? dateKey(followUps[followUps.length - 1].date) : record.attendanceDate;
 }
 
 // [BARU] Catatan sakit/izin yang berlaku pada tanggal `key` (dipakai halaman
 // Absensi untuk status hari ini). Hari pengajuan: perilaku lama (MASUK dengan
 // reason bukan ABSEN). Hari lanjutan izin sakit multi-hari: hanya Sakit yang
-// belum ditolak.
+// belum ditolak dan hanya hari kerja.
 export function getSickRecordCovering(records, key) {
   return records.find((record) => {
     if (record.actionCode !== 'MASUK') return false;
@@ -90,7 +114,8 @@ export function getSickRecordCovering(records, key) {
     return record.reasonCode === 'SAKIT'
       && record.approvalStatus !== 'REJECTED'
       && key > record.attendanceDate
-      && key <= getSickEndKey(record);
+      && key <= getSickEndKey(record)
+      && !isWeekend(parseLocalDate(key));
   });
 }
 
@@ -110,20 +135,19 @@ function groupByDate(records) {
     byDate.set(key, entry);
   });
 
-  // [BARU] Izin sakit multi-hari: hari ke-2 dst diisi salinan catatan sakit
-  // (kalender, termasuk akhir pekan) selama belum ada catatan masuk di hari itu.
+  // [UBAH] Izin sakit multi-hari: hari kerja lanjutan (tanpa Sabtu & Minggu) diisi
+  // salinan catatan sakit selama belum ada catatan masuk di hari itu.
   records.forEach((record) => {
     if (record.actionCode !== 'MASUK' || record.reasonCode !== 'SAKIT' || record.leaveDays <= 1) return;
     if (record.approvalStatus === 'REJECTED') return;
-    const start = parseLocalDate(record.attendanceDate);
-    for (let offset = 1; offset < record.leaveDays; offset += 1) {
-      const key = dateKey(new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset));
+    getSickFollowUpDays(record).forEach(({ date, dayNumber }) => {
+      const key = dateKey(date);
       const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null };
       if (!entry.checkIn) {
-        entry.checkIn = { ...record, attendanceDate: key, dayNumber: offset + 1 };
+        entry.checkIn = { ...record, attendanceDate: key, dayNumber };
         byDate.set(key, entry);
       }
-    }
+    });
   });
   return byDate;
 }

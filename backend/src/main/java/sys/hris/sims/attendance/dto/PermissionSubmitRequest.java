@@ -16,7 +16,8 @@ public class PermissionSubmitRequest {
     // Keterangan / alasan -- wajib, maksimal 255 karakter
     private String note;
 
-    // Lama izin sakit dalam hari (1-30). Diabaikan untuk TERLAMBAT.
+    // Lama izin sakit dalam HARI KERJA (1-30, Sabtu & Minggu tidak dihitung).
+    // Diabaikan (jadi 1) untuk TERLAMBAT dan bila surat dokter belum dilampirkan.
     private Integer days;
 
     // Surat dokter -- opsional (boleh menyusul). Hanya dipakai untuk SAKIT.
