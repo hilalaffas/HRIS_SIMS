@@ -10,8 +10,6 @@ import useServerFeatureFlags from '../hooks/useServerFeatureFlags'; // [BARU]
 import { isThemeToggleEnabled } from '../utils/featureFlags'; // [BARU]
 import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
-import { getCurrentUser } from '../services/authService';
-import { isDevAccessUsername, isDevAccessPath } from '../config/devAccessConfig';
 
 // Pastikan Anda sudah menginstal fontawesome: npm install @fortawesome/fontawesome-free
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -32,16 +30,6 @@ export default function MainLayout({ onLogout, user }) {
   useServerFeatureFlags();
   const isThemeToggleOn = useFeatureFlag(isThemeToggleEnabled);
   const activeTheme = isThemeToggleOn ? theme : 'light';
-
-  // [UBAH] Akun 'supersecret' sekarang berperan sebagai SuperAdmin (lihat
-  // migration V35 & ProtectedRoute.jsx) dan boleh berpindah ke halaman lain
-  // seperti biasa -- jadi Sidebar/Navbar TIDAK lagi disembunyikan untuk
-  // akun ini di semua halaman, cuma khusus saat dia sedang berada di
-  // halaman pengaturan /devAccess itu sendiri, supaya halaman itu tetap
-  // terasa seperti panel tersendiri, bukan HRIS yang "dikosongi".
-  const isOnDevAccessPage =
-    isDevAccessUsername(getCurrentUser()?.username) &&
-    isDevAccessPath(location.pathname);
 
   // Menu sidebar sekarang menyesuaikan role user (karyawan/manager/hr/super admin)
   const menuItems = getMenuItems(user);
@@ -76,39 +64,34 @@ export default function MainLayout({ onLogout, user }) {
   return (
     <div className="layout-container" data-theme={activeTheme}>
       
-      {/* [UBAH] Sidebar disembunyikan khusus saat berada di /devAccess. */}
-      {!isOnDevAccessPage && (
-        <>
-          {/* 2. Tambahkan class dinamis 'mobile-open' ke wrapper sidebar */}
-          <aside className={`sidebar-wrapper ${isSidebarOpen ? 'mobile-open' : ''}`}>
-            <Sidebar 
-            user={user} 
-            onLogout={onLogout} 
-            menuItems={menuItems} 
-            notificationCounts={{ approval: approvalCount }} 
-            onNavigate={() => setIsSidebarOpen(false)} />
-          </aside>
+      {/* [UBAH] Sidebar selalu tampil. Isi menunya menyesuaikan akun (akun dev
+          hanya melihat menu Pengaturan Fitur, lihat components/Sidebar.jsx). */}
+      {/* 2. Tambahkan class dinamis 'mobile-open' ke wrapper sidebar */}
+      <aside className={`sidebar-wrapper ${isSidebarOpen ? 'mobile-open' : ''}`}>
+        <Sidebar 
+        user={user} 
+        onLogout={onLogout} 
+        menuItems={menuItems} 
+        notificationCounts={{ approval: approvalCount }} 
+        onNavigate={() => setIsSidebarOpen(false)} />
+      </aside>
 
-          {/* 3. Tambahkan overlay transparan agar user bisa menutup sidebar 
-                 dengan mengklik area luar sidebar saat di versi mobile */}
-          {isSidebarOpen && (
-            <div 
-              className="mobile-overlay" 
-              onClick={() => setIsSidebarOpen(false)}
-            ></div>
-          )}
-        </>
+      {/* 3. Tambahkan overlay transparan agar user bisa menutup sidebar 
+             dengan mengklik area luar sidebar saat di versi mobile */}
+      {isSidebarOpen && (
+        <div 
+          className="mobile-overlay" 
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
       )}
 
       {/* 2. AREA KANAN (Navbar, Konten & Footer) */}
       <main className="main-area-wrapper">
         
-        {/* [UBAH] Navbar juga disembunyikan khusus saat berada di /devAccess. */}
-        {!isOnDevAccessPage && (
-          <header className="navbar-wrapper">
-            <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} user={user} />
-          </header>
-        )}
+        {/* [UBAH] Navbar selalu tampil (tidak lagi disembunyikan di /devAccess). */}
+        <header className="navbar-wrapper">
+          <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} user={user} />
+        </header>
 
         {/* MAIN CONTENT / OUTLET (Tengah) */}
         <section className="content-outlet">

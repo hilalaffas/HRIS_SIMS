@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getRiwayatByUser, getPendingApprovals, getMyApprovalUpdates } from '../services/CutiService';
 import { getPendingResetRequests } from '../services/passwordResetService';
 import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
+import { getCurrentUser } from '../services/authService';
+import { isDevAccessUsername, isDevAccessPath } from '../config/devAccessConfig';
 import NotifPasswordResetModal from './NotifPasswordResetModal';
 import NotifLeaveApprovalModal from './NotifLeaveApprovalModal';
 import './Navbar.css';
@@ -22,6 +24,9 @@ export default function Navbar({ toggleSidebar, user }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState('');
+
+  // [BARU] Akun dev tidak punya data cuti/notifikasi, jadi polling-nya dilewati.
+  const isDevAccount = isDevAccessUsername(getCurrentUser()?.username);
 
   const [showDropdown, setShowDropdown] = useState(false);
   const notificationRef = useRef(null);
@@ -43,7 +48,7 @@ export default function Navbar({ toggleSidebar, user }) {
   // bisa dilihat lewat panel Pengumuman & Portal Berita di Dashboard.
   const [resetRequests, setResetRequests] = useState([]);
   const [selectedResetNotif, setSelectedResetNotif] = useState(null);
-  const canSeeResetNotif = isHrAdmin(user) || isSuperAdmin(user);
+  const canSeeResetNotif = !isDevAccount && (isHrAdmin(user) || isSuperAdmin(user));
 
   const [leaveApprovalTasks, setLeaveApprovalTasks] = useState([]);
   const [selectedLeaveNotif, setSelectedLeaveNotif] = useState(null);
@@ -95,7 +100,7 @@ export default function Navbar({ toggleSidebar, user }) {
 
   // === NOTIFIKASI CUTI (status milik pemohon + progres approval + tugas atasan) ===
   useEffect(() => {
-    if (notificationOwner === 'guest') return undefined;
+    if (notificationOwner === 'guest' || isDevAccount) return undefined;
 
     let isMounted = true;
 
@@ -199,7 +204,7 @@ export default function Navbar({ toggleSidebar, user }) {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, [notificationOwner, notificationStorageKey, userRole, showDropdown]);
+  }, [notificationOwner, notificationStorageKey, userRole, showDropdown, isDevAccount]);
 
   // === NOTIFIKASI PERMINTAAN RESET SANDI (HR ADMIN / SUPER ADMIN) ===
   // Tidak berubah: Super Admin & HR Admin sama-sama melihat notifikasi ini.
@@ -377,6 +382,8 @@ export default function Navbar({ toggleSidebar, user }) {
   }, []);
 
   const getSubHeaderTitle = () => {
+    if (isDevAccessPath(location.pathname)) return 'Pengaturan Fitur';
+
     switch (location.pathname) {
       case '/':
       case '/dashboard': return 'Dashboard Utama';

@@ -1,9 +1,15 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { getCurrentUser } from '../services/authService';
+import { DEV_ACCESS_PATH, isDevAccessUsername } from '../config/devAccessConfig';
 import './Sidebar.css';
 
 export default function Sidebar({ user, onLogout, notificationCounts, onNavigate }) {
   const location = useLocation();
+
+  // [BARU] Akun dev hanya melihat menu Pengaturan Fitur (+ tombol Keluar).
+  // Username dibaca dari getCurrentUser() karena prop `user` tidak membawanya.
+  const isDevAccount = isDevAccessUsername(getCurrentUser()?.username);
 
   // Mengambil role dari database (memastikan lowercase untuk konsistensi pengecekan)
   const userRole = (user?.jabatan || user?.role || 'member').toLowerCase();
@@ -16,12 +22,13 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   // 1. DAFTAR MENU BERDASARKAN HAK AKSES (MENYESUAIKAN GAMBAR)
   
   // Menu Utama: Super Admin hanya punya Halaman Utama, role lain punya keduanya
-  const mainMenuItems = [
-    { path: '/dashboard', name: 'Halaman Utama', icon: 'fa-solid fa-border-all' },
-  ];
+  // [UBAH] Akun dev memakai satu menu saja: Pengaturan Fitur.
+  const mainMenuItems = isDevAccount
+    ? [{ path: DEV_ACCESS_PATH, name: 'Pengaturan Fitur', icon: 'fa-solid fa-sliders' }]
+    : [{ path: '/dashboard', name: 'Halaman Utama', icon: 'fa-solid fa-border-all' }];
 
-  // Tambahkan Manajemen Cuti Saya jika BUKAN Super Admin
-  if (!isSuperAdmin) {
+  // Tambahkan Manajemen Cuti Saya jika BUKAN Super Admin (dan bukan akun dev)
+  if (!isSuperAdmin && !isDevAccount) {
     mainMenuItems.push({ 
       path: '/ApplyCuti', 
       name: 'Manajemen Cuti Saya', 
@@ -90,7 +97,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
         );
       }
 
-      const isActive = location.pathname.startsWith(item.path) || (item.path === '/dashboard' && location.pathname === '/');
+      const isActive = location.pathname.toLowerCase().startsWith(item.path.toLowerCase()) || (item.path === '/dashboard' && location.pathname === '/');
       return (
         <Link
           key={item.path}
@@ -172,12 +179,12 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
           
           {/* 1. MAIN MENU (Tampil untuk semua role) */}
           <div className="menu-group">
-            <span className="menu-group-label">MAIN MENU</span>
+            <span className="menu-group-label">{isDevAccount ? 'PENGATURAN' : 'MAIN MENU'}</span>
             {renderLinks(mainMenuItems)}
           </div>
 
           {/* 2. MENU PERSETUJUAN (Khusus Manager - Gambar 2) */}
-          {isManager && (
+          {isManager && !isDevAccount && (
             <div className="menu-group">
               <span className="menu-group-label">MENU PERSETUJUAN</span>
               {renderLinks(approvalMenuItems)}
@@ -185,7 +192,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
           )}
 
           {/* 3. SISTEM HRD (Khusus HR Admin - Gambar 3) */}
-          {isHRAdmin && (
+          {isHRAdmin && !isDevAccount && (
             <div className="menu-group">
               <span className="menu-group-label">SISTEM HRD</span>
               {renderLinks(hrMenuItems)}
@@ -193,7 +200,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
           )}
 
           {/* 4. SUPER ADMIN (Khusus Super Admin - Gambar 4) */}
-          {isSuperAdmin && (
+          {isSuperAdmin && !isDevAccount && (
             <div className="menu-group">
               <span className="menu-group-label">SUPER ADMIN</span>
               {renderLinks(superAdminMenuItems)}
