@@ -8,6 +8,8 @@ import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
 import SickApprovalSection from './components/SickApprovalSection'; // [BARU] tab Izin Sakit
+import OvertimeApprovalSection from '../../Persetujuan/components/OvertimeApprovalSection'; // [BARU] tab Persetujuan Lembur
+import useOvertimeApprovals from '../../../hooks/useOvertimeApprovals'; // [BARU]
 import ActionReasonModal from './components/ActionReasonModal';
 import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
 import { decideSickApproval, getSickApprovals } from '../../../services/attendanceService'; // [BARU]
@@ -16,7 +18,7 @@ import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
 /**
  * ApproveLeaving.jsx
  * ------------------------------------------------------------------
- * Halaman "Pusat Persetujuan Cuti".
+ * Halaman "Pusat Persetujuan" (cuti, izin sakit, lembur).
  *
  * AKSES:
  * Halaman ini hanya boleh dirender untuk role berikut:
@@ -35,9 +37,15 @@ import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
  * ------------------------------------------------------------------
  */
 const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim AppRoutes)
-  const [activeTab, setActiveTab] = useState("proses"); // 'proses' | 'list'
-  const [selectedDetail, setSelectedDetail] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU]
+  // [BARU] Persetujuan Lembur hanya untuk Leader/SPV/Manager (HR Karyawan tidak).
+  const canApproveOvertime = isManagerOrSpv(user);
+  // [UBAH] 'proses' | 'list' | 'sakit' | 'lembur'. Tab awal bisa dipilih lewat
+  // ?tab=lembur (dipakai redirect dari URL lama /persetujuan).
+  const [activeTab, setActiveTab] = useState(
+    () => (searchParams.get('tab') === 'lembur' && canApproveOvertime ? 'lembur' : 'proses')
+  );
+  const [selectedDetail, setSelectedDetail] = useState(null);
 
   const [pending, setPending] = useState([]);
   const [history, setHistory] = useState([]);
@@ -196,19 +204,25 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
 
   const sickPendingCount = sickItems.filter((item) => item.approvalStatus === 'PENDING').length;
 
+  // [BARU] Data Persetujuan Lembur dimuat di sini (bukan di dalam tab) supaya
+  // badge jumlah tetap muncul walau tab belum dibuka.
+  const overtime = useOvertimeApprovals(canApproveOvertime);
+
   // [UBAH] Tab "Izin Sakit" hanya muncul untuk Leader/SPV/Manager.
   const tabs = useMemo(
     () => [
       { key: "proses", label: "Perlu Diproses", badge: pendingCount },
       { key: "list", label: "List Cuti", badge: 0 },
       ...(canApproveSick ? [{ key: "sakit", label: "Izin Sakit", badge: sickPendingCount }] : []),
+      // [BARU] Tab Persetujuan Lembur (pindahan dari menu sidebar)
+      ...(canApproveOvertime ? [{ key: "lembur", label: "Persetujuan Lembur", badge: overtime.pendingCount }] : []),
     ],
-    [pendingCount, canApproveSick, sickPendingCount]
+    [pendingCount, canApproveSick, sickPendingCount, canApproveOvertime, overtime.pendingCount]
   );
 
   return (
     <div className="approve-leaving-page">
-      <HeadlineApproval title="Pusat Persetujuan Cuti" description="Kelola antrean persetujuan dan tinjau riwayat keputusan Anda."/>
+      <HeadlineApproval title="Pusat Persetujuan" description="Kelola antrean persetujuan dan tinjau riwayat keputusan Anda."/>
 
       <div className="approve-leaving-page__body">
         {error && <div className="approvalSection__empty">{error}</div>}
@@ -230,6 +244,18 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
             loading={sickLoading}
             processingKey={sickProcessingKey}
             onDecision={handleSickDecision}
+          />
+        )}
+        {/* [BARU] Tab Persetujuan Lembur */}
+        {activeTab === "lembur" && canApproveOvertime && (
+          <OvertimeApprovalSection
+            padded
+            rows={overtime.rows}
+            loading={overtime.loading}
+            processingKey={overtime.processingKey}
+            toast={overtime.toast}
+            pendingCount={overtime.pendingCount}
+            onDecision={overtime.handleDecision}
           />
         )}
       </div>

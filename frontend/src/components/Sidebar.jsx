@@ -12,8 +12,6 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   const isSuperAdmin = userRole.includes('super_admin');
   const isHRAdmin = userRole.includes('hrd_admin') || userRole.includes('admin') && !isSuperAdmin;
   const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader') ||userRole.includes('hrd_karyawan');
-  // [BARU] Hanya Leader/SPV/Manager (bukan hrd_karyawan) yang punya persetujuan lembur.
-  const isLeaderSpvManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader');
 
   // 1. DAFTAR MENU BERDASARKAN HAK AKSES (MENYESUAIKAN GAMBAR)
   
@@ -50,22 +48,12 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   const approvalMenuItems = [
     { 
       path: '/ApproveLeave', 
-      name: 'Persetujuan Cuti', 
+      name: 'Persetujuan', 
       icon: 'fa-regular fa-circle-check', 
       badgeStyle: { backgroundColor: '#ff4d4d' }, 
       count: notificationCounts?.approval ?? 0
     },
   ];
-
-  // [BARU] Persetujuan Lembur: Leader/SPV/Manager (di bawah "Persetujuan Cuti").
-  // Persetujuan Sakit ada sebagai tab di halaman Persetujuan Cuti.
-  if (isLeaderSpvManager) {
-    approvalMenuItems.push({
-      path: '/persetujuan',
-      name: 'Persetujuan Lembur',
-      icon: 'fa-solid fa-clipboard-check',
-    });
-  }
 
   // Menu Khusus HRD (Gambar 3)
   const hrMenuItems = [
@@ -75,7 +63,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   // Menu Khusus Super Admin (Gambar 4)
   const superAdminMenuItems = [
     { path: '/karyawan', name: 'Pengaturan Akun', icon: 'fa-solid fa-gear' },
-    // [UBAH] SuperAdmin hanya punya Persetujuan Lembur (semua divisi).
+    // SuperAdmin tidak punya halaman Persetujuan Cuti, jadi tetap langsung ke Persetujuan Lembur (semua divisi).
     { path: '/persetujuan', name: 'Persetujuan Lembur', icon: 'fa-solid fa-clipboard-check' },
   ];
 

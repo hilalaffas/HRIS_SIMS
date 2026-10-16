@@ -72,11 +72,17 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           {/* [BARU] Wadah Halaman Pengajuan Lembur */}
           <Route path="/lembur" element={<Lembur />} />
 
-          {/* [UBAH] Persetujuan Lembur -- Leader, SPV, Manager, dan SuperAdmin;
-              role lain dialihkan ke dashboard (backend juga menolak 403). */}
+          {/* [UBAH] Persetujuan Lembur: SuperAdmin tetap di halaman ini.
+              Leader/SPV/Manager sekarang memakai tab "Persetujuan Lembur" di
+              Pusat Persetujuan, jadi URL lama dialihkan ke sana. Role lain
+              dialihkan ke dashboard (backend juga menolak 403). */}
           <Route
             path="/persetujuan"
-            element={isManagerOrSpv(user) || isSuperAdmin(user) ? <Persetujuan /> : <Navigate to="/dashboard" replace />}
+            element={
+              isSuperAdmin(user) ? <Persetujuan />
+                : isManagerOrSpv(user) ? <Navigate to="/ApproveLeave?tab=lembur" replace />
+                : <Navigate to="/dashboard" replace />
+            }
           />
 
           {/* Wadah Halaman Manajemen Karyawan */}
