@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FilePlus2, Plus } from 'lucide-react';
 import Toast from '../../components/Toast';
 import OvertimeHistoryTable from './components/OvertimeHistoryTable';
+import OvertimeStatusCard from './components/OvertimeStatusCard'; // [BARU]
 import OvertimeFormModal from './components/OvertimeFormModal';
 import { getMyOvertime, submitOvertime, toDisplayOvertime } from '../../services/overtimeService';
 import './Lembur.css';
@@ -18,6 +19,7 @@ export default function Lembur() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedId, setSelectedId] = useState(null); // [BARU] baris yang alurnya sedang dibuka
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
@@ -53,6 +55,10 @@ export default function Lembur() {
     setReloadKey((current) => current + 1);
   };
 
+  // [BARU] Klik badge yang sama sekali lagi = tutup kartu alur.
+  const handleSelectStatus = (id) => setSelectedId((current) => (current === id ? null : id));
+  const selectedRecord = records.find((record) => record.id === selectedId) || null;
+
   return (
     <div className="lembur-page">
       <header className="lmb-header-card">
@@ -69,7 +75,22 @@ export default function Lembur() {
         </button>
       </header>
 
-      <OvertimeHistoryTable records={records} loading={loading} />
+      {/* [BARU] Kartu alur persetujuan: di antara header dan tabel riwayat */}
+      {selectedRecord && (
+        <OvertimeStatusCard
+          key={selectedRecord.id}
+          record={selectedRecord}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+
+      {/* [UBAH] + selectedId & onSelectStatus */}
+      <OvertimeHistoryTable
+        records={records}
+        loading={loading}
+        selectedId={selectedId}
+        onSelectStatus={handleSelectStatus}
+      />
 
       {modalOpen && (
         <OvertimeFormModal onClose={() => setModalOpen(false)} onSubmit={handleSubmit} />

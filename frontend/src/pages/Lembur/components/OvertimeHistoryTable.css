@@ -72,3 +72,15 @@
 .lmb-status-approved { background: var(--color-success-bg); color: var(--color-success); }
 .lmb-status-pending { background: var(--color-warning-bg); color: var(--color-warning); }
 .lmb-status-rejected { background: var(--color-danger-bg); color: var(--color-danger); }
+
+/* [BARU] Badge status bisa diklik untuk membuka kartu alur persetujuan */
+.lmb-status-button {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.lmb-status-button:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15); }
+.lmb-status-button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.lmb-status-button.is-active { box-shadow: 0 0 0 2px var(--color-primary); }
+.lmb-row-active td { background: #fafbfc; }

@@ -1,4 +1,5 @@
-import { buildTimeline, getStatusMeta } from '../constants/overtimeFlow';
+import { formatDateLabel } from '../../../services/attendanceService';
+import { buildTimeline, getStatusMeta, resolveFlowState } from '../../../constants/overtimeFlow';
 import './OvertimeStatusCard.css';
 
 function StepIcon({ state, index }) {
@@ -45,10 +46,19 @@ function StepIcon({ state, index }) {
   return <span className="overtimeStep__number">{index + 1}</span>;
 }
 
-function OvertimeStatusCard({ request, onCancel, onClose }) {
-  const statusMeta = getStatusMeta(request);
-  const timeline = buildTimeline(request);
-  const canCancel = request.status === 'pending';
+// "2026-10-05T20:05:11" -> "05 Okt 2026, 20:05 WIB"
+function formatSubmittedLabel(createdAt) {
+  if (!createdAt) return '';
+  return `${formatDateLabel(createdAt.slice(0, 10))}, ${createdAt.slice(11, 16)} WIB`;
+}
+
+function OvertimeStatusCard({ record, onCancel, onClose }) {
+  const flowRequest = { ...record, ...resolveFlowState(record) };
+  const statusMeta = getStatusMeta(flowRequest);
+  const timeline = buildTimeline(flowRequest);
+  const submittedAtLabel = formatSubmittedLabel(record.createdAt);
+  // Tombol Batalkan hanya muncul jika halaman menyediakan onCancel (butuh endpoint backend).
+  const canCancel = flowRequest.status === 'pending' && typeof onCancel === 'function';
 
   return (
     <section
@@ -58,11 +68,9 @@ function OvertimeStatusCard({ request, onCancel, onClose }) {
       <header className="overtimeCard__header">
         <div className="overtimeCard__title">
           <span className="overtimeCard__eyebrow">Pengajuan Lembur</span>
-          <strong className="overtimeCard__date">{request.dateLabel}</strong>
-          {request.submittedAtLabel && (
-            <span className="overtimeCard__sent">
-              Dikirim {request.submittedAtLabel}
-            </span>
+          <strong className="overtimeCard__date">{formatDateLabel(record.date)}</strong>
+          {submittedAtLabel && (
+            <span className="overtimeCard__sent">Dikirim {submittedAtLabel}</span>
           )}
         </div>
 
@@ -84,18 +92,18 @@ function OvertimeStatusCard({ request, onCancel, onClose }) {
       <div className="overtimeCard__body">
         <dl className="overtimeCard__stat">
           <dt>Mulai</dt>
-          <dd>{request.startTime}</dd>
+          <dd>{record.startTime}</dd>
         </dl>
         <dl className="overtimeCard__stat">
           <dt>Selesai</dt>
-          <dd>{request.endTime}</dd>
+          <dd>{record.endTime}</dd>
         </dl>
         <dl className="overtimeCard__stat overtimeCard__stat--total">
           <dt>Total</dt>
-          <dd>{request.totalHours} Jam</dd>
+          <dd>{record.duration}</dd>
         </dl>
         <p className="overtimeCard__job">
-          <strong>Pekerjaan:</strong> {request.reason}
+          <strong>Pekerjaan:</strong> {record.reason}
         </p>
       </div>
 
@@ -129,7 +137,7 @@ function OvertimeStatusCard({ request, onCancel, onClose }) {
           <button
             type="button"
             className="overtimeCard__cancel"
-            onClick={() => onCancel(request)}
+            onClick={() => onCancel(record)}
           >
             Batalkan
           </button>

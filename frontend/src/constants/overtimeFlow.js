@@ -63,3 +63,24 @@ export function buildTimeline(request) {
     return { ...step, index, state };
   });
 }
+
+// [BARU] Menerjemahkan data dari overtimeService (statusCode huruf besar)
+// ke bentuk { status, levelIndex } yang dipakai getStatusMeta/buildTimeline.
+// approvalLevelIndex (0 Leader, 1 SPV, 2 Manager) belum dikirim backend;
+// selama kosong, level aktif dianggap Leader.
+const flowStatusByCode = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  CANCELLED: 'cancelled',
+};
+
+export function resolveFlowState(record) {
+  const maxLevel = approvalLevels.length - 1;
+  const rawLevel = Number.isInteger(record.approvalLevelIndex) ? record.approvalLevelIndex : 0;
+
+  return {
+    status: flowStatusByCode[record.statusCode] ?? 'pending',
+    levelIndex: Math.min(Math.max(rawLevel, 0), maxLevel),
+  };
+}

@@ -74,6 +74,8 @@ export function toDisplayOvertime(item) {
     duration: formatOvertimeDuration(item.totalMinutes),
     reason: item.reason || '-',
     statusCode: String(item.status || '').toUpperCase(),
+    createdAt: item.createdAt, // [BARU] "2026-10-05T20:05:11" -> label "Dikirim ..." di kartu alur
+    approvalLevelIndex: item.approvalLevelIndex ?? null, // [BARU] opsional, belum dikirim backend
   };
 }
 

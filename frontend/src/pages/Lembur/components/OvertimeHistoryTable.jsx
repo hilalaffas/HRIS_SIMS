@@ -4,7 +4,7 @@ import { formatDateLabel } from '../../../services/attendanceService';
 import { getOvertimeStatus } from '../../../services/overtimeService';
 import './OvertimeHistoryTable.css';
 
-export default function OvertimeHistoryTable({ records, loading }) {
+export default function OvertimeHistoryTable({ records, loading, selectedId, onSelectStatus }) {
   return (
     <section className="lmb-table-card">
       <h2>RIWAYAT PENGAJUAN LEMBUR SAYA</h2>
@@ -32,7 +32,7 @@ export default function OvertimeHistoryTable({ records, loading }) {
             {!loading && records.map((record, index) => {
               const status = getOvertimeStatus(record.statusCode);
               return (
-                <tr key={record.id}>
+                <tr key={record.id} className={selectedId === record.id ? 'lmb-row-active' : ''}>
                   <td>{index + 1}</td>
                   <td className="lmb-strong">{formatDateLabel(record.date)}</td>
                   <td className="lmb-mono">{record.startTime}</td>
@@ -40,7 +40,15 @@ export default function OvertimeHistoryTable({ records, loading }) {
                   <td className="lmb-strong">{record.duration}</td>
                   <td>{record.reason}</td>
                   <td className="lmb-center">
-                    <span className={`lmb-status lmb-status-${status.tone}`}>{status.label}</span>
+                    <button
+                      type="button"
+                      className={`lmb-status lmb-status-${status.tone} lmb-status-button${selectedId === record.id ? ' is-active' : ''}`}
+                      onClick={() => onSelectStatus(record.id)}
+                      aria-expanded={selectedId === record.id}
+                      title="Klik untuk melihat alur persetujuan"
+                    >
+                      {status.label}
+                    </button>
                   </td>
                 </tr>
               );
