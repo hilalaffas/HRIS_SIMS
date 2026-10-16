@@ -38,4 +38,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // [BARU] Semua pengajuan Sakit (check-in dengan reason SAKIT), terbaru
     // duluan -- dipakai halaman Persetujuan Sakit & Lembur (SuperAdmin).
     List<Attendance> findByReasonAndActionOrderByRecordedAtDesc(String reason, String action);
+
+    // [BARU] Semua pengajuan Sakit milik satu karyawan -- dipakai untuk mengecek
+    // apakah hari tertentu masih tercakup izin sakit multi-hari.
+    List<Attendance> findByEmployee_EmployeeIdAndReasonAndActionOrderByRecordedAtDesc(
+            Long employeeId, String reason, String action);
 }

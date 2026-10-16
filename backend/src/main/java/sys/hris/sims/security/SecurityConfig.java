@@ -344,6 +344,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/absensi/me")
                         .authenticated()
 
+                        // [BARU] Pengajuan Izin / Sakit & upload surat dokter susulan
+                        // (kepemilikan data dicek di AttendanceService).
+                        .requestMatchers(HttpMethod.POST, "/api/absensi/me/izin")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/api/absensi/*/document")
+                        .authenticated()
+
                         // [BARU] Nama lokasi dari koordinat (popup absen Dashboard).
                         .requestMatchers(HttpMethod.GET, "/api/absensi/location-name")
                         .authenticated()

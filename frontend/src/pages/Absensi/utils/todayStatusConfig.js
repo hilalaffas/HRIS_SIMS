@@ -2,7 +2,7 @@
 //
 // [BARU] Satu sumber untuk teks, warna, dan ikon "status absen hari ini" --
 // dipakai kartu ringkasan Dashboard (DashboardSummaryCard) DAN kartu absensi
-// di halaman Absensi Saya (AttendanceCameraCard), supaya keduanya selalu sama.
+// di halaman Absensi Saya (AttendancePortalCard), supaya keduanya selalu sama.
 //
 // Kunci status: idle | checkedIn | done | sick
 //   badge/badgeTone   = lencana kecil "STATUS HARI INI" (Dashboard)

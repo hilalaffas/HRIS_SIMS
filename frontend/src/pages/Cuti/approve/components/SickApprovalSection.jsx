@@ -12,8 +12,10 @@ const toSickRow = (item) => ({
   id: item.attendanceId,
   employeeName: item.employeeName || '-',
   date: item.attendanceDate,
-  detail: item.note || 'Sakit',
-  proofUrl: item.photoUrl || '',
+  // [UBAH] + lama izin (bila >1 hari) dan surat dokter sebagai bukti
+  // (pengajuan baru tanpa selfie; foto lama tetap jadi cadangan).
+  detail: `${item.note || 'Sakit'}${item.leaveDays > 1 ? ` (${item.leaveDays} hari)` : ''}`,
+  proofUrl: item.documentUrl || item.photoUrl || '',
   status: String(item.approvalStatus || '').toUpperCase(),
 });
 

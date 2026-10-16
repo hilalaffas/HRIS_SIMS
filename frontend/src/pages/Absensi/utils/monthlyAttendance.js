@@ -13,7 +13,7 @@
 // "September 2026" = 21 Agustus 2026 - 20 September 2026. Periode
 // diidentifikasi lewat bulan AKHIR-nya ({ year, month }, month = 0-11).
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
-import { formatDateLabel } from '../../../services/attendanceService';
+import { formatDateLabel, parseLocalDate } from '../../../services/attendanceService'; // [UBAH] + parseLocalDate
 import { formatOvertimeDuration, getOvertimeStatus } from '../../../services/overtimeService'; // [UBAH] + formatOvertimeDuration
 
 export const SHIFT_LABEL = 'Shift Normal (08:00 - 17:00)';
@@ -73,18 +73,57 @@ export function formatPeriodLabel(year, month) {
   return `${fmt(start)} - ${fmt(end)}`;
 }
 
+// [BARU] Tanggal terakhir (YYYY-MM-DD) izin sakit: tanggal pengajuan + lama izin - 1.
+function getSickEndKey(record) {
+  const start = parseLocalDate(record.attendanceDate);
+  return dateKey(new Date(start.getFullYear(), start.getMonth(), start.getDate() + (record.leaveDays || 1) - 1));
+}
+
+// [BARU] Catatan sakit/izin yang berlaku pada tanggal `key` (dipakai halaman
+// Absensi untuk status hari ini). Hari pengajuan: perilaku lama (MASUK dengan
+// reason bukan ABSEN). Hari lanjutan izin sakit multi-hari: hanya Sakit yang
+// belum ditolak.
+export function getSickRecordCovering(records, key) {
+  return records.find((record) => {
+    if (record.actionCode !== 'MASUK') return false;
+    if (record.attendanceDate === key) return record.reasonCode !== 'ABSEN';
+    return record.reasonCode === 'SAKIT'
+      && record.approvalStatus !== 'REJECTED'
+      && key > record.attendanceDate
+      && key <= getSickEndKey(record);
+  });
+}
+
 function groupByDate(records) {
   const byDate = new Map();
   records.forEach((record) => {
     const key = record.attendanceDate;
     if (!key) return;
-    const entry = byDate.get(key) || { checkIn: null, checkOut: null };
-    if (record.actionCode === 'KELUAR') {
+    const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null };
+    if (record.actionCode === 'IZIN') {
+      entry.lateNotice = record; // [BARU] izin terlambat: bukan check-in, hanya catatan
+    } else if (record.actionCode === 'KELUAR') {
       entry.checkOut = record;
     } else if (!entry.checkIn || (record.recordedAt && entry.checkIn.recordedAt && record.recordedAt < entry.checkIn.recordedAt)) {
       entry.checkIn = record; // kalau ada >1 Masuk di hari yang sama, pakai yang paling awal
     }
     byDate.set(key, entry);
+  });
+
+  // [BARU] Izin sakit multi-hari: hari ke-2 dst diisi salinan catatan sakit
+  // (kalender, termasuk akhir pekan) selama belum ada catatan masuk di hari itu.
+  records.forEach((record) => {
+    if (record.actionCode !== 'MASUK' || record.reasonCode !== 'SAKIT' || record.leaveDays <= 1) return;
+    if (record.approvalStatus === 'REJECTED') return;
+    const start = parseLocalDate(record.attendanceDate);
+    for (let offset = 1; offset < record.leaveDays; offset += 1) {
+      const key = dateKey(new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset));
+      const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null };
+      if (!entry.checkIn) {
+        entry.checkIn = { ...record, attendanceDate: key, dayNumber: offset + 1 };
+        byDate.set(key, entry);
+      }
+    }
   });
   return byDate;
 }
@@ -108,20 +147,23 @@ function blankRow(key) {
     mapsUrl: '',
     locationName: '', // [BARU]
     proofLabel: '',
+    document: null, // [BARU]
   };
 }
 
 function resolveRow(key, entry, todayKey) {
-  const { checkIn, checkOut } = entry;
+  const { checkIn, checkOut, lateNotice } = entry;
   const isToday = key === todayKey;
+  // [BARU] Pemberitahuan izin terlambat ikut tampil di keterangan hari itu.
+  const noticeSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
   const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: SHIFT_LABEL };
   const empty = { checkIn: null, checkOut: null, duration: null, durationMinutes: null };
 
   // Hari kerja tanpa catatan apa pun
   if (!checkIn && !checkOut) {
     return isToday
-      ? { ...base, ...empty, status: 'BELUM ABSEN', tone: 'belum', note: 'Menunggu Absen Masuk', photoUrl: '', mapsUrl: '', proofLabel: '' }
-      : { ...base, ...empty, status: 'TANPA KETERANGAN', tone: 'alpha', note: 'Tanpa Keterangan (Alpha)', photoUrl: '', mapsUrl: '', proofLabel: '' };
+      ? { ...base, ...empty, status: 'BELUM ABSEN', tone: 'belum', note: `Menunggu Absen Masuk${noticeSuffix}`, photoUrl: '', mapsUrl: '', proofLabel: '' }
+      : { ...base, ...empty, status: 'TANPA KETERANGAN', tone: 'alpha', note: `Tanpa Keterangan (Alpha)${noticeSuffix}`, photoUrl: '', mapsUrl: '', proofLabel: '' };
   }
 
   const proof = { photoUrl: checkIn?.photoUrl || '', mapsUrl: checkIn?.mapsUrl || '', locationName: checkIn?.locationName || '' }; // [UBAH] + locationName
@@ -135,14 +177,20 @@ function resolveRow(key, entry, todayKey) {
     const approvalSuffix = isSick
       ? ({ PENDING: ' (Menunggu Persetujuan)', REJECTED: ' (Ditolak)' }[checkIn.approvalStatus] || '')
       : '';
+    // [BARU] Izin sakit multi-hari: "Hari ke-2 dari 3".
+    const dayInfo = isSick && checkIn.leaveDays > 1 ? ` · Hari ke-${checkIn.dayNumber || 1} dari ${checkIn.leaveDays}` : '';
     return {
       ...base,
       ...empty,
       status: isSick ? 'SAKIT' : 'CUTI',
       tone: isSick ? 'sakit' : 'cuti',
-      note: `${checkIn.note || (isSick ? 'Sakit' : 'Izin')}${approvalSuffix}`,
+      note: `${checkIn.note || (isSick ? 'Sakit' : 'Izin')}${dayInfo}${approvalSuffix}`,
       ...proof,
       proofLabel: 'Foto Bukti',
+      // [BARU] Surat dokter: link bila sudah diunggah, tombol upload susulan bila belum.
+      document: isSick && checkIn.documentRequired
+        ? { recordId: checkIn.id, url: checkIn.documentUrl, canUpload: checkIn.approvalStatus !== 'REJECTED' }
+        : null,
     };
   }
 
@@ -155,6 +203,7 @@ function resolveRow(key, entry, todayKey) {
   if (!checkOut) note += isToday ? ' (Sedang Bekerja)' : ' (Tidak Absen Pulang)';
   // [BARU] Keterangan saat check-out (mis. "Pulang cepat: ...") ikut tampil di catatan.
   if (checkOut?.note) note += ` · ${checkOut.note}`;
+  note += noticeSuffix; // [BARU]
 
   const minutesWorked = checkIn?.recordedAt && checkOut?.recordedAt
     ? (checkOut.recordedAt.getTime() - checkIn.recordedAt.getTime()) / 60000
@@ -296,6 +345,7 @@ export function toReportRows(rows, { includeUrl = false } = {}) {
     row.status,
     row.photoUrl ? (includeUrl ? row.photoUrl : row.proofLabel) : '-',
     toOvertimeText(row.overtime),
-    row.note,
+    // [BARU] Rekap ikut menandai sakit yang surat dokternya belum diunggah.
+    row.document && !row.document.url ? `${row.note} (Surat dokter belum diunggah)` : row.note,
   ]);
 }

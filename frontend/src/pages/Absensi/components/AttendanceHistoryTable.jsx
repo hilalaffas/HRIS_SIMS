@@ -30,7 +30,7 @@
 // disetujui di modul Cuti (leave_requests), tambahkan sumber datanya di
 // buildMonthlyRows() -- struktur tabel tidak perlu diubah.
 import React, { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FileDown, FileText, MapPin } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FileDown, FileText, MapPin, Upload } from 'lucide-react'; // [UBAH] + Upload
 import { downloadCsv } from '../../../utils/csvExport';
 import {
   REPORT_HEADERS,
@@ -84,9 +84,30 @@ function ProofLinks({ row }) {
   );
 }
 
+// [BARU] Surat dokter pada baris Sakit: link bila sudah diunggah, tombol
+// "Upload surat dokter (menyusul)" bila belum -- karyawan tetap WAJIB melampirkan.
+function MedicalDocumentAction({ document, onUpload }) {
+  if (!document) return null;
+  if (document.url) {
+    return (
+      <a className="abs-document-link" href={document.url} target="_blank" rel="noreferrer">
+        <FileText aria-hidden="true" />
+        Surat Dokter
+      </a>
+    );
+  }
+  if (!document.canUpload) return null;
+  return (
+    <button type="button" className="abs-document-upload" onClick={() => onUpload(document.recordId)}>
+      <Upload aria-hidden="true" />
+      Upload surat dokter (menyusul)
+    </button>
+  );
+}
+
 // [BARU] Sel Keterangan / Catatan: badge status di atas, catatan di bawah,
-// lalu link bukti (foto & peta) bila ada.
-function NoteCell({ row }) {
+// lalu link bukti (foto & peta) dan surat dokter bila ada.
+function NoteCell({ row, onUploadDocument }) {
   const hasNote = row.note && row.note !== '-';
   if (!row.tone && !hasNote) return <span className="abs-empty-cell">-</span>;
   return (
@@ -94,6 +115,7 @@ function NoteCell({ row }) {
       {row.tone && <span className={`abs-record-status abs-status-${row.tone}`}>{row.status}</span>}
       {hasNote && <span className="abs-note-text">{row.note}</span>}
       <ProofLinks row={row} />
+      <MedicalDocumentAction document={row.document} onUpload={onUploadDocument} />
     </div>
   );
 }
@@ -115,7 +137,7 @@ function OvertimeCell({ overtime }) {
   );
 }
 
-export default function AttendanceHistoryTable({ records, overtimeRecords = [] }) {
+export default function AttendanceHistoryTable({ records, overtimeRecords = [], onUploadDocument }) { // [UBAH] + onUploadDocument
   const currentPeriod = useMemo(() => getCurrentPeriod(new Date()), []);
   const [period, setPeriod] = useState(currentPeriod);
   const [expanded, setExpanded] = useState(false);
@@ -307,7 +329,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [] }
                 <td className="abs-mono-cell">{row.checkOut || <span className="abs-empty-cell">{row.isToday ? '--:--:--' : '-'}</span>}</td>
                 <td className="abs-duration-cell">{row.duration || <span className="abs-empty-cell">-</span>}</td>
                 <td><OvertimeCell overtime={row.overtime} /></td>
-                <td className="abs-note-cell"><NoteCell row={row} /></td>
+                <td className="abs-note-cell"><NoteCell row={row} onUploadDocument={onUploadDocument} /></td>
               </tr>
             ))}
           </tbody>

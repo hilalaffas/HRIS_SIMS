@@ -1,0 +1,117 @@
+/* src/pages/Absensi/components/AttendancePortalCard.css */
+
+.abs-portal-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  flex-wrap: wrap;
+  background: var(--color-surface);
+  border: 1px solid var(--abs-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-lg, 14px);
+  padding: 16px 22px;
+  box-shadow: var(--shadow-sm);
+  animation: abs-fade-up 0.35s ease both;
+}
+
+.abs-portal-info { min-width: 0; }
+
+.abs-portal-info h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.abs-portal-info h2 svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--abs-primary-soft);
+}
+
+.abs-portal-info p {
+  margin: 0;
+  color: var(--abs-muted-ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.abs-portal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.abs-portal-button {
+  box-sizing: border-box;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-md, 8px);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.abs-portal-button svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* Hijau brand = aksi absen utama */
+.abs-portal-button--attendance { background: var(--color-primary); }
+.abs-portal-button--attendance:hover:not(:disabled) { background: var(--color-primary-hover); }
+
+/* Biru = pengajuan izin / sakit */
+.abs-portal-button--permission { background: var(--color-info); }
+.abs-portal-button--permission:hover:not(:disabled) { background: #1d4ed8; }
+
+.abs-portal-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+}
+
+.abs-portal-button:active:not(:disabled) { transform: translateY(0); }
+
+.abs-portal-button:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
+/* Terkunci (absensi selesai / sudah sakit / sedang memuat) */
+.abs-portal-button:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+@keyframes abs-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 720px) {
+  .abs-portal-actions { width: 100%; }
+  .abs-portal-button { flex: 1 1 0; min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abs-portal-card { animation: none; }
+  .abs-portal-button { transition: none; }
+}

@@ -56,13 +56,17 @@ public class Attendance {
     @Column(name = "note")
     private String note;
 
-    @Column(name = "photo_url", nullable = false, length = 500)
+    // [UBAH] photo_url / latitude / longitude boleh NULL (migration V45):
+    // pengajuan Izin/Sakit dari popup "Ajukan Izin / Sakit" tidak memakai
+    // selfie & GPS. Absen Masuk/Keluar tetap WAJIB mengisinya (divalidasi
+    // di AttendanceService.submit()).
+    @Column(name = "photo_url", length = 500)
     private String photoUrl;
 
-    @Column(name = "latitude", nullable = false, precision = 10, scale = 7)
+    @Column(name = "latitude", precision = 10, scale = 7)
     private BigDecimal latitude;
 
-    @Column(name = "longitude", nullable = false, precision = 11, scale = 7)
+    @Column(name = "longitude", precision = 11, scale = 7)
     private BigDecimal longitude;
 
     @Column(name = "recorded_at", nullable = false)
@@ -83,6 +87,18 @@ public class Attendance {
     @Column(name = "location_name", length = 255)
     private String locationName;
 
+    // [BARU] Lama izin sakit (hari kalender) mulai dari attendanceDate. Default 1.
+    @Column(name = "leave_days", nullable = false)
+    private Integer leaveDays;
+
+    // [BARU] URL surat dokter; null = belum diunggah (surat boleh menyusul).
+    @Column(name = "document_url", length = 500)
+    private String documentUrl;
+
+    // [BARU] true bila pengajuan ini wajib melampirkan surat dokter.
+    @Column(name = "document_required", nullable = false)
+    private Boolean documentRequired;
+
     // [BARU] Jam & tanggal SELALU diisi di sini (server), tidak pernah
     // diterima dari request client -- lihat AttendanceSubmitRequest yang
     // sengaja TIDAK punya field jam/tanggal sama sekali.
@@ -94,6 +110,12 @@ public class Attendance {
         this.createdAt = now;
         if (this.approvalStatus == null) {
             this.approvalStatus = "NOT_REQUIRED";
+        }
+        if (this.leaveDays == null) {
+            this.leaveDays = 1; // [BARU]
+        }
+        if (this.documentRequired == null) {
+            this.documentRequired = false; // [BARU]
         }
     }
 }

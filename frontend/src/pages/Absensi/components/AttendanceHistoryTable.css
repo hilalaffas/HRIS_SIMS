@@ -451,6 +451,53 @@ td strong {
   background: var(--color-success-bg);
 }
 
+/* [BARU] Surat dokter pada baris Sakit: link (sudah diunggah) & tombol upload susulan. */
+.abs-document-link,
+.abs-document-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.abs-document-link svg,
+.abs-document-upload svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.abs-document-link {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+/* Biru = aksi yang masih harus dilakukan karyawan (sama dengan tombol "Ajukan Izin / Sakit") */
+.abs-document-upload {
+  color: var(--color-info);
+  background: var(--color-info-bg);
+  border: 1px dashed var(--color-info-border);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.abs-document-link:hover,
+.abs-document-upload:hover {
+  transform: translateY(-1px);
+}
+
+.abs-document-upload:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
 /* [BARU] "Belum Absen": titik kecil berdenyut sebagai pengingat */
 .abs-status-belum::before {
   content: '';

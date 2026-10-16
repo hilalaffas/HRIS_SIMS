@@ -1,0 +1,212 @@
+/* src/pages/Absensi/components/PermissionRequestModal.css
+   Dipakai bersama oleh PermissionRequestModal dan MedicalLetterModal. */
+
+.abs-permission-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(19, 34, 56, 0.6);
+  animation: abs-permission-fade 0.18s ease both;
+}
+
+.abs-permission-modal {
+  width: min(480px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius-lg, 14px);
+  padding: 22px 24px;
+  box-shadow: 0 20px 50px rgba(19, 34, 56, 0.25);
+  animation: abs-permission-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.abs-permission-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.abs-permission-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.abs-permission-header h2 svg {
+  width: 17px;
+  height: 17px;
+  color: var(--color-info);
+}
+
+.abs-permission-header > button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.abs-permission-header > button:hover:not(:disabled) { color: var(--color-text); }
+.abs-permission-header > button svg { width: 18px; height: 18px; }
+
+.abs-permission-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.abs-permission-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.abs-permission-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.abs-permission-field textarea,
+.abs-permission-days input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.abs-permission-field textarea { resize: vertical; min-height: 76px; }
+
+.abs-permission-field textarea:focus,
+.abs-permission-days input:focus {
+  outline: none;
+  border-color: var(--color-info);
+  box-shadow: 0 0 0 3px var(--color-info-bg);
+}
+
+.abs-permission-days {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.abs-permission-days input { width: 84px; }
+
+.abs-permission-days span {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.abs-permission-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.abs-permission-check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-info);
+}
+
+.abs-permission-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.abs-permission-error {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.abs-permission-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.abs-permission-cancel,
+.abs-permission-submit {
+  height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-md, 8px);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.abs-permission-cancel {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.abs-permission-cancel:hover:not(:disabled) { color: var(--color-text); }
+
+.abs-permission-submit {
+  background: var(--color-info);
+  color: #fff;
+}
+
+.abs-permission-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.abs-permission-cancel:disabled,
+.abs-permission-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes abs-permission-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes abs-permission-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abs-permission-backdrop,
+  .abs-permission-modal { animation: none; }
+}

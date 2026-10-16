@@ -45,4 +45,11 @@ public class AttendanceResponse {
 
     // [BARU] Nama lokasi dari reverse geocoding backend; null bila tidak tersedia.
     private String locationName;
+
+    // [BARU] Lama izin sakit (hari kalender), default 1.
+    private Integer leaveDays;
+
+    // [BARU] URL surat dokter (null = belum diunggah) & apakah surat wajib.
+    private String documentUrl;
+    private Boolean documentRequired;
 }

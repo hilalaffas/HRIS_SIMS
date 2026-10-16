@@ -149,6 +149,50 @@ public class CloudinaryService {
         }
     }
 
+    // [BARU] Surat dokter / bukti izin sakit (popup "Ajukan Izin / Sakit" dan upload
+    // susulan dari tabel riwayat Absensi). Batas 4MB mengikuti
+    // spring.servlet.multipart.max-file-size (application.properties) -- naikkan
+    // keduanya bersamaan bila ingin 5MB. Berbeda dari foto selfie, PDF juga boleh.
+    private static final long MAX_MEDICAL_DOCUMENT_SIZE_BYTES = 4L * 1024L * 1024L; // 4MB
+    private static final List<String> ALLOWED_MEDICAL_DOCUMENT_TYPES = List.of("image/jpeg", "image/png", "application/pdf");
+    private static final List<String> ALLOWED_MEDICAL_DOCUMENT_EXTENSIONS = List.of(".jpg", ".jpeg", ".png", ".pdf");
+
+    // Mengembalikan true bila file adalah PDF.
+    private boolean validateMedicalDocument(MultipartFile file) {
+        if (file.getSize() > MAX_MEDICAL_DOCUMENT_SIZE_BYTES) {
+            throw new IllegalArgumentException("Ukuran surat dokter melebihi batas maksimal 4MB.");
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        String originalFilename = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        String extension = originalFilename.contains(".")
+                ? originalFilename.substring(originalFilename.lastIndexOf('.'))
+                : "";
+
+        if (!ALLOWED_MEDICAL_DOCUMENT_TYPES.contains(contentType)
+                || !ALLOWED_MEDICAL_DOCUMENT_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("Tipe file tidak didukung. Hanya JPG, PNG, atau PDF yang diperbolehkan.");
+        }
+        return extension.equals(".pdf");
+    }
+
+    public String uploadMedicalDocument(MultipartFile file, String publicId) throws IOException {
+        boolean isPdf = validateMedicalDocument(file);
+
+        // PDF diunggah sebagai "raw" (ekstensi .pdf harus ikut di public_id) supaya
+        // tautannya bisa dibuka langsung; gambar tetap "image".
+        Map uploadResult = cloudinary.uploader().upload(
+            file.getBytes(),
+            ObjectUtils.asMap(
+                "folder", "medical-documents",
+                "public_id", isPdf ? publicId + ".pdf" : publicId,
+                "overwrite", false,
+                "resource_type", isPdf ? "raw" : "image"
+            )
+        );
+        return uploadResult.get("secure_url").toString();
+    }
+
     public String uploadAttendancePhoto(MultipartFile file, String publicId) throws IOException {
         validateAttendancePhoto(file);
 

@@ -48,6 +48,25 @@ export async function submitAttendance({ action, reason, note, latitude, longitu
   return api.postForm('/api/absensi/me', formData);
 }
 
+// [BARU] Pengajuan Izin / Sakit (popup "Ajukan Izin / Sakit") -- TANPA selfie & GPS.
+// type: 'SAKIT' | 'TERLAMBAT'. `days` hanya dikirim untuk SAKIT. `documentFile`
+// (surat dokter) opsional: kosong = surat menyusul (lihat uploadMedicalDocument).
+export async function submitPermissionRequest({ type, note, days, documentFile }) {
+  const formData = new FormData();
+  formData.append('type', type);
+  formData.append('note', note);
+  if (type === 'SAKIT') formData.append('days', days);
+  if (documentFile) formData.append('document', documentFile);
+  return api.postForm('/api/absensi/me/izin', formData);
+}
+
+// [BARU] Surat dokter SUSULAN untuk pengajuan Sakit milik sendiri.
+export async function uploadMedicalDocument(attendanceId, documentFile) {
+  const formData = new FormData();
+  formData.append('document', documentFile);
+  return api.postForm(`/api/absensi/${attendanceId}/document`, formData);
+}
+
 // Konversi data:/blob: URL (hasil canvas.toDataURL() saat jepret kamera, atau
 // URL.createObjectURL() saat fallback unggah file) jadi Blob untuk FormData.
 export async function dataUrlToBlob(url) {
@@ -58,7 +77,7 @@ export async function dataUrlToBlob(url) {
 export const toActionCode = (label) => (label === 'Keluar' ? 'KELUAR' : 'MASUK');
 export const toReasonCode = (label) => ({ Absen: 'ABSEN', Sakit: 'SAKIT', Izin: 'IZIN' }[label] || 'ABSEN');
 
-const ACTION_LABELS = { MASUK: 'Masuk', KELUAR: 'Keluar' };
+const ACTION_LABELS = { MASUK: 'Masuk', KELUAR: 'Keluar', IZIN: 'Izin' }; // [UBAH] + IZIN (izin terlambat)
 export const actionLabel = (code) => ACTION_LABELS[String(code || '').toUpperCase()] || code || '-';
 
 const REASON_LABELS = { ABSEN: 'Absen', SAKIT: 'Sakit', IZIN: 'Izin' };
@@ -127,6 +146,9 @@ export function toDisplayRecord(item) {
     locationName: item.locationName || '', // [BARU] hasil reverse geocoding backend
     attendanceDate: item.attendanceDate,
     approvalStatus: String(item.approvalStatus || '').toUpperCase(), // [BARU]
+    leaveDays: item.leaveDays || 1, // [BARU] lama izin sakit (hari)
+    documentUrl: item.documentUrl || '', // [BARU] surat dokter; kosong = belum diunggah
+    documentRequired: Boolean(item.documentRequired), // [BARU]
     recordedAt,
     time: formatTimeLabel(recordedAt),
   };

@@ -1,10 +1,14 @@
 // src/pages/Absensi/absensi.jsx
 //
-// Realisasi halaman "Absensi": kartu ambil foto (Masuk/Keluar dalam satu tombol, dan Sakit),
-// kartu status hari ini, tabel riwayat (sekarang di SAMPING kartu
-// absensi, bukan di bawahnya -- lihat Absensi.css .abs-attendance-grid),
-// dan modal kamera. Dipecah per komponen di pages/Absensi/components/
-// mengikuti pola pages/Cuti/applycuti/.
+// Realisasi halaman "Absensi": kartu header "Portal Absensi Harian Karyawan"
+// (tombol Absen Masuk/Keluar + "Ajukan Izin / Sakit"), tabel riwayat, popup
+// kamera Masuk/Keluar, dan popup pengajuan izin/sakit. Dipecah per komponen di
+// pages/Absensi/components/ mengikuti pola pages/Cuti/applycuti/.
+//
+// [UBAH] Kartu "Status Hari Ini" dihapus (statusnya sudah terlihat di baris
+// "Hari ini" pada tabel riwayat). Sakit tidak lagi memakai kamera + GPS: kini
+// lewat PermissionRequestModal (lama izin + surat dokter yang boleh menyusul),
+// dan surat susulan diunggah dari tabel lewat MedicalLetterModal.
 //
 // Sidebar & topbar TIDAK digambar ulang di sini -- sudah disediakan
 // layouts/MainLayout.jsx + components/Sidebar.jsx/Navbar.jsx untuk semua
@@ -18,39 +22,37 @@
 // Jam yang tercatat adalah jam SERVER (lihat Attendance.prePersist() di
 // backend), bukan jam perangkat, supaya tidak bisa dimanipulasi klien.
 import React, { useCallback, useEffect, useMemo, useState } from 'react'; // [UBAH] useRef tidak dipakai lagi
-import { CalendarDays } from 'lucide-react';
 import Toast from '../../components/Toast';
-import AttendanceCameraCard from './components/AttendanceCameraCard';
-import AttendanceTodayCard from './components/AttendanceTodayCard';
+import AttendancePortalCard from './components/AttendancePortalCard'; // [UBAH] menggantikan AttendanceCameraCard + AttendanceTodayCard
 import AttendanceHistoryTable from './components/AttendanceHistoryTable';
-import AttendanceCameraModal from './components/AttendanceCameraModal';
+import PermissionRequestModal from './components/PermissionRequestModal'; // [BARU]
+import MedicalLetterModal from './components/MedicalLetterModal'; // [BARU]
 import CheckoutFlowModals from './components/CheckoutFlowModals'; // [UBAH] popup "Pulang Cepat" + "Check-Out Jam Kerja (17:00+)" (sebelumnya EarlyCheckoutModal)
 import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
 import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
-import { SHIFT_HOURS } from './utils/monthlyAttendance'; // [BARU]
-import { getMyAttendanceHistory, toDisplayRecord } from '../../services/attendanceService';
+import { SHIFT_HOURS, getSickRecordCovering } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering
+import {
+  formatDateLabel,
+  getMyAttendanceHistory,
+  submitPermissionRequest, // [BARU]
+  toDisplayRecord,
+  uploadMedicalDocument, // [BARU]
+} from '../../services/attendanceService';
 import useAttendanceCapture from './hooks/useAttendanceCapture'; // [BARU] logika kamera+GPS+kirim, dibagi dgn popup Dashboard
 // [BARU] Data lembur untuk kolom "Lembur" di tabel riwayat
 import { getMyOvertime, toDisplayOvertime } from '../../services/overtimeService';
 import './Absensi.css';
-
-// [BARU] Teks lokasi untuk modal kamera dari hasil hook.
-function describeLocation(coords, locationStatus) {
-  if (coords) return `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
-  return locationStatus === 'error' ? 'Lokasi tidak tersedia' : 'Lokasi belum diambil';
-}
 
 export default function Absensi() {
   const [records, setRecords] = useState([]);
   const [overtimeRecords, setOvertimeRecords] = useState([]); // [BARU]
   const [historyLoading, setHistoryLoading] = useState(true);
   const [toast, setToast] = useState(null);
-  // [BARU] Masuk/Keluar memakai popup yang sama dgn Dashboard (QuickAttendanceModal);
-  // Sakit tetap memakai AttendanceCameraModal (form jenis absensi + keterangan wajib).
-  // Disimpan sebagai state (bukan dihitung dari `reason`) supaya popup tidak berganti
-  // sendiri ketika pilihan jenis absensi diubah di dalam popup Sakit.
-  const [captureMode, setCaptureMode] = useState('attendance'); // 'attendance' | 'sick'
+  // [BARU] Popup pengajuan izin/sakit & popup upload surat dokter susulan
+  // (documentTargetId = id catatan sakit yang suratnya akan diunggah).
+  const [isPermissionOpen, setIsPermissionOpen] = useState(false);
+  const [documentTargetId, setDocumentTargetId] = useState(null);
 
   const [todayDate, setTodayDate] = useState(() => new Date());
 
@@ -61,11 +63,6 @@ export default function Absensi() {
     const timerId = window.setTimeout(() => setTodayDate(new Date()), nextMidnight - now);
     return () => window.clearTimeout(timerId);
   }, [todayDate]);
-  const todayLabel = useMemo(
-    () => todayDate.toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }),
-    [todayDate],
-  );
-
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 3500);
@@ -122,21 +119,21 @@ export default function Absensi() {
     [records, todayKey],
   );
 
-  // [BARU] Catatan Sakit/Izin hari ini (tersimpan sebagai MASUK dengan reason
-  // SAKIT/IZIN). Kalau ada, karyawan dianggap tidak bekerja hari ini.
+  // [UBAH] Catatan Sakit/Izin yang berlaku hari ini -- termasuk hari lanjutan izin
+  // sakit multi-hari (lihat getSickRecordCovering). Kalau ada, karyawan dianggap
+  // tidak bekerja hari ini.
   const todaySickRecord = useMemo(
-    () => records.find((record) => record.attendanceDate === todayKey
-      && record.actionCode === 'MASUK' && record.reasonCode !== 'ABSEN'),
+    () => getSickRecordCovering(records, todayKey),
     [records, todayKey],
   );
 
   // idle -> "Masuk", checkedIn -> "Keluar", done -> abu-abu,
-  // [BARU] sick -> abu-abu juga (Masuk/Keluar/Sakit tidak bisa diklik).
+  // sick -> abu-abu juga (Masuk/Keluar tidak bisa diklik).
   const attendanceStatus = todaySickRecord
     ? 'sick'
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
-  // Sakit hanya bisa dipakai sebelum check-in hari ini.
-  const disabledSakit = Boolean(todayCheckIn);
+  // [UBAH] Izin/Sakit hanya bisa diajukan sebelum check-in dan selama belum tercatat sakit.
+  const disablePermission = Boolean(todayCheckIn) || Boolean(todaySickRecord);
 
   // [BARU] Setelah "Tambah Lembur" saat check-out terkirim: toast + muat ulang
   // kolom Lembur di tabel riwayat (diam-diam, tabel tidak dikosongkan).
@@ -156,45 +153,53 @@ export default function Absensi() {
   });
 
   const handleStartAttendance = (action) => {
-    setCaptureMode('attendance');
     checkoutFlow.startAttendance(action); // [UBAH] sebelumnya earlyCheckout.startAttendance
   };
 
-  const handleStartSick = () => {
-    setCaptureMode('sick');
-    capture.open('Masuk', 'Sakit');
-  };
+  // [BARU] Kirim pengajuan izin/sakit. Error dilempar ke popup (tampil di sana);
+  // bila sukses popup ditutup dan baris hari ini langsung muncul di tabel.
+  const handlePermissionSubmit = useCallback(async (payload) => {
+    const saved = await submitPermissionRequest(payload);
+    setRecords((current) => [toDisplayRecord(saved), ...current]);
+    setIsPermissionOpen(false);
+    showToast(
+      payload.type === 'SAKIT' ? 'Pengajuan izin sakit berhasil dikirim.' : 'Izin terlambat berhasil dicatat.',
+      'success',
+    );
+  }, [showToast]);
+
+  // [BARU] Kirim surat dokter susulan; catatan sakit terkait diganti dengan data terbaru.
+  const handleDocumentSubmit = useCallback(async (file) => {
+    const saved = await uploadMedicalDocument(documentTargetId, file);
+    setRecords((current) => current.map((record) => (
+      record.id === saved.attendanceId ? toDisplayRecord(saved) : record
+    )));
+    setDocumentTargetId(null);
+    showToast('Surat dokter berhasil diunggah.', 'success');
+  }, [documentTargetId, showToast]);
+
+  const documentTarget = records.find((record) => record.id === documentTargetId);
 
   return (
     <div className="absensi-page">
-      {/* [UBAH] Tabel riwayat sekarang di SAMPING (bukan di bawah) kartu
-          absensi -- lihat Absensi.css .abs-attendance-grid (2 kolom) &
-          .abs-attendance-left (kartu ditumpuk vertikal di kolom kiri). */}
       <section className="abs-attendance-grid">
-        <div className="abs-attendance-left">
-          <AttendanceCameraCard
-            attendanceStatus={attendanceStatus}
-            isLoading={historyLoading} /* [BARU] status baru valid setelah riwayat termuat */
-            disabledSakit={disabledSakit}
-            onStartAttendance={handleStartAttendance} /* [UBAH] sebelumnya onOpenCamera={capture.open} */
-            onStartSick={handleStartSick}
-          />
-          <AttendanceTodayCard
-            todayLabel={todayLabel}
-            checkInRecord={todaySickRecord ? undefined : todayCheckIn} /* [UBAH] catatan sakit bukan check-in */
-            checkOutRecord={todayCheckOut}
-            isSick={Boolean(todaySickRecord)} /* [BARU] */
-          />
-        </div>
+        <AttendancePortalCard
+          attendanceStatus={attendanceStatus}
+          isLoading={historyLoading} /* status baru valid setelah riwayat termuat */
+          disablePermission={disablePermission}
+          onStartAttendance={handleStartAttendance}
+          onOpenPermission={() => setIsPermissionOpen(true)}
+        />
 
         <AttendanceHistoryTable
           records={historyLoading ? [] : records}
           overtimeRecords={historyLoading ? [] : overtimeRecords}
+          onUploadDocument={setDocumentTargetId} /* [BARU] upload surat dokter susulan */
         />
       </section>
 
-      {/* [BARU] Masuk/Keluar: popup yang sama dengan Dashboard. Kamera terblokir -> unggah foto (cadangan). */}
-      {capture.isOpen && captureMode === 'attendance' && (
+      {/* Masuk/Keluar: popup yang sama dengan Dashboard. Kamera terblokir -> unggah foto (cadangan). */}
+      {capture.isOpen && (
         <QuickAttendanceModal
           capture={capture}
           shiftHours={SHIFT_HOURS}
@@ -205,28 +210,20 @@ export default function Absensi() {
       {/* [UBAH] Popup check-out: peringatan pulang cepat + Check-Out Jam Kerja (17:00+) (portal ke <body>) */}
       <CheckoutFlowModals flow={checkoutFlow} />
 
-      {/* [UBAH] Popup lama kini khusus Sakit */}
-      {capture.isOpen && captureMode === 'sick' && (
-        <AttendanceCameraModal
-          attendanceAction={capture.action}
-          videoRef={capture.attachVideo} /* [UBAH] callback ref: video baru (setelah "Ambil ulang") tersambung ulang ke stream */
-          captured={capture.captured}
-          cameraError={capture.cameraError}
-          submitError={capture.submitError} /* [BARU] error kirim tampil sebagai pesan, tidak lagi menggantikan kamera */
-          reason={capture.reason}
-          note={capture.note}
-          location={describeLocation(capture.coords, capture.locationStatus)}
-          coords={capture.coords}
-          locationLoading={capture.locationStatus === 'loading'}
-          submitting={capture.isSubmitting}
-          onReasonChange={capture.setReason}
-          onNoteChange={capture.setNote}
-          onRefreshLocation={capture.refreshLocation}
-          onTakePhoto={capture.takePhoto}
-          onRetake={capture.retake}
-          onUploadFallback={capture.handleUploadFallback}
-          onConfirm={capture.submit}
-          onClose={capture.close}
+      {/* [BARU] Popup Pengajuan Izin / Surat Sakit */}
+      {isPermissionOpen && (
+        <PermissionRequestModal
+          onSubmit={handlePermissionSubmit}
+          onClose={() => setIsPermissionOpen(false)}
+        />
+      )}
+
+      {/* [BARU] Popup upload surat dokter susulan */}
+      {documentTargetId !== null && (
+        <MedicalLetterModal
+          dateLabel={documentTarget ? formatDateLabel(documentTarget.attendanceDate) : ''}
+          onSubmit={handleDocumentSubmit}
+          onClose={() => setDocumentTargetId(null)}
         />
       )}
 

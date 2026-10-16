@@ -1,0 +1,66 @@
+/* src/pages/Absensi/components/MedicalDocumentDropzone.css */
+
+.abs-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 22px 16px;
+  border: 2px dashed var(--abs-border-dashed, var(--color-border));
+  border-radius: var(--radius-lg, 12px);
+  background: var(--color-surface);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.abs-dropzone:hover:not(.is-disabled),
+.abs-dropzone:focus-within {
+  border-color: var(--color-info);
+  background: var(--color-info-bg);
+}
+
+.abs-dropzone svg {
+  width: 34px;
+  height: 34px;
+  color: var(--color-text-muted);
+}
+
+.abs-dropzone strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+.abs-dropzone span {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.abs-dropzone.has-file {
+  border-style: solid;
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.abs-dropzone.has-file svg { color: var(--color-success); }
+
+.abs-dropzone.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Input asli menutupi seluruh area supaya klik & fokus keyboard bekerja normal */
+.abs-dropzone input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: inherit;
+}

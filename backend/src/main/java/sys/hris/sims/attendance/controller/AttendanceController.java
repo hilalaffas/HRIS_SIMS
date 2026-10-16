@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
 import sys.hris.sims.attendance.dto.LocationNameResponse;
+import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
 import sys.hris.sims.attendance.service.AttendanceService;
 import sys.hris.sims.attendance.service.ReverseGeocodingService;
 import sys.hris.sims.common.dto.ApprovalDecisionRequest;
@@ -71,6 +74,48 @@ public class AttendanceController {
                 "attendances",
                 response.getAttendanceId(),
                 "Absensi " + response.getAction() + " tercatat",
+                httpRequest);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // [BARU] POST pengajuan Izin / Sakit (popup "Ajukan Izin / Sakit") -- multipart:
+    // type (SAKIT | TERLAMBAT), note, days, document (opsional, surat dokter).
+    @PostMapping(value = "/me/izin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AttendanceResponse> submitPermission(
+            @ModelAttribute PermissionSubmitRequest request,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        AttendanceResponse response = attendanceService.submitPermission(authentication.getName(), request);
+
+        activityLogService.log(
+                authentication.getName(),
+                getCurrentUserId(authentication),
+                "SUBMIT_IZIN",
+                "attendances",
+                response.getAttendanceId(),
+                "Pengajuan " + ("SAKIT".equals(response.getReason()) ? "izin sakit" : "izin terlambat") + " tercatat",
+                httpRequest);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // [BARU] POST surat dokter SUSULAN untuk pengajuan Sakit milik sendiri -- multipart: document.
+    @PostMapping(value = "/{attendanceId}/document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AttendanceResponse> uploadMedicalDocument(
+            @PathVariable Long attendanceId,
+            @RequestPart("document") MultipartFile document,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        AttendanceResponse response = attendanceService.uploadMedicalDocument(attendanceId, document, authentication.getName());
+
+        activityLogService.log(
+                authentication.getName(),
+                getCurrentUserId(authentication),
+                "UPLOAD_SURAT_DOKTER",
+                "attendances",
+                response.getAttendanceId(),
+                "Surat dokter susulan diunggah",
                 httpRequest);
 
         return ResponseEntity.ok(response);
