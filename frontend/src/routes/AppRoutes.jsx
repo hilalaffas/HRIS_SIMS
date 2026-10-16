@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import PublicRoute from '../components/PublicRoute'; 
 import Login from '../pages/Login/login';
+import { DEV_ACCESS_PATH } from '../config/devAccessConfig';
 import MainLayout from '../layouts/MainLayout';
 import Dashboard from '../pages/Dashboard/Dashboard';
 import ApplyCuti from '../pages/Cuti/applycuti/ApplyCuti';
@@ -88,7 +89,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           {/* Wadah Halaman Manajemen Karyawan */}
           <Route path="/karyawan" element={<Karyawan user={user} />} />
 
-          <Route path="/supersecret" element={<DevSettings />} />
+          <Route path={DEV_ACCESS_PATH} element={<DevSettings />} />
 
           {/* ============================================================
               TAMBAHAN: RUTE HALAMAN YANG SEBELUMNYA BELUM ADA DI SNIPPET KAMU 

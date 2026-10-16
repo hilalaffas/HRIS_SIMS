@@ -2,7 +2,7 @@
 //
 // Membaca satu feature flag (lihat utils/featureFlags.js) sebagai nilai
 // reaktif: komponen otomatis render ulang saat flag diubah, baik dari tab
-// yang sama (CustomEvent FEATURE_FLAG_CHANGE_EVENT, mis. dari /supersecret)
+// yang sama (CustomEvent FEATURE_FLAG_CHANGE_EVENT, mis. dari /devAccess)
 // maupun dari tab lain di browser yang sama (event 'storage').
 //
 // Pemakaian:

@@ -3,7 +3,7 @@
 // Menjaga cache flag fitur (utils/featureFlags.js) tetap sama dengan server.
 // Dipasang sekali di layouts/MainLayout.jsx, jadi hanya jalan saat user sudah
 // login. Memuat saat layout tampil, lalu menyegarkan tiap menit dan setiap
-// tab kembali dibuka -- supaya perubahan dari /supersecret sampai ke browser
+// tab kembali dibuka -- supaya perubahan dari /devAccess sampai ke browser
 // lain tanpa perlu logout atau reload.
 import { useEffect } from 'react';
 import { fetchFeatureFlags } from '../services/featureFlagService';

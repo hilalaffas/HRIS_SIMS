@@ -11,6 +11,7 @@ import { isThemeToggleEnabled } from '../utils/featureFlags'; // [BARU]
 import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
 import { getCurrentUser } from '../services/authService';
+import { isDevAccessUsername, isDevAccessPath } from '../config/devAccessConfig';
 
 // Pastikan Anda sudah menginstal fontawesome: npm install @fortawesome/fontawesome-free
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -23,7 +24,7 @@ export default function MainLayout({ onLogout, user }) {
   const location = useLocation();
   // [BARU] Tema terang/gelap (disimpan di localStorage, lihat hooks/useTheme.js)
   const { theme, isDark, toggleTheme } = useTheme();
-  // [UBAH] Saklar fitur dari /supersecret (disimpan di server). Kalau MATI, tombol hilang dan tema
+  // [UBAH] Saklar fitur dari /devAccess (disimpan di server). Kalau MATI, tombol hilang dan tema
   // dipaksa terang supaya user yang sebelumnya memilih gelap tidak "terkunci"
   // di mode gelap tanpa tombol. Pilihan tersimpannya TIDAK dihapus, jadi saat
   // fitur dinyalakan lagi tema pilihan user kembali seperti semula.
@@ -36,11 +37,11 @@ export default function MainLayout({ onLogout, user }) {
   // migration V35 & ProtectedRoute.jsx) dan boleh berpindah ke halaman lain
   // seperti biasa -- jadi Sidebar/Navbar TIDAK lagi disembunyikan untuk
   // akun ini di semua halaman, cuma khusus saat dia sedang berada di
-  // halaman pengaturan /supersecret itu sendiri, supaya halaman itu tetap
+  // halaman pengaturan /devAccess itu sendiri, supaya halaman itu tetap
   // terasa seperti panel tersendiri, bukan HRIS yang "dikosongi".
-  const isOnSupersecretPage =
-    getCurrentUser()?.username === 'supersecret' &&
-    location.pathname.toLowerCase() === '/supersecret';
+  const isOnDevAccessPage =
+    isDevAccessUsername(getCurrentUser()?.username) &&
+    isDevAccessPath(location.pathname);
 
   // Menu sidebar sekarang menyesuaikan role user (karyawan/manager/hr/super admin)
   const menuItems = getMenuItems(user);
@@ -75,8 +76,8 @@ export default function MainLayout({ onLogout, user }) {
   return (
     <div className="layout-container" data-theme={activeTheme}>
       
-      {/* [UBAH] Sidebar disembunyikan khusus saat berada di /supersecret. */}
-      {!isOnSupersecretPage && (
+      {/* [UBAH] Sidebar disembunyikan khusus saat berada di /devAccess. */}
+      {!isOnDevAccessPage && (
         <>
           {/* 2. Tambahkan class dinamis 'mobile-open' ke wrapper sidebar */}
           <aside className={`sidebar-wrapper ${isSidebarOpen ? 'mobile-open' : ''}`}>
@@ -102,8 +103,8 @@ export default function MainLayout({ onLogout, user }) {
       {/* 2. AREA KANAN (Navbar, Konten & Footer) */}
       <main className="main-area-wrapper">
         
-        {/* [UBAH] Navbar juga disembunyikan khusus saat berada di /supersecret. */}
-        {!isOnSupersecretPage && (
+        {/* [UBAH] Navbar juga disembunyikan khusus saat berada di /devAccess. */}
+        {!isOnDevAccessPage && (
           <header className="navbar-wrapper">
             <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} user={user} />
           </header>

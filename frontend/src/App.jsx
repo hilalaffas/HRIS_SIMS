@@ -10,6 +10,7 @@ import { logoutUser } from './services/authService';
 import { getMyProfile } from './services/profileService'; // [BARU] untuk hydrate foto profil di awal sesi
 import { expireSessionForInactivity, getAndClearRedirectPath, getTokenExpiryMs, refreshSession } from './services/api'; // [BARU] redirect terakhir & sliding session
 
+import { DEV_ACCESS_PATH, isDevAccessUsername } from './config/devAccessConfig';
 import './App.css'; 
 
 // 1. Pisahkan konten utama ke dalam komponen terpisah
@@ -263,15 +264,11 @@ const AppContent = () => {
     // /dashboard seperti perilaku semula.
     const redirectPath = getAndClearRedirectPath();
 
-    // [BARU] Akun 'supersecret' (lihat SUPERSECRET_USERNAME di
-    // ProtectedRoute.jsx) selalu diarahkan langsung ke panel pengaturan
-    // fitur /supersecret begitu login -- fungsinya cuma untuk dev
-    // (aktif/nonaktifkan fitur), bukan dashboard HR biasa. redirectPath
-    // tersimpan (kalau ada) SENGAJA diabaikan untuk akun ini supaya
-    // perilakunya konsisten setiap kali login, apa pun URL terakhir yang
-    // dibuka sebelumnya.
-    if (userData.username === 'supersecret') {
-      navigate('/supersecret', { replace: true });
+    // Akun dev (lihat config/devAccessConfig.js) selalu diarahkan langsung ke
+    // panel /devAccess begitu login. redirectPath tersimpan sengaja diabaikan
+    // supaya perilakunya konsisten setiap kali login.
+    if (isDevAccessUsername(userData.username)) {
+      navigate(DEV_ACCESS_PATH, { replace: true });
       return;
     }
 
