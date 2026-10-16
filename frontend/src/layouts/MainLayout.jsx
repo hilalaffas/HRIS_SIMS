@@ -80,7 +80,12 @@ export default function MainLayout({ onLogout, user }) {
         <>
           {/* 2. Tambahkan class dinamis 'mobile-open' ke wrapper sidebar */}
           <aside className={`sidebar-wrapper ${isSidebarOpen ? 'mobile-open' : ''}`}>
-            <Sidebar user={user} onLogout={onLogout} menuItems={menuItems} notificationCounts={{ approval: approvalCount }} />
+            <Sidebar 
+            user={user} 
+            onLogout={onLogout} 
+            menuItems={menuItems} 
+            notificationCounts={{ approval: approvalCount }} 
+            onNavigate={() => setIsSidebarOpen(false)} />
           </aside>
 
           {/* 3. Tambahkan overlay transparan agar user bisa menutup sidebar 

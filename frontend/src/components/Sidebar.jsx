@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Sidebar.css';
 
-export default function Sidebar({ user, onLogout, notificationCounts }) {
+export default function Sidebar({ user, onLogout, notificationCounts, onNavigate }) {
   const location = useLocation();
 
   // Mengambil role dari database (memastikan lowercase untuk konsistensi pengecekan)
@@ -108,6 +108,7 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
           key={item.path}
           to={item.path}
           className={`menu-link ${isActive ? 'active' : 'inactive'}`}
+          onClick={onNavigate}
         >
           <i className={item.icon}></i>
           <span style={{ flex: 1 }}>{item.name}</span>
@@ -139,6 +140,7 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
         <Link 
           to="/profile" 
           className={`profile-section ${isProfileActive ? 'profile-active' : ''}`}
+          onClick={onNavigate}
           style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
         >
           <div className="profile-avatar-container" style={{ position: 'relative' }}>
@@ -214,7 +216,12 @@ export default function Sidebar({ user, onLogout, notificationCounts }) {
       
       {/* Tombol Logout / Keluar */}
       <div className="sidebar-footer">
-        <button onClick={onLogout} className="btn-logout">
+        <button 
+        onClick={() => {
+          onNavigate?.();
+          onLogout();
+        }} 
+          className="btn-logout">
           <i className="fa-solid fa-right-from-bracket rotate-180"></i>
           <span>Keluar</span>
         </button>
