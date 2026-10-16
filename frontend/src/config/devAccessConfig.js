@@ -13,7 +13,8 @@ export const DEV_ACCESS_USERNAME = 'supersecret';
 export const DEV_ACCESS_PATH = '/devAccess';
 
 // Cek apakah akun yang sedang login adalah akun dev.
-export const isDevAccessUsername = (username) => username === DEV_ACCESS_USERNAME;
+export const isDevAccessUsername = (username) =>
+  String(username || '').trim().toLowerCase() === DEV_ACCESS_USERNAME;
 
 // Cek apakah path saat ini adalah halaman dev (tidak membedakan huruf besar/kecil).
 export const isDevAccessPath = (pathname = '') =>
