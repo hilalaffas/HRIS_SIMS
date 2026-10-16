@@ -8,7 +8,7 @@
 .filter-status__label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--alv-rose);
+  color: var(--kry-rose);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -20,24 +20,24 @@
   justify-content: space-between;
   gap: 10px;
   min-width: 170px;
-  background: var(--alv-bg-card);
-  border: 1px solid var(--alv-border);
-  border-radius: var(--alv-radius-md);
+  background: var(--kry-bg-card);
+  border: 1px solid var(--kry-border);
+  border-radius: var(--kry-radius-md);
   padding: 8px 12px;
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--alv-text-primary);
+  color: var(--kry-text-primary);
   cursor: pointer;
   transition: border-color 0.15s ease;
 }
 
 .filter-status__trigger.is-open {
-  border-color: var(--alv-green);
-  box-shadow: 0 0 0 3px var(--alv-green-bg);
+  border-color: var(--kry-green);
+  box-shadow: 0 0 0 3px var(--kry-green-bg);
 }
 
 .filter-status__chevron {
-  color: var(--alv-green);
+  color: var(--kry-green);
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }
@@ -52,10 +52,10 @@
   right: 0;
   z-index: 20;
   min-width: 220px;
-  background: var(--alv-bg-card);
-  border: 1px solid var(--alv-border);
-  border-radius: var(--alv-radius-md);
-  box-shadow: var(--alv-shadow-modal);
+  background: var(--kry-bg-card);
+  border: 1px solid var(--kry-border);
+  border-radius: var(--kry-radius-md);
+  box-shadow: var(--kry-shadow-modal);
   padding: 6px;
   margin: 0;
   list-style: none;
@@ -82,7 +82,7 @@
   padding: 9px 10px;
   font-size: 13.5px;
   font-weight: 500;
-  color: var(--alv-text-primary);
+  color: var(--kry-text-primary);
   cursor: pointer;
   transition: background-color 0.12s ease, color 0.13s ease; /* Transisi halus saat kursor bergerak */
 }
