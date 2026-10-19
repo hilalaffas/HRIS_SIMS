@@ -31,7 +31,7 @@ import CheckoutFlowModals from './components/CheckoutFlowModals'; // [UBAH] popu
 import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
 import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
-import { SHIFT_HOURS, getSickRecordCovering } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering
+import { SHIFT_HOURS, getSickRecordCovering, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
 import {
   formatDateLabel,
   getMyAttendanceHistory,
@@ -130,7 +130,7 @@ export default function Absensi() {
   // idle -> "Masuk", checkedIn -> "Keluar", done -> abu-abu,
   // sick -> abu-abu juga (Masuk/Keluar tidak bisa diklik).
   const attendanceStatus = todaySickRecord
-    ? 'sick'
+    ? resolveSickTodayStatus(todaySickRecord) // [UBAH] sick | sickPending | sickRejected
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
   // [UBAH] Izin/Sakit hanya bisa diajukan sebelum check-in dan selama belum tercatat sakit.
   const disablePermission = Boolean(todayCheckIn) || Boolean(todaySickRecord);

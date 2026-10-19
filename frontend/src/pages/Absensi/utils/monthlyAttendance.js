@@ -119,6 +119,16 @@ export function getSickRecordCovering(records, key) {
   });
 }
 
+// [BARU] Status hari ini dari catatan sakit/izin: sakit baru dianggap "sick" SETELAH
+// disetujui. Pending -> sickPending, ditolak -> sickRejected. Izin lama (tanpa alur
+// persetujuan) tetap "sick". Kunci sama dengan utils/todayStatusConfig.js.
+export function resolveSickTodayStatus(record) {
+  if (!record) return null;
+  if (record.reasonCode === 'SAKIT' && record.approvalStatus === 'PENDING') return 'sickPending';
+  if (record.reasonCode === 'SAKIT' && record.approvalStatus === 'REJECTED') return 'sickRejected';
+  return 'sick';
+}
+
 function groupByDate(records) {
   const byDate = new Map();
   records.forEach((record) => {
@@ -195,20 +205,21 @@ function resolveRow(key, entry, todayKey) {
   // Sakit / Izin: tidak bekerja, jam & durasi tidak ditampilkan.
   if (checkIn?.reasonCode === 'SAKIT' || checkIn?.reasonCode === 'IZIN') {
     const isSick = checkIn.reasonCode === 'SAKIT';
-    // [BARU] Keterangan ikut menunjukkan status persetujuan SuperAdmin.
-    // Keputusan "Ditolak" SEMENTARA hanya informasi -- belum mengubah status
-    // hari itu (aturan bisnisnya belum dikonfirmasi).
-    const approvalSuffix = isSick
-      ? ({ PENDING: ' (Menunggu Persetujuan)', REJECTED: ' (Ditolak)' }[checkIn.approvalStatus] || '')
-      : '';
+    // [UBAH] Status baris mengikuti persetujuan: SAKIT hanya SETELAH disetujui. Selama
+    // menunggu tampil "MENUNGGU APPROVAL", bila ditolak "DITOLAK" (tidak dihitung sakit).
+    const approvalStatus = isSick ? checkIn.approvalStatus : '';
+    const sickBadge = {
+      PENDING: { status: 'MENUNGGU APPROVAL', tone: 'menunggu' },
+      REJECTED: { status: 'DITOLAK', tone: 'ditolak' },
+    }[approvalStatus] || { status: 'SAKIT', tone: 'sakit' };
     // [BARU] Izin sakit multi-hari: "Hari ke-2 dari 3".
     const dayInfo = isSick && checkIn.leaveDays > 1 ? ` · Hari ke-${checkIn.dayNumber || 1} dari ${checkIn.leaveDays}` : '';
     return {
       ...base,
       ...empty,
-      status: isSick ? 'SAKIT' : 'CUTI',
-      tone: isSick ? 'sakit' : 'cuti',
-      note: `${checkIn.note || (isSick ? 'Sakit' : 'Izin')}${dayInfo}${approvalSuffix}`,
+      status: isSick ? sickBadge.status : 'CUTI',
+      tone: isSick ? sickBadge.tone : 'cuti',
+      note: `${checkIn.note || (isSick ? 'Sakit' : 'Izin')}${dayInfo}`,
       ...proof,
       proofLabel: 'Foto Bukti',
       // [BARU] Surat dokter: link bila sudah diunggah, tombol upload susulan bila belum.

@@ -148,6 +148,18 @@ td strong {
   background: #e0e7ff;
 }
 
+/* [BARU] Sakit menunggu persetujuan / ditolak (belum/tidak dianggap sakit) */
+.abs-status-menunggu {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+}
+
+.abs-status-ditolak {
+  color: var(--color-danger);
+  background: #fdecec;
+}
+
 .abs-status-belum {
   color: var(--abs-muted-ink);
   background: #eef1f4;

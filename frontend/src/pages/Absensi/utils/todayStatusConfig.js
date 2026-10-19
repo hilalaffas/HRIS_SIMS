@@ -4,12 +4,14 @@
 // dipakai kartu ringkasan Dashboard (DashboardSummaryCard) DAN kartu absensi
 // di halaman Absensi Saya (AttendancePortalCard), supaya keduanya selalu sama.
 //
-// Kunci status: idle | checkedIn | done | sick
+// Kunci status: idle | checkedIn | done | sick | sickPending | sickRejected
+//   [UBAH] sick = izin sakit SUDAH disetujui; sickPending = menunggu persetujuan;
+//   sickRejected = ditolak.
 //   badge/badgeTone   = lencana kecil "STATUS HARI INI" (Dashboard)
 //   pillLabel/pillTone/PillIcon = pil status di sebelah tombol
 //   buttonLabel/buttonIcon      = tombol utama
 //   action = jenis absen yang dibuka di popup ('Masuk' | 'Keluar'), null = tombol terkunci
-import { Camera, CheckCircle2, LogOut, Stethoscope, XCircle } from 'lucide-react';
+import { Camera, CheckCircle2, Clock, LogOut, Stethoscope, XCircle } from 'lucide-react';
 
 export const TODAY_STATUS_CONFIG = {
   idle: {
@@ -31,5 +33,17 @@ export const TODAY_STATUS_CONFIG = {
     badge: 'Izin Sakit', badgeTone: 'info',
     pillLabel: 'Izin Sakit', pillTone: 'info', PillIcon: Stethoscope,
     buttonLabel: 'Izin Sakit Tercatat', buttonIcon: CheckCircle2, action: null,
+  },
+  // [BARU] Pengajuan sakit belum diputuskan atasan -- belum dianggap sakit.
+  sickPending: {
+    badge: 'Menunggu Approval', badgeTone: 'warning',
+    pillLabel: 'Menunggu Approval', pillTone: 'warning', PillIcon: Clock,
+    buttonLabel: 'Menunggu Approval Sakit', buttonIcon: Clock, action: null,
+  },
+  // [BARU] Pengajuan sakit ditolak.
+  sickRejected: {
+    badge: 'Izin Sakit Ditolak', badgeTone: 'danger',
+    pillLabel: 'Izin Sakit Ditolak', pillTone: 'danger', PillIcon: XCircle,
+    buttonLabel: 'Izin Sakit Ditolak', buttonIcon: XCircle, action: null,
   },
 };
