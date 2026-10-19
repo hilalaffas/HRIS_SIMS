@@ -11,4 +11,5 @@ public class LoginResponse {
     private String role;
     private String gender;      // <-- tambahan
     private Long employeeId;    // <-- tambahan (opsional, tapi berguna)
+    private boolean devAccess;  // [BARU] true bila akun dev (lihat DevAccessService) -- frontend memakainya untuk panel /devAccess
 }

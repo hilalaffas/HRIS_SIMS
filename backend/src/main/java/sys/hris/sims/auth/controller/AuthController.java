@@ -23,6 +23,7 @@ import sys.hris.sims.role.repository.RoleRepository;
 import sys.hris.sims.security.JwtService;
 import sys.hris.sims.user.repository.UserRepository;
 import sys.hris.sims.auth.service.AuthService;
+import sys.hris.sims.devtools.service.DevAccessService;
 import sys.hris.sims.storage.CloudinaryService;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 import org.springframework.security.core.Authentication;
@@ -51,6 +52,7 @@ public class AuthController {
     private final ActivityLogService activityLogService;
     private final AuthService authService;
     private final CloudinaryService cloudinaryService;
+    private final DevAccessService devAccessService; // [BARU]
 
         public AuthController(UserRepository userRepository,
                           RoleRepository roleRepository,
@@ -61,7 +63,8 @@ public class AuthController {
                           PasswordEncoder passwordEncoder,
                           ActivityLogService activityLogService,
                           AuthService authService,
-                          CloudinaryService cloudinaryService) {
+                          CloudinaryService cloudinaryService,
+                          DevAccessService devAccessService) {
 
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -73,6 +76,7 @@ public class AuthController {
         this.activityLogService = activityLogService;
         this.authService = authService;
         this.cloudinaryService = cloudinaryService;
+        this.devAccessService = devAccessService;
     }
 
     // helper method ambil userId dari token
@@ -345,7 +349,8 @@ public class AuthController {
                 user.getUsername(),
                 role,
                 employee != null ? employee.getGender() : null,
-                employee != null ? employee.getEmployeeId() : null
+                employee != null ? employee.getEmployeeId() : null,
+                devAccessService.isDevAccount(user.getUsername())
         ));
     }
 

@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { getTokenExpiryMs } from '../services/api';
 import { getCurrentUser, logoutUser } from '../services/authService';
-import { DEV_ACCESS_PATH, isDevAccessUsername } from '../config/devAccessConfig';
+import { DEV_ACCESS_PATH, isDevAccessUser } from '../config/devAccessConfig';
 
 const PublicRoute = () => {
   // Mengecek apakah token ada di localStorage
@@ -24,7 +24,7 @@ const PublicRoute = () => {
   // Ini juga menutup celah saat PublicRoute sempat render ulang setelah token
   // tersimpan tetapi sebelum navigate() di App.jsx berjalan.
   if (token) {
-    const homePath = isDevAccessUsername(getCurrentUser()?.username)
+    const homePath = isDevAccessUser(getCurrentUser())
       ? DEV_ACCESS_PATH
       : '/dashboard';
     return <Navigate to={homePath} replace />;

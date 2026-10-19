@@ -1,0 +1,127 @@
+/* src/pages/DevSettings/components/PermissionResetSection.css */
+
+.devreset-section {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.devreset-search {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.devreset-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.devreset-search input:focus {
+  outline: none;
+  border-color: var(--color-primary-soft);
+}
+
+.devreset-search button,
+.devreset-item__actions button {
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.devreset-search button:hover:not(:disabled),
+.devreset-item__actions button:hover:not(:disabled) {
+  background: var(--color-primary-tint);
+}
+
+.devreset-search button:disabled,
+.devreset-item__actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.devreset-item__actions .is-danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+
+.devreset-item__actions .is-danger:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+}
+
+.devreset-info {
+  margin: var(--space-3) 0 0;
+  font-size: 0.8rem;
+  color: var(--color-success);
+}
+
+.devreset-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.devreset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.devreset-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
+.devreset-item__info span {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.devreset-item__note {
+  overflow-wrap: anywhere;
+}
+
+.devreset-item__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.devreset-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.devreset-badge--pending { color: var(--color-warning); background: var(--color-warning-bg); }
+.devreset-badge--approved { color: var(--color-success); background: var(--color-success-bg); }
+.devreset-badge--rejected { color: var(--color-danger); background: var(--color-danger-bg); }

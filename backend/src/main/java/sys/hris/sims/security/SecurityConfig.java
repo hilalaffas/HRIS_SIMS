@@ -209,11 +209,19 @@ public class SecurityConfig {
                         .hasAnyRole(ADMIN_ROLES)
 
                         // ==========================
-                        // FEATURE FLAG (saklar fitur global, dikelola dari /supersecret)
+                        // ALAT DEV (reset data izin/sakit dari panel /devAccess)
+                        // ==========================
+                        // [BARU] SUPER_ADMIN saja di sini; pembatasan ke akun dev
+                        // dilakukan lagi di DevToolsController (DevAccessService).
+                        .requestMatchers("/api/dev/**")
+                        .hasRole("SUPER_ADMIN")
+
+                        // ==========================
+                        // FEATURE FLAG (saklar fitur global, dikelola dari panel /devAccess)
                         // ==========================
                         // [BARU] GET: semua user login (dibaca frontend tiap sesi).
-                        // PUT: SUPER_ADMIN saja di sini; pembatasan ke username
-                        // 'supersecret' dilakukan lagi di FeatureFlagController.
+                        // PUT: SUPER_ADMIN saja di sini; pembatasan ke akun dev
+                        // dilakukan lagi di FeatureFlagController (DevAccessService).
                         .requestMatchers(HttpMethod.GET, "/api/feature-flags")
                         .authenticated()
 

@@ -13,10 +13,6 @@ import sys.hris.sims.featureflag.repository.FeatureFlagRepository;
 @Service
 public class FeatureFlagService {
 
-    // Satu-satunya akun yang boleh mengubah saklar (sama dengan
-    // SUPERSECRET_USERNAME di frontend/ProtectedRoute.jsx).
-    public static final String SUPERSECRET_USERNAME = "supersecret";
-
     // Whitelist key yang dikenal. Fitur baru: tambahkan di sini DAN seed-nya
     // lewat migration baru. Key di luar daftar ini ditolak.
     private static final Set<String> MANAGED_KEYS = Set.of("themeToggle");

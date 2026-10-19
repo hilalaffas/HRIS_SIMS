@@ -4,7 +4,7 @@ import { getRiwayatByUser, getPendingApprovals, getMyApprovalUpdates } from '../
 import { getPendingResetRequests } from '../services/passwordResetService';
 import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
 import { getCurrentUser } from '../services/authService';
-import { isDevAccessUsername, isDevAccessPath } from '../config/devAccessConfig';
+import { isDevAccessUser, isDevAccessPath } from '../config/devAccessConfig';
 import NotifPasswordResetModal from './NotifPasswordResetModal';
 import NotifLeaveApprovalModal from './NotifLeaveApprovalModal';
 import './Navbar.css';
@@ -26,7 +26,7 @@ export default function Navbar({ toggleSidebar, user }) {
   const [currentDate, setCurrentDate] = useState('');
 
   // [BARU] Akun dev tidak punya data cuti/notifikasi, jadi polling-nya dilewati.
-  const isDevAccount = isDevAccessUsername(getCurrentUser()?.username);
+  const isDevAccount = isDevAccessUser(getCurrentUser());
 
   const [showDropdown, setShowDropdown] = useState(false);
   const notificationRef = useRef(null);

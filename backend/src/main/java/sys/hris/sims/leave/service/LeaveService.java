@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import sys.hris.sims.devtools.service.DevAccessService;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.holiday.repository.HolidayRepository;
@@ -839,7 +840,7 @@ public class LeaveService {
         return employee;
     }
 
-    // [BARU] Akun khusus /supersecret (lihat frontend ProtectedRoute.jsx &
+    // [BARU] Akun khusus dev (panel /devAccess) (lihat frontend ProtectedRoute.jsx &
     // migration V34/V35) SENGAJA dibuat TANPA profil Employee -- supaya
     // tidak pernah muncul di halaman Karyawan. Auto-create di bawah ini
     // (createEmployeeProfileForExistingUser) awalnya jadi bug: begitu akun
@@ -848,7 +849,7 @@ public class LeaveService {
     // WAJIB dikecualikan dari auto-create -- fitur cuti/approval memang
     // TIDAK dimaksudkan untuk akun ini, jadi melempar error di sini adalah
     // perilaku yang benar, bukan bug.
-    private static final String SUPERSECRET_USERNAME = "supersecret";
+    private final DevAccessService devAccessService;
 
     private Employee getEmployeeByUsername(String username) {
         return karyawanRepository.findFirstByUser_Username(username)
@@ -856,7 +857,7 @@ public class LeaveService {
     }
 
     private Employee createEmployeeProfileForExistingUser(String username) {
-        if (SUPERSECRET_USERNAME.equalsIgnoreCase(username)) {
+        if (devAccessService.isDevAccount(username)) {
             throw new RuntimeException("Akun ini tidak memiliki profil karyawan dan tidak dibuatkan otomatis");
         }
 

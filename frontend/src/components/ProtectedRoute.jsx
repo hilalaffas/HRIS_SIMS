@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { saveRedirectPath } from '../services/api';
 import { getCurrentUser } from '../services/authService';
-import { isDevAccessUsername, isDevAccessPath } from '../config/devAccessConfig';
+import { isDevAccessUser, isDevAccessPath } from '../config/devAccessConfig';
 
 const ProtectedRoute = () => {
   // Preview Vite development dapat melihat dashboard tanpa login.
@@ -24,7 +24,7 @@ const ProtectedRoute = () => {
   // Halaman /devAccess hanya boleh dibuka akun dev (lihat config/devAccessConfig.js).
   // Akun lain, termasuk SuperAdmin biasa, dialihkan ke dashboard supaya switch
   // di dalamnya tidak bisa diubah sembarang akun yang kebetulan tahu URL-nya.
-  const isDevAccount = isDevAccessUsername(getCurrentUser()?.username);
+  const isDevAccount = isDevAccessUser(getCurrentUser());
 
   if (isDevAccessPath(location.pathname) && !isDevAccount) {
     return <Navigate to="/dashboard" replace />;

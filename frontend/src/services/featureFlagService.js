@@ -1,7 +1,7 @@
 // src/services/featureFlagService.js
 // GET /api/feature-flags        -> { themeToggle: true }  (semua user login)
 // PUT /api/feature-flags/{key}  -> body { enabled: boolean }, balasan sama
-//                                  seperti GET. Hanya akun 'supersecret'.
+//                                  seperti GET. Hanya akun dev.
 //
 // Sumber kebenaran flag ada di SERVER (tabel feature_flags), jadi satu
 // perubahan berlaku di semua browser. Hasilnya disalin ke cache localStorage

@@ -349,6 +349,50 @@ public class AttendanceService {
         return toResponse(attendanceRepository.save(attendance));
     }
 
+    // ===================== ALAT DEV (panel /devAccess) =====================
+    // Dipanggil DevToolsController (sudah dibatasi akun dev). HANYA data Izin/Sakit
+    // yang boleh disentuh -- absen Masuk/Keluar biasa tidak bisa dihapus lewat sini.
+    private static final List<String> PERMISSION_REASONS = List.of("SAKIT", "IZIN");
+
+    public List<AttendanceResponse> getPermissionRecordsForDev(String username) {
+        String query = username == null ? "" : username.trim();
+        if (query.isEmpty()) {
+            throw new IllegalArgumentException("Username karyawan wajib diisi.");
+        }
+        return attendanceRepository
+                .findByEmployee_User_UsernameIgnoreCaseAndReasonInOrderByRecordedAtDesc(query, PERMISSION_REASONS)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // Kembalikan status persetujuan Sakit ke PENDING supaya approve/tolak bisa diuji ulang.
+    public AttendanceResponse resetSickApprovalForDev(Long attendanceId) {
+        Attendance attendance = findPermissionRecordForDev(attendanceId);
+        if (!"SAKIT".equals(attendance.getReason())) {
+            throw new IllegalArgumentException("Hanya pengajuan Sakit yang punya status persetujuan.");
+        }
+        attendance.setApprovalStatus("PENDING");
+        return toResponse(attendanceRepository.save(attendance));
+    }
+
+    // Hapus satu data Izin/Sakit. File surat dokter di Cloudinary dibiarkan (hanya tautannya yang hilang).
+    public AttendanceResponse deletePermissionRecordForDev(Long attendanceId) {
+        Attendance attendance = findPermissionRecordForDev(attendanceId);
+        AttendanceResponse snapshot = toResponse(attendance);
+        attendanceRepository.delete(attendance);
+        return snapshot;
+    }
+
+    private Attendance findPermissionRecordForDev(Long attendanceId) {
+        Attendance attendance = attendanceRepository.findById(attendanceId)
+                .orElseThrow(() -> new IllegalArgumentException("Data absensi tidak ditemukan."));
+        if (!PERMISSION_REASONS.contains(attendance.getReason())) {
+            throw new IllegalArgumentException("Hanya data Izin/Sakit yang bisa direset dari panel dev.");
+        }
+        return attendance;
+    }
+
     private String resolveStatus(String action, String reason) {
         if (reason.equals("SAKIT")) return "SICK";
         if (reason.equals("IZIN")) return "IZIN";

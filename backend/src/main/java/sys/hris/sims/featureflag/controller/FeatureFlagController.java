@@ -14,14 +14,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.devtools.service.DevAccessService;
 import sys.hris.sims.featureflag.dto.FeatureFlagUpdateRequest;
 import sys.hris.sims.featureflag.service.FeatureFlagService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
 // [BARU] GET: semua user login (frontend membacanya setelah login).
-// PUT: hanya akun 'supersecret' (lapis 1 di SecurityConfig = role SUPER_ADMIN,
-// lapis 2 di method ini = username). Penolakan dikembalikan lewat
+// PUT: hanya akun dev (lapis 1 di SecurityConfig = role SUPER_ADMIN,
+// lapis 2 di method ini = DevAccessService). Penolakan dikembalikan lewat
 // ResponseEntity 403, BUKAN exception, karena GlobalExceptionHandler
 // menangkap semua Exception sebagai 400.
 @RestController
@@ -31,13 +32,16 @@ public class FeatureFlagController {
     private final FeatureFlagService featureFlagService;
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
+    private final DevAccessService devAccessService;
 
     public FeatureFlagController(FeatureFlagService featureFlagService,
                                  ActivityLogService activityLogService,
-                                 UserRepository userRepository) {
+                                 UserRepository userRepository,
+                                 DevAccessService devAccessService) {
         this.featureFlagService = featureFlagService;
         this.activityLogService = activityLogService;
         this.userRepository = userRepository;
+        this.devAccessService = devAccessService;
     }
 
     @GetMapping
@@ -50,7 +54,7 @@ public class FeatureFlagController {
                                     @RequestBody FeatureFlagUpdateRequest request,
                                     Authentication authentication,
                                     HttpServletRequest httpRequest) {
-        if (!FeatureFlagService.SUPERSECRET_USERNAME.equals(authentication.getName())) {
+        if (!devAccessService.isDevAccount(authentication.getName())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Hanya akun pengaturan khusus yang boleh mengubah fitur.");
         }

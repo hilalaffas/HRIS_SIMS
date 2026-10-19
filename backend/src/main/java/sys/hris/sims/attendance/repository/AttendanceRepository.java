@@ -43,4 +43,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // apakah hari tertentu masih tercakup izin sakit multi-hari.
     List<Attendance> findByEmployee_EmployeeIdAndReasonAndActionOrderByRecordedAtDesc(
             Long employeeId, String reason, String action);
+
+    // [BARU] Alat dev (panel /devAccess): data Izin/Sakit satu karyawan berdasarkan
+    // username login, terbaru dulu.
+    List<Attendance> findByEmployee_User_UsernameIgnoreCaseAndReasonInOrderByRecordedAtDesc(
+            String username, List<String> reasons);
 }

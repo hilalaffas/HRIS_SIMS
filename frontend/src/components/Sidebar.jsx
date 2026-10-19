@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser } from '../services/authService';
-import { DEV_ACCESS_PATH, isDevAccessUsername } from '../config/devAccessConfig';
+import { DEV_ACCESS_PATH, isDevAccessUser } from '../config/devAccessConfig';
 import './Sidebar.css';
 
 export default function Sidebar({ user, onLogout, notificationCounts, onNavigate }) {
@@ -9,7 +9,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
 
   // [BARU] Akun dev hanya melihat menu Pengaturan Fitur (+ tombol Keluar).
   // Username dibaca dari getCurrentUser() karena prop `user` tidak membawanya.
-  const isDevAccount = isDevAccessUsername(getCurrentUser()?.username);
+  const isDevAccount = isDevAccessUser(getCurrentUser());
 
   // Mengambil role dari database (memastikan lowercase untuk konsistensi pengecekan)
   const userRole = (user?.jabatan || user?.role || 'member').toLowerCase();

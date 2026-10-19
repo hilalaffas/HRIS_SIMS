@@ -6,7 +6,7 @@
 // Tetap di dalam ProtectedRoute + MainLayout, jadi tetap butuh login,
 // hanya saja tidak muncul di navigasi.
 //
-// [UBAH] Akun 'supersecret' sekarang SELALU diarahkan ke sini begitu login
+// [UBAH] Akun dev sekarang SELALU diarahkan ke sini begitu login
 // (lihat App.jsx -> handleLoginSuccess) dan halaman ini murni panel toggle
 // fitur untuk dev -- tombol "Buka Dashboard SuperAdmin" yang sebelumnya ada
 // di sini SUDAH DIHAPUS, jadi akun ini tidak lagi punya jalan pintas UI ke
@@ -25,6 +25,7 @@ import {
 } from '../../utils/featureFlags';
 import useFeatureFlag from '../../hooks/useFeatureFlag'; // [BARU]
 import { updateFeatureFlag } from '../../services/featureFlagService'; // [BARU]
+import PermissionResetSection from './components/PermissionResetSection'; // [BARU]
 import './DevSettings.css';
 
 export default function DevSettings() {
@@ -137,6 +138,9 @@ export default function DevSettings() {
           </button>
         </div>
         {themeToggleError && <p className="devsettings-error">{themeToggleError}</p>}
+
+        {/* [BARU] Reset data izin/sakit untuk uji ulang pengajuan & persetujuan */}
+        <PermissionResetSection />
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ import { logoutUser } from './services/authService';
 import { getMyProfile } from './services/profileService'; // [BARU] untuk hydrate foto profil di awal sesi
 import { expireSessionForInactivity, getAndClearRedirectPath, getTokenExpiryMs, refreshSession } from './services/api'; // [BARU] redirect terakhir & sliding session
 
-import { DEV_ACCESS_PATH, isDevAccessUsername } from './config/devAccessConfig';
+import { DEV_ACCESS_PATH, isDevAccessUser } from './config/devAccessConfig';
 import './App.css'; 
 
 // 1. Pisahkan konten utama ke dalam komponen terpisah
@@ -267,7 +267,7 @@ const AppContent = () => {
     // Akun dev (lihat config/devAccessConfig.js) selalu diarahkan langsung ke
     // panel /devAccess begitu login. redirectPath tersimpan sengaja diabaikan
     // supaya perilakunya konsisten setiap kali login.
-    if (isDevAccessUsername(userData.username)) {
+    if (isDevAccessUser(userData)) {
       navigate(DEV_ACCESS_PATH, { replace: true });
       return;
     }
