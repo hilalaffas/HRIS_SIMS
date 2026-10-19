@@ -96,7 +96,6 @@ function MedicalDocumentAction({ document, onUpload }) {
       </a>
     );
   }
-  if (!document.canUpload) return null;
   return (
     <button type="button" className="abs-document-upload" onClick={() => onUpload(document.recordId)}>
       <Upload aria-hidden="true" />

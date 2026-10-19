@@ -230,7 +230,6 @@
 .dashSummary__badge--warning { background: var(--color-warning-bg); color: var(--color-warning); }
 .dashSummary__badge--success { background: var(--color-success-bg); color: var(--color-success); }
 .dashSummary__badge--info { background: var(--color-info-bg); color: var(--color-info); }
-.dashSummary__badge--danger { background: var(--color-danger-bg); color: var(--color-danger); } /* [BARU] izin sakit ditolak */
 
 .dashSummary__pulse {
   position: relative;

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import sys.hris.sims.attendance.entity.Attendance;
@@ -48,4 +50,43 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     // username login, terbaru dulu.
     List<Attendance> findByEmployee_User_UsernameIgnoreCaseAndReasonInOrderByRecordedAtDesc(
             String username, List<String> reasons);
+
+    // [BARU] Versi "aktif" dari pengecekan di atas: MENGABAIKAN pengajuan Sakit yang
+    // DITOLAK (approval_status = REJECTED) supaya karyawan bisa Absen Masuk / mengajukan
+    // Izin lagi di hari yang sama. Dipakai AttendanceService & OvertimeService.
+    @Query("""
+            select count(a) > 0 from Attendance a
+            where a.employee.employeeId = :employeeId
+              and a.attendanceDate = :attendanceDate
+              and a.action = :action
+              and a.approvalStatus <> 'REJECTED'
+            """)
+    boolean existsActiveByAction(@Param("employeeId") Long employeeId,
+                                 @Param("attendanceDate") LocalDate attendanceDate,
+                                 @Param("action") String action);
+
+    @Query("""
+            select count(a) > 0 from Attendance a
+            where a.employee.employeeId = :employeeId
+              and a.attendanceDate = :attendanceDate
+              and a.action = :action
+              and a.reason in :reasons
+              and a.approvalStatus <> 'REJECTED'
+            """)
+    boolean existsActiveByActionAndReasonIn(@Param("employeeId") Long employeeId,
+                                            @Param("attendanceDate") LocalDate attendanceDate,
+                                            @Param("action") String action,
+                                            @Param("reasons") List<String> reasons);
+
+    // Catatan Masuk aktif hari ini (paling banyak satu, dijamin UNIQUE parsial V47).
+    @Query("""
+            select a from Attendance a
+            where a.employee.employeeId = :employeeId
+              and a.attendanceDate = :attendanceDate
+              and a.action = :action
+              and a.approvalStatus <> 'REJECTED'
+            """)
+    Optional<Attendance> findActiveByAction(@Param("employeeId") Long employeeId,
+                                            @Param("attendanceDate") LocalDate attendanceDate,
+                                            @Param("action") String action);
 }

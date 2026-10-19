@@ -106,7 +106,7 @@ public class AttendanceService {
         }
 
         LocalDate today = LocalDate.now();
-        if (attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employee.getEmployeeId(), today, action)) {
+        if (attendanceRepository.existsActiveByAction(employee.getEmployeeId(), today, action)) { // [UBAH] sakit ditolak tidak menghalangi
             throw new IllegalStateException(
                     action.equals("MASUK")
                             ? "Anda sudah melakukan check-in hari ini."
@@ -117,13 +117,13 @@ public class AttendanceService {
             throw new IllegalStateException("Anda tercatat sakit hari ini, absen masuk tidak diperlukan.");
         }
         if (action.equals("KELUAR")
-                && !attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employee.getEmployeeId(), today, "MASUK")) {
+                && !attendanceRepository.existsActiveByAction(employee.getEmployeeId(), today, "MASUK")) {
             throw new IllegalStateException("Anda belum melakukan check-in hari ini.");
         }
         // [BARU] Hari ini sudah tercatat Sakit/Izin -> tidak boleh check-out
         // (frontend sudah menonaktifkan tombol, ini pengaman di sisi server).
         if (action.equals("KELUAR")
-                && attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndActionAndReasonIn(
+                && attendanceRepository.existsActiveByActionAndReasonIn(
                         employee.getEmployeeId(), today, "MASUK", List.of("SAKIT", "IZIN"))) {
             throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, check-out tidak diperlukan.");
         }
@@ -134,7 +134,7 @@ public class AttendanceService {
         // SERVER (sama seperti Attendance.prePersist()), bukan jam perangkat.
         if (action.equals("KELUAR") && (request.getNote() == null || request.getNote().isBlank())) {
             attendanceRepository
-                    .findFirstByEmployee_EmployeeIdAndAttendanceDateAndAction(employee.getEmployeeId(), today, "MASUK")
+                    .findActiveByAction(employee.getEmployeeId(), today, "MASUK")
                     .ifPresent(checkIn -> {
                         Duration worked = Duration.between(checkIn.getRecordedAt(), LocalDateTime.now());
                         if (worked.compareTo(MIN_WORK_DURATION) < 0) {
@@ -222,7 +222,8 @@ public class AttendanceService {
         }
 
         LocalDate today = LocalDate.now();
-        if (attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employeeId, today, "MASUK")) {
+        // [UBAH] Pengajuan sakit yang DITOLAK tidak menghalangi pengajuan / absen baru.
+        if (attendanceRepository.existsActiveByAction(employeeId, today, "MASUK")) {
             throw new IllegalStateException("Anda sudah tercatat check-in / sakit hari ini, pengajuan izin tidak bisa dibuat.");
         }
         if (isSick && hasActiveSick(employeeId, today)) {
@@ -371,6 +372,14 @@ public class AttendanceService {
         Attendance attendance = findPermissionRecordForDev(attendanceId);
         if (!"SAKIT".equals(attendance.getReason())) {
             throw new IllegalArgumentException("Hanya pengajuan Sakit yang punya status persetujuan.");
+        }
+        // Data yang DITOLAK sudah tidak memakai jatah Masuk harinya; mengembalikannya ke
+        // Menunggu bentrok bila di tanggal itu sudah ada absen Masuk / pengajuan aktif lain.
+        if ("REJECTED".equals(attendance.getApprovalStatus())
+                && attendanceRepository.existsActiveByAction(
+                        attendance.getEmployee().getEmployeeId(), attendance.getAttendanceDate(), "MASUK")) {
+            throw new IllegalStateException(
+                    "Di tanggal itu sudah ada absen Masuk / pengajuan aktif lain. Hapus dulu data tersebut.");
         }
         attendance.setApprovalStatus("PENDING");
         return toResponse(attendanceRepository.save(attendance));

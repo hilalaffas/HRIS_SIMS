@@ -31,7 +31,7 @@ import CheckoutFlowModals from './components/CheckoutFlowModals'; // [UBAH] popu
 import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
 import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
-import { SHIFT_HOURS, getSickRecordCovering, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
+import { SHIFT_HOURS, getSickRecordCovering, isRejectedSick, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
 import {
   formatDateLabel,
   getMyAttendanceHistory,
@@ -111,7 +111,8 @@ export default function Absensi() {
   }, [todayDate]);
 
   const todayCheckIn = useMemo(
-    () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'MASUK'),
+    // [UBAH] sakit yang DITOLAK bukan check-in: tombol Absen Masuk & Ajukan Izin aktif lagi
+    () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'MASUK' && !isRejectedSick(record)),
     [records, todayKey],
   );
   const todayCheckOut = useMemo(
@@ -130,7 +131,7 @@ export default function Absensi() {
   // idle -> "Masuk", checkedIn -> "Keluar", done -> abu-abu,
   // sick -> abu-abu juga (Masuk/Keluar tidak bisa diklik).
   const attendanceStatus = todaySickRecord
-    ? resolveSickTodayStatus(todaySickRecord) // [UBAH] sick | sickPending | sickRejected
+    ? resolveSickTodayStatus(todaySickRecord) // [UBAH] sick | sickPending
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
   // [UBAH] Izin/Sakit hanya bisa diajukan sebelum check-in dan selama belum tercatat sakit.
   const disablePermission = Boolean(todayCheckIn) || Boolean(todaySickRecord);

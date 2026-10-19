@@ -13,6 +13,7 @@ import {
   formatPeriodLabel,
   getCurrentPeriod,
   getSickRecordCovering,
+  isRejectedSick,
   resolveSickTodayStatus,
 } from '../../Absensi/utils/monthlyAttendance';
 
@@ -26,7 +27,7 @@ const INITIAL_STATE = {
   permit: 0,
   periodShort: '',
   periodRange: '',
-  todayStatus: 'idle', // idle | checkedIn | done | sick | sickPending | sickRejected
+  todayStatus: 'idle', // idle | checkedIn | done | sick | sickPending
   checkInTime: '',
   checkInAt: null, // [BARU] Date jam Masuk hari ini -- dasar hitung "pulang cepat"
   division: '',
@@ -44,7 +45,7 @@ function summarizeRows(rows) {
 
 function resolveTodayStatus(records, todayKey) {
   const todays = records.filter((record) => record.attendanceDate === todayKey);
-  const checkIn = todays.find((record) => record.actionCode === 'MASUK');
+  const checkIn = todays.find((record) => record.actionCode === 'MASUK' && !isRejectedSick(record)); // [UBAH] sakit ditolak bukan check-in
   const checkOut = todays.find((record) => record.actionCode === 'KELUAR');
   // [UBAH] Sama dengan halaman Absensi (termasuk hari lanjutan izin sakit multi-hari);
   // "sick" baru muncul setelah disetujui, selama menunggu -> sickPending.

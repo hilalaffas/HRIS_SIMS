@@ -103,6 +103,12 @@ function getSickEndKey(record) {
   return followUps.length > 0 ? dateKey(followUps[followUps.length - 1].date) : record.attendanceDate;
 }
 
+// [BARU] Pengajuan sakit yang DITOLAK: tidak dianggap sakit dan tidak memakai jatah
+// Masuk hari itu (karyawan boleh Absen Masuk / mengajukan lagi). Hanya jadi riwayat.
+export function isRejectedSick(record) {
+  return record.reasonCode === 'SAKIT' && record.approvalStatus === 'REJECTED';
+}
+
 // [BARU] Catatan sakit/izin yang berlaku pada tanggal `key` (dipakai halaman
 // Absensi untuk status hari ini). Hari pengajuan: perilaku lama (MASUK dengan
 // reason bukan ABSEN). Hari lanjutan izin sakit multi-hari: hanya Sakit yang
@@ -110,9 +116,9 @@ function getSickEndKey(record) {
 export function getSickRecordCovering(records, key) {
   return records.find((record) => {
     if (record.actionCode !== 'MASUK') return false;
-    if (record.attendanceDate === key) return record.reasonCode !== 'ABSEN';
+    if (record.attendanceDate === key) return record.reasonCode !== 'ABSEN' && !isRejectedSick(record);
     return record.reasonCode === 'SAKIT'
-      && record.approvalStatus !== 'REJECTED'
+      && !isRejectedSick(record)
       && key > record.attendanceDate
       && key <= getSickEndKey(record)
       && !isWeekend(parseLocalDate(key));
@@ -120,13 +126,12 @@ export function getSickRecordCovering(records, key) {
 }
 
 // [BARU] Status hari ini dari catatan sakit/izin: sakit baru dianggap "sick" SETELAH
-// disetujui. Pending -> sickPending, ditolak -> sickRejected. Izin lama (tanpa alur
+// disetujui. Pending -> sickPending. Izin lama (tanpa alur
 // persetujuan) tetap "sick". Kunci sama dengan utils/todayStatusConfig.js.
+// (Sakit yang ditolak tidak sampai sini: getSickRecordCovering mengabaikannya.)
 export function resolveSickTodayStatus(record) {
   if (!record) return null;
-  if (record.reasonCode === 'SAKIT' && record.approvalStatus === 'PENDING') return 'sickPending';
-  if (record.reasonCode === 'SAKIT' && record.approvalStatus === 'REJECTED') return 'sickRejected';
-  return 'sick';
+  return record.reasonCode === 'SAKIT' && record.approvalStatus === 'PENDING' ? 'sickPending' : 'sick';
 }
 
 function groupByDate(records) {
@@ -134,8 +139,10 @@ function groupByDate(records) {
   records.forEach((record) => {
     const key = record.attendanceDate;
     if (!key) return;
-    const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null };
-    if (record.actionCode === 'IZIN') {
+    const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null, rejectedSick: null };
+    if (isRejectedSick(record)) {
+      entry.rejectedSick = record; // [BARU] riwayat saja -- bukan check-in
+    } else if (record.actionCode === 'IZIN') {
       entry.lateNotice = record; // [BARU] izin terlambat: bukan check-in, hanya catatan
     } else if (record.actionCode === 'KELUAR') {
       entry.checkOut = record;
@@ -149,10 +156,10 @@ function groupByDate(records) {
   // salinan catatan sakit selama belum ada catatan masuk di hari itu.
   records.forEach((record) => {
     if (record.actionCode !== 'MASUK' || record.reasonCode !== 'SAKIT' || record.leaveDays <= 1) return;
-    if (record.approvalStatus === 'REJECTED') return;
+    if (isRejectedSick(record)) return;
     getSickFollowUpDays(record).forEach(({ date, dayNumber }) => {
       const key = dateKey(date);
-      const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null };
+      const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null, rejectedSick: null };
       if (!entry.checkIn) {
         entry.checkIn = { ...record, attendanceDate: key, dayNumber };
         byDate.set(key, entry);
@@ -186,12 +193,24 @@ function blankRow(key) {
 }
 
 function resolveRow(key, entry, todayKey) {
-  const { checkIn, checkOut, lateNotice } = entry;
+  const { checkIn, checkOut, lateNotice, rejectedSick } = entry;
   const isToday = key === todayKey;
-  // [BARU] Pemberitahuan izin terlambat ikut tampil di keterangan hari itu.
-  const noticeSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
+  // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
+  const lateSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
+  const noticeSuffix = `${lateSuffix}${rejectedSick ? ' · Izin sakit ditolak' : ''}`;
   const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: SHIFT_LABEL };
   const empty = { checkIn: null, checkOut: null, duration: null, durationMinutes: null };
+
+  // [BARU] Hari lampau yang hanya punya pengajuan sakit DITOLAK: tampil "DITOLAK"
+  // (bukan sakit, bukan hadir). Hari ini tetap "BELUM ABSEN" karena masih bisa absen.
+  if (!checkIn && !checkOut && rejectedSick && !isToday) {
+    return {
+      ...base, ...empty,
+      status: 'DITOLAK', tone: 'ditolak',
+      note: `${rejectedSick.note || 'Sakit'}${lateSuffix}`,
+      photoUrl: '', mapsUrl: '', proofLabel: '', document: null,
+    };
+  }
 
   // Hari kerja tanpa catatan apa pun
   if (!checkIn && !checkOut) {
@@ -205,26 +224,23 @@ function resolveRow(key, entry, todayKey) {
   // Sakit / Izin: tidak bekerja, jam & durasi tidak ditampilkan.
   if (checkIn?.reasonCode === 'SAKIT' || checkIn?.reasonCode === 'IZIN') {
     const isSick = checkIn.reasonCode === 'SAKIT';
-    // [UBAH] Status baris mengikuti persetujuan: SAKIT hanya SETELAH disetujui. Selama
-    // menunggu tampil "MENUNGGU APPROVAL", bila ditolak "DITOLAK" (tidak dihitung sakit).
-    const approvalStatus = isSick ? checkIn.approvalStatus : '';
-    const sickBadge = {
-      PENDING: { status: 'MENUNGGU APPROVAL', tone: 'menunggu' },
-      REJECTED: { status: 'DITOLAK', tone: 'ditolak' },
-    }[approvalStatus] || { status: 'SAKIT', tone: 'sakit' };
+    // [UBAH] Status baris mengikuti persetujuan: SAKIT hanya SETELAH disetujui; selama
+    // menunggu tampil "MENUNGGU APPROVAL". (Yang ditolak tidak sampai sini -- lihat
+    // rejectedSick di groupByDate.)
+    const isPending = isSick && checkIn.approvalStatus === 'PENDING';
     // [BARU] Izin sakit multi-hari: "Hari ke-2 dari 3".
     const dayInfo = isSick && checkIn.leaveDays > 1 ? ` · Hari ke-${checkIn.dayNumber || 1} dari ${checkIn.leaveDays}` : '';
     return {
       ...base,
       ...empty,
-      status: isSick ? sickBadge.status : 'CUTI',
-      tone: isSick ? sickBadge.tone : 'cuti',
+      status: isSick ? (isPending ? 'MENUNGGU APPROVAL' : 'SAKIT') : 'CUTI',
+      tone: isSick ? (isPending ? 'menunggu' : 'sakit') : 'cuti',
       note: `${checkIn.note || (isSick ? 'Sakit' : 'Izin')}${dayInfo}`,
       ...proof,
       proofLabel: 'Foto Bukti',
       // [BARU] Surat dokter: link bila sudah diunggah, tombol upload susulan bila belum.
       document: isSick && checkIn.documentRequired
-        ? { recordId: checkIn.id, url: checkIn.documentUrl, canUpload: checkIn.approvalStatus !== 'REJECTED' }
+        ? { recordId: checkIn.id, url: checkIn.documentUrl }
         : null,
     };
   }

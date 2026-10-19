@@ -157,10 +157,10 @@ public class OvertimeService {
 
         // Hanya sah selama user sedang bekerja: sudah check-in, belum check-out,
         // dan bukan hari Sakit/Izin. Setelah check-out, pakai menu Pengajuan Lembur.
-        if (!attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employeeId, today, "MASUK")) {
+        if (!attendanceRepository.existsActiveByAction(employeeId, today, "MASUK")) { // [UBAH] sakit ditolak diabaikan
             throw new IllegalStateException("Anda belum melakukan check-in hari ini.");
         }
-        if (attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndActionAndReasonIn(
+        if (attendanceRepository.existsActiveByActionAndReasonIn(
                 employeeId, today, "MASUK", List.of("SAKIT", "IZIN"))) {
             throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, lembur tidak dapat diajukan.");
         }
