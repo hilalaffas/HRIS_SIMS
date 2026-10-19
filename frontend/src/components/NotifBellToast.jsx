@@ -18,6 +18,8 @@ const TYPE_META = {
   new: { tone: 'brand', title: 'Pengajuan baru' },
   'leave-approval': { tone: 'brand', title: 'Pengajuan baru' },
   'password-reset': { tone: 'info', title: 'Permintaan reset sandi' },
+  'sick-approved': { tone: 'success', title: 'Izin sakit disetujui' },
+  'sick-rejected': { tone: 'danger', title: 'Izin sakit ditolak' },
 };
 const DEFAULT_META = { tone: 'brand', title: 'Notifikasi baru' };
 

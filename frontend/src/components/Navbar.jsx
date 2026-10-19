@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getRiwayatByUser, getPendingApprovals, getMyApprovalUpdates } from '../services/CutiService';
+import { getMyAttendanceHistory } from '../services/attendanceService';
 import { getPendingResetRequests } from '../services/passwordResetService';
 import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
 import { getCurrentUser } from '../services/authService';
@@ -19,7 +20,11 @@ const APPROVER_ROLE_LABELS = {
 // [UBAH] Notifikasi yang mengarahkan ke suatu tempat saat diklik.
 // 'announcement' DIHAPUS -- lonceng notifikasi sekarang murni perihal cuti
 // (+ permintaan reset sandi), berita/pengumuman tidak lagi masuk sini.
-const CLICKABLE_TYPES = ['password-reset', 'leave-approval', 'approved'];
+const CLICKABLE_TYPES = ['password-reset', 'leave-approval', 'approved', 'sick-approved', 'sick-rejected'];
+
+// [BARU] Izin Sakit (modul Absensi) yang sudah diputuskan hanya jadi notifikasi
+// selama N hari terakhir, supaya riwayat lama tidak membanjiri lonceng.
+const SICK_NOTIF_WINDOW_DAYS = 14;
 
 export default function Navbar({ toggleSidebar, user }) {
   const location = useLocation();
@@ -60,6 +65,9 @@ export default function Navbar({ toggleSidebar, user }) {
   // HR/SuperAdmin). Berita/pengumuman tidak lagi ditampilkan di sini; tetap
   // bisa dilihat lewat panel Pengumuman & Portal Berita di Dashboard.
   const [resetRequests, setResetRequests] = useState([]);
+  // [BARU] Izin Sakit milik sendiri yang sudah APPROVED/REJECTED (data absensi,
+  // bukan data cuti -- jadi tidak ikut terbaca oleh polling cuti di atas).
+  const [sickDecisions, setSickDecisions] = useState([]);
   const [selectedResetNotif, setSelectedResetNotif] = useState(null);
   const canSeeResetNotif = !isDevAccount && (isHrAdmin(user) || isSuperAdmin(user));
 
@@ -222,6 +230,68 @@ export default function Navbar({ toggleSidebar, user }) {
     };
   }, [notificationOwner, notificationStorageKey, userRole, showDropdown, isDevAccount]);
 
+  // === [BARU] NOTIFIKASI STATUS IZIN SAKIT (disetujui / ditolak) ===
+  // Izin Sakit disimpan sebagai data absensi (approvalStatus PENDING ->
+  // APPROVED/REJECTED), bukan data cuti, jadi butuh polling tersendiri.
+  useEffect(() => {
+    if (notificationOwner === 'guest' || isDevAccount) return undefined;
+
+    let isMounted = true;
+
+    const fetchSickDecisions = async () => {
+      try {
+        // { silent: true } -- polling lonceng, jangan memicu LoadingScreen global.
+        const records = await getMyAttendanceHistory({ silent: true });
+        const cutoff = Date.now() - SICK_NOTIF_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+        const decided = (Array.isArray(records) ? records : []).filter((record) => {
+          const approval = String(record.approvalStatus || '').toUpperCase();
+          const attendanceTime = new Date(`${record.attendanceDate}T00:00:00`).getTime();
+          return (
+            String(record.reason || '').toUpperCase() === 'SAKIT'
+            && (approval === 'APPROVED' || approval === 'REJECTED')
+            && !Number.isNaN(attendanceTime)
+            && attendanceTime >= cutoff
+          );
+        });
+        if (isMounted) setSickDecisions(decided);
+      } catch (error) {
+        console.error('Gagal memuat notifikasi status izin sakit:', error);
+      } finally {
+        if (isMounted) setLoadedSources((prev) => (prev.sick ? prev : { ...prev, sick: true }));
+      }
+    };
+
+    fetchSickDecisions();
+    const intervalId = setInterval(fetchSickDecisions, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [notificationOwner, isDevAccount]);
+
+  // id memuat status: kalau status berubah (mis. REJECTED -> diajukan ulang -> APPROVED)
+  // id-nya baru, jadi popup & badge muncul lagi untuk perubahan itu.
+  const sickNotifications = sickDecisions.map((record) => {
+    const isApproved = String(record.approvalStatus).toUpperCase() === 'APPROVED';
+    const days = Number(record.leaveDays) > 1 ? ` (${record.leaveDays} hari)` : '';
+    return {
+      id: `sick-${isApproved ? 'approved' : 'rejected'}-${record.attendanceId}`,
+      text: (
+        <>
+          Pengajuan <strong>Izin Sakit{days}</strong> Anda telah{' '}
+          <strong>{isApproved ? 'disetujui.' : 'ditolak.'}</strong>
+        </>
+      ),
+      date: new Date(`${record.attendanceDate}T00:00:00`).toLocaleDateString('id-ID', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      }),
+      timestamp: record.recordedAt,
+      type: isApproved ? 'sick-approved' : 'sick-rejected',
+      raw: record,
+    };
+  });
+
   // === NOTIFIKASI PERMINTAAN RESET SANDI (HR ADMIN / SUPER ADMIN) ===
   // Tidak berubah: Super Admin & HR Admin sama-sama melihat notifikasi ini.
   useEffect(() => {
@@ -339,6 +409,7 @@ export default function Navbar({ toggleSidebar, user }) {
   const allNotificationCandidates = [
     ...leaveApprovalNotifications,
     ...resetNotifications,
+    ...sickNotifications,
     ...notifications,
   ];
   const allNotifications = allNotificationCandidates
@@ -353,6 +424,7 @@ export default function Navbar({ toggleSidebar, user }) {
   const requiredSourcesLoaded = Boolean(
     loadedSources.cuti
       && (!canSeeResetNotif || loadedSources.reset)
+      && loadedSources.sick
       && (!canSeeLeaveApprovalNotif || loadedSources.approval),
   );
 
@@ -397,6 +469,13 @@ export default function Navbar({ toggleSidebar, user }) {
       handleDismissOne(notif.id);
       setShowDropdown(false);
       navigate(`/ApplyCuti?leaveRequestId=${notif.raw.id}`);
+      return;
+    }
+    // [BARU] Izin Sakit: hilangkan notifikasi + buka halaman Absensi.
+    if (notif.type === 'sick-approved' || notif.type === 'sick-rejected') {
+      handleDismissOne(notif.id);
+      setShowDropdown(false);
+      navigate('/absensi');
       return;
     }
   };
@@ -538,7 +617,7 @@ export default function Navbar({ toggleSidebar, user }) {
                             <path d="M8 12h8M8 12l3-3m-3 3l3 3" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         )}
-                        {notif.type === 'approved' && (
+                        {(notif.type === 'approved' || notif.type === 'sick-approved') && (
                           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="#10b981" strokeWidth="2" fill="none"/>
                             <path d="M8 12l3 3 5-5" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -550,7 +629,7 @@ export default function Navbar({ toggleSidebar, user }) {
                             <path d="M8 12l3 3 5-5" stroke="#14b8a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                         )}
-                        {notif.type === 'rejected' && (
+                        {(notif.type === 'rejected' || notif.type === 'sick-rejected') && (
                           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="#ef4444" strokeWidth="2" fill="none"/>
                             <path d="M8.5 8.5l7 7m0-7l-7 7" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/>
@@ -589,6 +668,9 @@ export default function Navbar({ toggleSidebar, user }) {
                         )}
                         {notif.type === 'approved' && (
                           <span className="notification-action-hint" style={{ color: '#10b981' }}>Klik untuk lihat detail →</span>
+                        )}
+                        {(notif.type === 'sick-approved' || notif.type === 'sick-rejected') && (
+                          <span className="notification-action-hint" style={{ color: notif.type === 'sick-approved' ? '#10b981' : '#ef4444' }}>Klik untuk lihat di Absensi →</span>
                         )}
                       </div>
 

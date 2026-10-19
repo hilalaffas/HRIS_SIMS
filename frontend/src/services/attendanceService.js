@@ -13,8 +13,10 @@
 // browser yang bisa menggeser jamnya. Lihat parseNaiveDateTime().
 import { api } from './api';
 
-export async function getMyAttendanceHistory() {
-  return api.get('/api/absensi/me');
+// [UBAH] + parameter `config` opsional ({ silent: true } dipakai polling lonceng
+// notifikasi di Navbar.jsx). Pemanggilan lama tanpa argumen tetap sama.
+export async function getMyAttendanceHistory(config = {}) {
+  return api.get('/api/absensi/me', config);
 }
 
 // [BARU] Nama lokasi dari koordinat (reverse geocoding di backend, key Google
