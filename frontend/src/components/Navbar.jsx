@@ -7,6 +7,7 @@ import { getCurrentUser } from '../services/authService';
 import { isDevAccessUser, isDevAccessPath } from '../config/devAccessConfig';
 import NotifPasswordResetModal from './NotifPasswordResetModal';
 import NotifLeaveApprovalModal from './NotifLeaveApprovalModal';
+import NotifBellToast from './NotifBellToast';
 import './Navbar.css';
 
 const APPROVER_ROLE_LABELS = {
@@ -30,6 +31,18 @@ export default function Navbar({ toggleSidebar, user }) {
 
   const [showDropdown, setShowDropdown] = useState(false);
   const notificationRef = useRef(null);
+
+  // [BARU] Popup mini dari lonceng saat ada notifikasi BARU (cuti, sakit, izin,
+  // dll -- apa pun yang masuk ke allNotifications).
+  const bellButtonRef = useRef(null);
+  const [bellToast, setBellToast] = useState(null); // { key, notification, extraCount }
+  const [bellRingTick, setBellRingTick] = useState(0); // naik tiap ada notif baru -> ulang animasi lonceng & badge
+  const seenNotifIdsRef = useRef(new Set());
+  const baselineDoneRef = useRef(false);
+  const showDropdownRef = useRef(false);
+  // Tiap sumber polling menandai dirinya sudah selesai memuat pertama kali,
+  // supaya notifikasi LAMA saat login tidak dianggap baru (tidak banjir popup).
+  const [loadedSources, setLoadedSources] = useState({});
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -194,7 +207,10 @@ export default function Navbar({ toggleSidebar, user }) {
         console.error('Gagal memuat progres approval untuk notifikasi:', stepUpdatesResult.reason);
       }
 
-      if (isMounted) setNotifications(mappedNotifications);
+      if (isMounted) {
+        setNotifications(mappedNotifications);
+        setLoadedSources((prev) => (prev.cuti ? prev : { ...prev, cuti: true }));
+      }
     };
 
     fetchNotificationFromDB();
@@ -220,6 +236,8 @@ export default function Navbar({ toggleSidebar, user }) {
         if (isMounted) setResetRequests(data || []);
       } catch (error) {
         console.error('Gagal memuat notifikasi permintaan reset sandi:', error);
+      } finally {
+        if (isMounted) setLoadedSources((prev) => (prev.reset ? prev : { ...prev, reset: true }));
       }
     };
 
@@ -269,6 +287,8 @@ export default function Navbar({ toggleSidebar, user }) {
         if (isMounted) setLeaveApprovalTasks(data || []);
       } catch (error) {
         console.error('Gagal memuat notifikasi cuti perlu diproses:', error);
+      } finally {
+        if (isMounted) setLoadedSources((prev) => (prev.approval ? prev : { ...prev, approval: true }));
       }
     };
 
@@ -324,6 +344,40 @@ export default function Navbar({ toggleSidebar, user }) {
   const allNotifications = allNotificationCandidates
     .filter((notification) => !readNotificationIds.includes(notification.id))
     .sort((first, second) => getNotificationTime(second) - getNotificationTime(first));
+
+  // === [BARU] DETEKSI NOTIFIKASI BARU -> LONCENG BERGOYANG + POPUP MINI ===
+  useEffect(() => {
+    showDropdownRef.current = showDropdown;
+  }, [showDropdown]);
+  const notificationIdsKey = allNotifications.map((notification) => notification.id).join('|');
+  const requiredSourcesLoaded = Boolean(
+    loadedSources.cuti
+      && (!canSeeResetNotif || loadedSources.reset)
+      && (!canSeeLeaveApprovalNotif || loadedSources.approval),
+  );
+
+  useEffect(() => {
+    const seen = seenNotifIdsRef.current;
+    const freshNotifications = allNotifications.filter((notification) => !seen.has(notification.id));
+    allNotifications.forEach((notification) => seen.add(notification.id));
+
+    // Pemuatan awal (semua sumber) hanya dicatat sebagai "sudah dilihat".
+    if (!baselineDoneRef.current) {
+      if (requiredSourcesLoaded) baselineDoneRef.current = true;
+      return;
+    }
+    if (freshNotifications.length === 0) return;
+
+    setBellRingTick((tick) => tick + 1);
+    // Dropdown sedang terbuka: pengguna sudah melihat daftarnya, cukup goyang lonceng.
+    if (showDropdownRef.current) return;
+    setBellToast({
+      key: Date.now(),
+      notification: freshNotifications[0], // allNotifications sudah urut terbaru
+      extraCount: freshNotifications.length - 1,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notificationIdsKey, requiredSourcesLoaded]);
 
   // [UBAH] Satu handler terpusat untuk semua jenis klik notifikasi:
   // - password-reset & leave-approval: buka modal (perilaku lama, tidak berubah)
@@ -418,18 +472,47 @@ export default function Navbar({ toggleSidebar, user }) {
 
         <div className="notification-container" ref={notificationRef}>
           <button
+            ref={bellButtonRef}
             className="btn-notification"
             title="Notifikasi"
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={() => {
+              setBellToast(null);
+              setShowDropdown(!showDropdown);
+            }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
+            {/* [UBAH] svg dibungkus span.bell-icon + key=bellRingTick: tiap ada notif baru
+                elemen dibuat ulang sehingga animasi goyang selalu diputar dari awal. */}
+            <span key={`ring-${bellRingTick}`} className={`bell-icon${bellRingTick > 0 ? ' bell-icon--ring' : ''}`}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+            </span>
+            {bellRingTick > 0 && <span key={`wave-${bellRingTick}`} className="bell-wave" aria-hidden="true" />}
             {allNotifications.length > 0 && (
-              <span className="notification-badge">{allNotifications.length}</span>
+              <span
+                key={`badge-${bellRingTick}`}
+                className={`notification-badge${bellRingTick > 0 ? ' notification-badge--pop' : ''}`}
+              >
+                {allNotifications.length}
+              </span>
             )}
           </button>
+
+          {/* [BARU] Popup mini dari lonceng */}
+          {bellToast && !showDropdown && (
+            <NotifBellToast
+              key={bellToast.key}
+              notification={bellToast.notification}
+              extraCount={bellToast.extraCount}
+              anchorRef={bellButtonRef}
+              onOpen={() => {
+                setBellToast(null);
+                setShowDropdown(true);
+              }}
+              onClose={() => setBellToast(null)}
+            />
+          )}
 
           {showDropdown && (
             <div className="notification-dropdown">
