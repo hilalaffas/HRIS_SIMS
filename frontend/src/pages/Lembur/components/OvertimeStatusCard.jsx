@@ -52,7 +52,7 @@ function formatSubmittedLabel(createdAt) {
   return `${formatDateLabel(createdAt.slice(0, 10))}, ${createdAt.slice(11, 16)} WIB`;
 }
 
-function OvertimeStatusCard({ record, onCancel, onClose }) {
+function OvertimeStatusCard({ record, isLatest = false, onCancel, onClose }) { // [UBAH] + isLatest, onClose jadi opsional
   const flowRequest = { ...record, ...resolveFlowState(record) };
   const statusMeta = getStatusMeta(flowRequest);
   const timeline = buildTimeline(flowRequest);
@@ -67,7 +67,9 @@ function OvertimeStatusCard({ record, onCancel, onClose }) {
     >
       <header className="overtimeCard__header">
         <div className="overtimeCard__title">
-          <span className="overtimeCard__eyebrow">Pengajuan Lembur</span>
+          <span className="overtimeCard__eyebrow">
+            {isLatest ? 'Pengajuan Lembur Terbaru' : 'Pengajuan Lembur'} {/* [UBAH] */}
+          </span>
           <strong className="overtimeCard__date">{formatDateLabel(record.date)}</strong>
           {submittedAtLabel && (
             <span className="overtimeCard__sent">Dikirim {submittedAtLabel}</span>
@@ -78,14 +80,17 @@ function OvertimeStatusCard({ record, onCancel, onClose }) {
           <span className={`overtimeBadge overtimeBadge--${statusMeta.tone}`}>
             {statusMeta.label}
           </span>
-          <button
-            type="button"
-            className="overtimeCard__close"
-            onClick={onClose}
-            aria-label="Tutup detail alur"
-          >
-            ✕
-          </button>
+          {/* [UBAH] Tombol tutup hanya muncul jika halaman memberi onClose (Lembur.jsx tidak lagi) */}
+          {typeof onClose === 'function' && (
+            <button
+              type="button"
+              className="overtimeCard__close"
+              onClick={onClose}
+              aria-label="Tutup detail alur"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </header>
 

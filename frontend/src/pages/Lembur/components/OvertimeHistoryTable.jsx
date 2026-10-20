@@ -44,8 +44,8 @@ export default function OvertimeHistoryTable({ records, loading, selectedId, onS
                       type="button"
                       className={`lmb-status lmb-status-${status.tone} lmb-status-button${selectedId === record.id ? ' is-active' : ''}`}
                       onClick={() => onSelectStatus(record.id)}
-                      aria-expanded={selectedId === record.id}
-                      title="Klik untuk melihat alur persetujuan"
+                      aria-pressed={selectedId === record.id} // [UBAH] bukan lagi buka/tutup
+                      title="Klik untuk menampilkan alur persetujuan pengajuan ini"
                     >
                       {status.label}
                     </button>

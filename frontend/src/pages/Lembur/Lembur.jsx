@@ -4,7 +4,7 @@
 // tombol buat pengajuan baru, dan tabel riwayat pengajuan milik user.
 // Data lembur yang APPROVED/PENDING juga tampil di kolom "Lembur" pada
 // tabel Absensi (lihat pages/Absensi/utils/monthlyAttendance.js).
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react'; // [UBAH] + useMemo
 import { FilePlus2, Plus } from 'lucide-react';
 import Toast from '../../components/Toast';
 import OvertimeHistoryTable from './components/OvertimeHistoryTable';
@@ -19,7 +19,8 @@ export default function Lembur() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [selectedId, setSelectedId] = useState(null); // [BARU] baris yang alurnya sedang dibuka
+  // [UBAH] null = kartu alur mengikuti pengajuan TERBARU; terisi = user memilih baris lain
+  const [selectedId, setSelectedId] = useState(null);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
@@ -51,13 +52,24 @@ export default function Lembur() {
   const handleSubmit = async (formValues) => {
     await submitOvertime(formValues);
     setModalOpen(false);
+    setSelectedId(null); // [BARU] setelah submit, kartu kembali menampilkan pengajuan terbaru
     showToast('Pengajuan lembur berhasil dikirim.');
     setReloadKey((current) => current + 1);
   };
 
-  // [BARU] Klik badge yang sama sekali lagi = tutup kartu alur.
-  const handleSelectStatus = (id) => setSelectedId((current) => (current === id ? null : id));
-  const selectedRecord = records.find((record) => record.id === selectedId) || null;
+  // [BARU] Pengajuan terbaru = createdAt paling baru (fallback: id terbesar).
+  const latestRecord = useMemo(() => {
+    if (records.length === 0) return null;
+    return records.reduce((latest, record) => {
+      const latestKey = `${latest.createdAt || ''}|${String(latest.id).padStart(12, '0')}`;
+      const recordKey = `${record.createdAt || ''}|${String(record.id).padStart(12, '0')}`;
+      return recordKey > latestKey ? record : latest;
+    });
+  }, [records]);
+
+  // [UBAH] Kartu selalu tampil: baris pilihan user, atau pengajuan terbaru jika belum memilih
+  const activeRecord = records.find((record) => record.id === selectedId) || latestRecord;
+  const handleSelectStatus = (id) => setSelectedId(id);
 
   return (
     <div className="lembur-page">
@@ -75,20 +87,20 @@ export default function Lembur() {
         </button>
       </header>
 
-      {/* [BARU] Kartu alur persetujuan: di antara header dan tabel riwayat */}
-      {selectedRecord && (
+      {/* [UBAH] Kartu alur persetujuan selalu tampil (default: pengajuan terbaru), tanpa tombol tutup */}
+      {activeRecord && (
         <OvertimeStatusCard
-          key={selectedRecord.id}
-          record={selectedRecord}
-          onClose={() => setSelectedId(null)}
+          key={activeRecord.id}
+          record={activeRecord}
+          isLatest={activeRecord.id === latestRecord?.id}
         />
       )}
 
-      {/* [UBAH] + selectedId & onSelectStatus */}
+      {/* [UBAH] selectedId -> activeRecord?.id */}
       <OvertimeHistoryTable
         records={records}
         loading={loading}
-        selectedId={selectedId}
+        selectedId={activeRecord?.id ?? null}
         onSelectStatus={handleSelectStatus}
       />
 
