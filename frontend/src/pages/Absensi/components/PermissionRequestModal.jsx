@@ -134,32 +134,6 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
             />
           </div>
 
-          {isSick && (
-            <div className="abs-permission-field">
-              <label className="abs-permission-label" htmlFor="abs-permission-days">Lama Izin Sakit</label>
-              <div className="abs-permission-days">
-                <input
-                  id="abs-permission-days"
-                  type="number"
-                  min="1"
-                  max={MAX_SICK_DAYS}
-                  step="1"
-                  inputMode="numeric"
-                  value={days}
-                  onChange={(event) => setDays(event.target.value)}
-                  disabled={isSubmitting || documentLater}
-                />
-                <span>hari kerja (Sabtu &amp; Minggu tidak dihitung)</span>
-              </div>
-              {documentLater && (
-                <p className="abs-permission-hint">
-                  Lama izin dikunci 1 hari selama surat dokter menyusul. Lampirkan surat sekarang
-                  bila izin lebih dari 1 hari.
-                </p>
-              )}
-            </div>
-          )}
-
           <div className="abs-permission-field">
             <label className="abs-permission-label" htmlFor="abs-permission-note">Keterangan / Alasan</label>
             <textarea
@@ -182,17 +156,41 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
                 onError={setErrorMessage}
                 disabled={isSubmitting || documentLater}
               />
-              <label className="abs-permission-check">
-                <input
-                  type="checkbox"
-                  checked={documentLater}
-                  onChange={handleDocumentLaterChange}
-                  disabled={isSubmitting}
-                />
-                Surat dokter menyusul
-              </label>
+              <div className="abs-permission-options">
+                <label className="abs-permission-check">
+                  <input
+                    type="checkbox"
+                    checked={documentLater}
+                    onChange={handleDocumentLaterChange}
+                    disabled={isSubmitting}
+                  />
+                  Surat dokter menyusul
+                </label>
+                <div className="abs-permission-days">
+                  <label className="abs-permission-days-label" htmlFor="abs-permission-days">Lama Izin Sakit</label>
+                  <input
+                    id="abs-permission-days"
+                    type="number"
+                    min="1"
+                    max={MAX_SICK_DAYS}
+                    step="1"
+                    inputMode="numeric"
+                    value={days}
+                    onChange={(event) => setDays(event.target.value)}
+                    disabled={isSubmitting || documentLater}
+                  />
+                  <span>hari kerja</span>
+                </div>
+              </div>
+              {documentLater && (
+                <p className="abs-permission-hint">
+                  Lama izin dikunci 1 hari selama surat dokter menyusul. Lampirkan surat sekarang
+                  bila izin lebih dari 1 hari.
+                </p>
+              )}
               <p className="abs-permission-hint">
-                Surat dokter tetap wajib diunggah. Bila menyusul, unggah lewat kolom Keterangan / Catatan
+                Lama izin dihitung dalam hari kerja (Sabtu &amp; Minggu tidak dihitung). Surat dokter
+                tetap wajib diunggah. Bila menyusul, unggah lewat kolom Keterangan / Catatan
                 pada tabel Jadwal &amp; Log Absensi Bulanan.
               </p>
             </div>

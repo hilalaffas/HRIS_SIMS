@@ -106,7 +106,34 @@
 .abs-permission-days {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Baris: checkbox "Surat dokter menyusul" (kiri) + atur lama izin (kanan) */
+.abs-permission-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.abs-permission-days-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.abs-permission-options .abs-permission-days input {
+  width: 56px;
+  height: 32px;
+  padding: 0 8px;
+  text-align: center;
+}
+
+.abs-permission-options .abs-permission-days span {
+  white-space: nowrap;
 }
 
 .abs-permission-days input { width: 84px; }
