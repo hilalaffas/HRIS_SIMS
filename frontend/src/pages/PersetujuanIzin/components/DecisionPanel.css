@@ -1,0 +1,77 @@
+/* src/pages/PersetujuanIzin/components/DecisionPanel.css */
+.pzn-decision { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.pzn-decision__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.pzn-decision__label span { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--color-text-muted); }
+
+.pzn-decision__note {
+  width: 100%;
+  resize: vertical;
+  min-height: 84px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+
+.pzn-decision__note::placeholder { color: var(--color-text-muted); }
+
+.pzn-decision__note:focus-visible {
+  outline: none;
+  border-color: var(--color-primary-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-soft) 22%, transparent);
+}
+
+.pzn-decision__note.has-error {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 15%, transparent);
+  animation: pzn-shake 360ms var(--ease-out-soft);
+}
+
+.pzn-decision__error { margin: 0; font-size: 12px; font-weight: 600; color: var(--color-danger); animation: sims-fade-in var(--motion-base) ease-out; }
+
+.pzn-decision__actions { display: grid; grid-template-columns: 1fr 1.25fr; gap: var(--space-3); margin-top: var(--space-3); }
+
+.pzn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pzn-btn svg { width: 16px; height: 16px; stroke-width: 2.6; }
+.pzn-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pzn-btn--reject { background: var(--color-surface); border-color: var(--color-danger-border); color: var(--color-danger); }
+.pzn-btn--reject:not(:disabled):hover { background: var(--color-danger-bg); border-color: var(--color-danger); }
+
+.pzn-btn--approve { background: var(--color-primary); color: #fff; }
+.pzn-btn--approve:not(:disabled):hover { background: var(--color-primary-hover); }
+.pzn-btn--approve:not(:disabled):active { background: var(--color-primary-active); }
+
+@keyframes pzn-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}

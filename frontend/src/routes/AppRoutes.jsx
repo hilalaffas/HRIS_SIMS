@@ -35,6 +35,9 @@ const Absensi = lazyPage(() => import('../pages/Absensi/absensi'));
 const Lembur = lazyPage(() => import('../pages/Lembur/Lembur'));
 // [BARU] Halaman Persetujuan Sakit & Lembur (SuperAdmin)
 const Persetujuan = lazyPage(() => import('../pages/Persetujuan/Persetujuan'));
+// [BARU] Halaman Persetujuan Surat Sakit & Izin (Leader/SPV/Manager) -- menggantikan tab "Izin Sakit"
+// di Pusat Persetujuan.
+const PersetujuanIzin = lazyPage(() => import('../pages/PersetujuanIzin/PersetujuanIzin'));
 import { isManagerOrSpv, isSuperAdmin } from '../utils/roles';
 
 
@@ -92,6 +95,12 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
                 : isManagerOrSpv(user) ? <Navigate to="/ApproveLeave?tab=lembur" replace />
                 : <Navigate to="/dashboard" replace />
             }
+          />
+
+          {/* [BARU] Persetujuan Surat Sakit & Izin: hanya Leader/SPV/Manager (backend juga menolak 403 untuk role lain) */}
+          <Route
+            path="/persetujuan-izin"
+            element={isManagerOrSpv(user) ? <PersetujuanIzin /> : <Navigate to="/dashboard" replace />}
           />
 
           {/* Wadah Halaman Manajemen Karyawan */}

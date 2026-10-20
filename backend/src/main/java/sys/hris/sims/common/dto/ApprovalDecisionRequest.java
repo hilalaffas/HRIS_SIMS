@@ -7,4 +7,8 @@ import lombok.Data;
 @Data
 public class ApprovalDecisionRequest {
     private String status;
+
+    // [BARU] Catatan untuk karyawan -- wajib saat REJECTED pada persetujuan Sakit,
+    // diabaikan oleh persetujuan Lembur.
+    private String note;
 }

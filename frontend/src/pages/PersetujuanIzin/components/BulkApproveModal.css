@@ -1,0 +1,45 @@
+/* src/pages/PersetujuanIzin/components/BulkApproveModal.css */
+.pzn-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(15, 23, 42, 0.5);
+  animation: sims-fade-in var(--motion-base) ease-out backwards;
+}
+
+.pzn-modal-overlay.is-closing { animation: sims-fade-out 180ms var(--ease-in) forwards; }
+
+.pzn-modal {
+  width: min(440px, 100%);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md), 0 24px 40px -12px rgba(15, 23, 42, 0.35);
+  text-align: center;
+  animation: sims-modal-in var(--motion-slow) var(--ease-out-expo) backwards;
+}
+
+.pzn-modal-overlay.is-closing .pzn-modal { animation: sims-modal-out 180ms var(--ease-in) forwards; }
+
+.pzn-modal__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: var(--space-3);
+  border-radius: 50%;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.pzn-modal__icon svg { width: 26px; height: 26px; }
+.pzn-modal h2 { margin: 0 0 var(--space-2); font-size: 18px; color: var(--color-text); }
+.pzn-modal p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--color-text-secondary); }
+
+.pzn-modal__actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: var(--space-3); margin-top: var(--space-5); }
+.pzn-modal__btn { height: 42px; }
+.pzn-modal .pzn-btn--reject { color: var(--color-text); border-color: var(--color-border); }
+.pzn-modal .pzn-btn--reject:not(:disabled):hover { background: var(--color-bg-page); border-color: var(--color-text-muted); }

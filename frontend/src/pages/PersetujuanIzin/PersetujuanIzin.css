@@ -1,0 +1,156 @@
+/* src/pages/PersetujuanIzin/PersetujuanIzin.css
+ * Layout halaman, header, dan panel dua kolom. Gaya tiap komponen ada di
+ * components/*.css (co-located). Semua warna memakai styles/tokens.css, jadi
+ * otomatis ikut tema gelap. */
+
+.pzn-page {
+  --pzn-purple: #7c3aed;
+  --pzn-purple-bg: #f3edff;
+  --pzn-purple-border: #ddd0fb;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: var(--page-max-width, 1440px);
+  margin: 0 auto;
+}
+
+[data-theme='dark'] .pzn-page {
+  --pzn-purple: #b79cff;
+  --pzn-purple-bg: #241a3d;
+  --pzn-purple-border: #43307a;
+}
+
+/* ============ HEADER ============ */
+.pzn-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  animation: sims-rise-in var(--motion-slow) var(--ease-out-expo) backwards;
+}
+
+.pzn-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.pzn-header h1 svg { width: 26px; height: 26px; color: var(--color-success); }
+.pzn-header p { margin: 0; font-size: 14px; color: var(--color-text-secondary); }
+
+.pzn-bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pzn-bulk-btn svg { width: 16px; height: 16px; color: var(--color-success); }
+.pzn-bulk-btn:not(:disabled):hover { border-color: var(--color-primary-soft); background: var(--color-primary-tint); }
+.pzn-bulk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============ PANEL ============ */
+.pzn-panel {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  animation: sims-rise-in var(--motion-slow) var(--ease-out-expo) 120ms backwards;
+}
+
+.pzn-panel__bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-5) var(--space-6) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pzn-panel__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  --pzn-pane-height: clamp(460px, calc(100vh - 380px), 780px);
+}
+
+.pzn-panel__list,
+.pzn-panel__detail {
+  max-height: var(--pzn-pane-height);
+  min-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pzn-panel__detail { border-left: 1px solid var(--color-border); background: var(--color-bg-page); }
+
+.pzn-detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 360px;
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.pzn-detail-empty svg { width: 36px; height: 36px; opacity: 0.7; }
+.pzn-detail-empty p { margin: 0; max-width: 240px; font-size: 14px; color: var(--color-text-secondary); }
+
+/* ============ RESPONSIF ============ */
+@media (max-width: 900px) {
+  .pzn-panel__body { grid-template-columns: 1fr; }
+  .pzn-panel__list { max-height: 420px; min-height: 0; }
+  .pzn-panel__detail { max-height: none; border-left: 0; border-top: 1px solid var(--color-border); }
+  .pzn-panel__bar { padding: var(--space-4) var(--space-4) 0; }
+  .pzn-tabs { margin-bottom: 0; }
+}
+
+@media (max-width: 520px) {
+  .pzn-header h1 { font-size: 20px; }
+  .pzn-bulk-btn { width: 100%; justify-content: center; }
+}
+
+/* ============ GERAK MINIMAL (aksesibilitas) ============ */
+@media (prefers-reduced-motion: reduce) {
+  .pzn-stat,
+  .pzn-header,
+  .pzn-panel,
+  .pzn-item,
+  .pzn-detail,
+  .pzn-state,
+  .pzn-modal-overlay,
+  .pzn-modal,
+  .pzn-decision__note.has-error,
+  .pzn-skeleton__avatar::after,
+  .pzn-skeleton__lines span::after {
+    animation: none !important;
+  }
+
+  .pzn-item-wrap,
+  .pzn-item,
+  .pzn-tab::after,
+  .pzn-attach__preview img {
+    transition: none !important;
+  }
+}

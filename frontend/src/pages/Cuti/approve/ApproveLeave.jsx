@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom'; // [BARU] baca query param dari notifikasi cuti
 import './ApproveLeave.css';
 
@@ -7,12 +7,10 @@ import TabMenu from './components/TabMenu';
 import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
-import SickApprovalSection from './components/SickApprovalSection'; // [BARU] tab Izin Sakit
 import OvertimeApprovalSection from '../../Persetujuan/components/OvertimeApprovalSection'; // [BARU] tab Persetujuan Lembur
 import useOvertimeApprovals from '../../../hooks/useOvertimeApprovals'; // [BARU]
 import ActionReasonModal from './components/ActionReasonModal';
 import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
-import { decideSickApproval, getSickApprovals } from '../../../services/attendanceService'; // [BARU]
 import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
 
 /**
@@ -40,8 +38,8 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU]
   // [BARU] Persetujuan Lembur hanya untuk Leader/SPV/Manager (HR Karyawan tidak).
   const canApproveOvertime = isManagerOrSpv(user);
-  // [UBAH] 'proses' | 'list' | 'sakit' | 'lembur'. Tab awal bisa dipilih lewat
-  // ?tab=lembur (dipakai redirect dari URL lama /persetujuan).
+  // [UBAH] 'proses' | 'list' | 'lembur'. Tab awal bisa dipilih lewat ?tab=lembur
+  // (dipakai redirect dari URL lama /persetujuan). Izin Sakit pindah ke halaman /persetujuan-izin.
   const [activeTab, setActiveTab] = useState(
     () => (searchParams.get('tab') === 'lembur' && canApproveOvertime ? 'lembur' : 'proses')
   );
@@ -90,51 +88,6 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
     } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
   }, [mergeSisaCutiPemohon]);
   useEffect(() => { loadData(); }, [loadData]);
-
-  // [BARU] Izin Sakit -- hanya untuk Leader/SPV/Manager. Backend sudah memfilter
-  // bawahan di divisi yang sama (AttendanceService + ApprovalScopeService).
-  const canApproveSick = isManagerOrSpv(user);
-  const [sickItems, setSickItems] = useState([]);
-  const [sickLoading, setSickLoading] = useState(canApproveSick);
-  const [sickProcessingKey, setSickProcessingKey] = useState('');
-  // Gerbang sinkron anti klik ganda (state saja terlambat satu render).
-  const sickProcessingLock = useRef(false);
-
-  useEffect(() => {
-    if (!canApproveSick) return undefined;
-    let cancelled = false;
-    getSickApprovals()
-      .then((data) => {
-        if (!cancelled) setSickItems(data || []);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message || 'Gagal memuat data izin sakit.');
-      })
-      .finally(() => {
-        if (!cancelled) setSickLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [canApproveSick]);
-
-  const handleSickDecision = async (row, status) => {
-    if (sickProcessingLock.current) return;
-    sickProcessingLock.current = true;
-    setSickProcessingKey(row.rowKey);
-    try {
-      await decideSickApproval(row.id, status);
-      // Baris tetap tampil dengan status baru (Disetujui / Ditolak).
-      setSickItems((current) => current.map((item) => (
-        item.attendanceId === row.id ? { ...item, approvalStatus: status } : item
-      )));
-    } catch (err) {
-      alert(err.message || 'Izin sakit gagal diproses.');
-    } finally {
-      sickProcessingLock.current = false;
-      setSickProcessingKey('');
-    }
-  };
 
   // Permohonan yang sedang menunggu alasan dari approver.
   // Bentuknya { item, action } | null. Selama ini bernilai isi,
@@ -202,22 +155,18 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
     } catch (err) { alert(err.message || 'Aksi cuti gagal diproses.'); }
   };
 
-  const sickPendingCount = sickItems.filter((item) => item.approvalStatus === 'PENDING').length;
-
   // [BARU] Data Persetujuan Lembur dimuat di sini (bukan di dalam tab) supaya
   // badge jumlah tetap muncul walau tab belum dibuka.
   const overtime = useOvertimeApprovals(canApproveOvertime);
 
-  // [UBAH] Tab "Izin Sakit" hanya muncul untuk Leader/SPV/Manager.
   const tabs = useMemo(
     () => [
       { key: "proses", label: "Perlu Diproses", badge: pendingCount },
       { key: "list", label: "List Cuti", badge: 0 },
-      ...(canApproveSick ? [{ key: "sakit", label: "Izin Sakit", badge: sickPendingCount }] : []),
       // [BARU] Tab Persetujuan Lembur (pindahan dari menu sidebar)
       ...(canApproveOvertime ? [{ key: "lembur", label: "Persetujuan Lembur", badge: overtime.pendingCount }] : []),
     ],
-    [pendingCount, canApproveSick, sickPendingCount, canApproveOvertime, overtime.pendingCount]
+    [pendingCount, canApproveOvertime, overtime.pendingCount]
   );
 
   return (
@@ -237,14 +186,6 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
         )}
         {activeTab === "list" && (
           <ListCutiSection data={history} onOpenDetail={handleOpenDetail} />
-        )}
-        {activeTab === "sakit" && canApproveSick && (
-          <SickApprovalSection
-            items={sickItems}
-            loading={sickLoading}
-            processingKey={sickProcessingKey}
-            onDecision={handleSickDecision}
-          />
         )}
         {/* [BARU] Tab Persetujuan Lembur */}
         {activeTab === "lembur" && canApproveOvertime && (

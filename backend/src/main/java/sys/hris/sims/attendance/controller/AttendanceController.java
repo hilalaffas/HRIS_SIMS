@@ -159,7 +159,7 @@ public class AttendanceController {
             @RequestBody ApprovalDecisionRequest request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
-        AttendanceResponse response = attendanceService.decideSick(attendanceId, request.getStatus(), authentication);
+        AttendanceResponse response = attendanceService.decideSick(attendanceId, request.getStatus(), request.getNote(), authentication);
 
         activityLogService.log(
                 authentication.getName(),

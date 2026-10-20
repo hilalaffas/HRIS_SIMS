@@ -60,6 +60,10 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
       badgeStyle: { backgroundColor: '#ff4d4d' }, 
       count: notificationCounts?.approval ?? 0
     },
+    // [BARU] Persetujuan Surat Sakit & Izin -- hanya Leader/SPV/Manager (HRD Karyawan tidak berwenang)
+    ...(userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader')
+      ? [{ path: '/persetujuan-izin', name: 'Surat Sakit & Izin', icon: 'fa-solid fa-file-medical' }]
+      : []),
   ];
 
   // Menu Khusus HRD (Gambar 3)

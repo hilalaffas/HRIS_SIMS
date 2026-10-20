@@ -1,0 +1,69 @@
+/* src/pages/PersetujuanIzin/components/AttachmentPreview.css */
+.pzn-attach { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.pzn-attach__preview {
+  display: block;
+  max-height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+}
+
+.pzn-attach__preview img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  object-position: top;
+  transition: transform var(--motion-slow) var(--ease-out-soft);
+}
+
+.pzn-attach__preview:hover img { transform: scale(1.03); }
+
+.pzn-attach__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 120px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pzn-attach__fallback svg { width: 28px; height: 28px; }
+
+.pzn-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.pzn-file svg { flex: none; width: 15px; height: 15px; color: var(--color-text-secondary); }
+.pzn-file__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pzn-file__open { opacity: 0; transition: opacity var(--motion-fast) ease; }
+.pzn-file:hover .pzn-file__open { opacity: 1; }
+.pzn-file:hover .pzn-file__name { text-decoration: underline; }
+
+.pzn-attach--empty {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.pzn-attach--empty svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+.pzn-attach--empty p { margin: 0; font-size: 13px; line-height: 1.5; font-weight: 600; }

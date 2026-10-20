@@ -99,6 +99,14 @@ public class Attendance {
     @Column(name = "document_required", nullable = false)
     private Boolean documentRequired;
 
+    // [BARU] Catatan peninjau untuk karyawan (wajib saat DITOLAK) & waktu keputusan.
+    // Dipakai halaman Persetujuan Surat Sakit & Izin (migration V48).
+    @Column(name = "review_note", length = 500)
+    private String reviewNote;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
     // [BARU] Jam & tanggal SELALU diisi di sini (server), tidak pernah
     // diterima dari request client -- lihat AttendanceSubmitRequest yang
     // sengaja TIDAK punya field jam/tanggal sama sekali.

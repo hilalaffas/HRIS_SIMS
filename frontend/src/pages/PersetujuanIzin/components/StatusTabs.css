@@ -1,0 +1,48 @@
+/* src/pages/PersetujuanIzin/components/StatusTabs.css */
+.pzn-tabs { display: flex; align-items: center; gap: var(--space-6); }
+
+.pzn-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px 14px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.pzn-tab:hover { color: var(--color-text-secondary); }
+.pzn-tab.is-active { color: var(--color-text); font-weight: 700; }
+
+/* Garis bawah: tumbuh dari tengah (transform saja, tanpa reflow). */
+.pzn-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-primary);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transition: transform var(--motion-base) var(--ease-out-soft);
+}
+
+.pzn-tab.is-active::after { transform: scaleX(1); }
+
+.pzn-tab__badge {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}

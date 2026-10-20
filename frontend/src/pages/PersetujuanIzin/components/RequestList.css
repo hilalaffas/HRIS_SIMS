@@ -1,0 +1,48 @@
+/* src/pages/PersetujuanIzin/components/RequestList.css */
+.pzn-list { margin: 0; padding: 0; list-style: none; }
+
+.pzn-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 260px;
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  text-align: center;
+  animation: sims-fade-in var(--motion-base) ease-out backwards;
+}
+
+.pzn-state svg { width: 40px; height: 40px; opacity: 0.7; }
+.pzn-state p { margin: 0; max-width: 280px; font-size: 14px; color: var(--color-text-secondary); }
+.pzn-state--error svg { color: var(--color-danger); opacity: 1; }
+
+.pzn-skeleton {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pzn-skeleton__avatar,
+.pzn-skeleton__lines span {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.pzn-skeleton__avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; }
+.pzn-skeleton__lines { display: flex; flex-direction: column; gap: 8px; flex: 1; padding-top: 4px; }
+.pzn-skeleton__lines span { display: block; height: 12px; }
+
+/* Kilau digeser dengan transform (jalur GPU). */
+.pzn-skeleton__avatar::after,
+.pzn-skeleton__lines span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-surface) 70%, transparent), transparent);
+  animation: sims-indeterminate 1.2s var(--ease-in-out) infinite;
+}

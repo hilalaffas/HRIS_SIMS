@@ -52,4 +52,11 @@ public class AttendanceResponse {
     // [BARU] URL surat dokter (null = belum diunggah) & apakah surat wajib.
     private String documentUrl;
     private Boolean documentRequired;
+
+    // [BARU] Nama divisi karyawan (untuk daftar Persetujuan Surat Sakit & Izin).
+    private String divisionName;
+
+    // [BARU] Catatan peninjau (alasan tolak) & waktu keputusan; null selama PENDING.
+    private String reviewNote;
+    private LocalDateTime reviewedAt;
 }

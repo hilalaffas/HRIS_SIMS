@@ -1,0 +1,66 @@
+/* src/pages/PersetujuanIzin/components/VerificationChecklist.css */
+.pzn-check { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+
+.pzn-section-label {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.pzn-check__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 14px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.pzn-check__row:hover { border-color: var(--color-primary-soft); }
+.pzn-check__row.is-checked { border-color: var(--color-success-border); background: var(--color-success-bg); }
+
+.pzn-check__row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pzn-check__box {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--color-text-muted);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: #fff;
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+}
+
+.pzn-check__box svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity var(--motion-fast) ease, transform var(--motion-base) var(--ease-out-expo);
+}
+
+.pzn-check__row.is-checked .pzn-check__box { background: var(--color-primary); border-color: var(--color-primary); }
+.pzn-check__row.is-checked .pzn-check__box svg { opacity: 1; transform: scale(1); }
+
+.pzn-check__row input:focus-visible + .pzn-check__box {
+  outline: 2px solid var(--color-primary-soft);
+  outline-offset: 2px;
+}

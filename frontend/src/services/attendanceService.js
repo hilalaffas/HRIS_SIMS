@@ -29,12 +29,16 @@ export async function getLocationName(latitude, longitude) {
 // [UBAH] Persetujuan Sakit (Leader/SPV/Manager, tab "Izin Sakit" di Persetujuan Cuti):
 // daftar pengajuan bawahan di divisi yang sama & keputusan.
 // status: 'APPROVED' | 'REJECTED'
-export async function getSickApprovals() {
-  return api.get('/api/absensi/approvals/sakit');
+// [UBAH] + `config` opsional ({ silent: true } untuk polling latar belakang).
+export async function getSickApprovals(config = {}) {
+  return api.get('/api/absensi/approvals/sakit', config);
 }
 
-export async function decideSickApproval(attendanceId, status) {
-  return api.put(`/api/absensi/${attendanceId}/approval`, { status });
+// [UBAH] + `note` (catatan untuk karyawan). WAJIB saat status 'REJECTED' --
+// backend menolak tanpa catatan (AttendanceService.decideSick()).
+export async function decideSickApproval(attendanceId, status, note) {
+  const body = note ? { status, note } : { status };
+  return api.put(`/api/absensi/${attendanceId}/approval`, body);
 }
 
 // POST catat absensi. `photoBlob` WAJIB, `latitude`/`longitude` WAJIB --

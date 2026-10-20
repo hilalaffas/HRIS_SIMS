@@ -327,7 +327,7 @@ public class AttendanceService {
 
     // [BARU] Setujui / tolak pengajuan Sakit. Hanya yang masih PENDING yang
     // bisa diputuskan, supaya keputusan tidak bolak-balik tanpa jejak.
-    public AttendanceResponse decideSick(Long attendanceId, String decision, Authentication authentication) {
+    public AttendanceResponse decideSick(Long attendanceId, String decision, String note, Authentication authentication) {
         String status = normalize(decision);
         if (!status.equals("APPROVED") && !status.equals("REJECTED")) {
             throw new IllegalArgumentException("Keputusan tidak valid. Gunakan APPROVED atau REJECTED.");
@@ -346,7 +346,18 @@ public class AttendanceService {
             throw new IllegalStateException("Pengajuan ini sudah diproses.");
         }
 
+        // [BARU] Menolak WAJIB disertai catatan supaya karyawan tahu apa yang harus diperbaiki.
+        String reviewNote = note == null ? "" : note.trim();
+        if (status.equals("REJECTED") && reviewNote.length() < 3) {
+            throw new IllegalArgumentException("Catatan untuk karyawan wajib diisi saat menolak.");
+        }
+        if (reviewNote.length() > 500) {
+            throw new IllegalArgumentException("Catatan maksimal 500 karakter.");
+        }
+
         attendance.setApprovalStatus(status);
+        attendance.setReviewNote(reviewNote.isEmpty() ? null : reviewNote);
+        attendance.setReviewedAt(LocalDateTime.now());
         return toResponse(attendanceRepository.save(attendance));
     }
 
@@ -382,6 +393,8 @@ public class AttendanceService {
                     "Di tanggal itu sudah ada absen Masuk / pengajuan aktif lain. Hapus dulu data tersebut.");
         }
         attendance.setApprovalStatus("PENDING");
+        attendance.setReviewNote(null);
+        attendance.setReviewedAt(null);
         return toResponse(attendanceRepository.save(attendance));
     }
 
@@ -440,6 +453,10 @@ public class AttendanceService {
                 .leaveDays(attendance.getLeaveDays())
                 .documentUrl(attendance.getDocumentUrl())
                 .documentRequired(attendance.getDocumentRequired())
+                .divisionName(attendance.getEmployee().getDivisi() == null
+                        ? null : attendance.getEmployee().getDivisi().getNamaDivisi())
+                .reviewNote(attendance.getReviewNote())
+                .reviewedAt(attendance.getReviewedAt())
                 .build();
     }
 
