@@ -74,8 +74,8 @@ const ForgotPassword = () => {
 
       {/* Modal konfirmasi reset sandi */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-105 overflow-hidden">
+        <div className="sims-overlay-enter fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4">
+          <div className="sims-modal-enter bg-white rounded-2xl shadow-2xl w-full max-w-105 overflow-hidden">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
@@ -109,7 +109,7 @@ const ForgotPassword = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-3xl w-full max-w-100 p-8 shadow-2xl relative">
+      <div className="sims-auth-card bg-white rounded-3xl w-full max-w-100 p-8 shadow-2xl relative">
 
         {!isSubmitted ? (
           <>

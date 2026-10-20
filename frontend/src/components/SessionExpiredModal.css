@@ -85,3 +85,29 @@
 .session-modal-btn-ok:hover {
   background-color: var(--color-primary-hover);
 }
+
+
+/* [BARU] Animasi masuk & keluar (lihat SessionExpiredModal.jsx) */
+.session-modal-overlay {
+  animation: sims-fade-in var(--motion-base) ease-out backwards;
+}
+
+.session-modal-card {
+  animation: sims-modal-in var(--motion-slow) var(--ease-out-expo) backwards;
+}
+
+.session-modal-overlay.is-closing {
+  animation: sims-fade-out 180ms var(--ease-in) forwards;
+  pointer-events: none;
+}
+
+.session-modal-overlay.is-closing .session-modal-card {
+  animation: sims-modal-out 180ms var(--ease-in) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-modal-overlay,
+  .session-modal-card {
+    animation: none;
+  }
+}

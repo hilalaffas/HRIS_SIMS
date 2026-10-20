@@ -52,19 +52,51 @@
   transition: background-color 0.3s ease; /* [BARU] */
 }
 
-/* [BARU] Transisi masuk halaman saat berpindah route (hanya opacity & transform) */
+/* [UBAH] Transisi masuk halaman saat berpindah route (hanya opacity & transform).
+   Sebelumnya ease-out 0.28s / naik 8px; sekarang easing expo-out yang mengendap
+   lebih halus (keyframes `sims-rise-in` ada di styles/motion.css). Tanpa
+   fill-mode sengaja: transform tidak boleh tertinggal setelah animasi selesai
+   (akan merusak anak ber-position: fixed seperti modal). */
 .route-transition {
   min-height: 100%;
-  animation: routeFadeIn 0.28s ease-out;
+  animation: sims-rise-in var(--motion-slow) var(--ease-out-expo);
 }
 
-@keyframes routeFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* [BARU] Masuk ke aplikasi (login -> dashboard): latar memudar dari hijau brand
+   ke warna konten, area kanan (navbar + konten + footer) muncul perlahan.
+   Sidebar sudah hijau, jadi terasa nyambung dari halaman login. */
+.layout-container {
+  animation: sims-app-bg-in var(--motion-page) ease-out;
+}
+
+.layout-container > .main-area-wrapper {
+  animation: sims-fade-in var(--motion-page) var(--ease-out-soft) backwards;
+}
+
+/* [BARU] Keluar dari aplikasi (logout / sesi habis): dipicu atribut
+   data-app-leaving di <html> (lihat utils/appTransition.js). Isi memudar dan
+   latar berubah jadi hijau brand = warna halaman login. Durasi sinkron dengan
+   APP_LEAVE_MS (260ms). */
+html[data-app-leaving] .layout-container {
+  background-color: var(--color-primary);
+  transition: background-color 260ms var(--ease-in);
+}
+
+html[data-app-leaving] .main-area-wrapper {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms var(--ease-in);
+}
+
+html[data-app-leaving] .sidebar-wrapper > * {
+  opacity: 0;
+  transition: opacity 200ms var(--ease-in);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .route-transition { animation: none; }
+  .route-transition,
+  .layout-container,
+  .layout-container > .main-area-wrapper { animation: none; }
 }
 
 /* Responsif padding untuk content-outlet — dipadatkan satu tingkat dari sebelumnya */
@@ -156,7 +188,7 @@
     
     /* Animasi Slide dari kiri */
     transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
+    transition: transform var(--motion-slow) var(--ease-out-expo); /* [UBAH] ease-in-out -> expo-out */
     box-shadow: 4px 0 15px rgba(0,0,0,0.1); 
   }
 
@@ -174,7 +206,13 @@
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.6) !important;
     z-index: 9998 !important; /* Di bawah sidebar, di atas konten */
-    animation: fadeIn 0.3s ease-in-out;
+    animation: sims-fade-in var(--motion-slow) ease-out; /* [UBAH] fadeIn lama -> sims-fade-in */
+  }
+
+  /* [BARU] Memudar saat sidebar ditutup (lihat usePresence di MainLayout.jsx) */
+  .mobile-overlay.is-closing {
+    animation: sims-fade-out 250ms var(--ease-in) forwards;
+    pointer-events: none;
   }
 
   @keyframes fadeIn {

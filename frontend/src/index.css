@@ -1,6 +1,7 @@
 /* STREAMING_CHUNK: Menerapkan directive Tailwind CSS utama */
 @import "tailwindcss";
 @import "./styles/tokens.css";
+@import "./styles/motion.css"; /* [BARU] token & aturan gerak global (animasi transisi) */
 
 /* [BARU] Varian Tailwind `dark:` mengikuti atribut data-theme="dark" (bukan
    setelan OS), supaya class seperti `dark:bg-slate-900` bisa dipakai saat

@@ -1,10 +1,28 @@
 // src/components/LogoutModal.jsx
 import React from 'react';
 import './LogoutModal.css'; 
+import useModalExit from '../hooks/useModalExit'; // [BARU] animasi keluar modal
+import { APP_LEAVE_MS, beginAppLeave, endAppLeave } from '../utils/appTransition'; // [BARU] transisi keluar aplikasi
 
 export default function LogoutModal({ onConfirm, onCancel }) {
+  // [BARU] Callback parent (onCancel / onConfirm) TIDAK diubah -- hanya
+  // dipanggil setelah animasi keluar selesai, jadi alur logout tetap sama.
+  const { closing, close } = useModalExit();
+
+  const handleCancel = () => close(onCancel);
+
+  const handleConfirm = () => {
+    // Latar aplikasi memudar ke hijau brand (nyambung ke halaman login)
+    // selagi modal menutup, baru sesi dibersihkan.
+    beginAppLeave();
+    close(() => {
+      onConfirm();
+      endAppLeave();
+    }, APP_LEAVE_MS);
+  };
+
   return (
-    <div className="modal-overlay">
+    <div className={`modal-overlay logout-modal-overlay${closing ? ' is-closing' : ''}`}>
       <div className="modal-card">
         <div className="modal-body">
           
@@ -24,10 +42,10 @@ export default function LogoutModal({ onConfirm, onCancel }) {
           </p>
           
           <div className="modal-actions">
-            <button onClick={onCancel} className="btn-cancel">
+            <button onClick={handleCancel} className="btn-cancel">
               Batal
             </button>
-            <button onClick={onConfirm} className="btn-confirm">
+            <button onClick={handleConfirm} className="btn-confirm">
               Konfirmasi
             </button>
           </div>

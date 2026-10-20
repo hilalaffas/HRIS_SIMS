@@ -1,5 +1,5 @@
 // src/layouts/MainLayout.jsx
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
@@ -10,6 +10,10 @@ import useServerFeatureFlags from '../hooks/useServerFeatureFlags'; // [BARU]
 import { isThemeToggleEnabled } from '../utils/featureFlags'; // [BARU]
 import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
+import usePresence from '../hooks/usePresence'; // [BARU] animasi keluar overlay sidebar mobile
+import RouteFallback from '../components/RouteFallback'; // [BARU] indikator saat chunk halaman diunduh
+import RouteErrorBoundary from '../components/RouteErrorBoundary'; // [BARU] pengaman chunk gagal dimuat
+import { preloadLazyPages } from '../routes/lazyPages'; // [BARU] unduh halaman lain saat idle
 
 // Pastikan Anda sudah menginstal fontawesome: npm install @fortawesome/fontawesome-free
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -20,6 +24,14 @@ export default function MainLayout({ onLogout, user }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [approvalCount, setApprovalCount] = useState(0);
   const location = useLocation();
+  // [BARU] Overlay tetap di DOM sebentar setelah sidebar ditutup supaya bisa memudar.
+  const overlay = usePresence(isSidebarOpen, 250);
+
+  // [BARU] Setelah layout tampil & browser idle, unduh diam-diam chunk halaman
+  // lain (Absensi, Lembur, Profil, dll.) agar saat menu diklik langsung terbuka.
+  useEffect(() => {
+    preloadLazyPages();
+  }, []);
   // [BARU] Tema terang/gelap (disimpan di localStorage, lihat hooks/useTheme.js)
   const { theme, isDark, toggleTheme } = useTheme();
   // [UBAH] Saklar fitur dari /devAccess (disimpan di server). Kalau MATI, tombol hilang dan tema
@@ -78,9 +90,9 @@ export default function MainLayout({ onLogout, user }) {
 
       {/* 3. Tambahkan overlay transparan agar user bisa menutup sidebar 
              dengan mengklik area luar sidebar saat di versi mobile */}
-      {isSidebarOpen && (
+      {overlay.mounted && (
         <div 
-          className="mobile-overlay" 
+          className={`mobile-overlay${overlay.closing ? ' is-closing' : ''}`}
           onClick={() => setIsSidebarOpen(false)}
         ></div>
       )}
@@ -96,9 +108,15 @@ export default function MainLayout({ onLogout, user }) {
         {/* MAIN CONTENT / OUTLET (Tengah) */}
         <section className="content-outlet">
           {/* [BARU] key = pathname -> animasi masuk halus setiap pindah halaman */}
-          <div key={location.pathname} className="route-transition">
-            <Outlet />
-          </div>
+          {/* [BARU] Suspense + error boundary DI LUAR div ber-key: halaman lazy yang
+              baru selesai diunduh tetap memutar animasi masuknya. */}
+          <RouteErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={<RouteFallback />}>
+              <div key={location.pathname} className="route-transition">
+                <Outlet />
+              </div>
+            </Suspense>
+          </RouteErrorBoundary>
         </section>
 
         {/* 3. FOOTER (Bawah) */}

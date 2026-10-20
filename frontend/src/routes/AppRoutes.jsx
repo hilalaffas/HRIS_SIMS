@@ -1,5 +1,5 @@
 // src/routes/AppRoutes.jsx
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from '../components/ProtectedRoute';
 import PublicRoute from '../components/PublicRoute'; 
@@ -8,8 +8,8 @@ import { DEV_ACCESS_PATH } from '../config/devAccessConfig';
 import MainLayout from '../layouts/MainLayout';
 import Dashboard from '../pages/Dashboard/Dashboard';
 import ApplyCuti from '../pages/Cuti/applycuti/ApplyCuti';
-import ProfilePage from '../pages/Profile/profile';
-import ForgotPassword from '../pages/ForgotPassword/ForgotPassword';
+import RouteFallback from '../components/RouteFallback'; // [BARU]
+import { lazyPage } from './lazyPages'; // [BARU] code-splitting per halaman
 import ApproveLeave from '../pages/Cuti/approve/ApproveLeave';
 import Karyawan from '../pages/Karyawan/Karyawan';
 // [BARU] Halaman Riwayat Cuti (sebelumnya placeholder <div>, sekarang
@@ -18,21 +18,29 @@ import RiwayatCuti from '../pages/Cuti/RiwayatCuti';
 // [BARU] Halaman pengaturan fitur tersembunyi -- SENGAJA tidak ditambahkan
 // ke config/menuConfig.js, jadi tidak muncul di Sidebar mana pun. Cuma bisa
 // diakses dengan mengetik path-nya langsung (lihat rute di bawah).
-import DevSettings from '../pages/DevSettings/DevSettings';
+// [UBAH] DevSettings, Profile, ForgotPassword, Absensi, Lembur, Persetujuan sekarang
+// di-lazy-load (diunduh saat dibutuhkan / saat idle) supaya bundle awal lebih kecil.
+// Halaman Cuti & Karyawan sengaja TETAP eager: beberapa class CSS global-nya
+// (.form-cuti__*, .filter-status*) sama antar halaman, jadi urutan muat CSS-nya
+// harus tetap seperti semula agar tampilan tidak bergeser.
+const DevSettings = lazyPage(() => import('../pages/DevSettings/DevSettings'));
+const ProfilePage = lazyPage(() => import('../pages/Profile/profile'));
+const ForgotPassword = lazyPage(() => import('../pages/ForgotPassword/ForgotPassword'));
 // [BARU] Halaman Absensi -- sebelumnya placeholder <div> statis, sekarang
 // terhubung ke pages/Absensi/absensi.jsx (kartu Masuk/Keluar/Sakit,
 // status hari ini, riwayat harian di samping, modal kamera, backend
 // nyata). Lihat pages/Absensi/README.md.
-import Absensi from '../pages/Absensi/absensi';
+const Absensi = lazyPage(() => import('../pages/Absensi/absensi'));
 // [BARU] Halaman Pengajuan Lembur (menu di bawah Absensi saya)
-import Lembur from '../pages/Lembur/Lembur';
+const Lembur = lazyPage(() => import('../pages/Lembur/Lembur'));
 // [BARU] Halaman Persetujuan Sakit & Lembur (SuperAdmin)
-import Persetujuan from '../pages/Persetujuan/Persetujuan';
+const Persetujuan = lazyPage(() => import('../pages/Persetujuan/Persetujuan'));
 import { isManagerOrSpv, isSuperAdmin } from '../utils/roles';
 
 
 export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       {/* 1. HALAMAN UTAMA: Preview development langsung membuka dashboard. */}
       <Route path="/" element={<Navigate to={import.meta.env.DEV ? "/dashboard" : "/login"} replace />} />
@@ -121,5 +129,6 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
       {/* 4. CATCH-ALL ROUTE */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </Suspense>
   );
 }

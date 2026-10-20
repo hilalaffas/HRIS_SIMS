@@ -93,3 +93,29 @@
 }
 
 .btn-confirm:hover { background-color: #008256; }
+
+/* [BARU] Animasi masuk & keluar. Selector digandakan (.modal-overlay.logout-modal-overlay)
+   supaya menang atas .modal-overlay milik LeaveDetailModal.css yang namanya sama (global). */
+.modal-overlay.logout-modal-overlay {
+  animation: sims-fade-in var(--motion-base) ease-out backwards;
+}
+
+.modal-overlay.logout-modal-overlay .modal-card {
+  animation: sims-modal-in var(--motion-slow) var(--ease-out-expo) backwards;
+}
+
+.modal-overlay.logout-modal-overlay.is-closing {
+  animation: sims-fade-out 180ms var(--ease-in) forwards;
+  pointer-events: none; /* cegah klik ganda selama animasi keluar */
+}
+
+.modal-overlay.logout-modal-overlay.is-closing .modal-card {
+  animation: sims-modal-out 180ms var(--ease-in) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay.logout-modal-overlay,
+  .modal-overlay.logout-modal-overlay .modal-card {
+    animation: none;
+  }
+}

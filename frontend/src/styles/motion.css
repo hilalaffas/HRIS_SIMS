@@ -1,0 +1,155 @@
+/**
+ * motion.css
+ * ------------------------------------------------------------------
+ * Satu sumber kebenaran untuk gerak (animasi & transisi) di seluruh SIMS.
+ * Dipakai bersama tokens.css (warna/spacing). Aturan main:
+ *
+ *   1. Hanya animasikan `transform` & `opacity` (jalur GPU, 60fps).
+ *   2. Gerak selalu menjawab aksi user (buka/tutup, pindah halaman,
+ *      tekan tombol) -- tidak ada animasi dekoratif yang jalan sendiri.
+ *   3. Durasi: mikro 150ms | modal/dropdown 220-320ms | halaman 420ms.
+ *   4. Hormati `prefers-reduced-motion` (blok paling bawah).
+ *
+ * Semua nama @keyframes diawali `sims-` supaya tidak bentrok dengan
+ * keyframes lama di file CSS lain (mis. `fadeIn` sudah dipakai 2 file).
+ * ------------------------------------------------------------------
+ */
+
+:root {
+  /* ============ EASING ============ */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);   /* masuk: cepat, lalu mengendap halus */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);  /* umum: transisi state */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);            /* keluar: pelan lalu cepat hilang */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);      /* gerak berulang (loader) */
+
+  /* ============ DURASI ============ */
+  --motion-fast: 150ms;   /* hover, press, fokus */
+  --motion-base: 220ms;   /* overlay, dropdown */
+  --motion-slow: 320ms;   /* modal, drawer */
+  --motion-page: 420ms;   /* pindah zona (login <-> aplikasi) */
+}
+
+/* ===================== KEYFRAMES ===================== */
+
+/* Hanya `from` -> nilai akhir otomatis mengikuti style asli elemen. */
+@keyframes sims-fade-in   { from { opacity: 0; } }
+@keyframes sims-fade-out  { to   { opacity: 0; } }
+@keyframes sims-rise-in   { from { opacity: 0; transform: translateY(12px); } }
+@keyframes sims-modal-in  { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
+@keyframes sims-modal-out { to   { opacity: 0; transform: translateY(8px) scale(0.97); } }
+@keyframes sims-app-bg-in { from { background-color: var(--color-primary); } }
+@keyframes sims-indeterminate {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* ============ MIKRO-INTERAKSI GLOBAL ============
+   Semua selector dibungkus :where() => specificity 0, jadi gaya per-komponen
+   (yang sudah punya transition/hover sendiri) SELALU menang. Ini cuma
+   "lantai" minimum supaya elemen yang belum dianimasikan tidak terasa kaku. */
+
+:where(button, [role='button'], summary, a) {
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    scale var(--motion-fast) var(--ease-out-soft);
+}
+
+:where(input, select, textarea) {
+  transition:
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+:where(tbody tr) {
+  transition: background-color var(--motion-fast) ease;
+}
+
+/* Efek "ditekan": pakai properti `scale` (bukan `transform`) supaya tidak
+   menimpa transform milik komponen (mis. tombol yang diposisikan lewat
+   translate(-50%, -50%)). */
+:where(button:not(:disabled):active, [role='button']:not([aria-disabled='true']):active) {
+  scale: 0.97;
+}
+
+/* ============ MASUK UNTUK MODAL YANG BELUM PUNYA ANIMASI ============
+   Modal lain (Profile, Absensi, ConfirmDelete, NotifModal, dll.) sudah
+   punya animasi masuk sendiri dan TIDAK disentuh di sini.
+   Kartu memakai fill-mode `backwards` (bukan `both`) supaya setelah selesai
+   tidak ada `transform` yang tertinggal -- transform sisa akan membuat
+   elemen anak ber-`position: fixed` salah posisi. */
+
+.modal-overlay_notif_reset,
+.modal-overlay_notif_leave,
+.modal-overlay_leaveListHr,
+.modal-overlay_detail_karyawan,
+.modal-overlay_data_divisi,
+.photo-modal-overlay,
+.lmb-modal-overlay,
+.form-cuti__overlay {
+  animation: sims-fade-in var(--motion-base) ease-out backwards;
+}
+
+.modal-overlay_notif_reset > :first-child,
+.modal-overlay_notif_leave > :first-child,
+.modal-overlay_leaveListHr > :first-child,
+.modal-overlay_detail_karyawan > :first-child,
+.modal-overlay_data_divisi > :first-child,
+.photo-modal-overlay > :first-child,
+.lmb-modal-overlay > :first-child,
+.form-cuti__overlay > :first-child {
+  animation: sims-modal-in var(--motion-slow) var(--ease-out-expo) backwards;
+}
+
+/* ============ UTILITAS: modal berbasis class Tailwind inline ============
+   Untuk modal yang tidak punya file CSS sendiri (mis. konfirmasi di Lupa Sandi). */
+.sims-overlay-enter { animation: sims-fade-in var(--motion-base) ease-out backwards; }
+.sims-modal-enter   { animation: sims-modal-in var(--motion-slow) var(--ease-out-expo) backwards; }
+
+/* ============ KARTU LOGIN / LUPA SANDI ============
+   Latar hijau halaman TIDAK dianimasikan (supaya nyambung mulus dengan
+   transisi logout); hanya kartunya yang naik & muncul. */
+
+.sims-auth-card {
+  animation: sims-modal-in 520ms var(--ease-out-expo) backwards;
+}
+
+/* ============ REDUCED MOTION ============ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-base: 1ms;
+    --motion-slow: 1ms;
+    --motion-page: 1ms;
+  }
+
+  :where(button:not(:disabled):active, [role='button']:active) {
+    scale: 1;
+  }
+
+  .modal-overlay_notif_reset,
+  .modal-overlay_notif_leave,
+  .modal-overlay_leaveListHr,
+  .modal-overlay_detail_karyawan,
+  .modal-overlay_data_divisi,
+  .photo-modal-overlay,
+  .lmb-modal-overlay,
+  .form-cuti__overlay,
+  .modal-overlay_notif_reset > :first-child,
+  .modal-overlay_notif_leave > :first-child,
+  .modal-overlay_leaveListHr > :first-child,
+  .modal-overlay_detail_karyawan > :first-child,
+  .modal-overlay_data_divisi > :first-child,
+  .photo-modal-overlay > :first-child,
+  .lmb-modal-overlay > :first-child,
+  .form-cuti__overlay > :first-child,
+  .sims-auth-card,
+  .sims-overlay-enter,
+  .sims-modal-enter {
+    animation: none;
+  }
+}
