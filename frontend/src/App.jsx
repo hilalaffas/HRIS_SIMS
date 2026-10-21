@@ -30,10 +30,10 @@ const AppContent = () => {
   
   // Gunakan state untuk user agar UI langsung ter-update saat login/logout
   const [currentUser, setCurrentUser] = useState(() => (
-    import.meta.env.DEV
-      ? { name: 'Demo Karyawan', role: 'Karyawan', gender: 'Laki-laki' }
-      : { name: 'Guest', role: 'Guest' }
-  ));
+  import.meta.env.DEV && import.meta.env.VITE_PREVIEW_MODE === 'true'
+    ? { name: 'Demo Karyawan', role: 'Karyawan', gender: 'None' }
+    : { name: 'Dummy', role: 'Dummy' }
+));
 
   // Ambil data user dari localStorage hanya saat aplikasi pertama kali dimuat
   useEffect(() => {

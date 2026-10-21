@@ -6,7 +6,7 @@ import { isDevAccessUser, isDevAccessPath } from '../config/devAccessConfig';
 const ProtectedRoute = () => {
   // Preview Vite development dapat melihat dashboard tanpa login.
   // Build production tetap menggunakan autentikasi normal.
-  const isPreviewMode = import.meta.env.DEV;
+  const isPreviewMode = import.meta.env.DEV && import.meta.env.VITE_PREVIEW_MODE === 'true';
   const token = localStorage.getItem('token');
   const location = useLocation();
 

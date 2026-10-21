@@ -46,7 +46,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
     <Suspense fallback={<RouteFallback />}>
     <Routes>
       {/* 1. HALAMAN UTAMA: Preview development langsung membuka dashboard. */}
-      <Route path="/" element={<Navigate to={import.meta.env.DEV ? "/dashboard" : "/login"} replace />} />
+      <Route path="/" element={<Navigate to={import.meta.env.DEV && import.meta.env.VITE_PREVIEW_MODE === 'true' ? "/dashboard" : "/login"} replace />} />
 
       {/* 2. RUTE PUBLIC: Hanya bisa diakses jika BELUM login */}
       <Route element={<PublicRoute />}>
