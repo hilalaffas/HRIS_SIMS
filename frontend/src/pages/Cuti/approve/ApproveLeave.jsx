@@ -172,10 +172,10 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
     () => [
       { key: "proses", label: "Perlu Diproses", badge: pendingCount },
       { key: "list", label: "List Cuti", badge: 0 },
-      // [BARU] Tab Persetujuan Lembur (pindahan dari menu sidebar)
-      ...(canApproveOvertime ? [{ key: "lembur", label: "Persetujuan Lembur", badge: overtime.pendingCount }] : []),
       // [BARU] Tab Surat Sakit & Izin (pindahan dari menu sidebar)
       ...(canApprovePermission ? [{ key: "izin", label: "Surat Sakit & Izin", badge: permission.stats.pending }] : []),
+      // [BARU] Tab Persetujuan Lembur (pindahan dari menu sidebar)
+      ...(canApproveOvertime ? [{ key: "lembur", label: "Persetujuan Lembur", badge: overtime.pendingCount }] : []),
     ],
     [pendingCount, canApproveOvertime, overtime.pendingCount, canApprovePermission, permission.stats.pending]
   );
@@ -198,6 +198,11 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
         {activeTab === "list" && (
           <ListCutiSection data={history} onOpenDetail={handleOpenDetail} />
         )}
+        {/* [BARU] Tab Surat Sakit & Izin */}
+        {activeTab === "izin" && canApprovePermission && (
+          <PersetujuanIzin approvals={permission} embedded />
+        )}
+        
         {/* [BARU] Tab Persetujuan Lembur */}
         {activeTab === "lembur" && canApproveOvertime && (
           <OvertimeApprovalSection
@@ -209,10 +214,6 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
             pendingCount={overtime.pendingCount}
             onDecision={overtime.handleDecision}
           />
-        )}
-        {/* [BARU] Tab Surat Sakit & Izin */}
-        {activeTab === "izin" && canApprovePermission && (
-          <PersetujuanIzin approvals={permission} embedded />
         )}
       </div>
       {/*Bagian popup detail riwayat (FormCuti)*/}
