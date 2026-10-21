@@ -66,6 +66,28 @@
 .pzn-bulk-btn:not(:disabled):hover { border-color: var(--color-primary-soft); background: var(--color-primary-tint); }
 .pzn-bulk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ============ [BARU] MODE TAB (di dalam Pusat Persetujuan) ============ */
+.pzn-page--embedded {
+  max-width: none;
+  margin: 0;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  /* Ada headline + bar tab di atas, jadi tinggi panel dikurangi lebih banyak */
+  --pzn-embedded-pane: clamp(460px, calc(100vh - 480px), 780px);
+}
+
+.pzn-header--embedded {
+  align-items: center;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.pzn-page--embedded .pzn-panel { box-shadow: none; }
+.pzn-page--embedded .pzn-panel__body { --pzn-pane-height: var(--pzn-embedded-pane); }
+
+@media (max-width: 640px) {
+  .pzn-page--embedded { padding: var(--space-4); }
+}
+
 /* ============ PANEL ============ */
 .pzn-panel {
   overflow: hidden;

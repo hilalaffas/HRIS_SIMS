@@ -9,6 +9,8 @@ import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
 import OvertimeApprovalSection from '../../Persetujuan/components/OvertimeApprovalSection'; // [BARU] tab Persetujuan Lembur
 import useOvertimeApprovals from '../../../hooks/useOvertimeApprovals'; // [BARU]
+import PersetujuanIzin from '../../PersetujuanIzin/PersetujuanIzin'; // [BARU] tab Surat Sakit & Izin
+import usePermissionApprovals from '../../../hooks/usePermissionApprovals'; // [BARU]
 import ActionReasonModal from './components/ActionReasonModal';
 import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
@@ -38,11 +40,16 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU]
   // [BARU] Persetujuan Lembur hanya untuk Leader/SPV/Manager (HR Karyawan tidak).
   const canApproveOvertime = isManagerOrSpv(user);
-  // [UBAH] 'proses' | 'list' | 'lembur'. Tab awal bisa dipilih lewat ?tab=lembur
-  // (dipakai redirect dari URL lama /persetujuan). Izin Sakit pindah ke halaman /persetujuan-izin.
-  const [activeTab, setActiveTab] = useState(
-    () => (searchParams.get('tab') === 'lembur' && canApproveOvertime ? 'lembur' : 'proses')
-  );
+  // [BARU] Surat Sakit & Izin juga hanya untuk Leader/SPV/Manager (HR Karyawan tidak berwenang).
+  const canApprovePermission = isManagerOrSpv(user);
+  // [UBAH] 'proses' | 'list' | 'lembur' | 'izin'. Tab awal bisa dipilih lewat ?tab=lembur / ?tab=izin
+  // (dipakai redirect dari URL lama /persetujuan dan /persetujuan-izin).
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'lembur' && canApproveOvertime) return 'lembur';
+    if (tabParam === 'izin' && canApprovePermission) return 'izin';
+    return 'proses';
+  });
   const [selectedDetail, setSelectedDetail] = useState(null);
 
   const [pending, setPending] = useState([]);
@@ -158,6 +165,8 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   // [BARU] Data Persetujuan Lembur dimuat di sini (bukan di dalam tab) supaya
   // badge jumlah tetap muncul walau tab belum dibuka.
   const overtime = useOvertimeApprovals(canApproveOvertime);
+  // [BARU] Sama untuk Surat Sakit & Izin (enabled=false -> tidak memanggil API sama sekali)
+  const permission = usePermissionApprovals(canApprovePermission);
 
   const tabs = useMemo(
     () => [
@@ -165,8 +174,10 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
       { key: "list", label: "List Cuti", badge: 0 },
       // [BARU] Tab Persetujuan Lembur (pindahan dari menu sidebar)
       ...(canApproveOvertime ? [{ key: "lembur", label: "Persetujuan Lembur", badge: overtime.pendingCount }] : []),
+      // [BARU] Tab Surat Sakit & Izin (pindahan dari menu sidebar)
+      ...(canApprovePermission ? [{ key: "izin", label: "Surat Sakit & Izin", badge: permission.stats.pending }] : []),
     ],
-    [pendingCount, canApproveOvertime, overtime.pendingCount]
+    [pendingCount, canApproveOvertime, overtime.pendingCount, canApprovePermission, permission.stats.pending]
   );
 
   return (
@@ -198,6 +209,10 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
             pendingCount={overtime.pendingCount}
             onDecision={overtime.handleDecision}
           />
+        )}
+        {/* [BARU] Tab Surat Sakit & Izin */}
+        {activeTab === "izin" && canApprovePermission && (
+          <PersetujuanIzin approvals={permission} embedded />
         )}
       </div>
       {/*Bagian popup detail riwayat (FormCuti)*/}

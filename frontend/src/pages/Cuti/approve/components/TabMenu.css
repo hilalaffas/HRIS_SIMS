@@ -65,5 +65,12 @@
   .tab-menu {
     gap: 18px;
     padding: 14px 16px 0 16px;
+    overflow-x: auto; /* [BARU] 4 tab (termasuk Surat Sakit & Izin) bisa digeser di layar sempit */
+    scrollbar-width: none;
+  }
+
+  .tab-menu__item {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 }

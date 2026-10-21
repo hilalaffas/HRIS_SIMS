@@ -2,13 +2,15 @@
 //
 // [BARU] Halaman "Persetujuan Surat Sakit & Izin" untuk Leader / SPV / Manager.
 // Verifikasi surat dokter & bukti izin bawahan (satu divisi) sebelum dicatat ke
-// rekap absensi. Halaman ini hanya MERAKIT: data & aksi di
+// rekap absensi. Komponen ini hanya MERAKIT: data & aksi di
 // hooks/usePermissionApprovals.js, logika murni di utils/permissionRequest.js,
 // tampilan di components/.
+// [UBAH] Sekarang dirender sebagai TAB "Surat Sakit & Izin" di Pusat Persetujuan
+// (pages/Cuti/approve/ApproveLeave.jsx). Hook dipanggil di parent (pola yang sama
+// dengan Persetujuan Lembur) supaya badge jumlah menunggu tampil di tab sebelum dibuka.
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCheck, FilePlus2, MousePointerClick } from 'lucide-react';
 import Toast from '../../components/Toast';
-import usePermissionApprovals from '../../hooks/usePermissionApprovals';
 import ApprovalStatCards from './components/ApprovalStatCards';
 import ApprovalToolbar from './components/ApprovalToolbar';
 import BulkApproveModal from './components/BulkApproveModal';
@@ -26,10 +28,15 @@ const EMPTY_MESSAGES = {
   REJECTED: 'Belum ada pengajuan yang ditolak.',
 };
 
-export default function PersetujuanIzin() {
+/**
+ * @param {object} approvals - hasil usePermissionApprovals() dari parent
+ * @param {boolean} embedded - true = dipakai sebagai tab (judul halaman disembunyikan,
+ *   karena sudah ada judul "Pusat Persetujuan" di atasnya)
+ */
+export default function PersetujuanIzin({ approvals, embedded = true }) {
   const {
     rows, loading, loadError, stats, toast, processingIds, bulkRunning, decide, approveMany,
-  } = usePermissionApprovals(true);
+  } = approvals;
 
   const [tab, setTab] = useState('PENDING');
   const [type, setType] = useState('ALL');
@@ -92,13 +99,15 @@ export default function PersetujuanIzin() {
   };
 
   return (
-    <div className="pzn-page">
-      <header className="pzn-header">
+    <div className={`pzn-page${embedded ? ' pzn-page--embedded' : ''}`}>
+      <header className={`pzn-header${embedded ? ' pzn-header--embedded' : ''}`}>
         <div>
-          <h1>
-            <FilePlus2 aria-hidden="true" />
-            Persetujuan Surat Sakit &amp; Izin
-          </h1>
+          {!embedded && (
+            <h1>
+              <FilePlus2 aria-hidden="true" />
+              Persetujuan Surat Sakit &amp; Izin
+            </h1>
+          )}
           <p>Verifikasi surat dokter dan bukti izin karyawan sebelum dicatat ke rekap absensi.</p>
         </div>
         <button
