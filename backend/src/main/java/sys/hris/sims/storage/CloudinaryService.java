@@ -3,10 +3,15 @@ package sys.hris.sims.storage;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,6 +33,65 @@ public class CloudinaryService {
     private static final List<String> ALLOWED_EXTENSIONS = List.of(".jpg", ".jpeg", ".png");
 
     private final Cloudinary cloudinary;
+
+    // [BARU] Mode penyimpanan file. "cloudinary" (default, dipakai di Render) atau
+    // "local" (disimpan ke folder di disk saat development). Diatur lewat
+    // application.properties / application-local.properties:
+    //   storage.mode=local
+    //   storage.local.dir=uploads
+    //   storage.local.public-base-url=http://localhost:8080
+    // Field non-final sengaja dipakai supaya @RequiredArgsConstructor TIDAK berubah
+    // (AuthController, ProfileController, dll. tetap meng-inject class ini seperti semula).
+    @Value("${storage.mode:cloudinary}")
+    private String storageMode;
+
+    @Value("${storage.local.dir:uploads}")
+    private String localDir;
+
+    @Value("${storage.local.public-base-url:http://localhost:8080}")
+    private String localPublicBaseUrl;
+
+    private boolean isLocalMode() {
+        return storageMode != null && "local".equalsIgnoreCase(storageMode.trim());
+    }
+
+    // [BARU] Ekstensi ditentukan dari content-type yang SUDAH lolos validasi di
+    // masing-masing validateXxx() (bukan dari nama file kiriman user), supaya foto
+    // kamera yang namanya kosong tetap mendapat ekstensi yang benar.
+    private String extensionFor(MultipartFile file) {
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        return switch (contentType) {
+            case "image/jpeg" -> ".jpg";
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            case "application/pdf" -> ".pdf";
+            default -> ".bin";
+        };
+    }
+
+    // [BARU] Simpan file ke disk: {localDir}/{folder}/{publicId}{ext}, lalu kembalikan
+    // URL ABSOLUT ({public-base-url}/uploads/{folder}/{file}) supaya semua tempat di
+    // frontend yang memakai URL apa adanya (foto absensi, surat dokter, gambar berita,
+    // avatar) tetap jalan tanpa perubahan. Folder & nama file sama dengan di Cloudinary.
+    // `overwrite=true` (foto profil) menambah ?v=timestamp agar browser tidak memakai
+    // cache foto lama karena nama file-nya tetap.
+    private String saveLocal(MultipartFile file, String folder, String publicId, boolean overwrite) throws IOException {
+        String safeName = publicId.replaceAll("[^a-zA-Z0-9._-]", "_") + extensionFor(file);
+
+        Path baseDir = Paths.get(localDir).toAbsolutePath().normalize();
+        Path targetDir = baseDir.resolve(folder).normalize();
+        Files.createDirectories(targetDir);
+
+        Path target = targetDir.resolve(safeName).normalize();
+        if (!target.startsWith(targetDir)) {
+            throw new IllegalArgumentException("Nama file tidak valid.");
+        }
+        Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+
+        String base = localPublicBaseUrl == null ? "" : localPublicBaseUrl.trim().replaceAll("/+$", "");
+        String url = base + "/uploads/" + folder + "/" + safeName;
+        return overwrite ? url + "?v=" + System.currentTimeMillis() : url;
+    }
 
     // Validasi ukuran & tipe file foto sebelum diunggah ke Cloudinary.
     // Dipanggil dari uploadFoto() -- lempar IllegalArgumentException dengan
@@ -56,6 +120,7 @@ public class CloudinaryService {
     // otomatis tertimpa saat ganti foto -- tidak ada file menumpuk di Cloudinary.
     public String uploadFoto(MultipartFile file, String publicId) throws IOException {
         validateFoto(file);
+        if (isLocalMode()) return saveLocal(file, "employees", publicId, true); // [BARU]
 
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
@@ -105,6 +170,7 @@ public class CloudinaryService {
 
     public String uploadNewsImage(MultipartFile file) throws IOException {
         validateNewsImage(file);
+        if (isLocalMode()) return saveLocal(file, "news", "news-" + java.util.UUID.randomUUID(), false); // [BARU]
 
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
@@ -178,6 +244,7 @@ public class CloudinaryService {
 
     public String uploadMedicalDocument(MultipartFile file, String publicId) throws IOException {
         boolean isPdf = validateMedicalDocument(file);
+        if (isLocalMode()) return saveLocal(file, "medical-documents", publicId, false); // [BARU]
 
         // PDF diunggah sebagai "raw" (ekstensi .pdf harus ikut di public_id) supaya
         // tautannya bisa dibuka langsung; gambar tetap "image".
@@ -195,6 +262,7 @@ public class CloudinaryService {
 
     public String uploadAttendancePhoto(MultipartFile file, String publicId) throws IOException {
         validateAttendancePhoto(file);
+        if (isLocalMode()) return saveLocal(file, "attendance", publicId, false); // [BARU]
 
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
