@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .leaveErrorModal__overlay {
   position: fixed;
   inset: 0;
@@ -20,7 +21,7 @@
 .leaveErrorModal__card {
   width: 100%;
   max-width: 380px;
-  background: #ffffff;
+  background: var(--dk-bg-card, #ffffff);
   border-radius: 16px;
   box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.25);
   padding: 28px 24px 24px;
@@ -38,7 +39,7 @@
   height: 48px;
   margin: 0 auto 14px;
   border-radius: 50%;
-  background: #fee2e2;
+  background: var(--dk-tint-red, #fee2e2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,21 +48,21 @@
 .leaveErrorModal__icon {
   width: 26px;
   height: 26px;
-  stroke: #dc2626;
+  stroke: var(--dk-text-red, #dc2626);
 }
 
 .leaveErrorModal__title {
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: var(--dk-text, #111827);
 }
 
 .leaveErrorModal__text {
   margin: 0 0 22px 0;
   font-size: 13.5px;
   line-height: 1.55;
-  color: #4b5563;
+  color: var(--dk-text-2, #4b5563);
 }
 
 .leaveErrorModal__btnOk {

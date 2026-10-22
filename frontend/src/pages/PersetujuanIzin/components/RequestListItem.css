@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/PersetujuanIzin/components/RequestListItem.css */
 
 /* Pembungkus untuk animasi keluar: tinggi baris menciut halus (grid 1fr -> 0fr). */
@@ -71,10 +72,10 @@
   font-weight: 700;
 }
 
-.avatar-tone-0 { background: #dbe7ff; color: #1d4ed8; }
-.avatar-tone-1 { background: #fdeabf; color: #a15c07; }
-.avatar-tone-2 { background: #d6f3e4; color: #0f7a4f; }
-.avatar-tone-3 { background: #ece0ff; color: #6d3fd1; }
+.avatar-tone-0 { background: var(--dk-tint-blue-strong, #dbe7ff); color: var(--dk-text-blue, #1d4ed8); }
+.avatar-tone-1 { background: var(--dk-tint-amber-strong, #fdeabf); color: var(--dk-text-amber, #a15c07); }
+.avatar-tone-2 { background: var(--dk-tint-green-strong, #d6f3e4); color: var(--dk-text-green, #0f7a4f); }
+.avatar-tone-3 { background: var(--dk-tint-purple, #ece0ff); color: var(--dk-text-purple, #6d3fd1); }
 
 .pzn-item__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
 .pzn-item__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
@@ -106,11 +107,11 @@
 }
 
 .pzn-chip svg { width: 13px; height: 13px; }
-.pzn-chip--sick     { background: var(--color-info-bg); border-color: var(--color-info-border); color: var(--color-info); }
-.pzn-chip--late     { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning); }
-.pzn-chip--personal { background: var(--pzn-purple-bg); border-color: var(--pzn-purple-border); color: var(--pzn-purple); }
+.pzn-chip--sick     { background: var(--color-info-bg); border-color: var(--color-info-border); color: var(--dk-text-blue, var(--color-info)); }
+.pzn-chip--late     { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--dk-text-amber, var(--color-warning)); }
+.pzn-chip--personal { background: var(--pzn-purple-bg); border-color: var(--pzn-purple-border); color: var(--dk-text-purple, var(--pzn-purple)); }
 .pzn-chip--date     { background: var(--color-bg-page); border-color: var(--color-border); color: var(--color-text-secondary); font-weight: 500; }
-.pzn-chip--file     { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success); }
+.pzn-chip--file     { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--dk-text-green, var(--color-success)); }
 
 @media (max-width: 520px) {
   .pzn-item { padding: var(--space-3) var(--space-4); }

@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* =========================================
    TOGGLE TIPE DIVISI (Regular / Non Regular)
    ========================================= */
@@ -9,9 +10,9 @@
   min-width: 220px;
   padding: 3px;
   gap: 2px;
-  border: 1px solid #c9d9d9;
+  border: 1px solid var(--dk-border-strong, #c9d9d9);
   border-radius: 7px;
-  background: #f7fbf9;
+  background: var(--dk-tint-green, #f7fbf9);
   box-sizing: border-box;
 }
 
@@ -23,7 +24,7 @@
   flex: 1;
   border: 0;
   background: transparent;
-  color: #69817d;
+  color: var(--dk-text-3, #69817d);
   border-radius: 5px;
   padding: 8px 10px;
   font-size: 12px;
@@ -39,14 +40,14 @@
 }
 
 .toggle_divisi_type button.selected {
-  background: #dff6eb;
-  color: var(--color-primary, #124231);
+  background: var(--dk-tint-green-strong, #dff6eb);
+  color: var(--dk-text-green, var(--color-primary, #124231));
   box-shadow: 0 1px 2px rgba(18, 66, 49, 0.08);
 }
 
 .toggle_divisi_type button.selected.shifting {
-  background: #fff4d8;
-  color: #9a6500;
+  background: var(--dk-tint-amber-strong, #fff4d8);
+  color: var(--dk-text-amber, #9a6500);
 }
 
 .toggle_divisi_type span {

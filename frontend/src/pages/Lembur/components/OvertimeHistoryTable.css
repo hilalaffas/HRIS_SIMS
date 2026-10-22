@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Lembur/components/OvertimeHistoryTable.css */
 
 .lmb-table-card {
@@ -11,7 +12,7 @@
 .lmb-table-card h2 {
   margin: 0 0 16px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--dk-border-soft, #f0f2f5);
   font-size: 13px;
   letter-spacing: 0.02em;
   color: var(--color-text);
@@ -26,7 +27,7 @@
 }
 
 .lmb-table th {
-  background: #f6f8fa;
+  background: var(--dk-bg-subtle, #f6f8fa);
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   padding: 12px;
@@ -38,7 +39,7 @@
 
 .lmb-table td {
   padding: 14px 12px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--dk-border-soft, #f0f2f5);
   font-size: 12px;
   color: var(--color-text);
   vertical-align: middle;
@@ -69,9 +70,9 @@
   white-space: nowrap;
 }
 
-.lmb-status-approved { background: var(--color-success-bg); color: var(--color-success); }
-.lmb-status-pending { background: var(--color-warning-bg); color: var(--color-warning); }
-.lmb-status-rejected { background: var(--color-danger-bg); color: var(--color-danger); }
+.lmb-status-approved { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
+.lmb-status-pending { background: var(--color-warning-bg); color: var(--dk-text-amber, var(--color-warning)); }
+.lmb-status-rejected { background: var(--color-danger-bg); color: var(--dk-text-red, var(--color-danger)); }
 
 /* [BARU] Badge status bisa diklik untuk membuka kartu alur persetujuan */
 .lmb-status-button {
@@ -83,4 +84,4 @@
 .lmb-status-button:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15); }
 .lmb-status-button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .lmb-status-button.is-active { box-shadow: 0 0 0 2px var(--color-primary); }
-.lmb-row-active td { background: #fafbfc; }
+.lmb-row-active td { background: var(--dk-bg-subtle, #fafbfc); }

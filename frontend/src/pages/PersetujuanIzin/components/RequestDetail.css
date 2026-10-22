@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/PersetujuanIzin/components/RequestDetail.css */
 .pzn-detail {
   display: flex;
@@ -65,8 +66,8 @@
 .pzn-decided span { display: block; margin-top: 2px; font-size: 12px; opacity: 0.85; }
 .pzn-decided p { margin: var(--space-2) 0 0; font-size: 14px; line-height: 1.5; color: var(--color-text); overflow-wrap: anywhere; }
 
-.pzn-decided--approved { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success); }
-.pzn-decided--rejected { background: var(--color-danger-bg); border-color: var(--color-danger-border); color: var(--color-danger); }
+.pzn-decided--approved { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--dk-text-green, var(--color-success)); }
+.pzn-decided--rejected { background: var(--color-danger-bg); border-color: var(--color-danger-border); color: var(--dk-text-red, var(--color-danger)); }
 
 @media (max-width: 520px) {
   .pzn-detail { padding: var(--space-4); }

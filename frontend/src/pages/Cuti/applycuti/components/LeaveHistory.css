@@ -1,10 +1,11 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* ==========================================
    SEKSI RIWAYAT & STATUS PENGAJUAN
    ========================================== */
 .history-container {
   width: 100%;
   max-width: 1450px;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 16px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   margin-top: 24px;
@@ -16,8 +17,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
+  background-color: var(--dk-bg-card, #ffffff);
+  border-bottom: 1px solid var(--dk-border-soft, #f1f5f9);
 }
 
 .history-title-container {
@@ -28,7 +29,7 @@
 
 .history-header-icon {
   font-size: 18px;
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 .history-title {
@@ -37,7 +38,7 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--dk-text, #0f172a);
   position: relative;
 }
 
@@ -50,7 +51,7 @@
 .filter-label {
   font-size: 11px;
   font-weight: 800;
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
   letter-spacing: 0.5px;
 }
 
@@ -60,17 +61,17 @@
 
 .history-body {
   padding: 24px;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
 }
 
 .empty-history-box {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 12px;
   padding: 32px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
   font-size: 14px;
-  background-color: #fafafa;
+  background-color: var(--dk-bg-subtle, #fafafa);
 }
 
 .history-list {
@@ -84,15 +85,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 12px;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   margin-bottom: 4px;
   transition: all 0.2s ease;
 }
 
 .history-item-card.border-alert-red {
-  border-color: #fca5a5;
+  border-color: var(--dk-border-red, #fca5a5);
 }
 
 .history-item-left {
@@ -109,14 +110,14 @@
 
 .history-item-leave-type {
   font-weight: bold;
-  color: #1e293b;
+  color: var(--dk-text, #1e293b);
   font-size: 14px;
 }
 
 .history-item-dates {
   display: block;
   font-size: 14px;
-  color: #64748b;
+  color: var(--dk-text-3, #64748b);
   margin: 0;
   padding: 0;
 }
@@ -199,33 +200,33 @@
 }
 
 .status-badge-btn.dikembalikan {
-  background-color: #fffbeb; /* Latar belakang krem/kuning pudar */
-  color: #a16207; /* Warna teks oranye kecokelatan gelap agar kontras */
+  background-color: var(--dk-tint-amber, #fffbeb); /* Latar belakang krem/kuning pudar */
+  color: var(--dk-text-amber, #a16207); /* Warna teks oranye kecokelatan gelap agar kontras */
   border: 1px solid #fbbf24; /* Warna border kuning keemasan tegas */
 }
 
 .status-badge-btn.dikembalikan:hover {
-  background-color: #fef3c7; /* Warna latar sedikit lebih gelap saat di-hover */
+  background-color: var(--dk-tint-amber-strong, #fef3c7); /* Warna latar sedikit lebih gelap saat di-hover */
 }
 
 .status-badge-btn.disetujuiacc {
-  background-color: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background-color: var(--dk-tint-green, #f0fdf4);
+  color: var(--dk-text-green, #15803d);
+  border: 1px solid var(--dk-border-green, #bbf7d0);
 }
 
 .status-badge-btn.disetujuiacc:hover {
-  background-color: #d1fae5;
+  background-color: var(--dk-tint-green-strong, #d1fae5);
 }
 
 .status-badge-btn.ditolak {
-  background-color: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background-color: var(--dk-tint-red, #fef2f2);
+  color: var(--dk-text-red, #b91c1c);
+  border: 1px solid var(--dk-border-red, #fecaca);
 }
 
 .status-badge-btn.ditolak:hover {
-  background-color: #fee2e2;
+  background-color: var(--dk-tint-red, #fee2e2);
 }
 
 .status-badge-list {
@@ -239,20 +240,20 @@
 }
 
 .status-badge-list.dalam-proses {
-  background-color: #fef08a;
-  color: #a16207;
+  background-color: var(--dk-tint-amber-strong, #fef08a);
+  color: var(--dk-text-amber, #a16207);
 }
 
 .status-badge-list.dikembalikan {
-  background-color: #fffbeb;
-  color: #a16207;
+  background-color: var(--dk-tint-amber, #fffbeb);
+  color: var(--dk-text-amber, #a16207);
   border: 1px solid #fbbf24;
 }
 
 .status-badge-btn.proses-pill {
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background-color: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
+  color: var(--dk-text, #334155);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -264,7 +265,7 @@
 }
 
 .status-badge-btn.proses-pill:hover {
-  background-color: #f1f5f9;
+  background-color: var(--dk-bg-subtle, #f1f5f9);
   border-color: #94a3b8;
 }
 
@@ -278,8 +279,8 @@
   margin-left: 12px;
   padding: 3px 10px;
   border-radius: 20px;
-  background-color: #f0fdf4;
-  color: #15803d;
+  background-color: var(--dk-tint-green, #f0fdf4);
+  color: var(--dk-text-green, #15803d);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
@@ -304,15 +305,15 @@
 .history-sync__time {
   text-transform: none;
   font-weight: 600;
-  color: #4d7c62;
+  color: var(--dk-text-green, #4d7c62);
 }
 
 /* ==========================================
    [BARU] PAGINATION
    ========================================== */
 .history-pageSize {
-  border-color: #cbd5e1;
-  color: #475569;
+  border-color: var(--dk-border-strong, #cbd5e1);
+  color: var(--dk-text-2, #475569);
 }
 
 .history-pagination {
@@ -323,12 +324,12 @@
   gap: 12px;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--dk-border-soft, #f1f5f9);
 }
 
 .history-pagination__info {
   font-size: 13px;
-  color: #64748b;
+  color: var(--dk-text-3, #64748b);
 }
 
 .history-pagination__controls {
@@ -340,16 +341,16 @@
 .history-pagination__page {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--dk-text, #334155);
   white-space: nowrap;
 }
 
 .history-pagination__btn {
   padding: 7px 16px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  background-color: #ffffff;
-  color: #334155;
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
+  background-color: var(--dk-bg-card, #ffffff);
+  color: var(--dk-text, #334155);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -357,7 +358,7 @@
 }
 
 .history-pagination__btn:hover:not(:disabled) {
-  background-color: #f1f5f9;
+  background-color: var(--dk-bg-subtle, #f1f5f9);
   border-color: #94a3b8;
 }
 

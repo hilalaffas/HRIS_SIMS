@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Dashboard/components/DashboardSummaryCard.css */
 
 /* [BARU] Kartu utama Dashboard -- gradasi hijau lembut, ringkas.
@@ -14,7 +15,7 @@
   padding: 12px;
   border-radius: 16px;
   border: 1px solid rgba(18, 66, 49, 0.1);
-  background: linear-gradient(135deg, #f4fbf8 0%, #e5f4ed 48%, #d6ece0 100%);
+  background: linear-gradient(135deg, var(--dk-tint-green, #f4fbf8) 0%, var(--dk-tint-green-strong, #e5f4ed) 48%, var(--dk-tint-green-strong, #d6ece0) 100%);
   box-shadow: 0 2px 10px rgba(18, 66, 49, 0.06);
   animation: dashSummaryFadeUp 0.45s ease-out backwards;
 }
@@ -214,7 +215,7 @@
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 .dashSummary__badge {
@@ -227,9 +228,9 @@
   font-weight: 700;
 }
 
-.dashSummary__badge--warning { background: var(--color-warning-bg); color: var(--color-warning); }
-.dashSummary__badge--success { background: var(--color-success-bg); color: var(--color-success); }
-.dashSummary__badge--info { background: var(--color-info-bg); color: var(--color-info); }
+.dashSummary__badge--warning { background: var(--color-warning-bg); color: var(--dk-text-amber, var(--color-warning)); }
+.dashSummary__badge--success { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
+.dashSummary__badge--info { background: var(--color-info-bg); color: var(--dk-text-blue, var(--color-info)); }
 
 .dashSummary__pulse {
   position: relative;
@@ -266,7 +267,7 @@
   border-radius: 6px;
   font-size: 0.64rem;
   font-weight: 600;
-  color: var(--color-primary-soft);
+  color: var(--dk-text-green, var(--color-primary-soft));
   background: rgba(33, 122, 91, 0.1);
   border: 1px solid rgba(33, 122, 91, 0.18);
   white-space: nowrap;
@@ -298,7 +299,7 @@
 .dashSummary__pill svg { flex-shrink: 0; }
 
 .dashSummary__pill--danger {
-  color: var(--color-danger);
+  color: var(--dk-text-red, var(--color-danger));
   background: var(--color-danger-bg);
   border-color: var(--color-danger-border);
 }
@@ -307,20 +308,20 @@
 .dashSummary__pill--danger svg { animation: dashSummaryNudge 2.4s ease-in-out 0.6s infinite; }
 
 .dashSummary__pill--success {
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   background: var(--color-success-bg);
   border-color: var(--color-success-border);
 }
 
 .dashSummary__pill--info {
-  color: var(--color-info);
+  color: var(--dk-text-blue, var(--color-info));
   background: var(--color-info-bg);
   border-color: var(--color-info-border);
 }
 
 /* [BARU] Menunggu approval izin sakit */
 .dashSummary__pill--warning {
-  color: var(--color-warning);
+  color: var(--dk-text-amber, var(--color-warning));
   background: var(--color-warning-bg);
   border-color: var(--color-warning-border);
 }
@@ -385,9 +386,9 @@
 
 .dashSummary__btn:disabled {
   cursor: not-allowed;
-  color: #6b7280;
-  background: #e5e7eb;
-  border-color: #e5e7eb;
+  color: var(--dk-text-3, #6b7280);
+  background: var(--dk-bg-hover, #e5e7eb);
+  border-color: var(--dk-border, #e5e7eb);
 }
 
 /* ---------- Keyframes ---------- */

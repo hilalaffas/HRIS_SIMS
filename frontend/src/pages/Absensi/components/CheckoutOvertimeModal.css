@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Absensi/components/CheckoutOvertimeModal.css */
 
 /* [BARU] Popup "Check-Out Jam Kerja (17:00+)" + form Tambah Lembur. Warna memakai
@@ -61,7 +62,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  color: var(--color-primary-soft);
+  color: var(--dk-text-green, var(--color-primary-soft));
   background: var(--color-primary-tint);
   animation: coOtIconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
 }
@@ -98,7 +99,7 @@
   border: 1px solid var(--color-danger-border);
   border-radius: 10px;
   background: var(--color-danger-bg);
-  color: var(--color-danger);
+  color: var(--dk-text-red, var(--color-danger));
   font-weight: 600;
   animation: coOtFadeUp 0.25s ease-out both;
 }
@@ -111,7 +112,7 @@
   border: 1px solid var(--color-warning-border);
   border-radius: 10px;
   background: var(--color-warning-bg);
-  color: var(--color-warning);
+  color: var(--dk-text-amber, var(--color-warning));
   font-size: 0.74rem;
   font-weight: 600;
   line-height: 1.45;
@@ -152,9 +153,9 @@
   letter-spacing: 0.02em;
 }
 
-.coOt__entryStatus--pending { background: var(--color-warning-bg); color: var(--color-warning); }
-.coOt__entryStatus--approved { background: var(--color-success-bg); color: var(--color-success); }
-.coOt__entryStatus--rejected { background: var(--color-danger-bg); color: var(--color-danger); }
+.coOt__entryStatus--pending { background: var(--color-warning-bg); color: var(--dk-text-amber, var(--color-warning)); }
+.coOt__entryStatus--approved { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
+.coOt__entryStatus--rejected { background: var(--color-danger-bg); color: var(--dk-text-red, var(--color-danger)); }
 
 /* ---------- Tombol pilihan (2 kolom, seperti desain) ---------- */
 .coOt__choices {
@@ -351,7 +352,7 @@
 .coOt__chip:hover:not(:disabled) {
   background: var(--color-primary-tint);
   border-color: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 .coOt__chip:active:not(:disabled) { transform: scale(0.95); }
@@ -366,7 +367,7 @@
 /* Angka total "melonjak" kecil tiap berubah (key di JSX me-remount elemen) */
 .coOt__total strong {
   display: inline-block;
-  color: var(--color-primary-soft);
+  color: var(--dk-text-green, var(--color-primary-soft));
   font-size: 0.9rem;
   animation: coOtTotalPop 0.25s ease-out both;
 }
@@ -376,7 +377,7 @@
   font-size: 0.74rem;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--color-danger);
+  color: var(--dk-text-red, var(--color-danger));
   animation: coOtShake 0.38s ease both;
 }
 

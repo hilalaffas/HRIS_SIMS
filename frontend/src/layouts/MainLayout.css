@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/layouts/MainLayout.css */
 
 .layout-container {
@@ -16,7 +17,7 @@
 }
 
 .sidebar-wrapper {
-  border-right: 1px solid #e5e7eb; /* border-gray-200 */
+  border-right: 1px solid var(--dk-border, #e5e7eb); /* border-gray-200 */
   display: none; /* hidden secara default di mobile */
   flex-shrink: 0;
   width: 16rem; /* 64 (256px) */
@@ -41,7 +42,7 @@
 .navbar-wrapper {
   border-bottom: 1px solid var(--color-border, #e5e7eb);
   height: 4rem; /* was 5rem — navbar lebih ringkas */
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
 }
 
 .content-outlet {

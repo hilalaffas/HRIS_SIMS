@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .profile-header-block {
   display: flex;
   flex-direction: column;    /* Menjaga urutan elemen tetap tegak lurus ke bawah */
@@ -12,14 +13,14 @@
 .profile-main-name {
   margin: 0 0 6px 0;
   font-size: 26px;
-  color: #0f172a;
+  color: var(--dk-text, #0f172a);
   font-weight: 700;
 }
 
 .profile-main-nik {
   margin: 0 0 10px 0;        /* Jarak antara teks NIK dengan tombol di bawahnya */
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
 }
 
 /* Tombol Edit Data Profil */
@@ -40,7 +41,7 @@
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 16px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -71,15 +72,15 @@
 .profile-avatar-large {
   width: 120px;
   height: 120px;
-  background-color: #f5f7fa;
-  border: 4px solid #ffffff;
+  background-color: var(--dk-bg-subtle, #f5f7fa);
+  border: 4px solid var(--dk-border-soft, #ffffff);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 32px;
   font-weight: bold;
-  color: #1e6244;
+  color: var(--dk-text-green, #1e6244);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   flex-shrink: 0;            /* Mencegah lingkaran foto menyusut */
   margin-bottom: 12px;
@@ -137,7 +138,7 @@
 .profile-main-name {
   margin: 0 0 1px 0;
   font-size: 26px;
-  color: #0f172a;
+  color: var(--dk-text, #0f172a);
   font-weight: 700;
   text-align: left;
 }
@@ -145,7 +146,7 @@
 .profile-main-nik {
   margin: 0;
   font-size: 16px;
-  color: #4f5853;
+  color: var(--dk-text-2, #4f5853);
   text-align: left;
 }
 
@@ -171,7 +172,7 @@
 .profile-info-grid {
   display: flex;
   gap: 40px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--dk-border-soft, #f1f5f9);
   padding-top: 10px;
   
 }
@@ -183,7 +184,7 @@
 .section-title {
   font-size: 16px;
   text-transform: uppercase;
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
   font-weight: 700;
   margin-bottom: 24px;
 }
@@ -196,7 +197,7 @@
   display: block;
   font-size: 14px;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
   font-weight: bold;
   margin-bottom: 6px;
 }
@@ -204,35 +205,35 @@
 .info-group p {
   margin: 0;
   font-size: 16px;
-  color: #0f172a;
+  color: var(--dk-text, #0f172a);
   font-weight: 600;
 }
 
 .info-group .text-readonly {
-  color: #64748b;
+  color: var(--dk-text-3, #64748b);
   font-weight: 600;
 }
 
 /* Teks tambahan ringan di dalam kurung, mis. "(Orang Tua)" di sebelah nomor telepon darurat —
    sengaja TIDAK bold, beda dari field readonly di atas, supaya terlihat sebagai keterangan tambahan. */
 .text-muted-inline {
-  color: #64748b;
+  color: var(--dk-text-3, #64748b);
   font-weight: 400;
 }
 
 /* Label khusus untuk kontak darurat (wajib diisi) */
 .info-group.emergency-contact label {
-  color: #dc2626;
+  color: var(--dk-text-red, #dc2626);
 }
 
 /* Desain Komponen Input Baru Saat Mode Edit */
 .form-input-profile {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
   border-radius: 6px;
   font-size: 14px;
-  color: #334155;
+  color: var(--dk-text, #334155);
   outline: none;
 }
 
@@ -246,7 +247,7 @@
   justify-content: flex-end;
   gap: 12px;
   margin-top: 30px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--dk-border-soft, #f1f5f9);
   padding-top: 20px;
 }
 
@@ -261,9 +262,9 @@
 }
 
 .btn-profile-cancel {
-  background-color: #ffffff;
-  color: #64748b;
-  border: 1px solid #cbd5e1;
+  background-color: var(--dk-bg-card, #ffffff);
+  color: var(--dk-text-3, #64748b);
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
   padding: 10px 24px;
   border-radius: 6px;
   cursor: pointer;
@@ -299,7 +300,7 @@
   max-height: 90vh;
   overflow-y: auto;
   margin: 0 auto;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
   animation: profilePopupZoomIn 200ms ease;
@@ -398,7 +399,7 @@
 .profile-avatar-confirm-box {
   width: 100%;
   max-width: 360px;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
@@ -413,25 +414,25 @@
   object-fit: cover;
   margin: 0 auto 16px auto;
   display: block;
-  border: 4px solid #f5f7fa;
+  border: 4px solid var(--dk-border-soft, #f5f7fa);
 }
 
 .profile-avatar-confirm-text {
   margin: 0 0 16px 0;
   font-size: 14px;
-  color: #334155;
+  color: var(--dk-text, #334155);
 }
 
 .profile-avatar-confirm-error {
   margin: -8px 0 16px 0;
   font-size: 13px;
-  color: #dc2626;
+  color: var(--dk-text-red, #dc2626);
 }
 
 .profile-photo-error {
   margin: 6px 0 0 0;
   font-size: 13px;
-  color: #dc2626;
+  color: var(--dk-text-red, #dc2626);
 }
 
 .profile-avatar-confirm-actions {
@@ -443,15 +444,15 @@
   display: flex;
   align-items: center;
   margin-bottom: 24px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
   border-radius: 6px;
   padding: 6px;
 }
 
 .profile-photo-button {
-  background-color: #f1f5f9;
-  color: #334155;
-  border: 1px solid #cbd5e1;
+  background-color: var(--dk-bg-subtle, #f1f5f9);
+  color: var(--dk-text, #334155);
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
   border-radius: 6px;
   padding: 6px 14px;
   margin-right: 12px;
@@ -463,12 +464,12 @@
 }
 
 .profile-photo-button:hover {
-  background-color: #e2e8f0;
+  background-color: var(--dk-bg-hover, #e2e8f0);
 }
 
 .profile-photo-filename {
   font-size: 14px;
-  color: #334155;
+  color: var(--dk-text, #334155);
 }
 
 /* Input file asli disembunyikan secara visual, tetap bisa diakses (aksesibilitas) */
@@ -510,8 +511,8 @@
   padding-bottom: 10px;
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
-  border-bottom: 1px solid #e2e8f0;
+  color: var(--dk-text, #0f172a);
+  border-bottom: 1px solid var(--dk-border, #e2e8f0);
 }
 
 .profile-edit-grid {
@@ -528,7 +529,7 @@
 
 /* Section Keamanan & Kata Sandi */
 .profile-security-block {
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--dk-border-soft, #f1f5f9);
   padding-top: 30px;
   margin-top: 30px;
 }
@@ -543,7 +544,7 @@
 }
 
 .profile-password-error {
-  color: #dc2626;
+  color: var(--dk-text-red, #dc2626);
   font-size: 13px;
   margin: 4px 0 0 0;
 }
@@ -572,13 +573,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
   cursor: pointer;
   transition: color 150ms ease;
 }
 
 .password-toggle-btn:hover {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 /* Baris gabungan "Nomor Telepon Darurat" + "Hubungan" di form edit —
@@ -600,7 +601,7 @@
 
 /* Style khusus dropdown select agar konsisten dengan input teks lain */
 select.form-input-profile {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   cursor: pointer;
 }
 
@@ -610,10 +611,10 @@ select.form-input-profile:disabled {
 
 /* Field yang terkunci (readonly): abu-abu + cursor stop */
 .form-input-profile:disabled {
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--dk-bg-subtle, #f1f5f9);
+  color: var(--dk-text-3, #64748b);
   cursor: not-allowed;
-  border-color: #e2e8f0;
+  border-color: var(--dk-border, #e2e8f0);
 }
 
 .field-lock-icon {

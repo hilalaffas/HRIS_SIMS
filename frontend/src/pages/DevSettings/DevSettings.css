@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/DevSettings/DevSettings.css */
 
 .devsettings-page {
@@ -104,7 +105,7 @@
   padding: var(--space-2) var(--space-4);
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
   background-color: var(--color-primary-tint);
   border: none;
   border-radius: var(--radius-sm);
@@ -127,5 +128,5 @@
 .devsettings-error {
   margin: var(--space-2) 0 0;
   font-size: 0.8rem;
-  color: var(--color-danger);
+  color: var(--dk-text-red, var(--color-danger));
 }

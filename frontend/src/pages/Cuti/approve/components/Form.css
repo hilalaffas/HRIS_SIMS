@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .form-cuti__overlay {
   position: fixed;
   inset: 0;
@@ -15,8 +16,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #fff;
-  border: 1px solid #cbd5e1;
+  background: var(--dk-bg-card, #fff);
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
   border-radius: 14px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, .28);
 }
@@ -55,35 +56,35 @@
 .form-cuti__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 38px; }
 .form-cuti__grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .form-cuti__field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.form-cuti__value { color: #25334a; font-size: 16px; font-weight: 700; line-height: 1.35; }
-.form-cuti__value--accent { color: #057354; }
-.form-cuti__value--status { align-self: flex-start; padding: 3px 7px; border-radius: 3px; background: #e2e8f0; color: #334155; font-size: 11px; font-weight: 800; }
-.form-cuti__divider { height: 1px; margin: 22px 0 0; background: #e2e8f0; }
+.form-cuti__value { color: var(--dk-text, #25334a); font-size: 16px; font-weight: 700; line-height: 1.35; }
+.form-cuti__value--accent { color: var(--dk-text-green, #057354); }
+.form-cuti__value--status { align-self: flex-start; padding: 3px 7px; border-radius: 3px; background: var(--dk-bg-hover, #e2e8f0); color: var(--dk-text, #334155); font-size: 11px; font-weight: 800; }
+.form-cuti__divider { height: 1px; margin: 22px 0 0; background: var(--dk-bg-hover, #e2e8f0); }
 .form-cuti__divider--grid { margin: 26px 0 16px; }
 .form-cuti__divider--history { margin: 22px 0 18px; }
 
 .form-cuti__section { display: flex; flex-direction: column; gap: 7px; margin-top: 21px; }
 .form-cuti__section:first-of-type { margin-top: 0; }
-.form-cuti__label { color: #8ca0bb; font-size: 13px; font-weight: 700; letter-spacing: .01em; text-transform: uppercase; }
-.form-cuti__box { min-height: 57px; display: flex; align-items: center; padding: 13px 16px; border: 1px solid #dbe4ef; border-radius: 11px; background: #f8fafc; color: #475569; font-size: 16px; }
-.form-cuti__box--warning { border-color: #f5d66e; background: #fffbeb; color: #475569; }
-.form-cuti__box--info { border-color: #b8d8ff; background: #eff6ff; color: #334155; font-weight: 700; }
+.form-cuti__label { color: var(--dk-text-4, #8ca0bb); font-size: 13px; font-weight: 700; letter-spacing: .01em; text-transform: uppercase; }
+.form-cuti__box { min-height: 57px; display: flex; align-items: center; padding: 13px 16px; border: 1px solid var(--dk-border, #dbe4ef); border-radius: 11px; background: var(--dk-bg-subtle, #f8fafc); color: var(--dk-text-2, #475569); font-size: 16px; }
+.form-cuti__box--warning { border-color: #f5d66e; background: var(--dk-tint-amber, #fffbeb); color: var(--dk-text-2, #475569); }
+.form-cuti__box--info { border-color: var(--dk-border-blue, #b8d8ff); background: var(--dk-tint-blue, #eff6ff); color: var(--dk-text, #334155); font-weight: 700; }
 .form-cuti__box--italic { font-style: italic; }
 
 .form-cuti__log-list { display: flex; flex-direction: column; gap: 16px; }
-.form-cuti__log-item { padding: 16px 14px; border: 1px solid #edf1f5; border-radius: 11px; background: #f8fafc; }
+.form-cuti__log-item { padding: 16px 14px; border: 1px solid var(--dk-border-soft, #edf1f5); border-radius: 11px; background: var(--dk-bg-subtle, #f8fafc); }
 .form-cuti__log-top, .form-cuti__log-bottom { display: flex; justify-content: space-between; gap: 12px; }
 .form-cuti__log-top { align-items: center; margin-bottom: 10px; }
 .form-cuti__log-bottom { align-items: flex-start; justify-content: flex-start; }
-.form-cuti__log-name { color: #475569; font-size: 14px; }
-.form-cuti__log-time { flex-shrink: 0; color: #8ca0bb; font-size: 13px; font-weight: 600; }
-.form-cuti__log-badge { flex-shrink: 0; padding: 2px 5px; border-radius: 3px; background: #e2e8f0; color: #475569; font-size: 11px; font-weight: 800; line-height: 1.1; }
-.form-cuti__log-note { color: #64748b; font-size: 16px; line-height: 1.45; }
-.form-cuti__log-empty { padding: 16px 0; color: #94a3b8; font-size: 14px; text-align: center; }
+.form-cuti__log-name { color: var(--dk-text-2, #475569); font-size: 14px; }
+.form-cuti__log-time { flex-shrink: 0; color: var(--dk-text-4, #8ca0bb); font-size: 13px; font-weight: 600; }
+.form-cuti__log-badge { flex-shrink: 0; padding: 2px 5px; border-radius: 3px; background: var(--dk-bg-hover, #e2e8f0); color: var(--dk-text-2, #475569); font-size: 11px; font-weight: 800; line-height: 1.1; }
+.form-cuti__log-note { color: var(--dk-text-3, #64748b); font-size: 16px; line-height: 1.45; }
+.form-cuti__log-empty { padding: 16px 0; color: var(--dk-text-4, #94a3b8); font-size: 14px; text-align: center; }
 
-.form-cuti__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 22px 24px; background: #f8fafc; }
-.form-cuti__edit-btn { padding: 12px 20px; border: 1px solid #047857; border-radius: 11px; background: #fff; color: #047857; font-size: 15px; font-weight: 700; cursor: pointer; }
-.form-cuti__edit-btn:hover { background: #ecfdf5; }
+.form-cuti__footer { display: flex; justify-content: flex-end; gap: 10px; padding: 22px 24px; background: var(--dk-bg-subtle, #f8fafc); }
+.form-cuti__edit-btn { padding: 12px 20px; border: 1px solid #047857; border-radius: 11px; background: var(--dk-bg-card, #fff); color: var(--dk-text-green, #047857); font-size: 15px; font-weight: 700; cursor: pointer; }
+.form-cuti__edit-btn:hover { background: var(--dk-tint-green, #ecfdf5); }
 .form-cuti__close-btn { min-width: 141px; padding: 12px 20px; border: 1px solid #64748b; border-radius: 11px; background: #1e293b; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
 .form-cuti__close-btn:hover { background: #334155; }
 

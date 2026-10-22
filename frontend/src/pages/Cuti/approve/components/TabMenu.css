@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .tab-menu {
   display: flex;
   align-items: center;
@@ -35,7 +36,7 @@
 }
 
 .tab-menu__item.is-active {
-  color: var(--alv-primary);
+  color: var(--dk-text-green, var(--alv-primary));
 }
 
 .tab-menu__item.is-active::after {

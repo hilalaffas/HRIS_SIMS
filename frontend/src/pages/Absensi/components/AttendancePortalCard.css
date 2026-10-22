@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Absensi/components/AttendancePortalCard.css */
 
 .abs-portal-card {
@@ -30,7 +31,7 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  color: var(--abs-primary-soft);
+  color: var(--dk-text-green, var(--abs-primary-soft));
 }
 
 .abs-portal-info p {
@@ -95,8 +96,8 @@
 
 /* Terkunci (absensi selesai / sudah sakit / sedang memuat) */
 .abs-portal-button:disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
+  background: var(--dk-bg-hover, #e5e7eb);
+  color: var(--dk-text-4, #9ca3af);
   box-shadow: none;
   cursor: not-allowed;
 }

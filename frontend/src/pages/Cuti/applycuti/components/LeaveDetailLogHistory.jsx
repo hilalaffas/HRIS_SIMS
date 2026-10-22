@@ -64,7 +64,7 @@ const LeaveDetailLogHistory = ({ finalLogs = [], allHistory = [], currentId }) =
                   <div className="form-cuti__log-content">
                     <div className="form-cuti__log-top">
                       <span className="form-cuti__log-role" style={{ fontWeight: isThisRecord ? '700' : '600' }}>
-                        {item.jenisCuti} {isThisRecord && <span style={{ fontSize: '11px', color: '#0284c7' }}>(Berkas Ini)</span>}
+                        {item.jenisCuti} {isThisRecord && <span style={{ fontSize: '11px', color: 'var(--dk-text-blue, #0284c7)' }}>(Berkas Ini)</span>}
                       </span>
                       <span className="form-cuti__log-time">{historyDateOnly}</span>
                     </div>
@@ -76,7 +76,7 @@ const LeaveDetailLogHistory = ({ finalLogs = [], allHistory = [], currentId }) =
               );
             })
           ) : (
-            <div className="form-cuti__box" style={{ color: '#6b7280', textAlign: 'center', fontSize: '14px' }}>
+            <div className="form-cuti__box" style={{ color: 'var(--dk-text-3, #6b7280)', textAlign: 'center', fontSize: '14px' }}>
               Belum ada riwayat pengajuan cuti sebelumnya.
             </div>
           )}

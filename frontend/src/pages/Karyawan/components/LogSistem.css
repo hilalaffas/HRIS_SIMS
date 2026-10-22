@@ -1,7 +1,8 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* CONTAINER UTAMA */
 .card-wrapper_log_sistem {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
+  background-color: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border, #e5e7eb);
   border-radius: 12px;
   overflow: hidden;
   margin-top: 16px;
@@ -16,7 +17,7 @@
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--dk-border-soft, #f3f4f6);
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -28,14 +29,14 @@
 }
 
 .header-title_log_sistem svg {
-  color: #4b5563;
+  color: var(--dk-text-2, #4b5563);
 }
 
 .header-title_log_sistem h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--dk-text, #1f2937);
 }
 
 /* FILTER DROPDOWN */
@@ -44,7 +45,7 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #4b5563;
+  color: var(--dk-text-2, #4b5563);
 }
 
 /* [UBAH] Style dropdown lama dipindah ke src/components/Dropdown.css
@@ -88,32 +89,32 @@
 
 /* TIPE NORMAL (Abu-abu) */
 .item-normal_log_sistem {
-  background-color: #f8fafc;
-  border-color: #f1f5f9;
+  background-color: var(--dk-bg-subtle, #f8fafc);
+  border-color: var(--dk-border-soft, #f1f5f9);
 }
 
 .item-normal_log_sistem .log-time_log_sistem {
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
 }
 
 .item-normal_log_sistem .log-actor_log_sistem,
 .item-normal_log_sistem .log-action_log_sistem {
-  color: #334155;
+  color: var(--dk-text, #334155);
 }
 
 /* TIPE SYSTEM (Hijau) */
 .item-system_log_sistem {
-  background-color: #ecfdf5;
-  border-color: #d1fae5;
+  background-color: var(--dk-tint-green, #ecfdf5);
+  border-color: var(--dk-border-green, #d1fae5);
 }
 
 .item-system_log_sistem .log-time_log_sistem {
-  color: #10b981;
+  color: var(--dk-text-green, #10b981);
 }
 
 .item-system_log_sistem .log-actor_log_sistem,
 .item-system_log_sistem .log-action_log_sistem {
-  color: #047857;
+  color: var(--dk-text-green, #047857);
 }
 
 /* STRUKTUR KONTEN */
@@ -160,7 +161,7 @@
 /* EMPTY STATE */
 .empty-log_log_sistem {
   text-align: center;
-  color: #9ca3af;
+  color: var(--dk-text-4, #9ca3af);
   font-size: 14px;
   padding: 20px;
 }
@@ -172,35 +173,35 @@
   align-items: center;
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--dk-border-soft, #f3f4f6);
 }
 
 .btn-page_log_sistem {
   padding: 8px 16px;
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
+  background-color: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-strong, #d1d5db);
   border-radius: 6px;
   font-size: 14px;
-  color: #374151;
+  color: var(--dk-text, #374151);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-page_log_sistem:hover:not(:disabled) {
-  background-color: #f3f4f6;
+  background-color: var(--dk-bg-subtle, #f3f4f6);
   border-color: #9ca3af;
 }
 
 .btn-page_log_sistem:disabled {
-  background-color: #f9fafb;
-  color: #9ca3af;
+  background-color: var(--dk-bg-subtle, #f9fafb);
+  color: var(--dk-text-4, #9ca3af);
   cursor: not-allowed;
   opacity: 0.7;
 }
 
 .page-info_log_sistem {
   font-size: 14px;
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   font-weight: 500;
 }

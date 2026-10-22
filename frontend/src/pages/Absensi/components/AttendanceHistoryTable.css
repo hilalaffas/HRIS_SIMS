@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Absensi/components/AttendanceHistoryTable.css */
 
 .abs-history-section {
@@ -25,7 +26,7 @@
 
 .abs-section-heading h2 {
   margin: 0 0 6px;
-  color: var(--abs-navy);
+  color: var(--dk-text-green, var(--abs-navy));
   font-size: 17px;
 }
 
@@ -39,8 +40,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #dfe5ee;
-  color: #607089;
+  border: 1px solid var(--dk-border, #dfe5ee);
+  color: var(--dk-text-3, #607089);
   background: var(--color-surface);
   padding: 9px 12px;
   border-radius: var(--radius-sm, 6px);
@@ -52,7 +53,7 @@
 }
 
 .abs-outline-button:hover {
-  background: #f4f6fa;
+  background: var(--dk-bg-subtle, #f4f6fa);
 }
 
 .abs-outline-button svg {
@@ -90,7 +91,7 @@ th {
 }
 
 td {
-  border-top: 1px solid #f0f2f5;
+  border-top: 1px solid var(--dk-border-soft, #f0f2f5);
   color: var(--abs-muted-ink);
   font-size: 11px;
   padding: 12px 10px;
@@ -98,7 +99,7 @@ td {
 }
 
 td strong {
-  color: var(--abs-navy);
+  color: var(--dk-text-green, var(--abs-navy));
   font-size: 11px;
 }
 
@@ -129,46 +130,46 @@ td strong {
 }
 
 .abs-status-hadir {
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   background: var(--color-success-bg);
 }
 
 .abs-status-telat {
-  color: var(--color-warning);
+  color: var(--dk-text-amber, var(--color-warning));
   background: var(--color-warning-bg);
 }
 
 .abs-status-cuti {
-  color: var(--color-info);
+  color: var(--dk-text-blue, var(--color-info));
   background: var(--color-info-bg);
 }
 
 .abs-status-sakit {
-  color: #4338ca;
-  background: #e0e7ff;
+  color: var(--dk-text-blue, #4338ca);
+  background: var(--dk-tint-blue, #e0e7ff);
 }
 
 /* [BARU] Sakit menunggu persetujuan / ditolak (belum/tidak dianggap sakit) */
 .abs-status-menunggu {
-  color: var(--color-warning);
+  color: var(--dk-text-amber, var(--color-warning));
   background: var(--color-warning-bg);
   border: 1px solid var(--color-warning-border);
 }
 
 .abs-status-ditolak {
-  color: var(--color-danger);
-  background: #fdecec;
+  color: var(--dk-text-red, var(--color-danger));
+  background: var(--dk-tint-red, #fdecec);
 }
 
 .abs-status-belum {
   color: var(--abs-muted-ink);
-  background: #eef1f4;
-  border: 1px solid #dfe5ee;
+  background: var(--dk-bg-muted, #eef1f4);
+  border: 1px solid var(--dk-border, #dfe5ee);
 }
 
 .abs-status-absen {
-  color: var(--color-danger);
-  background: #fdecec;
+  color: var(--dk-text-red, var(--color-danger));
+  background: var(--dk-tint-red, #fdecec);
 }
 
 /* [BARU] Link "Peta" (Google Maps) / "Selfie" (foto) -- bisa tampil 2
@@ -184,7 +185,7 @@ td strong {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--abs-primary-soft);
+  color: var(--dk-text-green, var(--abs-primary-soft));
   font-size: 10px;
   font-weight: 700;
   text-decoration: none;
@@ -234,7 +235,7 @@ td strong {
   border-radius: 50%;
   border: 1px solid var(--abs-border);
   background: var(--color-surface);
-  color: var(--abs-navy);
+  color: var(--dk-text-green, var(--abs-navy));
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
@@ -298,8 +299,8 @@ td strong {
   height: 24px;
   border: 0;
   border-radius: 4px;
-  background: #f4f6fa;
-  color: var(--abs-navy);
+  background: var(--dk-bg-subtle, #f4f6fa);
+  color: var(--dk-text-green, var(--abs-navy));
   cursor: pointer;
 }
 
@@ -313,7 +314,7 @@ td strong {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   font-weight: 700;
-  color: var(--abs-navy);
+  color: var(--dk-text-green, var(--abs-navy));
 }
 
 .abs-heading-actions {
@@ -354,7 +355,7 @@ td strong {
 }
 
 .abs-history-section .abs-log-table th {
-  background: #f6f8fa;
+  background: var(--dk-bg-subtle, #f6f8fa);
   border-top: 1px solid var(--abs-border);
   border-bottom: 1px solid var(--abs-border);
   padding: 12px 8px; /* [UBAH] 10px -> 8px agar 9 kolom muat tanpa scroll */
@@ -375,13 +376,13 @@ td strong {
   animation: abs-today-sweep 1.6s ease 0.4s 1 both;
 }
 .abs-log-table tr.is-today:hover td { background: var(--color-success-bg); animation: none; }
-.abs-log-table tr.is-today .abs-date-cell strong { color: var(--color-success); }
+.abs-log-table tr.is-today .abs-date-cell strong { color: var(--dk-text-green, var(--color-success)); }
 
 .abs-today-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   font-size: 11px;
   font-weight: 700;
 }
@@ -400,12 +401,12 @@ td strong {
 .abs-duration-cell {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-weight: 700;
-  color: var(--abs-navy);
+  color: var(--dk-text-green, var(--abs-navy));
   white-space: nowrap;
 }
 
 .abs-duration-cell { font-family: inherit; white-space: normal; }
-.abs-photo-link svg { color: var(--color-success); }
+.abs-photo-link svg { color: var(--dk-text-green, var(--color-success)); }
 
 /* [BARU] Kolom Lembur: durasi + badge status pengajuan (ACC / Menunggu / Ditolak). */
 .abs-overtime-stack {
@@ -415,9 +416,9 @@ td strong {
   gap: 4px;
 }
 
-.abs-overtime-stack strong { color: var(--abs-navy); white-space: nowrap; }
+.abs-overtime-stack strong { color: var(--dk-text-green, var(--abs-navy)); white-space: nowrap; }
 /* [BARU] Durasi lembur berwarna oranye (mengikuti referensi) */
-.abs-overtime-stack .abs-overtime-value { color: var(--color-warning); font-size: 12px; }
+.abs-overtime-stack .abs-overtime-value { color: var(--dk-text-amber, var(--color-warning)); font-size: 12px; }
 
 .abs-overtime-badge {
   display: inline-block;
@@ -428,9 +429,9 @@ td strong {
   white-space: nowrap;
 }
 
-.abs-overtime-approved { background: var(--color-success-bg); color: var(--color-success); }
-.abs-overtime-pending { background: var(--color-warning-bg); color: var(--color-warning); }
-.abs-overtime-rejected { background: var(--color-danger-bg); color: var(--color-danger); }
+.abs-overtime-approved { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
+.abs-overtime-pending { background: var(--color-warning-bg); color: var(--dk-text-amber, var(--color-warning)); }
+.abs-overtime-rejected { background: var(--color-danger-bg); color: var(--dk-text-red, var(--color-danger)); }
 
 /* [BARU] Kolom Keterangan / Catatan: badge di atas, catatan di bawah,
    chip Foto & Peta paling bawah. */
@@ -487,13 +488,13 @@ td strong {
 }
 
 .abs-document-link {
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   background: var(--color-success-bg);
 }
 
 /* Biru = aksi yang masih harus dilakukan karyawan (sama dengan tombol "Ajukan Izin / Sakit") */
 .abs-document-upload {
-  color: var(--color-info);
+  color: var(--dk-text-blue, var(--color-info));
   background: var(--color-info-bg);
   border: 1px dashed var(--color-info-border);
   cursor: pointer;
@@ -548,7 +549,7 @@ td strong {
   border: 1px solid var(--abs-border);
   border-radius: var(--radius-sm, 6px);
   background: var(--color-surface);
-  color: var(--abs-navy);
+  color: var(--dk-text-green, var(--abs-navy));
   font-size: 11px;
   font-weight: 700;
   padding: 5px 8px;
@@ -580,7 +581,7 @@ td strong {
 }
 
 .abs-sort-button:hover,
-.abs-sort-button.is-active { color: var(--abs-navy); }
+.abs-sort-button.is-active { color: var(--dk-text-green, var(--abs-navy)); }
 
 .abs-sort-button svg {
   width: 12px;

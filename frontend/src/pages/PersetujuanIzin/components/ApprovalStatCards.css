@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/PersetujuanIzin/components/ApprovalStatCards.css */
 .pzn-stats {
   display: grid;
@@ -28,10 +29,10 @@
 }
 
 .pzn-stat__icon svg { width: 22px; height: 22px; }
-.pzn-stat__icon--amber  { background: var(--color-warning-bg); color: var(--color-warning); }
-.pzn-stat__icon--blue   { background: var(--color-info-bg); color: var(--color-info); }
-.pzn-stat__icon--purple { background: var(--pzn-purple-bg); color: var(--pzn-purple); }
-.pzn-stat__icon--green  { background: var(--color-success-bg); color: var(--color-success); }
+.pzn-stat__icon--amber  { background: var(--color-warning-bg); color: var(--dk-text-amber, var(--color-warning)); }
+.pzn-stat__icon--blue   { background: var(--color-info-bg); color: var(--dk-text-blue, var(--color-info)); }
+.pzn-stat__icon--purple { background: var(--pzn-purple-bg); color: var(--dk-text-purple, var(--pzn-purple)); }
+.pzn-stat__icon--green  { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
 
 .pzn-stat__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 

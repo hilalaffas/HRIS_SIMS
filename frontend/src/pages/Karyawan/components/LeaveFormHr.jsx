@@ -612,7 +612,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
         </div>
 
         {errorMessage && (
-          <div className="info-box_leaveFormHr" style={{ borderColor: '#f87171', color: '#b91c1c' }}>{errorMessage}</div>
+          <div className="info-box_leaveFormHr" style={{ borderColor: '#f87171', color: 'var(--dk-text-red, #b91c1c)' }}>{errorMessage}</div>
         )}
 
         <div className="footer-actions_leaveFormHr">

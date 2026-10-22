@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /**
  * ActionReasonModal.css
  * ------------------------------------------------------------------
@@ -161,7 +162,7 @@
 .action-reason__error {
   font-size: 12px;
   font-weight: 600;
-  color: var(--alv-rose, #e11d48);
+  color: var(--dk-text-red, var(--alv-rose, #e11d48));
 }
 
 .action-reason__footer {

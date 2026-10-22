@@ -75,7 +75,8 @@
  * spacing, radius) tetap diwarisi dari :root.
  *
  * Komponen baru wajib memakai token ini (bukan hex langsung) supaya otomatis
- * ikut tema. Komponen lama yang masih hardcode warna belum ikut berubah.
+ * ikut tema. [UBAH] Komponen lama yang hardcode warna sudah dimigrasi ke
+ * token --dk-* (lihat blok di bawah).
  */
 [data-theme='dark'] {
   --color-text: #e5e7eb;
@@ -99,4 +100,50 @@
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
+
+  /* [BARU] Browser ikut menggelapkan kontrol bawaan (scrollbar, date picker,
+     dropdown <select>, autofill) -- tanpa ini mereka tetap putih. */
+  color-scheme: dark;
+
+  /* ------------------------------------------------------------------
+   * [BARU] TOKEN ADAPTIF "--dk-*"
+   * Dipakai CSS lama yang dulunya hardcode hex, dengan pola:
+   *     background: var(--dk-bg-card, #ffffff);
+   * Token ini SENGAJA hanya didefinisikan di blok gelap ini. Saat tema
+   * terang, var() otomatis memakai fallback (= hex asli), jadi tampilan
+   * terang identik. Saat gelap, nilai di bawah yang dipakai.
+   * Semua pasangan teks/latar sudah dicek kontrasnya >= 4.5:1.
+   * ------------------------------------------------------------------ */
+  /* Latar */
+  --dk-bg-card: #16211d;      /* putih -> kartu/modal/navbar */
+  --dk-bg-subtle: #1a2621;    /* abu sangat muda (#f8fafc, #f9fafb) */
+  --dk-bg-muted: #1f2d27;     /* abu muda (#f1f5f9, #f3f4f6) */
+  --dk-bg-hover: #26352e;     /* abu hover/chip (#e2e8f0, #e5e7eb) */
+  /* Garis */
+  --dk-border-soft: #22302a;
+  --dk-border: #2a3a33;
+  --dk-border-strong: #3a4d44;
+  /* Teks netral (makin besar angka = makin redup) */
+  --dk-text: #e5e7eb;         /* judul / teks utama */
+  --dk-text-2: #c3ccc7;       /* teks isi */
+  --dk-text-3: #a3afa9;       /* teks sekunder */
+  --dk-text-4: #8a9690;       /* teks redup / placeholder */
+  /* Teks berwarna (versi terang dari hijau/merah/kuning/biru tua) */
+  --dk-text-green: #6ee7b7;
+  --dk-text-red: #fca5a5;
+  --dk-text-amber: #fcd34d;
+  --dk-text-blue: #93c5fd;
+  --dk-text-purple: #c4b5fd;
+  /* Latar badge / alert berwarna */
+  --dk-tint-green: #0f2a20;   --dk-tint-green-strong: #14532d;
+  --dk-tint-red: #2d1218;     --dk-tint-red-strong: #6b1d2c;
+  --dk-tint-amber: #2a2008;   --dk-tint-amber-strong: #5c4a12;
+  --dk-tint-blue: #0f1f3d;    --dk-tint-blue-strong: #1e3a6e;
+  --dk-tint-purple: #231a3a;  --dk-tint-purple-strong: #3b2a66;
+  /* Garis berwarna */
+  --dk-border-green: #14532d;
+  --dk-border-red: #6b1d2c;
+  --dk-border-amber: #5c4a12;
+  --dk-border-blue: #1e3a6e;
+  --dk-border-purple: #3b2a66;
 }

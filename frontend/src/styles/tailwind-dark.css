@@ -1,0 +1,70 @@
+/**
+ * tailwind-dark.css  [BARU]
+ * ------------------------------------------------------------------
+ * Menggelapkan class utilitas Tailwind yang dipakai di JSX (Dashboard,
+ * WorkCalendar, Input, dll.) TANPA mengubah satu pun class di JSX.
+ * Tailwind v4 membaca warna dari CSS variable (--color-gray-100, dst.),
+ * jadi cukup menimpa variable-nya di dalam [data-theme='dark'].
+ * Aturan ini tidak dilayer -> otomatis menang atas @layer utilities.
+ * Hanya daftar warna yang BENAR-BENAR dipakai di proyek (audit 22 Okt 2026).
+ * ------------------------------------------------------------------
+ */
+[data-theme='dark'] {
+  /* skala abu: dibalik (50 = latar paling gelap, 900 = teks paling terang) */
+  --color-gray-50: #1a2621;
+  --color-gray-100: #22302a;
+  --color-gray-200: #2a3a33;
+  --color-gray-300: #3a4d44;
+  --color-gray-400: #8a9690;
+  --color-gray-500: #a3afa9;
+  --color-gray-600: #b8c2bd;
+  --color-gray-700: #cbd3cf;
+  --color-gray-800: #e5e7eb;
+  --color-gray-900: #f3f4f6;
+
+  /* badge / swatch berwarna */
+  --color-emerald-50: #0f2a20;  --color-emerald-100: #14532d;
+  --color-green-100: #14532d;
+  --color-red-50: #2d1218;      --color-red-100: #6b1d2c;
+  --color-amber-50: #2a2008;    --color-amber-100: #5c4a12;
+  --color-blue-50: #0f1f3d;
+
+  /* teks berwarna gelap -> versi terang */
+  --color-emerald-600: #34d399; --color-emerald-700: #6ee7b7; --color-emerald-800: #a7f3d0;
+  --color-green-700: #6ee7b7;
+  --color-amber-600: #fbbf24;   --color-amber-700: #fcd34d;
+  --color-blue-600: #93c5fd;
+  --color-red-500: #f87171;     --color-red-600: #fca5a5;
+}
+
+/* bg-white tidak bisa lewat variable (text-white memakai variable yang sama
+   dan HARUS tetap putih di header hijau), jadi ditimpa langsung. */
+[data-theme='dark'] .bg-white {
+  background-color: var(--color-surface);
+}
+
+/* Link / teks hijau brand di Dashboard (arbitrary value text-[var(--color-primary)]) */
+[data-theme='dark'] [class*='text-[var(--color-primary)]'] {
+  color: var(--dk-text-green);
+}
+
+/* ------------------------------------------------------------------
+ * Kontrol form tanpa style sendiri (mis. input pencarian, select, textarea)
+ * jangan tetap putih. :where() = specificity 0, jadi class komponen yang
+ * punya background sendiri tetap menang.
+ * ------------------------------------------------------------------ */
+:where([data-theme='dark']) :where(input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file'], [type='button'], [type='submit']), select, textarea) {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+:where([data-theme='dark']) :where(input, textarea)::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+:where([data-theme='dark']) :where(option, optgroup) {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}

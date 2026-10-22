@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .confirm-delete__overlay {
   position: fixed;
   inset: 0;
@@ -39,7 +40,7 @@
   margin: 0 auto 14px;
   border-radius: 50%;
   background: var(--kry-rose-bg);
-  color: var(--kry-rose);
+  color: var(--dk-text-red, var(--kry-rose));
   font-size: 20px;
   font-weight: 800;
   display: flex;

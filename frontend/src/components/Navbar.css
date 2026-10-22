@@ -1,7 +1,8 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* Container Utama Header */
 .navbar-header {
   height: 5rem; /* h-20 (80px) */
-  background-color: #ffffff; /* bg-white */
+  background-color: var(--dk-bg-card, #ffffff); /* bg-white */
   display: flex; /* flex */
   align-items: center; /* items-center */
   justify-content: space-between; /* justify-between */
@@ -9,7 +10,7 @@
   padding-right: 2rem; /* px-8 */
   flex-shrink: 0; /* shrink-0 */
   z-index: 10; /* z-10 */
-  border-bottom: 1px solid #f3f4f6; /* border-b border-gray-100 */
+  border-bottom: 1px solid var(--dk-border-soft, #f3f4f6); /* border-b border-gray-100 */
 }
 
 /* --- BAGIAN KIRI (BRAND & JUDUL) --- */
@@ -29,8 +30,8 @@
 
 /* Badge Hijau Muda SIMS */
 .badge-sims {
-  background-color: #DEF7EC;
-  color: #03543F;
+  background-color: var(--dk-tint-green-strong, #DEF7EC);
+  color: var(--dk-text-green, #03543F);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.125rem 0.5rem;
@@ -42,7 +43,7 @@
 .navbar-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
   letter-spacing: 0.025em;
   margin: 0;
 }
@@ -57,7 +58,7 @@
 /* Teks Sub-Header Dinamis (Uppercase) */
 .navbar-subtitle {
   font-size: 0.65rem;
-  color: #9ca3af;
+  color: var(--dk-text-4, #9ca3af);
   margin-top: 0.25rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -88,7 +89,7 @@
 /* Teks Tanggal Real-time */
 .navbar-date {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: var(--dk-text-2, #4b5563);
   font-weight: 500;
   /* [BARU] Disembunyikan di HP supaya hemat ruang di header sempit;
      lonceng notifikasi (sibling-nya di .navbar-actions) tidak terpengaruh. */
@@ -107,7 +108,7 @@
   border: none;
   padding: 0;
   font-size: 1.25rem;
-  color: #4b5563;
+  color: var(--dk-text-2, #4b5563);
   cursor: pointer;
   position: relative;
   display: flex;
@@ -117,7 +118,7 @@
 }
 
 .btn-notification:hover {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 @keyframes notifBadgePulse {
@@ -141,7 +142,7 @@
   padding: 0 0.3rem;
   background-color: #ef4444;
   border-radius: 9999px;
-  border: 1.5px solid #ffffff;
+  border: 1.5px solid var(--dk-border-soft, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -162,13 +163,13 @@
   position: absolute;
   right: 0;
   top: 3rem;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   border-radius: 1rem;
   width: 420px;
   max-width: 90vw;
   z-index: 1000;
-  border: 1px solid #f3f4f6;
+  border: 1px solid var(--dk-border-soft, #f3f4f6);
   overflow: hidden;
   font-family: 'Inter', sans-serif;
 }
@@ -179,19 +180,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
 }
 
 .notification-header-title {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--dk-text, #111827);
 }
 
 .btn-mark-read {
   background: none;
   border: none;
-  color: #1e463a; /* Warna hijau gelap sesuai tema brand */
+  color: var(--dk-text-green, #1e463a); /* Warna hijau gelap sesuai tema brand */
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -214,12 +215,12 @@
   display: flex;
   align-items: flex-start;
   padding: 1.25rem 1.5rem;
-  border-top: 1px solid #f9fafb;
+  border-top: 1px solid var(--dk-border-soft, #f9fafb);
   transition: background-color 150ms ease;
 }
 
 .notification-item:hover {
-  background-color: #f9fafb;
+  background-color: var(--dk-bg-subtle, #f9fafb);
 }
 
 /* Bagian Kiri: Lingkaran & Ikon Status */
@@ -234,15 +235,15 @@
 
 /* Styling Khusus Ikon Berdasarkan Jenisnya */
 .icon-returned {
-  color: #d97706; /* Warna orange kuningan tua */
-  background-color: #fef3c7;
+  color: var(--dk-text-amber, #d97706); /* Warna orange kuningan tua */
+  background-color: var(--dk-tint-amber-strong, #fef3c7);
   padding: 0.4rem;
   border-radius: 50%;
   font-size: 0.95rem;
 }
 
 .icon-approved {
-  color: #10b981; /* Warna hijau sukses melingkar */
+  color: var(--dk-text-green, #10b981); /* Warna hijau sukses melingkar */
   font-size: 1.6rem;
 }
 
@@ -261,20 +262,20 @@
 .notification-text {
   margin: 0;
   font-size: 0.95rem;
-  color: #374151; /* Warna teks abu gelap netral */
+  color: var(--dk-text, #374151); /* Warna teks abu gelap netral */
   line-height: 1.45;
 }
 
 /* Menyamakan ketebalan tulisan bold seperti di gambar */
 .notification-text strong {
   font-weight: 700;
-  color: #1f2937;
+  color: var(--dk-text, #1f2937);
 }
 
 /* Sub-teks Tanggal di Bawah */
 .notification-time {
   font-size: 0.8rem;
-  color: #9ca3af; /* Abu-abu pudar sesuai gambar */
+  color: var(--dk-text-4, #9ca3af); /* Abu-abu pudar sesuai gambar */
   font-weight: 500;
 }
 
@@ -287,13 +288,13 @@
 
 /* [BARU] Varian warna biru untuk hint notifikasi cuti perlu diproses */
 .notification-action-hint_leave {
-  color: #0284c7;
+  color: var(--dk-text-blue, #0284c7);
 }
 
 .notification-empty {
   padding: 2rem 1.5rem;
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   text-align: center;
 }
 
@@ -305,7 +306,7 @@
 }
 
 .btn-hamburger:hover {
-  color: var(--color-primary); /* Efek hover warna hijau tema saat disentuh */
+  color: var(--dk-text-green, var(--color-primary)); /* Efek hover warna hijau tema saat disentuh */
 }
 
 /* Khusus saat diakses lewat Handphone (Layar Maksimal 768px) */
@@ -358,7 +359,7 @@
   right: 10px;
   background: transparent;
   border: none;
-  color: #9ca3af;
+  color: var(--dk-text-4, #9ca3af);
   font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
@@ -368,6 +369,6 @@
 }
 
 .notification-dismiss-btn:hover {
-  background-color: #f3f4f6;
+  background-color: var(--dk-bg-subtle, #f3f4f6);
   color: #ef4444;
 }

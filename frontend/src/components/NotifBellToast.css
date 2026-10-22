@@ -48,7 +48,7 @@
 
 /* ===== Popup ===== */
 .bell-toast {
-  --bell-toast-fg: var(--color-primary-soft, #217a5b);
+  --bell-toast-fg: var(--dk-text-green, var(--color-primary-soft, #217a5b));
   --bell-toast-bg: var(--color-primary-tint, #eef7f4);
   position: fixed;
   z-index: 1100;
@@ -64,10 +64,10 @@
   transform-origin: var(--bell-toast-arrow-x, 90%) -8px;
   animation: bellToastIn 0.42s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
-.bell-toast--success { --bell-toast-fg: var(--color-success, #059669); --bell-toast-bg: var(--color-success-bg, #ecfdf5); }
-.bell-toast--warning { --bell-toast-fg: var(--color-warning, #d97706); --bell-toast-bg: var(--color-warning-bg, #fffbeb); }
-.bell-toast--danger  { --bell-toast-fg: var(--color-danger, #e11d48);  --bell-toast-bg: var(--color-danger-bg, #fff1f2); }
-.bell-toast--info    { --bell-toast-fg: var(--color-info, #2563eb);    --bell-toast-bg: var(--color-info-bg, #eff6ff); }
+.bell-toast--success { --bell-toast-fg: var(--dk-text-green, var(--color-success, #059669)); --bell-toast-bg: var(--color-success-bg, #ecfdf5); }
+.bell-toast--warning { --bell-toast-fg: var(--dk-text-amber, var(--color-warning, #d97706)); --bell-toast-bg: var(--color-warning-bg, #fffbeb); }
+.bell-toast--danger  { --bell-toast-fg: var(--dk-text-red, var(--color-danger, #e11d48));  --bell-toast-bg: var(--color-danger-bg, #fff1f2); }
+.bell-toast--info    { --bell-toast-fg: var(--dk-text-blue, var(--color-info, #2563eb));    --bell-toast-bg: var(--color-info-bg, #eff6ff); }
 
 .bell-toast--leaving {
   animation: bellToastOut 0.22s ease-in both;

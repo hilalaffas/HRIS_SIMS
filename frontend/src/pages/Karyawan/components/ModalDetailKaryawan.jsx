@@ -264,7 +264,7 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
       <div className="modal-container_detail_karyawan">
         
         {errorMessage && (
-          <div className="notification-toast_detail_karyawan" style={{ background: '#fee2e2', color: '#b91c1c' }}>
+          <div className="notification-toast_detail_karyawan" style={{ background: 'var(--dk-tint-red-strong, #fee2e2)', color: 'var(--dk-text-red, #b91c1c)' }}>
             ⚠️ {errorMessage}
           </div>
         )}
@@ -478,7 +478,7 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
                 title="Sisa Cuti Tahunan + sisa Sisa Cuti (lama) yang belum terpakai. Saat karyawan mengajukan cuti, Sisa Cuti (lama) dipotong lebih dulu."
               />
             </div>
-            <p style={{ fontSize: '12px', color: '#374151', background: '#f3f4f6', padding: '8px 12px', borderRadius: '6px', margin: '8px 0 0' }}>
+            <p style={{ fontSize: '12px', color: 'var(--dk-text-2, #374151)', background: 'var(--dk-bg-muted, #f3f4f6)', padding: '8px 12px', borderRadius: '6px', margin: '8px 0 0' }}>
               ℹ️ <strong>Sisa Cuti Tahunan</strong> dihitung otomatis: mulai berlaku 1 tahun setelah tanggal bergabung, dan
               refresh tiap tahun mengikuti tanggal bergabung tersebut -- field ini tidak bisa diketik manual.
               <strong> Sisa Cuti (lama)</strong> di sebelahnya adalah alokasi awal (kuota tambahan) yang boleh diisi bebas oleh HR --

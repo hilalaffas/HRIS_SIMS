@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .headline-approval {
   display: flex;
   align-items: flex-start;
@@ -23,7 +24,7 @@
 .headline-approval__action {
   flex-shrink: 0;
   background: var(--alv-green-bg);
-  color: var(--alv-green);
+  color: var(--dk-text-green, var(--alv-green));
   border: 1px solid var(--alv-green-border);
   border-radius: var(--alv-radius-full);
   padding: 8px 18px;
@@ -36,7 +37,7 @@
 }
 
 .headline-approval__action:hover {
-  background: #d9f7e7;
+  background: var(--dk-tint-green-strong, #d9f7e7);
 }
 
 .headline-approval__action:active {

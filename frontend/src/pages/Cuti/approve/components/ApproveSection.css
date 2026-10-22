@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .approvalSection { padding: 18px 24px 24px 24px; }
 
 /* Grid Layout Presisi */
@@ -54,9 +55,9 @@
   white-space: nowrap;
 }
 
-.alvBtnPill--green { background: var(--alv-green-bg); color: var(--alv-green); border-color: var(--alv-green-border); }
-.alvBtnPill--amber { background: var(--alv-amber-bg); color: var(--alv-amber); border-color: var(--alv-amber-border); }
-.alvBtnPill--rose { background: var(--alv-rose-bg); color: var(--alv-rose); border-color: var(--alv-rose-border); }
+.alvBtnPill--green { background: var(--alv-green-bg); color: var(--dk-text-green, var(--alv-green)); border-color: var(--alv-green-border); }
+.alvBtnPill--amber { background: var(--alv-amber-bg); color: var(--dk-text-amber, var(--alv-amber)); border-color: var(--alv-amber-border); }
+.alvBtnPill--rose { background: var(--alv-rose-bg); color: var(--dk-text-red, var(--alv-rose)); border-color: var(--alv-rose-border); }
 
 /* --- TAMBAHAN EFEK HOVER SOLID MENYALA --- */
 .alvBtnPill--green:hover { background: var(--alv-green); color: #ffffff; }

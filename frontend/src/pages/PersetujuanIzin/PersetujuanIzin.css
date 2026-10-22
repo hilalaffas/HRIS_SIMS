@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/PersetujuanIzin/PersetujuanIzin.css
  * Layout halaman, header, dan panel dua kolom. Gaya tiap komponen ada di
  * components/*.css (co-located). Semua warna memakai styles/tokens.css, jadi
@@ -5,8 +6,8 @@
 
 .pzn-page {
   --pzn-purple: #7c3aed;
-  --pzn-purple-bg: #f3edff;
-  --pzn-purple-border: #ddd0fb;
+  --pzn-purple-bg: var(--dk-tint-purple, #f3edff);
+  --pzn-purple-border: var(--dk-border-purple, #ddd0fb);
 
   display: flex;
   flex-direction: column;
@@ -43,7 +44,7 @@
   color: var(--color-text);
 }
 
-.pzn-header h1 svg { width: 26px; height: 26px; color: var(--color-success); }
+.pzn-header h1 svg { width: 26px; height: 26px; color: var(--dk-text-green, var(--color-success)); }
 .pzn-header p { margin: 0; font-size: 14px; color: var(--color-text-secondary); }
 
 .pzn-bulk-btn {
@@ -62,7 +63,7 @@
   cursor: pointer;
 }
 
-.pzn-bulk-btn svg { width: 16px; height: 16px; color: var(--color-success); }
+.pzn-bulk-btn svg { width: 16px; height: 16px; color: var(--dk-text-green, var(--color-success)); }
 .pzn-bulk-btn:not(:disabled):hover { border-color: var(--color-primary-soft); background: var(--color-primary-tint); }
 .pzn-bulk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 

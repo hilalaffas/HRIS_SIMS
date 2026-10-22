@@ -1,7 +1,8 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .table-card {
-  background: white;
+  background: var(--dk-bg-card, white);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dk-border, #e2e8f0);
   margin-top: 24px;
   overflow: hidden;
 }
@@ -11,13 +12,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--dk-border, #e2e8f0);
 }
 
 .table-header-controls h3 {
   margin: 0;
   font-size: 16px;
-  color: #1a202c;
+  color: var(--dk-text, #1a202c);
 }
 
 .filters {
@@ -30,7 +31,7 @@
    hanya dipakai sebagai className tambahan pada Dropdown. */
 .search-box input {
   padding: 8px 12px;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--dk-border-strong, #cbd5e0);
   border-radius: 6px;
   font-size: 14px;
 }
@@ -44,7 +45,7 @@
 .search-icon {
   position: absolute;
   left: 10px;
-  color: #a0aec0;
+  color: var(--dk-text-4, #a0aec0);
 }
 
 .search-box input {
@@ -58,18 +59,18 @@
 }
 
 .karyawan-table th {
-  background-color: #f7fafc;
+  background-color: var(--dk-bg-subtle, #f7fafc);
   text-align: left;
   padding: 12px 20px;
   font-size: 12px;
-  color: #718096;
+  color: var(--dk-text-3, #718096);
   font-weight: 700;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--dk-border, #e2e8f0);
 }
 
 .karyawan-table td {
   padding: 16px 20px;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--dk-border-soft, #edf2f7);
   vertical-align: middle;
 }
 
@@ -84,25 +85,25 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dk-border, #e2e8f0);
 }
 
 .emp-name, .emp-position {
   font-weight: 600;
-  color: #2d3748;
+  color: var(--dk-text, #2d3748);
   margin: 0 0 4px 0;
   font-size: 14px;
 }
 
 .emp-nik, .emp-division {
-  color: #a0aec0;
+  color: var(--dk-text-4, #a0aec0);
   margin: 0;
   font-size: 12px;
 }
 
 .badge-role {
-  background-color: #edf2f7;
-  color: #4a5568;
+  background-color: var(--dk-bg-muted, #edf2f7);
+  color: var(--dk-text-2, #4a5568);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -110,8 +111,8 @@
 }
 
 .badge-status {
-  background-color: #c6f6d5;
-  color: #22543d;
+  background-color: var(--dk-tint-green-strong, #c6f6d5);
+  color: var(--dk-text-green, #22543d);
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
@@ -119,18 +120,18 @@
 }
 
 .badge-status.inactive {
-  background-color: #fed7d7; /* Merah muda lembut */
-  color: #9b2c2c;           /* Merah tua untuk teks */
+  background-color: var(--dk-tint-red-strong, #fed7d7); /* Merah muda lembut */
+  color: var(--dk-text-red, #9b2c2c);           /* Merah tua untuk teks */
 }
 
 .text-center { text-align: center; }
 .font-bold { font-weight: 700; }
-.text-green { color: #2f855a; }
+.text-green { color: var(--dk-text-green, #2f855a); }
 
 .btn-edit {
   background: none;
   border: none;
-  color: #2b6cb0;
+  color: var(--dk-text-blue, #2b6cb0);
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -143,7 +144,7 @@
 .btn-edit {
   background: none;
   border: none;
-  color: #0891b2; /* Warna teal/cyan yang mirip dengan referensi */
+  color: var(--dk-text-blue, #0891b2); /* Warna teal/cyan yang mirip dengan referensi */
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -154,7 +155,7 @@
 }
 
 .btn-edit:hover { 
-  color: #0e7490; /* Warna sedikit lebih gelap saat di-hover */
+  color: var(--dk-text-blue, #0e7490); /* Warna sedikit lebih gelap saat di-hover */
   text-decoration: underline; 
 }
 /* Styling untuk background gelap Modal */
@@ -193,7 +194,7 @@
   border-radius: 5%; /* Dibuat bulat, hapus baris ini jika ingin fotonya kotak */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   object-fit: cover;
-  background-color: #fff;
+  background-color: var(--dk-bg-card, #fff);
 }
 
 /* Tombol X untuk menutup modal */
@@ -255,8 +256,8 @@
   gap: 6px;
   padding: 3px 10px;
   border-radius: 20px;
-  background-color: #f0fdf4;
-  color: #15803d;
+  background-color: var(--dk-tint-green, #f0fdf4);
+  color: var(--dk-text-green, #15803d);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
@@ -280,7 +281,7 @@
 .table-sync__time {
   text-transform: none;
   font-weight: 600;
-  color: #4d7c62;
+  color: var(--dk-text-green, #4d7c62);
 }
 
 /* ==========================================
@@ -293,12 +294,12 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--dk-border, #e2e8f0);
 }
 
 .table-pagination__info {
   font-size: 13px;
-  color: #64748b;
+  color: var(--dk-text-3, #64748b);
 }
 
 .table-pagination__controls {
@@ -310,16 +311,16 @@
 .table-pagination__page {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--dk-text, #334155);
   white-space: nowrap;
 }
 
 .table-pagination__btn {
   padding: 7px 16px;
   border-radius: 6px;
-  border: 1px solid #cbd5e0;
-  background-color: #ffffff;
-  color: #334155;
+  border: 1px solid var(--dk-border-strong, #cbd5e0);
+  background-color: var(--dk-bg-card, #ffffff);
+  color: var(--dk-text, #334155);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -327,7 +328,7 @@
 }
 
 .table-pagination__btn:hover:not(:disabled) {
-  background-color: #f1f5f9;
+  background-color: var(--dk-bg-subtle, #f1f5f9);
   border-color: #94a3b8;
 }
 

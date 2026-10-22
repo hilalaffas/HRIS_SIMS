@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/PersetujuanIzin/components/DecisionPanel.css */
 .pzn-decision { display: flex; flex-direction: column; gap: var(--space-2); }
 
@@ -40,7 +41,7 @@
   animation: pzn-shake 360ms var(--ease-out-soft);
 }
 
-.pzn-decision__error { margin: 0; font-size: 12px; font-weight: 600; color: var(--color-danger); animation: sims-fade-in var(--motion-base) ease-out; }
+.pzn-decision__error { margin: 0; font-size: 12px; font-weight: 600; color: var(--dk-text-red, var(--color-danger)); animation: sims-fade-in var(--motion-base) ease-out; }
 
 .pzn-decision__actions { display: grid; grid-template-columns: 1fr 1.25fr; gap: var(--space-3); margin-top: var(--space-3); }
 
@@ -61,7 +62,7 @@
 .pzn-btn svg { width: 16px; height: 16px; stroke-width: 2.6; }
 .pzn-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.pzn-btn--reject { background: var(--color-surface); border-color: var(--color-danger-border); color: var(--color-danger); }
+.pzn-btn--reject { background: var(--color-surface); border-color: var(--color-danger-border); color: var(--dk-text-red, var(--color-danger)); }
 .pzn-btn--reject:not(:disabled):hover { background: var(--color-danger-bg); border-color: var(--color-danger); }
 
 .pzn-btn--approve { background: var(--color-primary); color: #fff; }

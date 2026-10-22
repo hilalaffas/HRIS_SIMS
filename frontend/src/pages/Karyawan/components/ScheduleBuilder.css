@@ -1,9 +1,10 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* =========================================
    BUILDER JADWAL ABSENSI (BULANAN)
    ========================================= */
 .card_schedule_builder {
   background-color: var(--color-surface, #ffffff);
-  border: 1px solid #dfe8e8;
+  border: 1px solid var(--dk-border, #dfe8e8);
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(13, 53, 50, 0.06);
   margin-top: 20px;
@@ -17,7 +18,7 @@
 }
 
 .icon_schedule_builder {
-  color: var(--color-primary-soft, #217A5B);
+  color: var(--dk-text-green, var(--color-primary-soft, #217A5B));
   margin-top: 2px;
   flex: none;
 }
@@ -25,7 +26,7 @@
 .heading_schedule_builder h2 {
   margin: 0 0 6px;
   font-size: 17px;
-  color: #111827;
+  color: var(--dk-text, #111827);
 }
 
 .heading_schedule_builder p {
@@ -36,8 +37,8 @@
 
 .form_schedule_builder {
   margin-top: 18px;
-  border: 1px solid #d8e3ec;
-  background: #f8fafc;
+  border: 1px solid var(--dk-border, #d8e3ec);
+  background: var(--dk-bg-subtle, #f8fafc);
   border-radius: 9px;
   padding: 16px;
   display: grid;
@@ -49,7 +50,7 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  color: #193350;
+  color: var(--dk-text, #193350);
   font-weight: 700;
   font-size: 12px;
   min-width: 0;
@@ -58,10 +59,10 @@
 .form_schedule_builder select,
 .form_schedule_builder input {
   min-height: 36px;
-  border: 1px solid #c8d5e3;
+  border: 1px solid var(--dk-border-strong, #c8d5e3);
   border-radius: 5px;
-  background: #ffffff;
-  color: #31465a;
+  background: var(--dk-bg-card, #ffffff);
+  color: var(--dk-text, #31465a);
   padding: 0 11px;
   font: inherit;
   font-weight: 400;
@@ -99,13 +100,13 @@
 .preview-label_schedule_builder {
   font-size: 13px;
   margin: 18px 0 8px;
-  color: #111827;
+  color: var(--dk-text, #111827);
 }
 
 .notice_schedule_builder {
   background: var(--color-warning-bg, #fffbeb);
   border: 1px solid var(--color-warning-border, #fde68a);
-  color: #92400e;
+  color: var(--dk-text-amber, #92400e);
   border-radius: 8px;
   padding: 9px 13px;
   font-size: 12px;
@@ -115,33 +116,33 @@
 /* Tabel bulanan: kolom nama menempel saat digulir ke samping */
 .table-wrap_schedule_builder {
   overflow-x: auto;
-  border-top: 1px solid #dbe3ec;
+  border-top: 1px solid var(--dk-border, #dbe3ec);
 }
 
 .table_schedule_builder {
   border-collapse: collapse;
   width: 100%;
   font-size: 11px;
-  color: #193350;
+  color: var(--dk-text, #193350);
 }
 
 .table_schedule_builder th,
 .table_schedule_builder td {
   padding: 10px 8px;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--dk-border-soft, #edf0f4);
   text-align: left;
   white-space: nowrap;
-  background: #ffffff;
+  background: var(--dk-bg-card, #ffffff);
 }
 
 .table_schedule_builder th {
-  background: #f1f5f9;
-  color: #385069;
+  background: var(--dk-bg-subtle, #f1f5f9);
+  color: var(--dk-text-2, #385069);
   font-weight: 700;
 }
 
 .table_schedule_builder th.off-head_schedule_builder {
-  color: #b91c1c;
+  color: var(--dk-text-red, #b91c1c);
 }
 
 .sticky-col_schedule_builder {
@@ -154,14 +155,14 @@
 
 .tag-shift_schedule_builder {
   display: inline-block;
-  color: #4653cb;
-  background: #e7e9ff;
+  color: var(--dk-text-blue, #4653cb);
+  background: var(--dk-tint-blue, #e7e9ff);
   border-radius: 4px;
   padding: 3px 6px;
 }
 
 .tag-off_schedule_builder {
-  color: #7e8998;
+  color: var(--dk-text-3, #7e8998);
 }
 
 .btn-publish_schedule_builder {

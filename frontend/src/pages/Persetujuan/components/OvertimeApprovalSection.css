@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Persetujuan/components/OvertimeApprovalSection.css -- filter Menunggu/Semua */
 
 .overtimeApprovalSection--padded { padding: 4px 24px 24px 24px; }
@@ -12,9 +13,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid #dfe5ee;
+  border: 1px solid var(--dk-border, #dfe5ee);
   background: var(--color-surface);
-  color: #607089;
+  color: var(--dk-text-3, #607089);
   padding: 7px 14px;
   border-radius: 999px;
   font-size: 12px;
@@ -23,7 +24,7 @@
   transition: background-color 0.15s ease;
 }
 
-.apv-filter-button:hover { background: #f4f6fa; }
+.apv-filter-button:hover { background: var(--dk-bg-subtle, #f4f6fa); }
 
 .apv-filter-button.is-active {
   background: var(--color-primary);

@@ -1,6 +1,7 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .form-card_formkaryawan {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
+    background-color: var(--dk-bg-card, #ffffff);
+    border: 1px solid var(--dk-border, #e2e8f0);
     border-radius: 8px;
     margin-top: 0px;
     margin-bottom: 32px;
@@ -8,15 +9,15 @@
   }
 
   .form-header-soft_formkaryawan {
-    background-color: #f0fdf4;
+    background-color: var(--dk-tint-green, #f0fdf4);
     padding: 16px 24px;
     display: flex;
     align-items: center;
     gap: 0px;
     font-size: 16px;
     font-weight: 700;
-    color: var(--color-primary);
-    border-bottom: 1px solid #e2e8f0;
+    color: var(--dk-text-green, var(--color-primary));
+    border-bottom: 1px solid var(--dk-border, #e2e8f0);
   }
 
   .icon-user-add_formkaryawan {
@@ -29,16 +30,16 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 40px;
-    background-color: #ffffff;
+    background-color: var(--dk-bg-card, #ffffff);
     padding: 24px;
   }
 
   .section-title_formkaryawan {
     font-size: 14px;
     font-weight: 700;
-    color: var(--color-primary);
+    color: var(--dk-text-green, var(--color-primary));
     margin-bottom: 16px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--dk-border, #e2e8f0);
     padding-bottom: 8px;
   }
 
@@ -51,7 +52,7 @@
   .input-group_formkaryawan label {
     font-size: 11px;
     font-weight: 700;
-    color: #000000;
+    color: var(--dk-text, #000000);
     margin-bottom: 6px;
     text-transform: uppercase;
   }
@@ -64,10 +65,10 @@
   .input-group_formkaryawan select, 
   .input-group_formkaryawan textarea {
     padding: 10px;
-    border: 1px solid #cbd5e0;
+    border: 1px solid var(--dk-border-strong, #cbd5e0);
     border-radius: 6px;
     font-size: 14px;
-    color: #000000;
+    color: var(--dk-text, #000000);
   }
 
   .input-group_formkaryawan input:focus, 
@@ -78,14 +79,14 @@
   }
 
   .input-group_formkaryawan select:disabled {
-    background-color: #f7fafc;
-    color: #a0aec0;
+    background-color: var(--dk-bg-subtle, #f7fafc);
+    color: var(--dk-text-4, #a0aec0);
     cursor: not-allowed;
   }
 
   .hint-text_formkaryawan {
     font-size: 11px;
-    color: #718096;
+    color: var(--dk-text-3, #718096);
     margin-top: 4px;
   }
 
@@ -96,10 +97,10 @@
   }
 
   .credential-box_formkaryawan {
-    background-color: #f7fafc;
+    background-color: var(--dk-bg-subtle, #f7fafc);
     padding: 16px;
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--dk-border, #e2e8f0);
   }
 
   .password-wrapper_formkaryawan {
@@ -117,16 +118,16 @@
     right: 12px;
     top: 10px;
     cursor: pointer;
-    color: #a0aec0;
+    color: var(--dk-text-4, #a0aec0);
     user-select: none;
   }
 
   .text-red_formkaryawan { color: #e53e3e !important; }
-  .border-red_formkaryawan { border-color: #fc8181 !important; background-color: #fff5f5; }
+  .border-red_formkaryawan { border-color: var(--dk-border-red, #fc8181) !important; background-color: var(--dk-tint-red, #fff5f5); }
 
   /* [BARU] Versi untuk komponen Dropdown custom -- border/bg sekarang
      digambar di .dropdown__trigger, bukan langsung di elemen <select>. */
-  .border-red_formkaryawan .dropdown__trigger { border-color: #fc8181 !important; background-color: #fff5f5; }
+  .border-red_formkaryawan .dropdown__trigger { border-color: var(--dk-border-red, #fc8181) !important; background-color: var(--dk-tint-red, #fff5f5); }
 
   .form-actions_formkaryawan {
     grid-column: span 2;
@@ -164,10 +165,10 @@
 
 /* Styling tombol custom */
 .btn-upload_formkaryawan {
-  background-color: #edf2f7;
-  color: #030303;
+  background-color: var(--dk-bg-muted, #edf2f7);
+  color: var(--dk-text, #030303);
   padding: 8px 16px;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--dk-border-strong, #cbd5e0);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -177,13 +178,13 @@
 }
 
 .btn-upload_formkaryawan:hover {
-  background-color: #e2e8f0;
+  background-color: var(--dk-bg-hover, #e2e8f0);
 }
 
 /* Styling teks nama file */
 .file-name_formkaryawan {
   font-size: 13px;
-  color: #000000;
+  color: var(--dk-text, #000000);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

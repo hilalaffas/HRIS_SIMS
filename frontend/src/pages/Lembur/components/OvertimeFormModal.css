@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Lembur/components/OvertimeFormModal.css */
 
 .lmb-modal-overlay {
@@ -34,7 +35,7 @@
 .lmb-modal-header h2 {
   margin: 0;
   font-size: 16px;
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 .lmb-modal-close {
@@ -47,7 +48,7 @@
   border-radius: 6px;
 }
 
-.lmb-modal-close:hover:not(:disabled) { background: #f4f6fa; }
+.lmb-modal-close:hover:not(:disabled) { background: var(--dk-bg-subtle, #f4f6fa); }
 .lmb-modal-close svg { width: 18px; height: 18px; }
 
 .lmb-field {
@@ -93,7 +94,7 @@
   color: var(--color-text-secondary);
 }
 
-.lmb-total-hint strong { color: var(--color-primary); }
+.lmb-total-hint strong { color: var(--dk-text-green, var(--color-primary)); }
 
 .lmb-form-error {
   margin: 0;
@@ -101,7 +102,7 @@
   border-radius: var(--radius-sm, 6px);
   background: var(--color-danger-bg);
   border: 1px solid var(--color-danger-border);
-  color: var(--color-danger);
+  color: var(--dk-text-red, var(--color-danger));
   font-size: 12px;
 }
 
@@ -113,9 +114,9 @@
 }
 
 .lmb-outline-button {
-  border: 1px solid #dfe5ee;
+  border: 1px solid var(--dk-border, #dfe5ee);
   background: var(--color-surface);
-  color: #607089;
+  color: var(--dk-text-3, #607089);
   padding: 11px 16px;
   border-radius: var(--radius-sm, 6px);
   font-size: 12px;
@@ -123,5 +124,5 @@
   cursor: pointer;
 }
 
-.lmb-outline-button:hover:not(:disabled) { background: #f4f6fa; }
+.lmb-outline-button:hover:not(:disabled) { background: var(--dk-bg-subtle, #f4f6fa); }
 .lmb-outline-button:disabled { opacity: 0.6; cursor: not-allowed; }

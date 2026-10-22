@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* =========================================================================
    STRUKTUR BARU: MODAL POP-UP WINDOWS EFFECT
    ========================================================================= */
@@ -17,7 +18,7 @@
 }
 
 .modal-content-box {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   width: 100%;
   max-width: 620px; 
   max-height: 90vh; /* Tambahan: membatasi tinggi maksimal 90% dari tinggi layar */
@@ -78,34 +79,34 @@
 .modal-info-label {
   width: 150px;
   font-weight: bold;
-  color: #64748b;
+  color: var(--dk-text-3, #64748b);
   flex-shrink: 0;
 }
 
 .modal-info-value {
-  color: #1e293b;
+  color: var(--dk-text, #1e293b);
 }
 
 .modal-info-value.value-highlight {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
   font-weight: bold;
 }
 
 .modal-divider {
   height: 1px;
-  background-color: #e2e8f0;
+  background-color: var(--dk-bg-hover, #e2e8f0);
   margin: 18px 0;
 }
 
 .modal-subtitle-text {
   margin: 0 0 12px 0;
   font-size: 13px;
-  color: #334155;
+  color: var(--dk-text, #334155);
   font-weight: 700;
 }
 
 .modal-approval-status-box {
-  background-color: #f8fafc;
+  background-color: var(--dk-bg-subtle, #f8fafc);
   border-radius: 8px;
   padding: 12px 16px;
   display: flex;
@@ -127,13 +128,13 @@
   text-transform: uppercase;
 }
 
-.badge-step.approved { background-color: #d1fae5; color: #065f46; }
-.badge-step.returned { background-color: #ffedd5; color: #c2410c; }
-.badge-step.pending  { background-color: #f1f5f9; color: #64748b; }
+.badge-step.approved { background-color: var(--dk-tint-green-strong, #d1fae5); color: var(--dk-text-green, #065f46); }
+.badge-step.returned { background-color: var(--dk-tint-amber-strong, #ffedd5); color: var(--dk-text-red, #c2410c); }
+.badge-step.pending  { background-color: var(--dk-bg-subtle, #f1f5f9); color: var(--dk-text-3, #64748b); }
 
 .modal-feedback-alert {
   margin-top: 16px;
-  background-color: #fef2f2;
+  background-color: var(--dk-tint-red, #fef2f2);
   border-left: 4px solid #ef4444;
   padding: 12px;
   border-radius: 4px;
@@ -142,21 +143,21 @@
 .modal-feedback-alert strong {
   display: block;
   font-size: 12.5px;
-  color: #991b1b;
+  color: var(--dk-text-red, #991b1b);
   margin-bottom: 4px;
 }
 
 .modal-feedback-alert p {
   margin: 0;
   font-size: 13px;
-  color: #7f1d1d;
+  color: var(--dk-text-red, #7f1d1d);
   line-height: 1.4;
 }
 
 .modal-footer-section {
   padding: 12px 24px;
-  background-color: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background-color: var(--dk-bg-subtle, #f8fafc);
+  border-top: 1px solid var(--dk-border, #e2e8f0);
   display: flex;
   justify-content: flex-end;
 }
@@ -198,8 +199,8 @@
 }
 
 .modal-display-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 8px;
   padding: 12px;
   margin-top: 6px;
@@ -207,8 +208,8 @@
 }
 
 .modal-display-box.highlight-box {
-  background: #fffdf5;
-  border-color: #fef08a;
+  background: var(--dk-tint-amber, #fffdf5);
+  border-color: var(--dk-border-amber, #fef08a);
 }
 
 .btn-modal-close-dark {
@@ -231,7 +232,7 @@
   padding: 16px;
   margin-top: 10px;
   margin-bottom: 12px;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   display: block;
   width: 100%;
   box-sizing: border-box;
@@ -246,7 +247,7 @@
 }
 
 .modal-log-card .modal-log-date {
-  color: #94a3b8 !important;
+  color: var(--dk-text-4, #94a3b8) !important;
   font-size: 13px !important;
   font-weight: 400 !important;
   text-align: right !important;
@@ -283,7 +284,7 @@
 
 /* Kontainer Pop-out Utama (Lebar Dibatasi Sesuai Gambar) */
 .form-cuti__modal {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   width: 100%;
   max-width: 620px; 
   max-height: 90vh;
@@ -308,7 +309,7 @@
 .form-cuti__title {
   font-size: 13px;
   font-weight: 700;
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   text-transform: uppercase;
   margin: 0 0 4px 0;
   letter-spacing: 0.5px;
@@ -371,7 +372,7 @@
 .form-cuti__label {
   font-size: 11px;
   font-weight: 700;
-  color: #94a3b8; /* Abu-abu pucat kapital */
+  color: var(--dk-text-4, #94a3b8); /* Abu-abu pucat kapital */
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -379,38 +380,38 @@
 .form-cuti__value {
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--dk-text, #1e293b);
 }
 
 /* Aksen Warna Hijau Khusus Durasi Kerja / Tanggal */
 .form-cuti__value--accent {
-  color: #0f4c3a;
+  color: var(--dk-text-green, #0f4c3a);
 }
 
 /* Garis Pembatas Tipis */
 .form-cuti__divider {
   height: 1px;
-  background-color: #f1f5f9;
+  background-color: var(--dk-bg-subtle, #f1f5f9);
   margin: 4px 0;
 }
 
 /* Kotak Box (Alasan Keterangan) */
 .form-cuti__box {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 8px;
   padding: 12px 14px;
   font-size: 13.5px;
-  color: #334155;
+  color: var(--dk-text, #334155);
   margin-top: 6px;
   min-height: 20px;
 }
 
 /* Kotak Box Khusus Berwarna Kuning (Pekerjaan Tertunda) */
 .form-cuti__box--warn {
-  background-color: #fffdf5;
-  border: 1px solid #fef08a;
-  color: #b45309;
+  background-color: var(--dk-tint-amber, #fffdf5);
+  border: 1px solid var(--dk-border-amber, #fef08a);
+  color: var(--dk-text-amber, #b45309);
   font-style: italic;
 }
 
@@ -425,11 +426,11 @@
 
 /* Alert Box Merah Tambahan (Jika Data Dikembalikan) */
 .modal-feedback-alert {
-  background-color: #fef2f2;
-  border: 1px solid #fca5a5;
+  background-color: var(--dk-tint-red, #fef2f2);
+  border: 1px solid var(--dk-border-red, #fca5a5);
   border-radius: 8px;
   padding: 12px 14px;
-  color: #991b1b;
+  color: var(--dk-text-red, #991b1b);
   font-size: 13px;
 }
 
@@ -439,16 +440,16 @@
 }
 
 .form-cuti__box--feedback {
-  color: #b91c1c;
-  border-color: #fca5a5;
-  background: #fef2f2;
+  color: var(--dk-text-red, #b91c1c);
+  border-color: var(--dk-border-red, #fca5a5);
+  background: var(--dk-tint-red, #fef2f2);
 }
 
 /* FOOTER MODAL */
 .form-cuti__footer {
   padding: 16px 24px;
-  background-color: #ffffff;
-  border-top: 1px solid #f1f5f9;
+  background-color: var(--dk-bg-card, #ffffff);
+  border-top: 1px solid var(--dk-border-soft, #f1f5f9);
   display: flex;
   justify-content: flex-end;
 }
@@ -506,7 +507,7 @@
 
 .btn-cancel-detail {
   margin-left: auto;
-  background: #ccc;
+  background: var(--dk-bg-hover, #ccc);
   padding: 8px 16px;
   border: none;
   border-radius: 4px;

@@ -43,6 +43,15 @@ export default function MainLayout({ onLogout, user }) {
   const isThemeToggleOn = useFeatureFlag(isThemeToggleEnabled);
   const activeTheme = isThemeToggleOn ? theme : 'light';
 
+  // [BARU] Pasang tema juga di <html>. Modal yang dirender lewat createPortal ke
+  // document.body (CheckoutOvertimeModal & EarlyCheckoutModal di Absensi) berada
+  // DI LUAR .layout-container, jadi sebelumnya selalu terang walau tema gelap.
+  // Atribut dilepas saat keluar dari layout supaya halaman Login tetap terang.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', activeTheme);
+    return () => document.documentElement.removeAttribute('data-theme');
+  }, [activeTheme]);
+
   // Menu sidebar sekarang menyesuaikan role user (karyawan/manager/hr/super admin)
   const menuItems = getMenuItems(user);
   const role = String(user?.role || user?.jabatan || '').trim().toUpperCase().replace(/^ROLE_/, '');

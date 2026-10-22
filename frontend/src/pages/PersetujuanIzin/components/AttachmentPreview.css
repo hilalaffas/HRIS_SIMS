@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/PersetujuanIzin/components/AttachmentPreview.css */
 .pzn-attach { display: flex; flex-direction: column; gap: var(--space-2); }
 
@@ -62,7 +63,7 @@
   border: 1px solid var(--color-warning-border);
   border-radius: var(--radius-md);
   background: var(--color-warning-bg);
-  color: var(--color-warning);
+  color: var(--dk-text-amber, var(--color-warning));
 }
 
 .pzn-attach--empty svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }

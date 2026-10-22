@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/components/LoadingScreen.css */
 
 /* [BARU] Overlay penuh layar. z-index sengaja di BAWAH SessionExpiredModal
@@ -48,7 +49,7 @@
 }
 
 .loading-screen--complete .loading-screen__wordmark {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
   text-shadow: 0 0 18px var(--color-primary-tint), 0 0 6px var(--color-primary-soft);
 }
 

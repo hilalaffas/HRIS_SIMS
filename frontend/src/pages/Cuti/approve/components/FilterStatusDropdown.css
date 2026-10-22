@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .filter-status {
   position: relative;
   display: flex;
@@ -8,7 +9,7 @@
 .filter-status__label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--alv-rose);
+  color: var(--dk-text-red, var(--alv-rose));
   text-transform: uppercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -37,7 +38,7 @@
 }
 
 .filter-status__chevron {
-  color: var(--alv-green);
+  color: var(--dk-text-green, var(--alv-green));
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }

@@ -81,7 +81,7 @@ const DivisiShiftSettings = ({ shifts, isLoading, error, onSaved, onToast }) => 
 
       {isLoading && <div className="empty-state_shift_settings">Memuat data shift...</div>}
       {!isLoading && error && (
-        <div className="empty-state_shift_settings" style={{ color: '#b91c1c' }}>{error}</div>
+        <div className="empty-state_shift_settings" style={{ color: 'var(--dk-text-red, #b91c1c)' }}>{error}</div>
       )}
 
       {!isLoading && !error && (

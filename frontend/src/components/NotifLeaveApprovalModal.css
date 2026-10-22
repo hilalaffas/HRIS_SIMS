@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/components/NotifLeaveApprovalModal.css */
 
 .modal-overlay_notif_leave {
@@ -12,7 +13,7 @@
 }
 
 .modal-card_notif_leave {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 1rem;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
   width: 100%;
@@ -25,7 +26,7 @@
   width: 3rem;
   height: 3rem;
   border-radius: 9999px;
-  background-color: #e0f2fe;
+  background-color: var(--dk-tint-blue, #e0f2fe);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -39,26 +40,26 @@
 .modal-title_notif_leave {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--dk-text, #111827);
   margin: 0 0 0.75rem;
 }
 
 .modal-message_notif_leave {
-  color: #374151;
+  color: var(--dk-text, #374151);
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0 0 0.5rem;
 }
 
 .modal-reason_notif_leave {
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   font-size: 0.85rem;
   line-height: 1.5;
   margin: 0 0 0.5rem;
 }
 
 .modal-time_notif_leave {
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   font-size: 0.8rem;
   margin: 0 0 1rem;
 }
@@ -72,9 +73,9 @@
 
 .btn-tutup_notif_leave {
   padding: 0.625rem 1.25rem;
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  background-color: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-strong, #d1d5db);
+  color: var(--dk-text, #374151);
   font-weight: 600;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -82,7 +83,7 @@
 }
 
 .btn-tutup_notif_leave:hover {
-  background-color: #f9fafb;
+  background-color: var(--dk-bg-subtle, #f9fafb);
 }
 
 .btn-proses_notif_leave {

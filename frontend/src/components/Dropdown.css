@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /**
  * Dropdown.css
  * ------------------------------------------------------------------
@@ -55,7 +56,7 @@
 }
 
 .dropdown__chevron {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }
@@ -160,7 +161,7 @@
 /* Opsi yang sedang terpilih (saat listbox baru dibuka, sebelum di-hover) */
 .dropdown__option.is-selected {
   background: var(--color-success-bg);
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   font-weight: 700;
 }
 

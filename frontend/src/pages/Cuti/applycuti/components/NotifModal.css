@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .notifModal__overlay {
   position: fixed;
   inset: 0;
@@ -20,7 +21,7 @@
 .notifModal__card {
   width: 100%;
   max-width: 380px;
-  background: #ffffff;
+  background: var(--dk-bg-card, #ffffff);
   border-radius: 16px;
   box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.25);
   padding: 28px 24px 24px;
@@ -51,26 +52,26 @@
 }
 
 /* --- error --- */
-.notifModal__iconWrap--error { background: #fee2e2; }
-.notifModal__icon--error { color: #dc2626; }
+.notifModal__iconWrap--error { background: var(--dk-tint-red, #fee2e2); }
+.notifModal__icon--error { color: var(--dk-text-red, #dc2626); }
 .notifModal__btnOk--error { background: #dc2626; }
 .notifModal__btnOk--error:hover { background: #b91c1c; }
 
 /* --- warning --- */
-.notifModal__iconWrap--warning { background: #fef3c7; }
-.notifModal__icon--warning { color: #d97706; }
+.notifModal__iconWrap--warning { background: var(--dk-tint-amber-strong, #fef3c7); }
+.notifModal__icon--warning { color: var(--dk-text-amber, #d97706); }
 .notifModal__btnOk--warning { background: #d97706; }
 .notifModal__btnOk--warning:hover { background: #b45309; }
 
 /* --- success --- */
-.notifModal__iconWrap--success { background: #dcfce7; }
-.notifModal__icon--success { color: #009A66; }
+.notifModal__iconWrap--success { background: var(--dk-tint-green-strong, #dcfce7); }
+.notifModal__icon--success { color: var(--dk-text-green, #009A66); }
 .notifModal__btnOk--success { background: #009A66; }
 .notifModal__btnOk--success:hover { background: #008256; }
 
 /* --- info --- */
-.notifModal__iconWrap--info { background: #dbeafe; }
-.notifModal__icon--info { color: #2563eb; }
+.notifModal__iconWrap--info { background: var(--dk-tint-blue-strong, #dbeafe); }
+.notifModal__icon--info { color: var(--dk-text-blue, #2563eb); }
 .notifModal__btnOk--info { background: #2563eb; }
 .notifModal__btnOk--info:hover { background: #1d4ed8; }
 
@@ -78,14 +79,14 @@
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: var(--dk-text, #111827);
 }
 
 .notifModal__text {
   margin: 0 0 22px 0;
   font-size: 13.5px;
   line-height: 1.55;
-  color: #4b5563;
+  color: var(--dk-text-2, #4b5563);
   white-space: pre-line;
 }
 

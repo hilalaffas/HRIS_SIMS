@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /**
  * Absensi.css
  * ------------------------------------------------------------------
@@ -16,7 +17,7 @@
   --abs-primary-tint: var(--color-primary-tint);
   --abs-soft-blue: var(--color-primary-tint);
   --abs-border: var(--color-border);
-  --abs-border-dashed: #c9dcd4;
+  --abs-border-dashed: var(--dk-border-green, #c9dcd4);
   --abs-muted-ink: var(--color-text-secondary);
   --abs-muted-ink-2: var(--color-text-muted);
 
@@ -34,7 +35,7 @@
 }
 
 .absensi-page .abs-eyebrow-title {
-  color: var(--abs-primary-soft);
+  color: var(--dk-text-green, var(--abs-primary-soft));
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.11em;
@@ -45,7 +46,7 @@
   margin: 0 0 6px;
   font-size: 26px;
   letter-spacing: -0.02em;
-  color: var(--abs-navy);
+  color: var(--dk-text-green, var(--abs-navy));
 }
 
 .absensi-page .abs-subheading {
@@ -69,7 +70,7 @@
 .absensi-page .abs-date-chip svg {
   width: 15px;
   height: 15px;
-  color: var(--abs-primary-soft);
+  color: var(--dk-text-green, var(--abs-primary-soft));
 }
 
 /* [UBAH] Layout dikembalikan ke "kartu di atas, tabel full-width di bawah".

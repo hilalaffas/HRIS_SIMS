@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* [BARU] Popup konfirmasi pengajuan cuti (LeaveConfirmModal.jsx).
    z-index 2100: di atas modal detail cuti (Form.css = 1000) dan NotifModal
    (2000), supaya tetap terlihat saat dibuka dari form edit di dalam modal. */
@@ -68,8 +69,8 @@
   padding: 10px 14px;
   font-size: 13px;
   line-height: 1.5;
-  color: #92400e;
-  background: #fffbeb;
+  color: var(--dk-text-amber, #92400e);
+  background: var(--dk-tint-amber, #fffbeb);
   border: 1px solid #fcd34d;
   border-radius: var(--radius-md, 10px);
 }
@@ -120,7 +121,7 @@
 }
 
 .leaveConfirmModal__value--strong {
-  color: var(--color-success, #059669);
+  color: var(--dk-text-green, var(--color-success, #059669));
 }
 
 .leaveConfirmModal__value--multiline {

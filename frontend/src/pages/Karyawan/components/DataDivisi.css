@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* =========================================
    WRAPPER HALAMAN (3 kartu: Divisi, Jam Shift, Builder Jadwal)
    Kartu Jam Shift & Builder punya CSS sendiri
@@ -11,8 +12,8 @@
    CONTAINER & HEADER UTAMA
    ========================================= */
 .card_data_divisi {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
+  background-color: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border, #e5e7eb);
   border-radius: 12px;
   overflow: hidden;
   margin-top: 16px;
@@ -20,12 +21,12 @@
 }
 
 .header_data_divisi {
-  background-color: #f0fdf4;
+  background-color: var(--dk-tint-green, #f0fdf4);
   padding: 20px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--dk-border, #e5e7eb);
 }
 
 .header-info_data_divisi {
@@ -44,19 +45,19 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: var(--dk-text, #111827);
 }
 
 .icon_data_divisi {
   display: flex;
   align-items: center;
-  color: var(--color-primary-soft, #217A5B);
+  color: var(--dk-text-green, var(--color-primary-soft, #217A5B));
 }
 
 .header-info_data_divisi p {
   margin: 0;
   font-size: 13px;
-  color: #047857;
+  color: var(--dk-text-green, #047857);
 }
 
 /* =========================================
@@ -76,7 +77,7 @@
 
 .input-new_data_divisi {
   padding: 10px 16px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--dk-border-strong, #d1d5db);
   border-radius: 6px;
   font-size: 14px;
   width: 220px;
@@ -100,7 +101,7 @@
 
 .input-error-text_data_divisi {
   font-size: 12px;
-  color: #dc2626;
+  color: var(--dk-text-red, #dc2626);
   font-weight: 600;
 }
 
@@ -149,11 +150,11 @@
   display: flex;
   justify-content: space-between;
   padding: 12px 24px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #f3f4f6;
+  background-color: var(--dk-bg-card, #ffffff);
+  border-bottom: 1px solid var(--dk-border-soft, #f3f4f6);
   font-size: 11px;
   font-weight: 700;
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   letter-spacing: 0.5px;
 }
 
@@ -167,13 +168,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  border-bottom: 1px solid #f3f4f6;
-  background-color: #ffffff;
+  border-bottom: 1px solid var(--dk-border-soft, #f3f4f6);
+  background-color: var(--dk-bg-card, #ffffff);
   transition: background-color 0.15s;
 }
 
 .list-row_data_divisi:hover {
-  background-color: #f9fafb;
+  background-color: var(--dk-bg-subtle, #f9fafb);
 }
 
 .row-name_data_divisi {
@@ -194,19 +195,19 @@
 }
 
 .badge-tipe_data_divisi--regular {
-  color: #08765a;
-  background: #e6f8ef;
+  color: var(--dk-text-green, #08765a);
+  background: var(--dk-tint-green, #e6f8ef);
 }
 
 .badge-tipe_data_divisi--shifting {
-  color: #9a6500;
-  background: #fff4d8;
+  color: var(--dk-text-amber, #9a6500);
+  background: var(--dk-tint-amber-strong, #fff4d8);
 }
 
 .divisi-name-text_data_divisi {
   font-size: 15px;
   font-weight: 600;
-  color: #374151;
+  color: var(--dk-text, #374151);
 }
 
 /* =========================================
@@ -231,25 +232,25 @@
 }
 
 .btn-action-edit_data_divisi {
-  color: #10b981;
+  color: var(--dk-text-green, #10b981);
 }
 
 .btn-action-edit_data_divisi:hover {
-  color: #059669;
+  color: var(--dk-text-green, #059669);
 }
 
 .btn-action-delete_data_divisi {
-  color: #e11d48;
+  color: var(--dk-text-red, #e11d48);
 }
 
 .btn-action-delete_data_divisi:hover {
-  color: #be123c;
+  color: var(--dk-text-red, #be123c);
 }
 
 .empty-state_data_divisi {
   padding: 32px;
   text-align: center;
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   font-size: 14px;
 }
 
@@ -274,7 +275,7 @@
    MODAL EDIT DIVISI
    ========================================= */
 .modal-content_data_divisi {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   width: 100%;
   max-width: 450px;
   border-radius: 12px;
@@ -289,7 +290,7 @@
 }
 
 .modal-header-edit_data_divisi {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   padding: 22px 24px 0;
   display: flex;
   justify-content: space-between;
@@ -297,7 +298,7 @@
 }
 
 .modal-header-edit_data_divisi h3 {
-  color: #111827;
+  color: var(--dk-text, #111827);
   font-size: 19px;
   font-weight: 700;
   margin: 0 0 6px;
@@ -312,7 +313,7 @@
 .btn-close-modal_data_divisi {
   background: transparent;
   border: none;
-  color: #78909a;
+  color: var(--dk-text-3, #78909a);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -332,7 +333,7 @@
 .modal-body-edit_data_divisi label {
   font-size: 12px;
   font-weight: 700;
-  color: #193350;
+  color: var(--dk-text, #193350);
 }
 
 .modal-body-edit_data_divisi .label-tipe_data_divisi {
@@ -342,7 +343,7 @@
 .modal-body-edit_data_divisi input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
@@ -352,7 +353,7 @@
 .modal-footer-edit_data_divisi {
   margin: 14px 24px 0;
   padding: 16px 0 22px;
-  border-top: 1px solid #edf1f1;
+  border-top: 1px solid var(--dk-border-soft, #edf1f1);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -362,7 +363,7 @@
    MODAL KONFIRMASI HAPUS
    ========================================= */
 .modal-delete-content_data_divisi {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   width: 100%;
   max-width: 420px;
   border-radius: 12px;
@@ -378,7 +379,7 @@
 }
 
 .modal-delete-icon-wrapper_data_divisi {
-  background-color: #ffe4e6;
+  background-color: var(--dk-tint-red, #ffe4e6);
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -397,9 +398,9 @@
 /* Tombol Global Modal */
 .btn-batal-modal_data_divisi {
   padding: 10px 20px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
+  background-color: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border, #e2e8f0);
+  color: var(--dk-text-3, #64748b);
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;

@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Dashboard/components/QuickAttendanceModal.css */
 
 /* [BARU] Popup absen di Dashboard. Warna memakai token (ikut tema gelap).
@@ -52,7 +53,7 @@
   color: var(--color-text);
 }
 
-.quickAtt__header h2 svg { color: var(--color-success); }
+.quickAtt__header h2 svg { color: var(--dk-text-green, var(--color-success)); }
 
 .quickAtt__close {
   display: grid;
@@ -119,7 +120,7 @@
 .quickAtt__flash {
   position: absolute;
   inset: 0;
-  background: #ffffff;
+  background: var(--dk-bg-card, #ffffff);
   pointer-events: none;
   animation: quickAttFlash 0.45s ease-out forwards;
 }
@@ -208,7 +209,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   background:
     linear-gradient(90deg, transparent 49%, var(--color-border) 49% 51%, transparent 51%),
     linear-gradient(0deg, transparent 49%, var(--color-border) 49% 51%, transparent 51%);
@@ -245,7 +246,7 @@
   color: var(--color-text);
 }
 
-.quickAtt__locationHead strong svg { color: var(--color-success); }
+.quickAtt__locationHead strong svg { color: var(--dk-text-green, var(--color-success)); }
 
 .quickAtt__refresh {
   display: grid;
@@ -255,7 +256,7 @@
   border: 0;
   border-radius: 6px;
   background: var(--color-success-bg);
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -280,7 +281,7 @@
   padding: 3px 7px;
   border-radius: 6px;
   background: var(--color-success-bg);
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.64rem;
   font-weight: 700;
@@ -294,13 +295,13 @@
 .quickAtt__warn { margin: 0; font-size: 0.68rem; line-height: 1.4; }
 
 .quickAtt__muted { color: var(--color-text-secondary); }
-.quickAtt__error { color: var(--color-danger); font-weight: 600; }
+.quickAtt__error { color: var(--dk-text-red, var(--color-danger)); font-weight: 600; }
 
 .quickAtt__warn {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--color-warning);
+  color: var(--dk-text-amber, var(--color-warning));
   font-weight: 600;
 }
 
@@ -370,7 +371,7 @@
   border-radius: 10px;
   border: 1px solid var(--color-danger-border);
   background: var(--color-danger-bg);
-  color: var(--color-danger);
+  color: var(--dk-text-red, var(--color-danger));
   font-size: 0.78rem;
   font-weight: 600;
   animation: quickAttFadeUp 0.25s ease-out both;

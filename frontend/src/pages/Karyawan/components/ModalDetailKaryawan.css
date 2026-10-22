@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* =========================================
    1. OVERLAY (MEMBUAT POPUP & EFEK BLUR)
    ========================================= */
@@ -21,7 +22,7 @@
    2. CONTAINER MODAL
    ========================================= */
 .modal-container_detail_karyawan {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 12px;
   width: 100%;
   max-width: 850px;
@@ -41,8 +42,8 @@
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: var(--dk-tint-green-strong, #d1fae5);
+  color: var(--dk-text-green, #065f46);
   padding: 12px 24px;
   border-radius: 8px;
   font-size: 14px;
@@ -111,9 +112,9 @@
 
 /* [BARU] Banner saat modal dibuka dari notifikasi Permintaan Reset Sandi */
 .reset-request-banner_detail_karyawan {
-  background-color: #f5f3ff;
-  border: 1px solid #ddd6fe;
-  color: #5b21b6;
+  background-color: var(--dk-tint-blue, #f5f3ff);
+  border: 1px solid var(--dk-border-blue, #ddd6fe);
+  color: var(--dk-text-purple, #5b21b6);
   font-size: 13px;
   line-height: 1.6;
   padding: 12px 16px;
@@ -130,9 +131,9 @@
 .section-title_detail_karyawan {
   font-size: 16px;
   font-weight: 700;
-  color: #2d3748;
+  color: var(--dk-text, #2d3748);
   margin: 0 0 4px 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--dk-border, #e2e8f0);
   padding-bottom: 8px;
 }
 
@@ -161,7 +162,7 @@
 .form-group_detail_karyawan label {
   font-size: 11px;
   font-weight: 700;
-  color: #718096;
+  color: var(--dk-text-3, #718096);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -170,12 +171,12 @@
 .form-group_detail_karyawan select,
 .form-group_detail_karyawan textarea {
   padding: 10px 12px;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--dk-border-strong, #cbd5e0);
   border-radius: 6px;
   font-size: 14px;
-  color: #2d3748;
+  color: var(--dk-text, #2d3748);
   font-family: inherit;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
 }
 
 .form-group_detail_karyawan input:focus,
@@ -191,15 +192,15 @@
 }
 .error-group_detail_karyawan input,
 .error-group_detail_karyawan select {
-  border-color: #fc8181;
-  background-color: #fff5f5;
+  border-color: var(--dk-border-red, #fc8181);
+  background-color: var(--dk-tint-red, #fff5f5);
 }
 
 .success-group_detail_karyawan label {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 .success-group_detail_karyawan select {
-  color: #047857;
+  color: var(--dk-text-green, #047857);
   font-weight: 600;
 }
 
@@ -207,19 +208,19 @@
    Tanpa ini, cue warna merah/hijau pada field STATUS AKUN hilang karena
    border sekarang digambar di .dropdown__trigger, bukan di <select>. */
 .error-group_detail_karyawan .dropdown__trigger {
-  border-color: #fc8181;
-  background-color: #fff5f5;
+  border-color: var(--dk-border-red, #fc8181);
+  background-color: var(--dk-tint-red, #fff5f5);
 }
 .success-group_detail_karyawan .dropdown__trigger {
-  color: #047857;
+  color: var(--dk-text-green, #047857);
   font-weight: 600;
 }
 
 .green-bg-group_detail_karyawan label {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 .green-bg-group_detail_karyawan input {
-  background-color: #ecfdf5;
+  background-color: var(--dk-tint-green, #ecfdf5);
   border-color: #6ee7b7;
   font-weight: 600;
 }
@@ -239,7 +240,7 @@
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
-  color: #a0aec0;
+  color: var(--dk-text-4, #a0aec0);
   user-select: none;
 }
 
@@ -248,11 +249,11 @@
    ========================================= */
 .modal-footer_detail_karyawan {
   padding: 16px 24px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--dk-border, #e2e8f0);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
 }
 
 .footer-actions_detail_karyawan {
@@ -262,8 +263,8 @@
 
 .btn-delete_detail_karyawan {
   padding: 10px 16px;
-  background-color: #fff5f5;
-  border: 1px solid #fc8181;
+  background-color: var(--dk-tint-red, #fff5f5);
+  border: 1px solid var(--dk-border-red, #fc8181);
   border-radius: 6px;
   color: #e53e3e;
   font-weight: 600;
@@ -275,22 +276,22 @@
 }
 
 .btn-delete_detail_karyawan:hover {
-  background-color: #fed7d7;
+  background-color: var(--dk-tint-red-strong, #fed7d7);
 }
 
 .btn-cancel_detail_karyawan {
   padding: 10px 20px;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e0;
+  background-color: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-strong, #cbd5e0);
   border-radius: 6px;
-  color: #4a5568;
+  color: var(--dk-text-2, #4a5568);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .btn-cancel_detail_karyawan:hover {
-  background-color: #f7fafc;
+  background-color: var(--dk-bg-subtle, #f7fafc);
 }
 
 .btn-save_detail_karyawan {
@@ -310,7 +311,7 @@
 
 /* Styling untuk opsi di dalam dropdown */
 .text-green-option {
-  color: #047857; /* Hijau */
+  color: var(--dk-text-green, #047857); /* Hijau */
   font-weight: 600;
 }
 

@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .filter-departemen {
   position: relative;
   display: flex;
@@ -27,7 +28,7 @@
 }
 
 .filter-departemen__chevron {
-  color: var(--kry-primary);
+  color: var(--dk-text-green, var(--kry-primary));
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }
@@ -78,7 +79,7 @@
 
 .filter-departemen__option.is-selected {
   background: var(--kry-primary-tint);
-  color: var(--kry-primary);
+  color: var(--dk-text-green, var(--kry-primary));
   font-weight: 700;
 }
 

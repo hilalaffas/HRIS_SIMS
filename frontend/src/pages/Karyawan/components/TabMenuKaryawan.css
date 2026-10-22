@@ -1,7 +1,8 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .tab-menu-container {
   display: flex;
   gap: 32px; 
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--dk-border, #e2e8f0);
   margin-bottom: 8px;
   /* Tambahan untuk scroll horizontal */
   overflow-x: auto;
@@ -19,7 +20,7 @@
   border: none;
   font-size: 15px;
   font-weight: 600;
-  color: #a0aec0;
+  color: var(--dk-text-4, #a0aec0);
   padding: 0 0 12px 0;
   cursor: pointer;
   position: relative;
@@ -28,7 +29,7 @@
 }
 
 .tab-item.active {
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 .tab-item.active::after {

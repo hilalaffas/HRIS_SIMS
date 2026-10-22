@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .leaveList {
   padding: 18px 24px 24px 24px;
 }
@@ -22,7 +23,7 @@
 }
 
 .leaveList__total strong {
-  color: var(--alv-primary);
+  color: var(--dk-text-green, var(--alv-primary));
 }
 
 .leaveList__empty {
@@ -113,25 +114,25 @@
 
 .statusBadge--blue {
   background: var(--alv-blue-bg);
-  color: var(--alv-blue);
+  color: var(--dk-text-blue, var(--alv-blue));
   border-color: var(--alv-blue-border);
 }
 
 .statusBadge--green {
   background: var(--alv-green-bg);
-  color: var(--alv-green);
+  color: var(--dk-text-green, var(--alv-green));
   border-color: var(--alv-green-border);
 }
 
 .statusBadge--amber {
   background: var(--alv-amber-bg);
-  color: var(--alv-amber);
+  color: var(--dk-text-amber, var(--alv-amber));
   border-color: var(--alv-amber-border);
 }
 
 .statusBadge--rose {
   background: var(--alv-rose-bg);
-  color: var(--alv-rose);
+  color: var(--dk-text-red, var(--alv-rose));
   border-color: var(--alv-rose-border);
 }
 
@@ -150,7 +151,7 @@
 }
 
 .leaveList__detailsBtn:hover {
-  color: var(--alv-primary);
+  color: var(--dk-text-green, var(--alv-primary));
 }
 
 @media (max-width: 900px) {

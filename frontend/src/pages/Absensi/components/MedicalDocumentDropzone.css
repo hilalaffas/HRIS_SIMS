@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Absensi/components/MedicalDocumentDropzone.css */
 
 .abs-dropzone {
@@ -48,7 +49,7 @@
   background: var(--color-success-bg);
 }
 
-.abs-dropzone.has-file svg { color: var(--color-success); }
+.abs-dropzone.has-file svg { color: var(--dk-text-green, var(--color-success)); }
 
 .abs-dropzone.is-disabled {
   opacity: 0.5;

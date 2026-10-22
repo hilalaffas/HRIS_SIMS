@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /**
  * ApproveLeaving.css
  * ------------------------------------------------------------------
@@ -17,32 +18,32 @@
 
   /* Status: Disetujui / ACC */
   --alv-green: #059669;
-  --alv-green-bg: #ecfdf5;
-  --alv-green-border: #a7f3d0;
+  --alv-green-bg: var(--dk-tint-green, #ecfdf5);
+  --alv-green-border: var(--dk-border-green, #a7f3d0);
 
   /* Status: Revisi / Dikembalikan */
   --alv-amber: #d97706;
-  --alv-amber-bg: #fffbeb;
-  --alv-amber-border: #fde68a;
+  --alv-amber-bg: var(--dk-tint-amber, #fffbeb);
+  --alv-amber-border: var(--dk-border-amber, #fde68a);
 
   /* Status: Tolak / Ditolak */
   --alv-rose: #e11d48;
-  --alv-rose-bg: #fff1f2;
-  --alv-rose-border: #fecdd3;
+  --alv-rose-bg: var(--dk-tint-red, #fff1f2);
+  --alv-rose-border: var(--dk-border-red, #fecdd3);
 
   /* Status: Proses / Dalam Proses */
   --alv-blue: #2563eb;
-  --alv-blue-bg: #eff6ff;
-  --alv-blue-border: #bfdbfe;
+  --alv-blue-bg: var(--dk-tint-blue, #eff6ff);
+  --alv-blue-border: var(--dk-border-blue, #bfdbfe);
 
   /* Netral */
-  --alv-text-primary: #1f2937;
-  --alv-text-secondary: #6b7280;
-  --alv-text-muted: #9ca3af;
-  --alv-border: #e5e7eb;
-  --alv-bg-page: #f8fafc;
-  --alv-bg-card: #ffffff;
-  --alv-bg-table-head: #f8fafc;
+  --alv-text-primary: var(--dk-text, #1f2937);
+  --alv-text-secondary: var(--dk-text-3, #6b7280);
+  --alv-text-muted: var(--dk-text-4, #9ca3af);
+  --alv-border: var(--dk-border, #e5e7eb);
+  --alv-bg-page: var(--dk-bg-subtle, #f8fafc);
+  --alv-bg-card: var(--dk-bg-card, #ffffff);
+  --alv-bg-table-head: var(--dk-bg-subtle, #f8fafc);
 
   /* Radius & shadow */
   --alv-radius-lg: 16px;

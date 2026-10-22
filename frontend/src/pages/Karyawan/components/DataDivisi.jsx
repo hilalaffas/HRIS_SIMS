@@ -231,7 +231,7 @@ const DataDivisi = ({ karyawanList }) => {
           <div className="list-body_data_divisi">
             {isLoading && <div className="empty-state_data_divisi">Memuat data...</div>}
             {!isLoading && loadError && (
-              <div className="empty-state_data_divisi" style={{ color: '#b91c1c' }}>{loadError}</div>
+              <div className="empty-state_data_divisi" style={{ color: 'var(--dk-text-red, #b91c1c)' }}>{loadError}</div>
             )}
             {!isLoading && !loadError && divisiList.length === 0 && (
               <div className="empty-state_data_divisi">Belum ada divisi.</div>

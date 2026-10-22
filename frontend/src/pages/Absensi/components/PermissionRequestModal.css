@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Absensi/components/PermissionRequestModal.css
    Dipakai bersama oleh PermissionRequestModal dan MedicalLetterModal. */
 
@@ -46,7 +47,7 @@
 .abs-permission-header h2 svg {
   width: 17px;
   height: 17px;
-  color: var(--color-info);
+  color: var(--dk-text-blue, var(--color-info));
 }
 
 .abs-permission-header > button {
@@ -178,7 +179,7 @@
   border: 1px solid var(--color-danger-border);
   border-radius: var(--radius-md, 8px);
   background: var(--color-danger-bg);
-  color: var(--color-danger);
+  color: var(--dk-text-red, var(--color-danger));
   font-size: 12px;
   line-height: 1.45;
 }

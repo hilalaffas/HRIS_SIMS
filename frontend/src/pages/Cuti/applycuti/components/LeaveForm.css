@@ -1,10 +1,11 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* ==========================================
    KONTAINER FORMULIR UTAMA
    ========================================== */
 .form-container {
   width: 100%;
   max-width: 1450px;
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 16px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   overflow: visible;
@@ -72,7 +73,7 @@
   display: block;
   font-size: 11px;
   font-weight: bold;
-  color: #64748b;
+  color: var(--dk-text-3, #64748b);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -82,10 +83,10 @@
   width: 100%;
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
   font-size: 14px;
-  color: #334155;
-  background-color: #fff;
+  color: var(--dk-text, #334155);
+  background-color: var(--dk-bg-card, #fff);
   outline: none;
   transition: border-color 0.2s;
   accent-color: var(--color-primary); /* browser modern akan pakai warna ini utk highlight opsi terpilih pada <select> native */
@@ -97,7 +98,7 @@
 }
 
 .text-input-flat {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--dk-border-strong, #cbd5e1);
   border-radius: 8px;
   padding: 12px 14px;
 }
@@ -117,7 +118,7 @@
 .input-icon-inside {
   position: absolute;
   right: 14px;
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
   pointer-events: none;
   font-size: 16px;
 }
@@ -131,9 +132,9 @@
    ALERT BOX INFORMASI DURASI (HIJAU DINAMIS)
    ========================================== */
 .duration-info-alert {
-  background-color: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background-color: var(--dk-tint-green, #ecfdf5);
+  border: 1px solid var(--dk-border-green, #a7f3d0);
+  color: var(--dk-text-green, #065f46);
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 13px;
@@ -149,9 +150,9 @@
    info hijau biasa), supaya user langsung sadar durasi 0 itu KARENA
    bentrok pengajuan lain, bukan cuma weekend/tanggal merah. */
 .duration-info-alert--warning {
-  background-color: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background-color: var(--dk-tint-amber, #fffbeb);
+  border-color: var(--dk-border-amber, #fde68a);
+  color: var(--dk-text-amber, #92400e);
 }
 
 /* ==========================================
@@ -181,9 +182,9 @@
   letter-spacing: 0.5px;
 }
 
-.badge-approval.leader { color: #000000; }
-.badge-approval.spv    { color: #000000; }
-.badge-approval.manager { color: #000000; }
+.badge-approval.leader { color: var(--dk-text, #000000); }
+.badge-approval.spv    { color: var(--dk-text, #000000); }
+.badge-approval.manager { color: var(--dk-text, #000000); }
 
 /* ==========================================
    TOMBOL AKSI / ACTION BUTTONS
@@ -212,8 +213,8 @@
 }
 
 .btn-submit-dark:disabled {
-  background-color: #cbd5e1;
-  color: #94a3b8;
+  background-color: var(--dk-bg-hover, #cbd5e1);
+  color: var(--dk-text-4, #94a3b8);
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -226,7 +227,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 input[type="date"]::-webkit-datetime-edit {
-  color: #334155;
+  color: var(--dk-text, #334155);
 }
 
 ::-webkit-calendar-picker {
@@ -251,8 +252,8 @@ input[type="date"]::-webkit-calendar-picker-table td:nth-child(7) {
   left: 0;
   z-index: 100;
   width: 260px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 12px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   padding: 12px;
@@ -264,13 +265,13 @@ input[type="date"]::-webkit-calendar-picker-table td:nth-child(7) {
   align-items: center;
   font-weight: bold;
   font-size: 13px;
-  color: #1e293b;
+  color: var(--dk-text, #1e293b);
   margin-bottom: 10px;
 }
 
 .calendar-mini-nav button {
   background: transparent;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 4px;
   padding: 2px 6px;
   cursor: pointer;
@@ -279,7 +280,7 @@ input[type="date"]::-webkit-calendar-picker-table td:nth-child(7) {
 }
 
 .calendar-mini-nav button:hover {
-  background: #f1f5f9;
+  background: var(--dk-bg-subtle, #f1f5f9);
 }
 
 .calendar-mini-weekdays {
@@ -288,7 +289,7 @@ input[type="date"]::-webkit-calendar-picker-table td:nth-child(7) {
   text-align: center;
   font-size: 10px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--dk-text-4, #94a3b8);
   margin-bottom: 6px;
 }
 
@@ -305,7 +306,7 @@ input[type="date"]::-webkit-calendar-picker-table td:nth-child(7) {
   height: 28px;
   font-size: 11px;
   font-weight: 500;
-  color: #334155;
+  color: var(--dk-text, #334155);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -314,7 +315,7 @@ input[type="date"]::-webkit-calendar-picker-table td:nth-child(7) {
 }
 
 .mini-day-cell:hover:not(:disabled) {
-  background: #f1f5f9;
+  background: var(--dk-bg-subtle, #f1f5f9);
 }
 
 /* Tanggal weekend (Sabtu/Minggu) berwarna merah.
@@ -332,7 +333,7 @@ button.mini-day-cell.weekend {
 
 .mini-day-cell.today {
   border: 1px solid var(--color-primary);
-  color: var(--color-primary);
+  color: var(--dk-text-green, var(--color-primary));
 }
 
 .mini-day-cell.outside-month {
@@ -362,8 +363,8 @@ button.mini-day-cell.weekend:disabled {
 }
 
 .mini-day-cell.holiday {
-  background-color: #fee2e2;
-  color: #dc2626;
+  background-color: var(--dk-tint-red, #fee2e2);
+  color: var(--dk-text-red, #dc2626);
   font-weight: 700;
 }
 

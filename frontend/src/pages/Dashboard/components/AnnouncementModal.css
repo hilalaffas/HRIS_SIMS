@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Dashboard/components/AnnouncementModal.css
    [BARU] Styling editor gaya blog di AnnouncementModal (toolbar + area
    contentEditable). Dipisah dari Tailwind inline karena placeholder
@@ -13,15 +14,15 @@
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #4b5563;
+  color: var(--dk-text-2, #4b5563);
   background: transparent;
   border: none;
   cursor: pointer;
 }
 
 .announcement-editor-btn:hover:not(:disabled) {
-  background: #e5e7eb;
-  color: #111827;
+  background: var(--dk-bg-hover, #e5e7eb);
+  color: var(--dk-text, #111827);
 }
 
 .announcement-editor-btn:disabled {
@@ -35,14 +36,14 @@
   padding: 10px 12px;
   font-size: 14px;
   line-height: 1.6;
-  color: #374151;
+  color: var(--dk-text, #374151);
   outline: none;
 }
 
 /* Placeholder ala blog editor -- muncul hanya saat area benar-benar kosong. */
 .announcement-editor-content:empty::before {
   content: attr(data-placeholder);
-  color: #9ca3af;
+  color: var(--dk-text-4, #9ca3af);
   pointer-events: none;
 }
 
@@ -64,6 +65,6 @@
 }
 
 .announcement-editor-content a {
-  color: var(--color-primary, #0f766e);
+  color: var(--dk-text-green, var(--color-primary, #0f766e));
   text-decoration: underline;
 }

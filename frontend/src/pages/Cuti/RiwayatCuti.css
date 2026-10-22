@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /**
  * RiwayatCuti.css
  * ------------------------------------------------------------------
@@ -10,30 +11,30 @@
 
 .riwayat-cuti-page {
   --rc-primary: #1e345e;
-  --rc-primary-tint: #eaeef6;
+  --rc-primary-tint: var(--dk-bg-muted, #eaeef6);
 
   --rc-green: #059669;
-  --rc-green-bg: #ecfdf5;
-  --rc-green-border: #a7f3d0;
+  --rc-green-bg: var(--dk-tint-green, #ecfdf5);
+  --rc-green-border: var(--dk-border-green, #a7f3d0);
 
   --rc-amber: #b45309;
-  --rc-amber-bg: #fffbeb;
-  --rc-amber-border: #fde68a;
+  --rc-amber-bg: var(--dk-tint-amber, #fffbeb);
+  --rc-amber-border: var(--dk-border-amber, #fde68a);
 
   --rc-orange: #c2410c;
-  --rc-orange-bg: #fff7ed;
-  --rc-orange-border: #fed7aa;
+  --rc-orange-bg: var(--dk-tint-amber, #fff7ed);
+  --rc-orange-border: var(--dk-border-amber, #fed7aa);
 
   --rc-rose: #e11d48;
-  --rc-rose-bg: #fff1f2;
-  --rc-rose-border: #fecdd3;
+  --rc-rose-bg: var(--dk-tint-red, #fff1f2);
+  --rc-rose-border: var(--dk-border-red, #fecdd3);
 
-  --rc-text-primary: #1f2937;
-  --rc-text-secondary: #6b7280;
-  --rc-text-muted: #9ca3af;
-  --rc-border: #e5e7eb;
-  --rc-bg-card: #ffffff;
-  --rc-bg-head: #f8fafc;
+  --rc-text-primary: var(--dk-text, #1f2937);
+  --rc-text-secondary: var(--dk-text-3, #6b7280);
+  --rc-text-muted: var(--dk-text-4, #9ca3af);
+  --rc-border: var(--dk-border, #e5e7eb);
+  --rc-bg-card: var(--dk-bg-card, #ffffff);
+  --rc-bg-head: var(--dk-bg-subtle, #f8fafc);
 
   --rc-radius-lg: 16px;
   --rc-radius-md: 12px;
@@ -85,7 +86,7 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--rc-green);
+  color: var(--dk-text-green, var(--rc-green));
   background: var(--rc-green-bg);
   border: 1px solid var(--rc-green-border);
   border-radius: var(--rc-radius-full);
@@ -145,10 +146,10 @@
   color: var(--rc-text-primary);
 }
 
-.rc-stat--proses .rc-stat__count { color: var(--rc-amber); }
-.rc-stat--disetujui .rc-stat__count { color: var(--rc-green); }
-.rc-stat--dikembalikan .rc-stat__count { color: var(--rc-orange); }
-.rc-stat--ditolak .rc-stat__count { color: var(--rc-rose); }
+.rc-stat--proses .rc-stat__count { color: var(--dk-text-amber, var(--rc-amber)); }
+.rc-stat--disetujui .rc-stat__count { color: var(--dk-text-green, var(--rc-green)); }
+.rc-stat--dikembalikan .rc-stat__count { color: var(--dk-text-amber, var(--rc-orange)); }
+.rc-stat--ditolak .rc-stat__count { color: var(--dk-text-red, var(--rc-rose)); }
 
 /* ---------- Body card ---------- */
 .riwayat-cuti-page__body {
@@ -161,7 +162,7 @@
 
 .rc-alert {
   background: var(--rc-rose-bg);
-  color: var(--rc-rose);
+  color: var(--dk-text-red, var(--rc-rose));
   border: 1px solid var(--rc-rose-border);
   border-radius: var(--rc-radius-md);
   padding: 10px 14px;
@@ -199,7 +200,7 @@
 
 .rc-tab:hover {
   border-color: var(--rc-primary);
-  color: var(--rc-primary);
+  color: var(--dk-text-blue, var(--rc-primary));
 }
 
 .rc-tab.is-active {
@@ -314,25 +315,25 @@
 
 .rc-badge--proses {
   background: var(--rc-amber-bg);
-  color: var(--rc-amber);
+  color: var(--dk-text-amber, var(--rc-amber));
   border-color: var(--rc-amber-border);
 }
 
 .rc-badge--disetujui {
   background: var(--rc-green-bg);
-  color: var(--rc-green);
+  color: var(--dk-text-green, var(--rc-green));
   border-color: var(--rc-green-border);
 }
 
 .rc-badge--dikembalikan {
   background: var(--rc-orange-bg);
-  color: var(--rc-orange);
+  color: var(--dk-text-amber, var(--rc-orange));
   border-color: var(--rc-orange-border);
 }
 
 .rc-badge--ditolak {
   background: var(--rc-rose-bg);
-  color: var(--rc-rose);
+  color: var(--dk-text-red, var(--rc-rose));
   border-color: var(--rc-rose-border);
 }
 
@@ -378,7 +379,7 @@
 
 .rc-pagination__btn:hover:not(:disabled) {
   border-color: var(--rc-primary);
-  color: var(--rc-primary);
+  color: var(--dk-text-blue, var(--rc-primary));
 }
 
 .rc-pagination__btn--primary {

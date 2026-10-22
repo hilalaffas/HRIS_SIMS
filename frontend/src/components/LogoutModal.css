@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/components/LogoutModal.css */
 
 .modal-overlay {
@@ -12,7 +13,7 @@
 }
 
 .modal-card {
-  background-color: #ffffff;
+  background-color: var(--dk-bg-card, #ffffff);
   border-radius: 1rem;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -35,7 +36,7 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 9999px;
-  background-color: #e1effe; /* Biru sangat muda */
+  background-color: var(--dk-tint-blue, #e1effe); /* Biru sangat muda */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,12 +52,12 @@
 .modal-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--dk-text, #111827);
   margin: 0;
 }
 
 .modal-text {
-  color: #4b5563; /* Abu-abu sedikit lebih gelap agar terbaca */
+  color: var(--dk-text-2, #4b5563); /* Abu-abu sedikit lebih gelap agar terbaca */
   font-size: 1rem;
   margin-bottom: 2rem;
   margin-left: 0; /* Menghapus margin paksaan */
@@ -70,16 +71,16 @@
 
 .btn-cancel {
   padding: 0.625rem 1.25rem;
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  background-color: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-strong, #d1d5db);
+  color: var(--dk-text, #374151);
   font-weight: 600;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-cancel:hover { background-color: #f9fafb; }
+.btn-cancel:hover { background-color: var(--dk-bg-subtle, #f9fafb); }
 
 .btn-confirm {
   padding: 0.625rem 1.25rem;

@@ -1,9 +1,10 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* =========================================
    PENGATURAN DIVISI & JAM KERJA SHIFT
    ========================================= */
 .card_shift_settings {
   background-color: var(--color-surface, #ffffff);
-  border: 1px solid #dfe8e8;
+  border: 1px solid var(--dk-border, #dfe8e8);
   border-radius: 12px;
   box-shadow: 0 2px 4px rgba(13, 53, 50, 0.06);
   margin-top: 26px;
@@ -24,7 +25,7 @@
 }
 
 .icon_shift_settings {
-  color: var(--color-primary-soft, #217A5B);
+  color: var(--dk-text-green, var(--color-primary-soft, #217A5B));
   margin-top: 2px;
   flex: none;
 }
@@ -32,7 +33,7 @@
 .title-wrapper_shift_settings h2 {
   margin: 0 0 6px;
   font-size: 17px;
-  color: #111827;
+  color: var(--dk-text, #111827);
 }
 
 .title-wrapper_shift_settings p {
@@ -44,7 +45,7 @@
 .btn-more_shift_settings {
   border: 0;
   background: transparent;
-  color: #78909a;
+  color: var(--dk-text-3, #78909a);
   border-radius: 6px;
   padding: 4px 6px;
   cursor: pointer;
@@ -54,20 +55,20 @@
 .btn-more_shift_settings:hover,
 .btn-more_shift_settings--active {
   background: var(--color-primary-tint, #EEF7F4);
-  color: var(--color-primary, #124231);
+  color: var(--dk-text-green, var(--color-primary, #124231));
 }
 
 .hint_shift_settings {
   margin: 14px 0 0;
   font-size: 12px;
-  color: var(--color-primary-soft, #217A5B);
+  color: var(--dk-text-green, var(--color-primary-soft, #217A5B));
   font-weight: 600;
 }
 
 .empty-state_shift_settings {
   padding: 24px;
   text-align: center;
-  color: #6b7280;
+  color: var(--dk-text-3, #6b7280);
   font-size: 14px;
 }
 
@@ -116,9 +117,9 @@
   transform: translateY(-1px);
 }
 
-.tone-mint { background: #edfbf4; border-color: #7ce0b2; color: #08765a; }
-.tone-yellow { background: #fffbec; border-color: #f7d269; color: #a46500; }
-.tone-blue { background: #eff2ff; border-color: #a9b9ff; color: #283b9a; }
+.tone-mint { background: var(--dk-tint-green, #edfbf4); border-color: #7ce0b2; color: var(--dk-text-green, #08765a); }
+.tone-yellow { background: var(--dk-tint-amber, #fffbec); border-color: #f7d269; color: var(--dk-text-amber, #a46500); }
+.tone-blue { background: var(--dk-tint-blue, #eff2ff); border-color: var(--dk-border-blue, #a9b9ff); color: var(--dk-text-blue, #283b9a); }
 
 @media (max-width: 768px) {
   .card_shift_settings {

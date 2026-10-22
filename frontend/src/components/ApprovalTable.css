@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/Persetujuan/components/ApprovalTable.css */
 
 .apv-table-wrap { overflow-x: auto; }
@@ -9,7 +10,7 @@
 }
 
 .apv-table th {
-  background: #f6f8fa;
+  background: var(--dk-bg-subtle, #f6f8fa);
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   padding: 13px 12px;
@@ -21,7 +22,7 @@
 
 .apv-table td {
   padding: 14px 12px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--dk-border-soft, #f0f2f5);
   font-size: 12px;
   color: var(--color-text);
   vertical-align: middle;
@@ -50,7 +51,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--color-success);
+  color: var(--dk-text-green, var(--color-success));
   font-weight: 700;
   text-decoration: none;
 }
@@ -90,5 +91,5 @@
   font-weight: 700;
 }
 
-.apv-decided-approved { background: var(--color-success-bg); color: var(--color-success); }
-.apv-decided-rejected { background: var(--color-danger-bg); color: var(--color-danger); }
+.apv-decided-approved { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
+.apv-decided-rejected { background: var(--color-danger-bg); color: var(--dk-text-red, var(--color-danger)); }

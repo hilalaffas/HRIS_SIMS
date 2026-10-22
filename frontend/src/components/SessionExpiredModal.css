@@ -1,3 +1,4 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/components/SessionExpiredModal.css */
 /* [BARU] Class dibuat unik (prefix session-modal-*), sengaja TIDAK memakai
    nama generic .modal-overlay/.modal-card seperti LogoutModal.css, supaya
@@ -49,7 +50,7 @@
 .session-modal-icon {
   width: 1.5rem;
   height: 1.5rem;
-  color: var(--color-warning);
+  color: var(--dk-text-amber, var(--color-warning));
 }
 
 .session-modal-title {
