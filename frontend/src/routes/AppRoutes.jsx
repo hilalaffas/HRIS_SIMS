@@ -35,6 +35,8 @@ const Absensi = lazyPage(() => import('../pages/Absensi/absensi'));
 const Lembur = lazyPage(() => import('../pages/Lembur/Lembur'));
 // [BARU] Halaman Persetujuan Sakit & Lembur (SuperAdmin)
 const Persetujuan = lazyPage(() => import('../pages/Persetujuan/Persetujuan'));
+// [BARU] Halaman Pusat Pengajuan Karyawan -- wadah Cuti, Sakit & Izin, Lembur, Tukar Shift
+const Pengajuan = lazyPage(() => import('../pages/Pengajuan/Pengajuan'));
 import { isManagerOrSpv, isSuperAdmin } from '../utils/roles';
 
 
@@ -80,6 +82,9 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
 
           {/* [BARU] Wadah Halaman Pengajuan Lembur */}
           <Route path="/lembur" element={<Lembur />} />
+
+          {/* [BARU] Wadah Halaman Pusat Pengajuan Karyawan (menggabungkan Cuti, Sakit & Izin, Lembur) */}
+          <Route path="/pengajuan" element={<Pengajuan user={user} />} />
 
           {/* [UBAH] Persetujuan Lembur: SuperAdmin tetap di halaman ini.
               Leader/SPV/Manager sekarang memakai tab "Persetujuan Lembur" di

@@ -29,25 +29,21 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
 
   // Tambahkan Manajemen Cuti Saya jika BUKAN Super Admin (dan bukan akun dev)
   if (!isSuperAdmin && !isDevAccount) {
-    mainMenuItems.push({ 
-      path: '/ApplyCuti', 
-      name: 'Manajemen Cuti Saya', 
-      icon: 'fa-regular fa-calendar-check',
-      // Menampilkan dot merah statis/notifikasi sesuai Gambar 1 (Karyawan) jika diperlukan
+    // [UBAH] Menu "Manajemen Cuti Saya" dan "Pengajuan Lembur" yang sebelumnya
+    // berdiri sendiri digabung jadi satu menu "Pengajuan" (cuti, sakit & izin,
+    // lembur, tukar shift). Halaman lama (/ApplyCuti, /lembur) tetap bisa
+    // diakses lewat URL / notifikasi, hanya tidak lagi tampil di sidebar.
+    mainMenuItems.push({
+      path: '/pengajuan',
+      name: 'Pengajuan',
+      icon: 'fa-solid fa-clipboard-list',
       hasDot: notificationCounts?.leaveRequest ?? false
     });
     mainMenuItems.push({ 
       path: '/absensi', 
       name: 'Absensi saya', 
       icon: 'fa-regular fa-clock',
-      // Menampilkan dot merah statis/notifikasi sesuai Gambar 1 (Karyawan) jika diperlukan
       hasDot: notificationCounts?.leaveRequest ?? false
-    });
-    // [BARU] Pengajuan Lembur -- tepat di bawah "Absensi saya"
-    mainMenuItems.push({
-      path: '/lembur',
-      name: 'Pengajuan Lembur',
-      icon: 'fa-solid fa-business-time',
     });
   }
 

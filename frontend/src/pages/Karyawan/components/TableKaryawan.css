@@ -23,7 +23,19 @@
 
 .filters {
   display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+/* [BARU] Lebar filter dikunci. Sebelumnya lebar pill mengikuti teks terpilih ("Semua Jabatan"
+   vs "SPV"), sehingga posisi filter, "10 / halaman", dan kolom cari bergeser tiap memilih. */
+.filters .filter-select .dropdown__trigger {
+  min-width: 150px;
+  justify-content: space-between;
+}
+.filters .search-box input {
+  box-sizing: border-box;
+  min-height: 36px;
 }
 
 /* [UBAH] Style dropdown lama dipindah ke src/components/Dropdown.css

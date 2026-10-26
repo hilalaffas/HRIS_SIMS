@@ -28,3 +28,18 @@ export const updateDivisi = async (id, namaDivisi, tipeDivisi = 'REGULAR') => {
 export const deleteDivisi = async (id) => {
   return api.delete(`/api/divisi/${id}`);
 };
+// [BARU] Apakah divisi karyawan yang sedang login bertipe SHIFTING?
+// Dipakai halaman Pengajuan untuk menampilkan kartu "Tukar Shift" hanya pada
+// divisi yang punya jadwal shift. Gagal memuat = dianggap BUKAN divisi shift.
+export const isMyDivisionShifting = async () => {
+  try {
+    const [profile, divisions] = await Promise.all([
+      api.get('/api/profile/me', { silent: true }),
+      api.get('/api/divisi', { silent: true }),
+    ]);
+    const myDivision = (divisions || []).find((division) => division.namaDivisi === profile?.divisi);
+    return String(myDivision?.tipeDivisi || '').toUpperCase() === 'SHIFTING';
+  } catch {
+    return false;
+  }
+};

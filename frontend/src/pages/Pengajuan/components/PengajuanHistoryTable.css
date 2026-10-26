@@ -1,0 +1,167 @@
+.pgj-history {
+  margin-top: 16px;
+  overflow: hidden;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #dde5e2);
+  border-radius: 16px;
+  box-shadow: 0 2px 5px rgba(26, 52, 67, 0.03);
+  animation: pgjHistoryIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.pgj-history__title {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text, #243042);
+  border-bottom: 1px solid var(--color-border, #e4e9ec);
+}
+
+.pgj-history__scroll { overflow-x: auto; }
+
+.pgj-table {
+  width: 100%;
+  min-width: 700px;
+  font-size: 12px;
+  text-align: left;
+  border-collapse: collapse;
+}
+.pgj-table th {
+  padding: 10px 16px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--color-text-secondary, #718092);
+  background: var(--color-bg-page, #f8fafb);
+}
+.pgj-table td {
+  padding: 12px 16px;
+  color: var(--color-text, #344153);
+  border-top: 1px solid var(--color-border, #e4e9ec);
+}
+.pgj-table tbody tr {
+  animation: pgjRowIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--rowIndex, 0) * 40ms);
+  transition: background-color 0.2s ease;
+}
+.pgj-table tbody tr:hover { background: var(--dk-bg-subtle, #f6faf9); }
+/* Baris yang sedang tampil di kartu alur persetujuan */
+.pgj-table tbody tr.pgj-row-active { background: var(--dk-tint-green, #f0faf7); }
+
+.pgj-right { text-align: right !important; }
+.pgj-strong { font-weight: 600; white-space: nowrap; }
+.pgj-detail { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pgj-empty {
+  padding: 32px 16px !important;
+  text-align: center;
+  color: var(--color-text-secondary, #718092) !important;
+}
+
+/* ----- Badge jenis ----- */
+.pgj-kind {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.pgj-kind--green { color: var(--dk-text-green, #078b6b); background: var(--dk-tint-green-strong, #e3f7ef); }
+.pgj-kind--blue { color: var(--dk-text-blue, #3472d2); background: var(--dk-tint-blue-strong, #dceaff); }
+.pgj-kind--amber { color: var(--dk-text-amber, #bd7100); background: var(--dk-tint-amber-strong, #fff2c9); }
+.pgj-kind--slate { color: var(--dk-text-2, #475569); background: var(--dk-bg-hover, #e2e8f0); }
+
+/* ----- Badge status (pill) -- tombol saat bisa diklik untuk memilih kartu alur ----- */
+.pgj-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  border: 0;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+button.pgj-status {
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, filter 0.18s ease;
+}
+button.pgj-status:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(26, 52, 67, 0.14); }
+button.pgj-status:active { transform: scale(0.96); }
+button.pgj-status:focus-visible { outline: 2px solid #57b89a; outline-offset: 2px; }
+.pgj-status svg { width: 12px; height: 12px; }
+.pgj-status--warning { color: #d47700; background: var(--dk-tint-amber-strong, #fff1d6); }
+.pgj-status--success { color: #11824e; background: var(--dk-tint-green-strong, #dcf8e9); }
+.pgj-status--danger { color: #e11d48; background: var(--dk-tint-red, #ffe1e6); }
+.pgj-status--info { color: #3472d2; background: var(--dk-tint-blue-strong, #dceaff); }
+.pgj-status--muted { color: #64748b; background: var(--dk-bg-hover, #e2e8f0); }
+/* Penanda baris yang sedang tampil di kartu: cincin tipis, tanpa mengubah ukuran */
+.pgj-status.is-active { box-shadow: 0 0 0 2px currentColor; }
+button.pgj-status.is-active:hover { box-shadow: 0 0 0 2px currentColor, 0 3px 8px rgba(26, 52, 67, 0.14); }
+
+/* ----- Tombol aksi (Detail / Upload Surat) ----- */
+.pgj-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dk-text-green, #078b6b);
+  background: transparent;
+  border: 1px solid var(--color-border, #dbe5e2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pgj-action:hover { background: var(--dk-tint-green, #effaf6); border-color: #9ed8c5; transform: translateY(-1px); }
+.pgj-action:active { transform: scale(0.97); }
+.pgj-action:focus-visible { outline: 2px solid #57b89a; outline-offset: 2px; }
+.pgj-action svg { width: 14px; height: 14px; }
+.pgj-action--upload { color: #e11d48; border-color: #fecdd3; }
+.pgj-action--upload:hover { background: var(--dk-tint-red, #fff1f2); border-color: #fda4af; }
+
+.pgj-history__footer {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  border-top: 1px solid var(--color-border, #e4e9ec);
+}
+.pgj-more {
+  padding: 7px 16px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dk-text-green, #078b6b);
+  background: var(--dk-tint-green, #effaf6);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+.pgj-more:hover { background: var(--dk-bg-hover, #dcefe8); transform: translateY(-1px); }
+
+/* ----- Skeleton saat data dimuat ----- */
+.pgj-skeleton-row { animation: none !important; }
+.pgj-skeleton {
+  display: block;
+  height: 12px;
+  max-width: 100%;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.18), rgba(148, 163, 184, 0.38), rgba(148, 163, 184, 0.18));
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: pgjShimmer 1.2s linear infinite;
+}
+
+@keyframes pgjHistoryIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pgjRowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pgjShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pgj-history, .pgj-table tbody tr, .pgj-skeleton { animation: none; }
+  .pgj-action, button.pgj-status, .pgj-more { transition: none; }
+}

@@ -1,0 +1,65 @@
+/* src/pages/Pengajuan/Pengajuan.css -- layout halaman + header
+   Jarak antar bagian mengikuti desain: header -> kartu jenis 20px, kartu jenis -> kartu alur 12px,
+   bagian lainnya 16px (diatur lewat margin-top tiap komponen, bukan gap, agar kartu alur
+   yang kadang tidak tampil tidak membuat jarak ganda). */
+.pengajuan-page {
+  max-width: var(--page-max-width, 1440px);
+  margin: 0 auto;
+}
+
+.pgj-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--dk-border, #dfe6e3);
+  animation: pgjHeaderIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pgj-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text, #243042);
+}
+.pgj-header h1 svg {
+  width: 20px;
+  height: 20px;
+  color: var(--dk-text-green, #078b6b);
+  stroke-width: 2.2;
+}
+.pgj-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary, #718092);
+}
+
+.pgj-balance-pill {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--dk-text-green, #078b6b);
+  background: var(--dk-tint-green, #effdf8);
+  border: 1px solid var(--dk-border-green, #9de8cf);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Kartu alur persetujuan (varian compact) -- jarak dari kartu jenis di atasnya */
+.pengajuan-page > .approvalCard { margin-top: 12px; }
+
+@keyframes pgjHeaderIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgj-header { animation: none; }
+}

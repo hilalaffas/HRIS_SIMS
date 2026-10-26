@@ -6,6 +6,7 @@ import React from 'react';
 import { Paperclip } from 'lucide-react';
 import { formatDateLabel } from '../services/attendanceService';
 import './ApprovalTable.css';
+import { toSafeHttpUrl } from '../utils/safeUrl';
 
 const DECIDED_LABEL = { APPROVED: 'Disetujui', REJECTED: 'Ditolak' };
 
@@ -44,8 +45,9 @@ export default function ApprovalTable({ rows, loading, processingKey, emptyMessa
                 </td>
                 {showProof && (
                   <td className="apv-center">
-                    {row.proofUrl ? (
-                      <a className="apv-proof" href={row.proofUrl} target="_blank" rel="noreferrer">
+                    {/* [UBAH] href hanya http(s): skema "javascript:" dari server tidak boleh jadi tautan */}
+                    {toSafeHttpUrl(row.proofUrl) ? (
+                      <a className="apv-proof" href={toSafeHttpUrl(row.proofUrl)} target="_blank" rel="noreferrer">
                         <Paperclip aria-hidden="true" />
                         Foto Bukti
                       </a>

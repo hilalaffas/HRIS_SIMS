@@ -1,0 +1,68 @@
+/* Kartu jenis pengajuan -- ikon di kiri, teks di kanan (sesuai desain).
+   auto-fit: 3 kartu (tanpa Tukar Shift) atau 4 kartu (divisi shift) otomatis sama lebar;
+   di ponsel menjadi 1 kolom. */
+.pgj-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.pgj-type-card {
+  --typeColor: #00a979;
+  --typeBg: var(--dk-tint-green, #e9fbf4);
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 104px;
+  padding: 16px 20px;
+  text-align: left;
+  font-family: inherit;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #dde5e2);
+  border-radius: 16px;
+  box-shadow: 0 2px 5px rgba(26, 52, 67, 0.04);
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+  animation: pgjCardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--cardIndex) * 70ms);
+}
+.pgj-type-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--typeColor) 45%, transparent);
+  box-shadow: 0 8px 18px rgba(26, 52, 67, 0.1);
+}
+.pgj-type-card:active { transform: translateY(0) scale(0.99); }
+.pgj-type-card:focus-visible { outline: 2px solid var(--typeColor); outline-offset: 2px; }
+
+.pgj-type-card--blue { --typeColor: #3179ed; --typeBg: var(--dk-tint-blue-strong, #e8f1ff); }
+.pgj-type-card--amber { --typeColor: #e89a00; --typeBg: var(--dk-tint-amber-strong, #fff3ce); }
+.pgj-type-card--purple { --typeColor: #9333ea; --typeBg: #f3e8ff; }
+
+.pgj-type-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--typeColor);
+  background: var(--typeBg);
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pgj-type-card:hover .pgj-type-icon { transform: scale(1.1) rotate(-6deg); }
+.pgj-type-icon svg { width: 20px; height: 20px; stroke-width: 1.8; }
+
+.pgj-type-text { display: flex; flex-direction: column; min-width: 0; }
+.pgj-type-title { font-size: 14px; font-weight: 700; color: var(--color-text, #273346); }
+.pgj-type-desc { margin-top: 4px; font-size: 11px; color: var(--color-text-secondary, #718092); }
+
+@keyframes pgjCardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgj-type-card, .pgj-type-icon { animation: none; transition: none; }
+}

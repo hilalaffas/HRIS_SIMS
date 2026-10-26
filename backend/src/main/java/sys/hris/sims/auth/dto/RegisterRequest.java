@@ -25,4 +25,8 @@ public class RegisterRequest {
     private String emergencyContactPhone;
     private Integer emergencyContactRelationshipId;
     private String joinDate;
+    // [BARU] Jabatan (Staff/Leader/SPV/Manager/HRD_Admin/HRD_Karyawan). Sebelumnya field ini
+    // tidak ada di request register, sehingga kolom employees.position selalu kosong
+    // pada karyawan baru dan tabel menampilkan fallback "Staff".
+    private String position;
 }

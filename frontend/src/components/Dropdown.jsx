@@ -1,5 +1,42 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { DropdownPortalContext } from './DropdownPortalContext';
 import './Dropdown.css';
+
+// [BARU] Mode portal (lihat DropdownPortalContext.js): tinggi menu maksimum
+// (harus sama dengan max-height .dropdown__menu), jarak ke tepi layar, dan
+// perkiraan tinggi tiap baris untuk memutuskan buka ke atas / ke bawah.
+const MENU_MAX_HEIGHT = 260;
+const MENU_GAP = 6;
+const VIEWPORT_MARGIN = 12;
+const ESTIMATED_ROW_HEIGHT = 40;
+const ESTIMATED_SEARCH_HEIGHT = 52;
+
+// Posisi menu (fixed) dari kotak trigger: buka ke bawah, kecuali ruang bawah
+// lebih sempit daripada kebutuhan menu DAN ruang atas lebih lega.
+function computeMenuPosition(triggerRect, estimatedHeight, matchTriggerWidth) {
+  const spaceBelow = window.innerHeight - triggerRect.bottom - VIEWPORT_MARGIN;
+  const spaceAbove = triggerRect.top - VIEWPORT_MARGIN;
+  const wantedHeight = Math.min(MENU_MAX_HEIGHT, estimatedHeight);
+  const openUp = spaceBelow < wantedHeight && spaceAbove > spaceBelow;
+  const available = openUp ? spaceAbove : spaceBelow;
+  // top/bottom/right WAJIB diisi eksplisit ('auto' untuk sisi yang tidak dipakai):
+  // CSS dasar .dropdown__menu punya `top: calc(100% + 6px)` (untuk mode absolute). Pada
+  // menu fixed yang membuka ke ATAS, `top` itu ikut berlaku = di bawah layar, sehingga
+  // menu "tidak muncul" padahal dropdown sudah berstatus terbuka.
+  return {
+    left: triggerRect.left,
+    right: 'auto',
+    minWidth: triggerRect.width,
+    // Dropdown form selebar trigger; dropdown pill (filter) mengikuti isi terpanjang.
+    width: matchTriggerWidth ? triggerRect.width : 'max-content',
+    maxWidth: matchTriggerWidth ? 'none' : undefined,
+    maxHeight: Math.max(120, Math.min(MENU_MAX_HEIGHT, available - MENU_GAP)),
+    ...(openUp
+      ? { top: 'auto', bottom: window.innerHeight - triggerRect.top + MENU_GAP }
+      : { top: triggerRect.bottom + MENU_GAP, bottom: 'auto' }),
+  };
+}
 
 /**
  * Dropdown.jsx
@@ -55,7 +92,11 @@ const Dropdown = ({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [query, setQuery] = useState('');
   const wrapperRef = useRef(null);
+  const menuRef = useRef(null);
   const hiddenSelectRef = useRef(null);
+  const usePortalMenu = useContext(DropdownPortalContext);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const [portalTarget, setPortalTarget] = useState(null); // elemen [data-theme] terdekat (agar token tema gelap berlaku)
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase('id-ID');
@@ -85,13 +126,32 @@ const Dropdown = ({
   // Tutup menu saat klik di luar komponen.
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+      const insideTrigger = wrapperRef.current?.contains(e.target);
+      const insideMenu = menuRef.current?.contains(e.target); // menu portal ada di luar wrapper
+      if (wrapperRef.current && !insideTrigger && !insideMenu) {
         setOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // [BARU] Mode portal: posisi menu mengikuti trigger saat halaman/popup di-scroll
+  // atau jendela diubah ukurannya (menu fixed tidak ikut bergerak sendiri).
+  useEffect(() => {
+    if (!open || !usePortalMenu) return undefined;
+    const reposition = () => {
+      if (!wrapperRef.current) return;
+      const estimatedHeight = filteredOptions.length * ESTIMATED_ROW_HEIGHT + (searchable ? ESTIMATED_SEARCH_HEIGHT : 0) + 12;
+      setMenuPosition(computeMenuPosition(wrapperRef.current.getBoundingClientRect(), estimatedHeight, variant === 'form'));
+    };
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [open, usePortalMenu, filteredOptions.length, searchable, variant]);
 
   // [BARU] Sinkronkan validitas native <select> tersembunyi supaya atribut
   // `required` tetap memblokir submit form (native), walau tampilan
@@ -116,6 +176,11 @@ const Dropdown = ({
     if (disabled) return;
     setQuery('');
     setHighlightedIndex(selectedIndexInFiltered >= 0 ? selectedIndexInFiltered : 0);
+    if (usePortalMenu && wrapperRef.current) {
+      const estimatedHeight = options.length * ESTIMATED_ROW_HEIGHT + (searchable ? ESTIMATED_SEARCH_HEIGHT : 0) + 12;
+      setMenuPosition(computeMenuPosition(wrapperRef.current.getBoundingClientRect(), estimatedHeight, variant === 'form'));
+      setPortalTarget(wrapperRef.current.closest('[data-theme]') || document.body);
+    }
     setOpen(true);
   };
 
@@ -166,33 +231,14 @@ const Dropdown = ({
     handleMenuKeyDown(e);
   };
 
-  return (
-    <div
-      className={`dropdown dropdown--${variant} ${disabled ? 'is-disabled' : ''} ${className}`}
-      ref={wrapperRef}
-    >
-      <button
-        type="button"
-        id={id}
-        className={`dropdown__trigger ${open ? 'is-open' : ''}`}
-        onClick={() => (open ? closeMenu() : openMenu())}
-        onKeyDown={handleTriggerKeyDown}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={ariaLabel}
-        title={title}
-      >
-        <span className={`dropdown__value ${!selectedOption ? 'is-placeholder' : ''}`}>
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
-        <svg className="dropdown__chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-
-      {open && !disabled && (
-        <ul className="dropdown__menu" role="listbox">
+  // Daftar pilihan dipisah supaya bisa dirender di tempat (default) atau lewat portal.
+  const menuList = open && !disabled ? (
+        <ul
+          className={`dropdown__menu${usePortalMenu ? ' dropdown__menu--portal' : ''}`}
+          role="listbox"
+          ref={menuRef}
+          style={usePortalMenu ? menuPosition || undefined : undefined}
+        >
           {searchable && (
             <li className="dropdown__search-wrap">
               <input
@@ -242,7 +288,34 @@ const Dropdown = ({
             <li className="dropdown__empty">Data tidak ditemukan.</li>
           )}
         </ul>
-      )}
+  ) : null;
+
+  return (
+    <div
+      className={`dropdown dropdown--${variant} ${disabled ? 'is-disabled' : ''} ${className}`}
+      ref={wrapperRef}
+    >
+      <button
+        type="button"
+        id={id}
+        className={`dropdown__trigger ${open ? 'is-open' : ''}`}
+        onClick={() => (open ? closeMenu() : openMenu())}
+        onKeyDown={handleTriggerKeyDown}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        title={title}
+      >
+        <span className={`dropdown__value ${!selectedOption ? 'is-placeholder' : ''}`}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <svg className="dropdown__chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {usePortalMenu && portalTarget ? createPortal(menuList, portalTarget) : menuList}
 
       {/* [BARU] Native <select> tersembunyi -- HANYA untuk menjaga validasi
           HTML5 `required` tetap berfungsi saat form di-submit (browser akan

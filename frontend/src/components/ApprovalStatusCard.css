@@ -1,0 +1,520 @@
+/* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
+/* ===== Approval status card (kartu alur persetujuan: lembur, cuti, izin sakit) ===== */
+.approvalCard {
+  --apWarning: #f59e0b;
+  --apWarningDark: #b45309;
+  --apSuccess: #10b981;
+  --apDanger: var(--color-danger, #dc2626);
+  --apMuted: #94a3b8;
+  --apInfo: #3b82f6; /* [BARU] tone "info" = pengajuan dikembalikan */
+  --apAccent: var(--apWarning);
+  --apTrack: var(--dk-bg-hover, #e2e8f0);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px 12px;
+  background: linear-gradient(135deg, var(--dk-bg-card, #ffffff) 0%, var(--dk-tint-amber, #fffaf0) 100%);
+  border: 1px solid var(--dk-border-amber, #fde7b0);
+  border-left: 6px solid var(--apAccent);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  animation: approvalCardIn 0.35s ease-out both;
+}
+
+.approvalCard--success {
+  --apAccent: var(--apSuccess);
+  background: linear-gradient(135deg, var(--dk-bg-card, #ffffff) 0%, var(--dk-tint-green, #f0fdf7) 100%);
+  border-color: var(--dk-border-green, #bbf0d8);
+}
+.approvalCard--danger {
+  --apAccent: var(--apDanger);
+  background: linear-gradient(135deg, var(--dk-bg-card, #ffffff) 0%, var(--dk-tint-red, #fff5f5) 100%);
+  border-color: var(--dk-border-red, #fecaca);
+}
+.approvalCard--info {
+  --apAccent: var(--apInfo);
+  background: linear-gradient(135deg, var(--dk-bg-card, #ffffff) 0%, var(--dk-tint-blue, #eff6ff) 100%);
+  border-color: var(--dk-border-blue, #bfdbfe);
+}
+.approvalCard--muted {
+  --apAccent: var(--apMuted);
+  background: linear-gradient(135deg, var(--dk-bg-card, #ffffff) 0%, var(--dk-bg-subtle, #f8fafc) 100%);
+  border-color: var(--dk-border, #e2e8f0);
+}
+
+@keyframes approvalCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ----- Header ----- */
+.approvalCard__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.approvalCard__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 0;
+}
+.approvalCard__eyebrow {
+  flex-basis: 100%;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dk-text-amber, var(--apWarningDark));
+}
+.approvalCard__date {
+  font-size: 18px;
+  line-height: 1.3;
+  color: var(--dk-text, #0f172a);
+}
+.approvalCard__sent {
+  font-size: 12px;
+  color: var(--dk-text-3, #64748b);
+}
+.approvalCard__headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.approvalCard__close {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dk-text-3, #64748b);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.approvalCard__close:hover {
+  background: var(--dk-bg-subtle, #f1f5f9);
+  color: var(--dk-text, #0f172a);
+}
+
+/* ----- Status badge ----- */
+.approvalBadge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  animation: approvalBadgeSwap 0.3s ease-out;
+}
+.approvalBadge--warning {
+  background: var(--apWarning);
+}
+.approvalBadge--success {
+  background: var(--apSuccess);
+}
+.approvalBadge--danger {
+  background: var(--apDanger);
+}
+.approvalBadge--info {
+  background: var(--apInfo);
+}
+.approvalBadge--muted {
+  background: var(--apMuted);
+}
+@keyframes approvalBadgeSwap {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ----- Body: 3 stat chips + job description fill the full width ----- */
+.approvalCard__body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(88px, 128px)) minmax(0, 1fr);
+  gap: 10px;
+}
+.approvalCard__stat {
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-amber, #fde7b0);
+  border-radius: 10px;
+}
+.approvalCard__stat dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dk-text-3, #64748b);
+}
+.approvalCard__stat dd {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--dk-text, #0f172a);
+}
+.approvalCard__stat--total {
+  background: #f97316;
+  border-color: #f97316;
+}
+.approvalCard__stat--total dt,
+.approvalCard__stat--total dd {
+  color: #ffffff;
+}
+.approvalCard__job {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--dk-text, #334155);
+  background: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-amber, #fde7b0);
+  border-radius: 10px;
+}
+
+/* ----- Timeline (Diajukan -> level approval, jumlah langkah dinamis) ----- */
+.approvalTimeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* default; jumlah kolom aktual di-set inline dari jumlah langkah */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.approvalStep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.approvalStep__line {
+  position: absolute;
+  top: 14px;
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--apTrack);
+  overflow: hidden;
+  z-index: 0;
+}
+.approvalStep__line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--apSuccess);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.approvalStep--done .approvalStep__line::after {
+  transform: scaleX(1);
+}
+.approvalStep--current .approvalStep__line::after {
+  background: linear-gradient(90deg, var(--apSuccess), var(--apWarning));
+  transform: scaleX(1);
+}
+.approvalStep--rejected .approvalStep__line::after {
+  background: linear-gradient(90deg, var(--apSuccess), var(--apDanger));
+  transform: scaleX(1);
+}
+.approvalStep--returned .approvalStep__line::after {
+  background: linear-gradient(90deg, var(--apSuccess), var(--apInfo));
+  transform: scaleX(1);
+}
+.approvalStep--cancelled .approvalStep__line::after {
+  background: linear-gradient(90deg, var(--apSuccess), var(--apMuted));
+  transform: scaleX(1);
+}
+.approvalStep:not(.approvalStep--upcoming) .approvalStep__line::after {
+  animation: approvalLineFill 0.5s ease-out both;
+  animation-delay: calc(var(--stepIndex) * 0.12s);
+}
+@keyframes approvalLineFill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.approvalStep__node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--apTrack);
+  box-shadow: 0 0 0 3px var(--apRing, #ffffff);
+}
+.approvalStep__number {
+  color: var(--dk-text-3, #64748b);
+}
+.approvalStep--done .approvalStep__node {
+  background: var(--apSuccess);
+}
+.approvalStep--current .approvalStep__node {
+  background: var(--apWarning);
+  animation: approvalPulse 1.6s ease-in-out infinite;
+}
+.approvalStep--rejected .approvalStep__node {
+  background: var(--apDanger);
+}
+.approvalStep--returned .approvalStep__node {
+  background: var(--apInfo);
+}
+.approvalStep--cancelled .approvalStep__node {
+  background: var(--apMuted);
+}
+@keyframes approvalPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--apRing, #ffffff), 0 0 0 3px rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--apRing, #ffffff), 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+}
+
+.approvalStep__label {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--dk-text-4, #94a3b8);
+}
+.approvalStep--done .approvalStep__label {
+  color: var(--dk-text-green, #047857);
+}
+.approvalStep--current .approvalStep__label {
+  color: var(--dk-text-amber, var(--apWarningDark));
+}
+.approvalStep--rejected .approvalStep__label {
+  color: var(--dk-text-red, var(--apDanger));
+}
+.approvalStep--returned .approvalStep__label {
+  color: var(--apInfo);
+}
+.approvalStep--cancelled .approvalStep__label {
+  color: var(--dk-text-3, #64748b);
+}
+
+/* ----- Footer ----- */
+.approvalCard__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--dk-border-amber, #fde7b0);
+}
+.approvalCard__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dk-text-3, #64748b);
+}
+.approvalCard__hintDot {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--apAccent);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+}
+.approvalCard__cancel {
+  padding: 5px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dk-text-red, var(--apDanger));
+  background: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-red, #fecaca);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.approvalCard__cancel:hover {
+  background: var(--apDanger);
+  color: #ffffff;
+}
+
+/* =====================================================================
+   VARIAN COMPACT -- dipakai halaman Pengajuan (Pusat Pengajuan Karyawan).
+   Metrik (Mulai/Selesai/Total/Pekerjaan) dan alur persetujuan sejajar dalam
+   SATU baris; kartu lebih rapat. Varian default (halaman Lembur) tidak berubah.
+   ===================================================================== */
+.approvalCard__main {
+  display: contents; /* default: pembungkus tidak memengaruhi tata letak */
+}
+
+.approvalCard--compact {
+  --apRing: var(--dk-tint-amber, #fffdf8);
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--dk-tint-amber, #fffdf8);
+  border-left-width: 5px;
+  border-radius: 16px;
+  box-shadow: 0 2px 5px rgba(26, 52, 67, 0.03);
+}
+.approvalCard--compact.approvalCard--success { --apRing: var(--dk-tint-green, #f7fdfa); background: var(--dk-tint-green, #f7fdfa); }
+.approvalCard--compact.approvalCard--danger { --apRing: var(--dk-tint-red, #fff8f8); background: var(--dk-tint-red, #fff8f8); }
+.approvalCard--compact.approvalCard--info { --apRing: var(--dk-tint-blue, #f7faff); background: var(--dk-tint-blue, #f7faff); }
+.approvalCard--compact.approvalCard--muted { --apRing: var(--dk-bg-subtle, #f8fafc); background: var(--dk-bg-subtle, #f8fafc); }
+
+.approvalCard--compact .approvalCard__eyebrow { font-size: 10px; letter-spacing: 0.03em; }
+.approvalCard--compact .approvalCard__title { align-items: baseline; column-gap: 8px; }
+.approvalCard--compact .approvalCard__date { margin-top: 2px; font-size: 16px; }
+.approvalCard--compact .approvalCard__sent { font-size: 11px; }
+.approvalCard--compact .approvalBadge { padding: 4px 12px; font-size: 11px; }
+
+.approvalCard--compact .approvalCard__main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.approvalCard--compact .approvalCard__body {
+  flex-shrink: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.approvalCard--compact .approvalCard__stat {
+  min-height: 58px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+.approvalCard--compact .approvalCard__stat dt { font-size: 9px; }
+.approvalCard--compact .approvalCard__stat dd {
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.approvalCard--compact .approvalCard__stat--total { background: #ff7614; border-color: #ff7614; }
+.approvalCard--compact .approvalCard__job {
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 16px;
+  border-radius: 12px;
+}
+.approvalCard--compact .approvalCard__job span { min-width: 0; overflow-wrap: anywhere; }
+
+.approvalCard--compact .approvalTimeline {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px 0;
+  align-self: stretch;
+  align-content: center;
+}
+.approvalCard--compact .approvalStep { gap: 4px; min-width: 84px; }
+.approvalCard--compact .approvalStep__line { top: 13px; height: 2px; }
+.approvalCard--compact .approvalStep__node { width: 28px; height: 28px; font-size: 11px; }
+.approvalCard--compact .approvalStep__label { font-size: 10px; white-space: nowrap; }
+
+.approvalCard--compact .approvalCard__footer { padding-top: 8px; }
+.approvalCard--compact .approvalCard__hint { font-size: 11px; }
+
+/* Masuk halus: metrik muncul berurutan, titik alur "pop" satu per satu. */
+.approvalCard--compact .approvalCard__stat,
+.approvalCard--compact .approvalCard__job {
+  animation: approvalItemIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.approvalCard--compact .approvalCard__stat:nth-child(1) { animation-delay: 0.05s; }
+.approvalCard--compact .approvalCard__stat:nth-child(2) { animation-delay: 0.1s; }
+.approvalCard--compact .approvalCard__stat:nth-child(3) { animation-delay: 0.15s; }
+.approvalCard--compact .approvalCard__job { animation-delay: 0.2s; }
+.approvalCard--compact .approvalStep__node {
+  animation: approvalNodePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(0.15s + var(--stepIndex) * 0.09s);
+}
+.approvalCard--compact .approvalStep--current .approvalStep__node {
+  animation:
+    approvalNodePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    approvalPulse 1.6s ease-in-out 0.8s infinite;
+  animation-delay: calc(0.15s + var(--stepIndex) * 0.09s), 0.8s;
+}
+@keyframes approvalItemIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes approvalNodePop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (min-width: 640px) {
+  .approvalCard--compact .approvalCard__main { flex-direction: row; align-items: center; gap: 12px; }
+  .approvalCard--compact .approvalCard__body {
+    grid-template-columns: 112px 112px 128px 220px;
+  }
+}
+/* Layar sedang: alur turun ke baris sendiri supaya tidak sesak. */
+@media (min-width: 640px) and (max-width: 1100px) {
+  .approvalCard--compact .approvalCard__main { flex-direction: column; align-items: stretch; }
+  .approvalCard--compact .approvalCard__body { grid-template-columns: 112px 112px 128px minmax(0, 1fr); }
+}
+@media (max-width: 639px) {
+  .approvalCard--compact .approvalCard__job { grid-column: 1 / -1; }
+  .approvalCard--compact .approvalTimeline { overflow-x: auto; padding-bottom: 4px; }
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 720px) {
+  .approvalCard__body {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .approvalCard__job {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 480px) {
+  .approvalCard {
+    padding: 12px 12px 10px;
+  }
+  .approvalStep__label {
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .approvalCard,
+  .approvalBadge,
+  .approvalStep__line::after,
+  .approvalStep--current .approvalStep__node,
+  .approvalCard--compact .approvalCard__stat,
+  .approvalCard--compact .approvalCard__job,
+  .approvalCard--compact .approvalStep__node {
+    animation: none;
+  }
+}

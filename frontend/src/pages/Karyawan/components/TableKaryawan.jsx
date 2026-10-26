@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
+import { DropdownPortalContext } from '../../../components/DropdownPortalContext';
 import Skeleton from '../../../components/Skeleton'; // [BARU]
 import './TableKaryawan.css';
 
@@ -9,6 +10,9 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 // [BARU] Opsi filter jabatan (pengganti <select> native -- lihat komentar
 // di komponen Dropdown untuk alasan blue-highlight fix).
 const JABATAN_FILTER_OPTIONS = [
+  // [BARU] Opsi pengembali filter: placeholder bukan opsi yang bisa dipilih, jadi tanpa
+  // baris ini user tidak bisa kembali ke "semua jabatan" setelah memilih satu jabatan.
+  { value: '', label: 'Semua Jabatan' },
   { value: 'Staff', label: 'Staff' },
   { value: 'Leader', label: 'Leader' },
   { value: 'SPV', label: 'SPV' },
@@ -81,37 +85,41 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
             </div>
           )}
         </div>
-        <div className="filters">
-          {/* 3. Dropdown Filter Dinamis */}
-          <Dropdown
-            className="filter-select"
-            variant="pill"
-            value={filterJabatan}
-            onChange={(e) => setFilterJabatan(e.target.value)}
-            options={JABATAN_FILTER_OPTIONS}
-            placeholder="Semua Jabatan"
-          />
-
-          {/* [BARU] Dropdown jumlah data per halaman */}
-          <Dropdown
-            className="filter-select"
-            variant="pill"
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size} / halaman` }))}
-            ariaLabel="Jumlah data per halaman"
-          />
-          
-          <div className="search-box">
-            <span className="search-icon">🔍</span>
-            <input 
-              type="text" 
-              placeholder="Cari Nama / NIK..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+        {/* [BARU] Portal: daftar dropdown tidak terpotong card tabel saat hasil filter kosong
+            (tabel pendek) -- sebelumnya menu "rusak" terpotong di bawah header tabel. */}
+        <DropdownPortalContext.Provider value>
+          <div className="filters">
+            {/* 3. Dropdown Filter Dinamis */}
+            <Dropdown
+              className="filter-select"
+              variant="pill"
+              value={filterJabatan}
+              onChange={(e) => setFilterJabatan(e.target.value)}
+              options={JABATAN_FILTER_OPTIONS}
+              placeholder="Semua Jabatan"
             />
+
+            {/* [BARU] Dropdown jumlah data per halaman */}
+            <Dropdown
+              className="filter-select"
+              variant="pill"
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size} / halaman` }))}
+              ariaLabel="Jumlah data per halaman"
+            />
+          
+            <div className="search-box">
+              <span className="search-icon">🔍</span>
+              <input 
+                type="text" 
+                placeholder="Cari Nama / NIK..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
+        </DropdownPortalContext.Provider>
       </div>
 
       {/* Gunakan class table-scroll-wrapper untuk memastikan tabel di dalam card aman jika dilayar kecil */}

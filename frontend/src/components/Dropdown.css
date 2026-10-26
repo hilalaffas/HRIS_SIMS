@@ -125,6 +125,15 @@
   max-width: none;
 }
 
+/* [BARU] Mode portal: menu digambar fixed di luar wadah popup yang bisa di-scroll.
+   top/bottom/left/width/maxHeight diisi inline oleh Dropdown.jsx; z-index di atas
+   semua popup (konfirmasi cuti = 2100). */
+.dropdown__menu--portal {
+  position: fixed;
+  z-index: 3000;
+  max-width: min(360px, calc(100vw - 24px));
+}
+
 @keyframes dropdownPop {
   from {
     opacity: 0;

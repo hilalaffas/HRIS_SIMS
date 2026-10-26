@@ -165,6 +165,9 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
     data.append('phoneNumber', formData.phone);
     data.append('roleId', mappedRoleId);
     data.append('divisiId', formData.divisiId);
+    // [BARU] Jabatan ikut dikirim & disimpan. Sebelumnya hanya dipakai untuk menentukan
+    // roleId, sehingga jabatan karyawan baru selalu kosong (tampil "Staff").
+    if (formData.position) data.append('position', formData.position);
     data.append('emergencyContactPhone', formData.emergencyPhone);
     data.append('emergencyContactName', formData.emergencyContact);
     if (mappedRelId) data.append('emergencyContactRelationshipId', mappedRelId);

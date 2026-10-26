@@ -165,6 +165,10 @@ export function mapMyLeave(item) {
     session: item.session ?? null,
     status: statusLabel(status),
     statusChangedAt: item.returnedAt || item.approvedAt || item.submittedAt || null,
+    // [BARU] Waktu pengajuan dikirim ("2026-10-25T10:34:00"), dipakai halaman Pengajuan
+    // untuk kolom "Tanggal" & urutan riwayat gabungan. statusChangedAt di atas tidak
+    // cocok karena berubah mengikuti status.
+    submittedAt: item.submittedAt ?? null,
     rawDetail: { 
       jenisCuti: item.leaveType?.name, 
       startDate: item.startDate, 
@@ -198,7 +202,8 @@ export async function getRiwayatByUser(config = {}) {
   return Array.isArray(res) ? res.map(mapMyLeave) : []; 
 }
 
-export const getMyLeaveDetail = (id) => api.get(`/api/cuti/${id}/detail`);
+// [UBAH] + config opsional ({ silent }) supaya prefetch detail di halaman Pengajuan tidak memicu LoadingScreen global.
+export const getMyLeaveDetail = (id, config = {}) => api.get(`/api/cuti/${id}/detail`, config);
 
 // [BARU] Progres approval per-tahap milik user yang sedang login -- dipakai
 // lonceng notifikasi Navbar.jsx supaya karyawan tahu begitu SALAH SATU
