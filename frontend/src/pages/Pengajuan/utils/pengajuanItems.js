@@ -59,6 +59,13 @@ export const STATUS_FILTER_OPTIONS = [
   { value: 'RECORDED', label: 'Tercatat' },
 ];
 
+// [BARU] Jenis data (REQUEST_KIND) yang tampil di riwayat tiap tab. Tab Cuti memakai
+// LeaveHistory miliknya sendiri, jadi tidak ada di sini.
+const TYPE_KINDS = {
+  [TYPE_KEY.PERMISSION]: [REQUEST_KIND.SICK, REQUEST_KIND.LATE],
+  [TYPE_KEY.OVERTIME]: [REQUEST_KIND.OVERTIME],
+};
+
 const LEAVE_STATUS_CODE = {
   'Dalam Proses': 'PENDING',
   'Disetujui (ACC)': 'APPROVED',
@@ -184,6 +191,12 @@ export function filterPengajuanItems(items, { kind = 'ALL', status = 'ALL', sear
     return haystack.includes(keyword);
   });
 }
+
+// [BARU] Riwayat per tab: hanya pengajuan yang sesuai jenis tab (urutan terbaru tetap terjaga).
+export const filterItemsByType = (items, typeKey) => {
+  const kinds = TYPE_KINDS[typeKey] || [];
+  return items.filter((item) => kinds.includes(item.kind));
+};
 
 // Kartu alur persetujuan hanya untuk pengajuan yang butuh ACC atasan.
 export const getCardItems = (items) => items.filter((item) => item.requiresApproval);

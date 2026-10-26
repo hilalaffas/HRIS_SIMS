@@ -39,7 +39,18 @@ function StatusCell({ item, isSelected, onSelectStatus }) {
   );
 }
 
-export default function PengajuanHistoryTable({ items, loading, selectedKey, resetKey, onSelectStatus, onAction }) {
+// [UBAH] + props `title` & `emptyMessage` (default sama seperti sebelumnya) supaya tabel ini
+// bisa dipakai sebagai riwayat per tab (mis. "Riwayat Lembur Saya").
+export default function PengajuanHistoryTable({
+  items,
+  loading,
+  selectedKey,
+  resetKey,
+  onSelectStatus,
+  onAction,
+  title = 'Riwayat Pengajuan Saya',
+  emptyMessage = 'Belum ada pengajuan yang cocok.',
+}) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Filter/pencarian berubah (resetKey berbeda) -> kembali menampilkan halaman pertama.
@@ -55,7 +66,7 @@ export default function PengajuanHistoryTable({ items, loading, selectedKey, res
 
   return (
     <section className="pgj-history">
-      <h2 className="pgj-history__title">Riwayat Pengajuan Saya</h2>
+      <h2 className="pgj-history__title">{title}</h2>
 
       <div className="pgj-history__scroll">
         <table className="pgj-table">
@@ -77,7 +88,7 @@ export default function PengajuanHistoryTable({ items, loading, selectedKey, res
               </tr>
             ))}
             {!loading && items.length === 0 && (
-              <tr><td colSpan={5} className="pgj-empty">Belum ada pengajuan yang cocok.</td></tr>
+              <tr><td colSpan={5} className="pgj-empty">{emptyMessage}</td></tr>
             )}
             {!loading && visibleItems.map((item, index) => {
               const kind = KIND_META[item.kind];

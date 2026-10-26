@@ -1,0 +1,158 @@
+/* src/pages/Pengajuan/components/PengajuanTabs.css
+   Gaya bersama isi tab: animasi panel, info sisa cuti kecil, pesan error form,
+   dan kartu kosong. Warna memakai token tema (terang/gelap) yang sudah ada. */
+
+/* ----- Panel tab: masuk dengan fade + slide halus tiap kali ditampilkan ----- */
+.pgj-tab-panel {
+  margin-top: 20px;
+  animation: pgjPanelIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pgj-tab-panel[hidden] { display: none; }
+
+/* Isi tab Cuti: sama seperti .form-wrapper pada halaman ApplyCuti lama */
+.pgj-leave-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Kartu formulir (Sakit & Izin, Lembur, Tukar Shift) */
+.pgj-form-card { margin: 0 auto; }
+.pgj-form-card .header-form-icon svg { width: 22px; height: 22px; }
+
+/* ----- Info sisa cuti kecil (tanpa card) ----- */
+.pgj-balance-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  max-width: 1450px;
+  margin: 0 0 12px;
+  padding: 0 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #718092);
+}
+.pgj-balance-inline svg {
+  width: 15px;
+  height: 15px;
+  color: var(--dk-text-green, #078b6b);
+}
+.pgj-balance-inline strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--dk-text-green, #078b6b);
+}
+.pgj-balance-inline__note { color: var(--color-text-muted, #94a3b8); }
+.pgj-balance-inline__skeleton {
+  width: 64px;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--dk-bg-hover, #e8eeec) 25%, var(--dk-border, #f3f6f5) 50%, var(--dk-bg-hover, #e8eeec) 75%);
+  background-size: 200% 100%;
+  animation: pgjShimmer 1.2s linear infinite;
+}
+
+/* ----- Pesan error ----- */
+.pgj-field-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-danger, #dc2626);
+  animation: pgjErrorIn 0.2s ease both;
+}
+.pgj-form-error {
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-danger, #dc2626);
+  background: var(--color-danger-bg, #fef2f2);
+  border: 1px solid var(--color-danger, #dc2626);
+  border-radius: 8px;
+  animation: pgjErrorIn 0.2s ease both;
+}
+
+/* ----- Elemen kecil di dalam form ----- */
+.pgj-inline-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin-top: 12px;
+}
+.pgj-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--dk-text, #334155);
+  cursor: pointer;
+}
+.pgj-check input { accent-color: var(--color-primary); }
+.pgj-days {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--dk-text, #334155);
+}
+.pgj-days .form-control { width: 84px; padding: 8px 10px; text-align: center; }
+.pgj-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #718092);
+}
+.pgj-char-count {
+  margin: 4px 0 0;
+  font-size: 11px;
+  text-align: right;
+  color: var(--color-text-muted, #94a3b8);
+}
+
+/* ----- Kartu riwayat kosong (Tukar Shift belum punya backend) ----- */
+.pgj-empty-card {
+  width: 100%;
+  max-width: 1450px;
+  margin: 24px auto 0;
+  overflow: hidden;
+  background: var(--dk-bg-card, #ffffff);
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+.pgj-empty-card h3 {
+  margin: 0;
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, #243042);
+  border-bottom: 1px solid var(--dk-border, #e4e9ec);
+}
+.pgj-empty-card p {
+  margin: 0;
+  padding: 28px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary, #718092);
+}
+
+@keyframes pgjPanelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pgjErrorIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pgjShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgj-tab-panel,
+  .pgj-field-error,
+  .pgj-form-error,
+  .pgj-balance-inline__skeleton { animation: none; }
+}

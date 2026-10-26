@@ -6,28 +6,30 @@
 //   - Cuti          -> hook useLeaveApplication + <LeaveForm> (halaman Cuti lama)
 //   - Sakit & Izin  -> PermissionRequestModal + MedicalLetterModal (halaman Absensi)
 //   - Lembur        -> OvertimeFormModal (halaman Lembur)
-// Alurnya: klik kartu jenis -> popup formulir; tabel riwayat gabungan di bawah;
-// kartu alur persetujuan (default pengajuan terbaru) berpindah saat tombol
-// status di tabel diklik; tombol aksi membuka popup detail (izin sakit: upload
-// surat susulan).
+// [UBAH] Alurnya sekarang: pilih TAB (Cuti, Sakit & Izin, Lembur, Tukar Shift) ->
+// formulir + riwayat jenis itu muncul INLINE di bawah tab menu (bukan popup lagi).
+// Kartu alur persetujuan & tabel riwayat gabungan DISEMBUNYIKAN sementara lewat
+// PENGAJUAN_VISIBILITY (config/pengajuanConfig.js); kodenya tetap utuh. Tombol status/
+// aksi di riwayat tab membuka popup detail (izin sakit: upload surat susulan).
 //
 // Halaman lama (/ApplyCuti, /absensi, /lembur) tetap hidup -- dipakai deep link
 // notifikasi dan tabel Jadwal & Log Absensi.
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // [UBAH] + useRef
 import { ClipboardList } from 'lucide-react';
 import Toast from '../../components/Toast';
 import ApprovalStatusCard from '../../components/ApprovalStatusCard';
 import useLeaveApplication from '../Cuti/applycuti/hooks/useLeaveApplication';
 import LeaveRequestDialogs from '../Cuti/applycuti/components/LeaveRequestDialogs';
-import PermissionRequestModal from '../Absensi/components/PermissionRequestModal';
 import MedicalLetterModal from '../Absensi/components/MedicalLetterModal';
-import OvertimeFormModal from '../Lembur/components/OvertimeFormModal';
-import PengajuanTypeCards from './components/PengajuanTypeCards';
+import PengajuanTabMenu, { PengajuanTabPanel } from './components/PengajuanTabMenu'; // [BARU]
 import PengajuanFilterBar from './components/PengajuanFilterBar';
 import PengajuanHistoryTable from './components/PengajuanHistoryTable';
-import LeaveFormModal from './components/LeaveFormModal';
 import RequestDetailModal from './components/RequestDetailModal';
-import ShiftSwapModal from './components/ShiftSwapModal';
+import LeaveTab from './tabs/LeaveTab'; // [BARU]
+import PermissionTab from './tabs/PermissionTab'; // [BARU]
+import OvertimeTab from './tabs/OvertimeTab'; // [BARU]
+import ShiftSwapTab from './tabs/ShiftSwapTab'; // [BARU]
+import { PENGAJUAN_TABS, PENGAJUAN_VISIBILITY } from './config/pengajuanConfig'; // [BARU]
 import { MOCK_COLLEAGUES, MOCK_MY_SHIFTS } from './data/mockShiftSwap';
 import usePengajuanData from './hooks/usePengajuanData';
 import useLeaveDetails from './hooks/useLeaveDetails';
@@ -38,27 +40,23 @@ import {
   buildCardModelForItem,
   buildPengajuanItems,
   buildRequestDetail,
+  filterItemsByType, // [BARU]
   filterPengajuanItems,
   getCardItems,
 } from './utils/pengajuanItems';
 import { formatDateLabel, submitPermissionRequest, toDisplayRecord, uploadMedicalDocument } from '../../services/attendanceService';
 import { submitOvertime } from '../../services/overtimeService';
 import { isMyDivisionShifting } from '../../services/divisiService';
-import { buildLeaveBalanceNote } from '../../utils/leaveBalanceNote';
-import useCountUp from '../Dashboard/hooks/useCountUp';
 import './Pengajuan.css';
 
-// Popup yang sedang terbuka. Popup detail cuti dikelola hook cuti sendiri.
-const MODAL = {
-  LEAVE_FORM: 'LEAVE_FORM',
-  PERMISSION: 'PERMISSION',
-  OVERTIME: 'OVERTIME',
-  SHIFT_SWAP: 'SHIFT_SWAP',
-};
+// [BARU] Daftar kosong yang stabil: dipakai agar useLeaveDetails tidak mengambil detail
+// cuti (sampai 10 request / 15 detik) selagi kartu alur persetujuan disembunyikan.
+const NO_LEAVE_HISTORY = [];
 
 export default function Pengajuan({ user }) {
   const [toast, setToast] = useState(null);
-  const [activeModal, setActiveModal] = useState(null);
+  const [activeTab, setActiveTab] = useState(TYPE_KEY.LEAVE); // [UBAH] menggantikan activeModal
+  const leaveFormTopRef = useRef(null); // [BARU] di-scroll saat "Edit" dari riwayat cuti
   const [letterTargetId, setLetterTargetId] = useState(null);
   const [detailKey, setDetailKey] = useState(null);
   const [selectedKey, setSelectedKey] = useState(null); // null = kartu mengikuti pengajuan TERBARU
@@ -71,10 +69,8 @@ export default function Pengajuan({ user }) {
   }, []);
   const showErrorToast = useCallback((message) => showToast(message, 'error'), [showToast]);
 
-  const closeModal = useCallback(() => setActiveModal(null), []);
-
   // ===================== DATA =====================
-  const leave = useLeaveApplication(user, { notify: showToast, onSubmitted: closeModal });
+  const leave = useLeaveApplication(user, { notify: showToast, formTopRef: leaveFormTopRef }); // [UBAH] tidak ada popup form yang perlu ditutup
   const isSupervisorRequester = leave.formProps.isSupervisor;
   const { overtimeRecords, attendanceRecords, loading, reload, upsertAttendance } = usePengajuanData(showErrorToast);
 
@@ -100,9 +96,16 @@ export default function Pengajuan({ user }) {
   const latestCardKey = getCardItems(baseItems)[0]?.key ?? null;
   const activeKey = selectedKey ?? latestCardKey;
   const activeBaseItem = baseItems.find((item) => item.key === activeKey);
-  const selectedLeaveId = activeBaseItem?.kind === REQUEST_KIND.LEAVE ? activeBaseItem.refId : null;
+  // [UBAH] detail cuti hanya diambil bila kartu alur persetujuan sedang ditampilkan
+  const selectedLeaveId = PENGAJUAN_VISIBILITY.approvalCard && activeBaseItem?.kind === REQUEST_KIND.LEAVE
+    ? activeBaseItem.refId
+    : null;
 
-  const leaveDetails = useLeaveDetails(leave.history, selectedLeaveId, leave.historySyncedAt);
+  const leaveDetails = useLeaveDetails(
+    PENGAJUAN_VISIBILITY.approvalCard ? leave.history : NO_LEAVE_HISTORY, // [UBAH]
+    selectedLeaveId,
+    leave.historySyncedAt,
+  );
 
   const items = useMemo(() => buildPengajuanItems({
     leaveHistory: leave.history,
@@ -113,6 +116,17 @@ export default function Pengajuan({ user }) {
   }), [leave.history, leaveDetails, overtimeRecords, attendanceRecords, isSupervisorRequester]);
 
   const visibleItems = useMemo(() => filterPengajuanItems(items, filters), [items, filters]);
+
+  // [BARU] Riwayat per tab (Cuti memakai LeaveHistory miliknya sendiri)
+  const permissionItems = useMemo(() => filterItemsByType(items, TYPE_KEY.PERMISSION), [items]);
+  const overtimeItems = useMemo(() => filterItemsByType(items, TYPE_KEY.OVERTIME), [items]);
+
+  // [BARU] Tab Tukar Shift hanya untuk divisi SHIFTING; bila tidak berlaku, kembali ke tab Cuti
+  const visibleTabs = useMemo(
+    () => PENGAJUAN_TABS.filter((tab) => !tab.shiftOnly || isShifting),
+    [isShifting],
+  );
+  const currentTab = visibleTabs.some((tab) => tab.key === activeTab) ? activeTab : TYPE_KEY.LEAVE;
 
   // ===================== KARTU ALUR PERSETUJUAN =====================
   const activeItem = items.find((item) => item.key === activeKey) || null;
@@ -131,15 +145,8 @@ export default function Pengajuan({ user }) {
   const letterTarget = attendanceRecords.find((record) => record.id === letterTargetId);
 
   // ===================== HANDLER =====================
-  const handleSelectType = (typeKey) => {
-    const modalByType = {
-      [TYPE_KEY.LEAVE]: MODAL.LEAVE_FORM,
-      [TYPE_KEY.PERMISSION]: MODAL.PERMISSION,
-      [TYPE_KEY.OVERTIME]: MODAL.OVERTIME,
-      [TYPE_KEY.SHIFT_SWAP]: MODAL.SHIFT_SWAP,
-    };
-    setActiveModal(modalByType[typeKey] || null);
-  };
+  // [BARU] Tombol status di riwayat tab membuka popup detail (kartu alur persetujuan sedang disembunyikan)
+  const handleSelectStatus = (item) => setDetailKey(item.key);
 
   const handleRowAction = (item) => {
     if (item.kind === REQUEST_KIND.LEAVE) leave.handleOpenDetail(item.source);
@@ -147,12 +154,11 @@ export default function Pengajuan({ user }) {
     else setDetailKey(item.key);
   };
 
-  // Error dilempar ulang ke popup supaya pesan backend tampil di sana & isian tidak hilang.
+  // Error dilempar ulang ke form tab supaya pesan backend tampil di sana & isian tidak hilang.
   const handlePermissionSubmit = async (payload) => {
     const saved = await submitPermissionRequest(payload);
     upsertAttendance(toDisplayRecord(saved));
     setSelectedKey(null);
-    setActiveModal(null);
     showToast(
       payload.type === 'SAKIT' ? 'Pengajuan izin sakit berhasil dikirim.' : 'Izin terlambat berhasil dicatat.',
     );
@@ -168,19 +174,15 @@ export default function Pengajuan({ user }) {
   const handleOvertimeSubmit = async (formValues) => {
     await submitOvertime(formValues);
     setSelectedKey(null);
-    setActiveModal(null);
     showToast('Pengajuan lembur berhasil dikirim.');
     reload();
   };
 
   // Tukar shift: tampilan sementara, belum ada endpoint backend.
   const handleShiftSwapSubmit = () => {
-    setActiveModal(null);
     showToast('Tampilan Tukar Shift masih sementara: pengajuan belum tersambung ke server.', 'error');
   };
 
-  const leaveBalanceTotal = leave.balance ? buildLeaveBalanceNote(leave.balance).total : null;
-  const animatedBalance = useCountUp(Number(leaveBalanceTotal ?? 0)); // angka sisa cuti naik halus
 
   return (
     <div className="pengajuan-page">
@@ -192,54 +194,75 @@ export default function Pengajuan({ user }) {
           </h1>
           <p>Ajukan cuti, izin/sakit, lembur, dan tukar shift dari satu tempat terpadu.</p>
         </div>
-        <span className="pgj-balance-pill">
-          Sisa Cuti: {leaveBalanceTotal === null ? '...' : animatedBalance.toLocaleString('id-ID')} Hari
-        </span>
       </header>
 
-      <PengajuanTypeCards showShiftSwap={isShifting} onSelect={handleSelectType} />
+      {/* [UBAH] Kartu jenis (PengajuanTypeCards) diganti tab menu bergaya halaman Karyawan */}
+      <PengajuanTabMenu tabs={visibleTabs} activeKey={currentTab} onChange={setActiveTab} />
 
-      {/* Kartu alur persetujuan: default pengajuan terbaru yang butuh ACC atasan */}
-      {cardModel && (
+      {/* [BARU] Isi tiap tab tampil inline di bawah tab menu. Panel nonaktif tetap ter-mount
+          (hanya disembunyikan) supaya isian form tidak hilang saat pindah tab. */}
+      <PengajuanTabPanel tabKey={TYPE_KEY.LEAVE} activeKey={currentTab}>
+        <LeaveTab leave={leave} formTopRef={leaveFormTopRef} />
+      </PengajuanTabPanel>
+
+      <PengajuanTabPanel tabKey={TYPE_KEY.PERMISSION} activeKey={currentTab}>
+        <PermissionTab
+          onSubmit={handlePermissionSubmit}
+          historyItems={permissionItems}
+          loading={loading}
+          onSelectStatus={handleSelectStatus}
+          onAction={handleRowAction}
+        />
+      </PengajuanTabPanel>
+
+      <PengajuanTabPanel tabKey={TYPE_KEY.OVERTIME} activeKey={currentTab}>
+        <OvertimeTab
+          onSubmit={handleOvertimeSubmit}
+          historyItems={overtimeItems}
+          loading={loading}
+          onSelectStatus={handleSelectStatus}
+          onAction={handleRowAction}
+        />
+      </PengajuanTabPanel>
+
+      {isShifting && (
+        <PengajuanTabPanel tabKey={TYPE_KEY.SHIFT_SWAP} activeKey={currentTab}>
+          <ShiftSwapTab
+            shiftOptions={MOCK_MY_SHIFTS}
+            colleagueOptions={MOCK_COLLEAGUES}
+            onSubmit={handleShiftSwapSubmit}
+          />
+        </PengajuanTabPanel>
+      )}
+
+      {/* [DISEMBUNYIKAN] Kartu alur persetujuan (default pengajuan terbaru yang butuh ACC atasan).
+          Aktifkan lagi lewat PENGAJUAN_VISIBILITY.approvalCard = true. */}
+      {PENGAJUAN_VISIBILITY.approvalCard && cardModel && (
         <ApprovalStatusCard key={activeKey} model={cardModel} variant="compact" />
       )}
 
-      <PengajuanFilterBar
-        kind={filters.kind}
-        status={filters.status}
-        search={filters.search}
-        onKindChange={(kind) => setFilters((current) => ({ ...current, kind }))}
-        onStatusChange={(status) => setFilters((current) => ({ ...current, status }))}
-        onSearchChange={(search) => setFilters((current) => ({ ...current, search }))}
-      />
+      {/* [DISEMBUNYIKAN] Filter + tabel riwayat gabungan semua jenis pengajuan.
+          Aktifkan lagi lewat PENGAJUAN_VISIBILITY.combinedHistory = true. */}
+      {PENGAJUAN_VISIBILITY.combinedHistory && (
+        <>
+          <PengajuanFilterBar
+            kind={filters.kind}
+            status={filters.status}
+            search={filters.search}
+            onKindChange={(kind) => setFilters((current) => ({ ...current, kind }))}
+            onStatusChange={(status) => setFilters((current) => ({ ...current, status }))}
+            onSearchChange={(search) => setFilters((current) => ({ ...current, search }))}
+          />
 
-      <PengajuanHistoryTable
-        items={visibleItems}
-        loading={loading}
-        selectedKey={cardModel ? activeKey : null}
-        resetKey={`${filters.kind}|${filters.status}|${filters.search}`}
-        onSelectStatus={(item) => setSelectedKey(item.key)}
-        onAction={handleRowAction}
-      />
-
-      {/* ----- Popup formulir (dipakai ulang dari halaman Cuti, Absensi, Lembur) ----- */}
-      {activeModal === MODAL.LEAVE_FORM && (
-        <LeaveFormModal formProps={leave.formProps} balance={leave.balance} onClose={closeModal} />
-      )}
-      {activeModal === MODAL.PERMISSION && (
-        <PermissionRequestModal onSubmit={handlePermissionSubmit} onClose={closeModal} />
-      )}
-      {activeModal === MODAL.OVERTIME && (
-        <OvertimeFormModal onSubmit={handleOvertimeSubmit} onClose={closeModal} />
-      )}
-
-      {activeModal === MODAL.SHIFT_SWAP && (
-        <ShiftSwapModal
-          shiftOptions={MOCK_MY_SHIFTS}
-          colleagueOptions={MOCK_COLLEAGUES}
-          onSubmit={handleShiftSwapSubmit}
-          onClose={closeModal}
-        />
+          <PengajuanHistoryTable
+            items={visibleItems}
+            loading={loading}
+            selectedKey={cardModel ? activeKey : null}
+            resetKey={`${filters.kind}|${filters.status}|${filters.search}`}
+            onSelectStatus={(item) => setSelectedKey(item.key)}
+            onAction={handleRowAction}
+          />
+        </>
       )}
 
       {/* ----- Popup detail & surat susulan ----- */}
