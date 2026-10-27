@@ -43,10 +43,10 @@ export function buildOvertimeCardModel(record, { isLatest = false } = {}) {
 }
 
 // ------------------------------------------------------------------ CUTI
-// Ketiga approver (Leader, SPV, Manager) bekerja PARALEL: cuti baru APPROVED
-// setelah semuanya ACC, dan satu aksi tolak/kembalikan langsung mengakhiri
-// proses (lihat LeaveService.processApprovalAction). Karena itu beberapa
-// langkah bisa berstatus "current" sekaligus.
+// [UBAH] Approver bekerja BERJENJANG sesuai backend (LeaveService.processApprovalAction):
+// Leader -> SPV -> Manager. Hanya SATU langkah yang "current" (approver pertama yang belum
+// ACC); langkah sesudahnya "upcoming" sampai giliran tiba. Cuti baru APPROVED setelah
+// semuanya ACC, dan satu aksi tolak/kembalikan langsung mengakhiri proses.
 const CUTI_ROLE_ORDER = ['LEADER', 'SPV', 'MANAGER'];
 const CUTI_ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager' };
 const CUTI_STEP_LABEL = { LEADER: 'Review Leader', SPV: 'Review SPV', MANAGER: 'ACC Manager' };
@@ -88,28 +88,28 @@ function resolveCutiApprovals(detail, isSupervisorRequester) {
 export function buildLeaveCardModel(item, detail, { isLatest = false, isSupervisorRequester = false } = {}) {
   const overall = CUTI_OVERALL_BY_LABEL[item.status] || 'PENDING';
   const approvals = resolveCutiApprovals(detail, isSupervisorRequester);
+  // [BARU] Approver yang sedang ditunggu = yang pertama belum ACC/aksi (urutan Leader -> SPV -> Manager)
+  const currentRole = approvals.find((approval) => !CUTI_STEP_STATE_BY_ACTION[approval.action])?.role || null;
 
   const steps = [
     { key: 'submitted', label: 'Diajukan', state: 'done' },
     ...approvals.map(({ role, action }) => {
       let state = CUTI_STEP_STATE_BY_ACTION[action];
-      if (!state) state = overall === 'PENDING' ? 'current' : 'upcoming';
+      // [UBAH] hanya approver pertama yang belum ACC yang "current"; sisanya "upcoming"
+      if (!state) state = overall === 'PENDING' && role === currentRole ? 'current' : 'upcoming';
       if (overall === 'APPROVED') state = 'done';
       return { key: role.toLowerCase(), label: CUTI_STEP_LABEL[role], state };
     }),
   ];
 
-  const pendingNames = approvals
-    .filter((approval) => approval.action === 'PENDING')
-    .map((approval) => CUTI_ROLE_LABEL[approval.role]);
+  const pendingNames = currentRole ? [CUTI_ROLE_LABEL[currentRole]] : [];
   const actedBy = approvals.find((approval) => CUTI_STEP_STATE_BY_ACTION[approval.action] && approval.action !== 'APPROVED');
   const actedByLabel = actedBy ? CUTI_ROLE_LABEL[actedBy.role] : 'approver';
   const actedNote = actedBy?.note ? ` Catatan: ${actedBy.note}` : '';
 
   let tone = 'warning';
-  let badgeLabel = 'Menunggu Approval';
-  if (pendingNames.length === 1) badgeLabel = `Menunggu ${pendingNames[0]}`;
-  else if (pendingNames.length > 1) badgeLabel = `Menunggu ${pendingNames.length} Approver`;
+  // [UBAH] Label mengikuti alur: Menunggu Leader -> Menunggu SPV -> Menunggu Manager -> Disetujui
+  let badgeLabel = pendingNames.length ? `Menunggu ${pendingNames[0]}` : 'Menunggu Approval';
   let hint = pendingNames.length ? `Menunggu review dari ${joinNames(pendingNames)}.` : 'Menunggu proses persetujuan.';
 
   if (overall === 'APPROVED') {
@@ -196,6 +196,51 @@ export function buildSickCardModel(record, { isLatest = false } = {}) {
     ],
     note: { label: 'Keterangan', text: record.note || '-' },
     steps,
+    hint,
+    cancellable: false,
+  };
+}
+
+// ------------------------------------------------------------ TUKAR SHIFT
+// [BARU] `request` = { id, requesterName, receiverName, shiftLabel, reason, createdAt, status }
+// status: 'PENDING_COLLEAGUE' (menunggu rekan) | 'PENDING_SUPERIOR' (rekan sudah setuju,
+// menunggu ACC atasan) | 'REJECTED_COLLEAGUE' (ditolak rekan).
+// Datanya masih lokal (belum ada backend) -- lihat pages/Pengajuan/hooks/useShiftSwapRequests.js.
+export function buildShiftSwapCardModel(request, { isLatest = false } = {}) {
+  let colleagueState = 'current';
+  let superiorState = 'upcoming';
+  let tone = 'warning';
+  let badgeLabel = 'Menunggu Rekan';
+  let hint = `Menunggu persetujuan ${request.receiverName} sebagai rekan pengganti.`;
+
+  if (request.status === 'PENDING_SUPERIOR') {
+    colleagueState = 'done';
+    superiorState = 'current';
+    badgeLabel = 'Menunggu ACC Atasan';
+    hint = `${request.receiverName} sudah menyetujui. Menunggu ACC dari atasan.`;
+  } else if (request.status === 'REJECTED_COLLEAGUE') {
+    colleagueState = 'rejected';
+    tone = 'danger';
+    badgeLabel = 'Ditolak Rekan';
+    hint = `${request.receiverName} menolak permintaan tukar shift ini.`;
+  }
+
+  return {
+    tone,
+    eyebrow: isLatest ? 'Pengajuan Tukar Shift Terbaru' : 'Pengajuan Tukar Shift',
+    title: `${request.requesterName} \u2192 ${request.receiverName}`,
+    sentLabel: toSentLabel(request.createdAt),
+    badgeLabel,
+    stats: [
+      { label: 'Pemohon', value: request.requesterName },
+      { label: 'Rekan Pengganti', value: request.receiverName, emphasis: true },
+    ],
+    note: { label: 'Jadwal', text: request.shiftLabel },
+    steps: [
+      { key: 'submitted', label: 'Diajukan', state: 'done' },
+      { key: 'colleague', label: 'Persetujuan Rekan', state: colleagueState },
+      { key: 'superior', label: 'ACC Atasan', state: superiorState },
+    ],
     hint,
     cancellable: false,
   };

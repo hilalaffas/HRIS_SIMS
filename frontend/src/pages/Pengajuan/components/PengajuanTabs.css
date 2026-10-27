@@ -16,6 +16,8 @@
   align-items: center;
   width: 100%;
 }
+/* [BARU] tabel riwayat cuti selebar form (maks. 1450px) */
+.pgj-leave-tab > .pgj-history { width: 100%; max-width: 1450px; }
 
 /* Kartu formulir (Sakit & Izin, Lembur, Tukar Shift) */
 .pgj-form-card { margin: 0 auto; }
@@ -155,4 +157,52 @@
   .pgj-field-error,
   .pgj-form-error,
   .pgj-balance-inline__skeleton { animation: none; }
+}
+
+/* ----- [BARU] Chip sisa cuti di header hijau formulir (LeaveBalanceInline variant="header") ----- */
+.pgj-balance-inline--header {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 6px 14px;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #d1fae5;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+.pgj-balance-inline--header svg,
+.pgj-balance-inline--header strong { color: #ffffff; }
+.pgj-balance-inline--header .pgj-balance-inline__note { color: #a7f3d0; }
+.pgj-balance-inline--header .pgj-balance-inline__skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.18) 25%, rgba(255, 255, 255, 0.34) 50%, rgba(255, 255, 255, 0.18) 75%);
+  background-size: 200% 100%;
+}
+@media (max-width: 760px) {
+  .pgj-balance-inline--header .pgj-balance-inline__note { display: none; }
+}
+
+/* ----- [BARU] Indikator "Live" di judul riwayat cuti + filter status ----- */
+.pgj-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-secondary, #718092);
+}
+.pgj-live__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pgjLivePulse 1.8s ease-in-out infinite;
+}
+@keyframes pgjLivePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+  50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pgj-live__dot { animation: none; }
 }

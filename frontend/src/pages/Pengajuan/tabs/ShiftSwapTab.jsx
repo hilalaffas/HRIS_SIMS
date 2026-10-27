@@ -2,21 +2,37 @@
 //
 // Tab "Tukar Shift" (hanya untuk divisi SHIFTING): formulir inline -- pilih
 // jadwal sendiri, pilih rekan pengganti, isi alasan. TAMPILAN SEMENTARA:
-// endpoint tukar shift belum ada, jadi pengiriman diserahkan ke parent lewat
-// `onSubmit(values)` dan riwayatnya masih kosong.
+// endpoint tukar shift belum ada, jadi data hanya disimpan di sisi frontend
+// (useShiftSwapRequests) dan pengiriman diserahkan ke parent lewat `onSubmit(values)`.
+// [UBAH] Di bawah form: kartu permintaan yang menunggu persetujuan rekan (tombol Setuju ->
+// status "Menunggu ACC Atasan") lalu tabel riwayat yang sama dengan tab lain.
 //
 // Contoh pemakaian:
-// <ShiftSwapTab shiftOptions={[...]} colleagueOptions={[...]} onSubmit={fn} />
+// <ShiftSwapTab shiftOptions={[...]} colleagueOptions={[...]} onSubmit={fn}
+//   historyItems={items} incomingRequests={incoming} onRespond={fn}
+//   onSelectStatus={fn} onAction={fn} />
 import React, { useState } from 'react';
 import { ArrowLeftRight } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
 import PengajuanFormCard, { FieldError } from '../components/PengajuanFormCard';
+import PengajuanHistoryTable from '../components/PengajuanHistoryTable'; // [BARU]
+import ShiftSwapIncomingCard from '../components/ShiftSwapIncomingCard'; // [BARU]
+import { SHIFT_SWAP_DEMO } from '../config/pengajuanConfig'; // [BARU]
 import { dropdownErrorClass, inputErrorClass, validateRequired } from '../../../utils/validation';
 
 const EMPTY_FORM = { myShift: '', colleague: '', reason: '' };
 const REASON_MAX_LENGTH = 255;
 
-export default function ShiftSwapTab({ shiftOptions, colleagueOptions, onSubmit }) {
+export default function ShiftSwapTab({
+  shiftOptions,
+  colleagueOptions,
+  onSubmit,
+  historyItems, // [BARU]
+  incomingRequests, // [BARU] permintaan yang menunggu persetujuan rekan
+  onRespond, // [BARU] (requestId, isAccepted) => void
+  onSelectStatus, // [BARU]
+  onAction, // [BARU]
+}) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -50,7 +66,7 @@ export default function ShiftSwapTab({ shiftOptions, colleagueOptions, onSubmit 
         onSubmit={handleSubmit}
       >
         <div className="duration-info-alert duration-info-alert--warning">
-          Tampilan Tukar Shift masih sementara: pengajuan belum tersambung ke server.
+          Tampilan Tukar Shift masih sementara: pengajuan belum tersambung ke server dan hilang saat halaman dimuat ulang.
         </div>
 
         <div className="form-group">
@@ -97,10 +113,22 @@ export default function ShiftSwapTab({ shiftOptions, colleagueOptions, onSubmit 
         </div>
       </PengajuanFormCard>
 
-      <section className="pgj-empty-card">
-        <h3>Riwayat Tukar Shift Saya</h3>
-        <p>Belum ada pengajuan tukar shift.</p>
-      </section>
+      <ShiftSwapIncomingCard
+        requests={incomingRequests}
+        onRespond={onRespond}
+        simulated={SHIFT_SWAP_DEMO.simulateReceiver}
+      />
+
+      <PengajuanHistoryTable
+        title="Riwayat Tukar Shift Saya"
+        emptyMessage="Belum ada pengajuan tukar shift."
+        items={historyItems}
+        loading={false}
+        selectedKey={null}
+        resetKey="shift-swap"
+        onSelectStatus={onSelectStatus}
+        onAction={onAction}
+      />
     </>
   );
 }

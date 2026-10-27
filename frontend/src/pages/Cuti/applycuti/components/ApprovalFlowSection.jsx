@@ -17,7 +17,7 @@ const ApprovalFlowSection = ({
   invalidField = '',
 }) => {
   return (
-    <div className="form-group">
+    <div className="form-group form-group--approval">{/* [UBAH] + form-group--approval (hook layout compact) */}
       <label className="form-label">PILIH ALUR APPROVAL CUTI *</label>
       <div className="approval-row">
         <div className="approval-col">

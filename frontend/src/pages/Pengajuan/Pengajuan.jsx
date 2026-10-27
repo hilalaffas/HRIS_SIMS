@@ -12,6 +12,10 @@
 // PENGAJUAN_VISIBILITY (config/pengajuanConfig.js); kodenya tetap utuh. Tombol status/
 // aksi di riwayat tab membuka popup detail (izin sakit: upload surat susulan).
 //
+// [UBAH] Tombol STATUS di riwayat SEMUA tab (Cuti, Sakit & Izin, Lembur, Tukar Shift) membuka POPUP
+// kartu alur persetujuan bergaris (ApprovalStatusModal); tombol Aksi/Detail membuka popup detail.
+// Tukar Shift masih frontend saja (useShiftSwapRequests): rekan klik Setuju -> "Menunggu ACC Atasan".
+//
 // Halaman lama (/ApplyCuti, /absensi, /lembur) tetap hidup -- dipakai deep link
 // notifikasi dan tabel Jadwal & Log Absensi.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // [UBAH] + useRef
@@ -25,14 +29,16 @@ import PengajuanTabMenu, { PengajuanTabPanel } from './components/PengajuanTabMe
 import PengajuanFilterBar from './components/PengajuanFilterBar';
 import PengajuanHistoryTable from './components/PengajuanHistoryTable';
 import RequestDetailModal from './components/RequestDetailModal';
+import ApprovalStatusModal from './components/ApprovalStatusModal'; // [BARU]
 import LeaveTab from './tabs/LeaveTab'; // [BARU]
 import PermissionTab from './tabs/PermissionTab'; // [BARU]
 import OvertimeTab from './tabs/OvertimeTab'; // [BARU]
 import ShiftSwapTab from './tabs/ShiftSwapTab'; // [BARU]
-import { PENGAJUAN_TABS, PENGAJUAN_VISIBILITY } from './config/pengajuanConfig'; // [BARU]
+import { PENGAJUAN_TABS, PENGAJUAN_VISIBILITY, SHIFT_SWAP_DEMO } from './config/pengajuanConfig'; // [UBAH] + SHIFT_SWAP_DEMO
 import { MOCK_COLLEAGUES, MOCK_MY_SHIFTS } from './data/mockShiftSwap';
 import usePengajuanData from './hooks/usePengajuanData';
 import useLeaveDetails from './hooks/useLeaveDetails';
+import useShiftSwapRequests from './hooks/useShiftSwapRequests'; // [BARU]
 import {
   REQUEST_KIND,
   ROW_ACTION,
@@ -49,16 +55,13 @@ import { submitOvertime } from '../../services/overtimeService';
 import { isMyDivisionShifting } from '../../services/divisiService';
 import './Pengajuan.css';
 
-// [BARU] Daftar kosong yang stabil: dipakai agar useLeaveDetails tidak mengambil detail
-// cuti (sampai 10 request / 15 detik) selagi kartu alur persetujuan disembunyikan.
-const NO_LEAVE_HISTORY = [];
-
 export default function Pengajuan({ user }) {
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState(TYPE_KEY.LEAVE); // [UBAH] menggantikan activeModal
   const leaveFormTopRef = useRef(null); // [BARU] di-scroll saat "Edit" dari riwayat cuti
   const [letterTargetId, setLetterTargetId] = useState(null);
   const [detailKey, setDetailKey] = useState(null);
+  const [statusKey, setStatusKey] = useState(null); // [BARU] pengajuan yang kartu alurnya sedang dibuka di popup
   const [selectedKey, setSelectedKey] = useState(null); // null = kartu mengikuti pengajuan TERBARU
   const [filters, setFilters] = useState({ kind: 'ALL', status: 'ALL', search: '' });
   const [isShifting, setIsShifting] = useState(false);
@@ -73,6 +76,7 @@ export default function Pengajuan({ user }) {
   const leave = useLeaveApplication(user, { notify: showToast, formTopRef: leaveFormTopRef }); // [UBAH] tidak ada popup form yang perlu ditutup
   const isSupervisorRequester = leave.formProps.isSupervisor;
   const { overtimeRecords, attendanceRecords, loading, reload, upsertAttendance } = usePengajuanData(showErrorToast);
+  const shiftSwap = useShiftSwapRequests(); // [BARU] data tukar shift lokal (belum ada backend)
 
   useEffect(() => {
     let cancelled = false;
@@ -90,34 +94,40 @@ export default function Pengajuan({ user }) {
     leaveHistory: leave.history,
     overtimeRecords,
     attendanceRecords,
+    shiftSwapRequests: shiftSwap.requests, // [BARU]
     isSupervisorRequester,
-  }), [leave.history, overtimeRecords, attendanceRecords, isSupervisorRequester]);
+  }), [leave.history, overtimeRecords, attendanceRecords, shiftSwap.requests, isSupervisorRequester]);
 
   const latestCardKey = getCardItems(baseItems)[0]?.key ?? null;
   const activeKey = selectedKey ?? latestCardKey;
   const activeBaseItem = baseItems.find((item) => item.key === activeKey);
-  // [UBAH] detail cuti hanya diambil bila kartu alur persetujuan sedang ditampilkan
-  const selectedLeaveId = PENGAJUAN_VISIBILITY.approvalCard && activeBaseItem?.kind === REQUEST_KIND.LEAVE
+  // [UBAH] cuti yang kartu alurnya sedang dibuka (popup statusKey, atau kartu inline bila saklar
+  // approvalCard aktif) selalu ikut diambil detailnya, walau di luar 10 cuti terbaru.
+  const statusBaseItem = baseItems.find((item) => item.key === statusKey);
+  const popupLeaveId = statusBaseItem?.kind === REQUEST_KIND.LEAVE ? statusBaseItem.refId : null;
+  const inlineLeaveId = PENGAJUAN_VISIBILITY.approvalCard && activeBaseItem?.kind === REQUEST_KIND.LEAVE
     ? activeBaseItem.refId
     : null;
+  const selectedLeaveId = popupLeaveId ?? inlineLeaveId;
 
-  const leaveDetails = useLeaveDetails(
-    PENGAJUAN_VISIBILITY.approvalCard ? leave.history : NO_LEAVE_HISTORY, // [UBAH]
-    selectedLeaveId,
-    leave.historySyncedAt,
-  );
+  // [UBAH] Detail (log approval) cuti yang belum final selalu diambil (maks. 10 terbaru, ikut sinkron
+  // 15 detik) supaya label status di tabel mengikuti alur: Menunggu Leader -> SPV -> Manager -> Disetujui.
+  const leaveDetails = useLeaveDetails(leave.history, selectedLeaveId, leave.historySyncedAt);
 
   const items = useMemo(() => buildPengajuanItems({
     leaveHistory: leave.history,
     leaveDetails,
     overtimeRecords,
     attendanceRecords,
+    shiftSwapRequests: shiftSwap.requests, // [BARU]
     isSupervisorRequester,
-  }), [leave.history, leaveDetails, overtimeRecords, attendanceRecords, isSupervisorRequester]);
+  }), [leave.history, leaveDetails, overtimeRecords, attendanceRecords, shiftSwap.requests, isSupervisorRequester]);
 
   const visibleItems = useMemo(() => filterPengajuanItems(items, filters), [items, filters]);
 
   // [BARU] Riwayat per tab (Cuti memakai LeaveHistory miliknya sendiri)
+  const leaveItems = useMemo(() => filterItemsByType(items, TYPE_KEY.LEAVE), [items]); // [BARU]
+  const shiftSwapItems = useMemo(() => filterItemsByType(items, TYPE_KEY.SHIFT_SWAP), [items]); // [BARU]
   const permissionItems = useMemo(() => filterItemsByType(items, TYPE_KEY.PERMISSION), [items]);
   const overtimeItems = useMemo(() => filterItemsByType(items, TYPE_KEY.OVERTIME), [items]);
 
@@ -136,7 +146,17 @@ export default function Pengajuan({ user }) {
     isSupervisorRequester,
   });
 
-  // ===================== POPUP DETAIL (lembur / sakit / terlambat) =====================
+  // ===================== POPUP KARTU ALUR PERSETUJUAN (semua tab) =====================
+  // [BARU] Model kartu bergaris untuk pengajuan yang tombol statusnya diklik.
+  const statusItem = items.find((item) => item.key === statusKey) || null;
+  const statusModel = buildCardModelForItem(statusItem, { leaveDetails, isSupervisorRequester });
+
+  // [BARU] Permintaan tukar shift yang menunggu persetujuan rekan pengganti
+  const incomingShiftRequests = useMemo(() => shiftSwap.requests.filter((request) => (
+    request.status === 'PENDING_COLLEAGUE' && (SHIFT_SWAP_DEMO.simulateReceiver || request.direction === 'IN')
+  )), [shiftSwap.requests]);
+
+  // ===================== POPUP DETAIL (lembur / sakit / terlambat / tukar shift) =====================
   const detailItem = items.find((item) => item.key === detailKey) || null;
   const detail = detailItem
     ? buildRequestDetail(detailItem, buildCardModelForItem(detailItem, { isSupervisorRequester }))
@@ -145,8 +165,8 @@ export default function Pengajuan({ user }) {
   const letterTarget = attendanceRecords.find((record) => record.id === letterTargetId);
 
   // ===================== HANDLER =====================
-  // [BARU] Tombol status di riwayat tab membuka popup detail (kartu alur persetujuan sedang disembunyikan)
-  const handleSelectStatus = (item) => setDetailKey(item.key);
+  // [UBAH] Tombol status di riwayat (semua tab) membuka POPUP kartu alur persetujuan bergaris
+  const handleSelectStatus = (item) => setStatusKey(item.key);
 
   const handleRowAction = (item) => {
     if (item.kind === REQUEST_KIND.LEAVE) leave.handleOpenDetail(item.source);
@@ -178,9 +198,20 @@ export default function Pengajuan({ user }) {
     reload();
   };
 
-  // Tukar shift: tampilan sementara, belum ada endpoint backend.
-  const handleShiftSwapSubmit = () => {
-    showToast('Tampilan Tukar Shift masih sementara: pengajuan belum tersambung ke server.', 'error');
+  // [UBAH] Tukar shift: masih sementara (hanya di frontend, belum ada endpoint backend).
+  const handleShiftSwapSubmit = (values) => {
+    const shiftLabel = MOCK_MY_SHIFTS.find((option) => option.value === values.myShift)?.label || values.myShift;
+    const receiverName = MOCK_COLLEAGUES.find((option) => option.value === values.colleague)?.label || values.colleague;
+    shiftSwap.createRequest({ shiftLabel, receiverName, reason: values.reason });
+    showToast('Pengajuan tukar shift terkirim. Menunggu persetujuan rekan pengganti.');
+  };
+
+  // [BARU] Rekan pengganti klik Setuju -> "Menunggu ACC Atasan"; klik Tolak -> "Ditolak Rekan".
+  const handleShiftSwapRespond = (requestId, isAccepted) => {
+    shiftSwap.respondAsColleague(requestId, isAccepted);
+    showToast(isAccepted
+      ? 'Tukar shift disetujui. Status berubah menjadi Menunggu ACC Atasan.'
+      : 'Permintaan tukar shift ditolak.');
   };
 
 
@@ -202,7 +233,13 @@ export default function Pengajuan({ user }) {
       {/* [BARU] Isi tiap tab tampil inline di bawah tab menu. Panel nonaktif tetap ter-mount
           (hanya disembunyikan) supaya isian form tidak hilang saat pindah tab. */}
       <PengajuanTabPanel tabKey={TYPE_KEY.LEAVE} activeKey={currentTab}>
-        <LeaveTab leave={leave} formTopRef={leaveFormTopRef} />
+        <LeaveTab
+          leave={leave}
+          formTopRef={leaveFormTopRef}
+          historyItems={leaveItems}
+          onSelectStatus={handleSelectStatus}
+          onAction={handleRowAction}
+        />
       </PengajuanTabPanel>
 
       <PengajuanTabPanel tabKey={TYPE_KEY.PERMISSION} activeKey={currentTab}>
@@ -231,6 +268,11 @@ export default function Pengajuan({ user }) {
             shiftOptions={MOCK_MY_SHIFTS}
             colleagueOptions={MOCK_COLLEAGUES}
             onSubmit={handleShiftSwapSubmit}
+            historyItems={shiftSwapItems}
+            incomingRequests={incomingShiftRequests}
+            onRespond={handleShiftSwapRespond}
+            onSelectStatus={handleSelectStatus}
+            onAction={handleRowAction}
           />
         </PengajuanTabPanel>
       )}
@@ -274,6 +316,10 @@ export default function Pengajuan({ user }) {
         />
       )}
       {detail && <RequestDetailModal detail={detail} onClose={() => setDetailKey(null)} />}
+      {/* [BARU] Popup kartu alur persetujuan bergaris (klik tombol status di riwayat) */}
+      {statusModel && (
+        <ApprovalStatusModal key={statusKey} model={statusModel} onClose={() => setStatusKey(null)} />
+      )}
 
       {/* Popup error + konfirmasi kirim + detail/edit berkas cuti */}
       <LeaveRequestDialogs leave={leave} />

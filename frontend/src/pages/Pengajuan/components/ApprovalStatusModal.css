@@ -1,0 +1,67 @@
+/* src/pages/Pengajuan/components/ApprovalStatusModal.css
+   Popup kartu alur persetujuan. Kartunya sendiri bergaya ApprovalStatusCard.css. */
+.pgj-status-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  padding: 12px;
+  background: rgba(15, 23, 20, 0.45);
+  backdrop-filter: blur(2px);
+  animation: pgjStatusFadeIn 0.18s ease-out both;
+}
+.pgj-status-overlay.is-closing { animation: pgjStatusFadeOut 0.18s ease-in both; }
+
+.pgj-status-modal {
+  width: min(780px, 100%);
+  min-width: 0;
+  max-height: calc(100vh - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.28);
+  animation: pgjStatusPopIn 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+.pgj-status-overlay.is-closing .pgj-status-modal { animation: pgjStatusPopOut 0.18s ease-in both; }
+
+/* Tata letak kartu di dalam popup: aturan responsif kartu mengikuti lebar LAYAR, bukan lebar popup,
+   sehingga di layar lebar kartu melebar melewati popup. Di sini dipaksa vertikal & membungkus:
+   baris 1 = metrik (kotak) + catatan, baris 2 = alur persetujuan selebar popup. */
+.pgj-status-modal .approvalCard--compact { padding: 16px 20px 14px; border-radius: 14px; }
+.pgj-status-modal .approvalCard--compact .approvalCard__main {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+.pgj-status-modal .approvalCard--compact .approvalCard__body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pgj-status-modal .approvalCard--compact .approvalCard__stat { flex: 0 0 132px; min-width: 0; }
+.pgj-status-modal .approvalCard--compact .approvalCard__job { flex: 1 1 240px; min-width: 0; }
+.pgj-status-modal .approvalCard--compact .approvalTimeline {
+  flex: none;
+  align-self: stretch;
+  padding: 8px 4px 2px;
+  overflow-x: auto;
+}
+.pgj-status-modal .approvalCard--compact .approvalStep { min-width: 76px; }
+
+@keyframes pgjStatusFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pgjStatusFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pgjStatusPopIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pgjStatusPopOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgj-status-overlay,
+  .pgj-status-modal { animation: none; }
+}

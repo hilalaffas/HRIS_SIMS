@@ -15,6 +15,14 @@ export const PENGAJUAN_TABS = [
   { key: TYPE_KEY.SHIFT_SWAP, label: 'Tukar Shift', shiftOnly: true },
 ];
 
+// [BARU] Saklar demo Tukar Shift (frontend saja, belum ada backend).
+//  simulateReceiver: true -> pengajuan milik sendiri juga muncul di kartu "Menunggu Persetujuan
+//  Rekan Pengganti" supaya tombol Setuju bisa dicoba. Set false saat akun penerima sungguhan ada:
+//  kartu itu lalu hanya menampilkan permintaan yang masuk dari rekan (direction === 'IN').
+export const SHIFT_SWAP_DEMO = {
+  simulateReceiver: true,
+};
+
 export const PENGAJUAN_VISIBILITY = {
   approvalCard: false, // kartu alur persetujuan (ApprovalStatusCard)
   combinedHistory: false, // filter + tabel "Riwayat Pengajuan Saya" gabungan

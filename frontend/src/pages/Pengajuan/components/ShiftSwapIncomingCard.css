@@ -1,0 +1,88 @@
+/* src/pages/Pengajuan/components/ShiftSwapIncomingCard.css */
+.pgj-incoming {
+  width: 100%;
+  max-width: 1450px;
+  margin: 16px auto 0;
+  overflow: hidden;
+  background: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border-amber, #fde7b0);
+  border-left: 5px solid #f59e0b;
+  border-radius: 14px;
+  box-shadow: 0 2px 5px rgba(26, 52, 67, 0.03);
+  animation: pgjIncomingIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pgj-incoming__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 4px;
+}
+.pgj-incoming__header h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--color-text, #243042); }
+.pgj-incoming__count {
+  min-width: 20px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  color: #b45309;
+  background: var(--dk-tint-amber-strong, #fff1d6);
+  border-radius: 999px;
+}
+.pgj-incoming__note {
+  margin: 0;
+  padding: 0 16px 6px;
+  font-size: 11px;
+  color: var(--color-text-secondary, #718092);
+}
+
+.pgj-incoming__list { margin: 0; padding: 0 8px 8px; list-style: none; }
+.pgj-incoming__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--dk-border, #e4e9ec);
+}
+.pgj-incoming__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; color: var(--color-text, #344153); }
+.pgj-incoming__info strong { font-size: 13px; }
+.pgj-incoming__info span,
+.pgj-incoming__info em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pgj-incoming__info em { font-style: normal; color: var(--color-text-secondary, #718092); }
+
+.pgj-incoming__actions { display: flex; flex-shrink: 0; gap: 8px; }
+.pgj-incoming__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.pgj-incoming__btn svg { width: 14px; height: 14px; }
+.pgj-incoming__btn:hover { transform: translateY(-1px); }
+.pgj-incoming__btn:active { transform: scale(0.97); }
+.pgj-incoming__btn:focus-visible { outline: 2px solid #57b89a; outline-offset: 2px; }
+.pgj-incoming__btn--approve { color: #ffffff; background: var(--color-primary, #124231); }
+.pgj-incoming__btn--approve:hover { background: var(--color-primary-hover, #0d3224); }
+.pgj-incoming__btn--reject { color: #e11d48; background: transparent; border-color: #fecdd3; }
+.pgj-incoming__btn--reject:hover { background: var(--dk-tint-red, #fff1f2); }
+
+@keyframes pgjIncomingIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .pgj-incoming__item { flex-direction: column; align-items: stretch; }
+  .pgj-incoming__actions { justify-content: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pgj-incoming { animation: none; }
+  .pgj-incoming__btn { transition: none; }
+}

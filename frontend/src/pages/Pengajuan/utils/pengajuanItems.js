@@ -11,6 +11,7 @@ import { toSafeHttpUrl } from '../../../utils/safeUrl';
 import {
   buildLeaveCardModel,
   buildOvertimeCardModel,
+  buildShiftSwapCardModel, // [BARU]
   buildSickCardModel,
 } from '../../../utils/approvalCardModels';
 
@@ -19,6 +20,7 @@ export const REQUEST_KIND = {
   SICK: 'SICK',
   LATE: 'LATE',
   OVERTIME: 'OVERTIME',
+  SHIFT_SWAP: 'SHIFT_SWAP', // [BARU]
 };
 
 // Kunci kartu jenis pengajuan di bagian atas halaman Pengajuan.
@@ -34,6 +36,7 @@ export const KIND_META = {
   SICK: { label: 'Izin Sakit', tone: 'blue' },
   LATE: { label: 'Izin Terlambat', tone: 'slate' },
   OVERTIME: { label: 'Lembur', tone: 'amber' },
+  SHIFT_SWAP: { label: 'Tukar Shift', tone: 'purple' }, // [BARU]
 };
 
 export const ROW_ACTION = {
@@ -47,6 +50,7 @@ export const KIND_FILTER_OPTIONS = [
   { value: REQUEST_KIND.SICK, label: 'Izin Sakit' },
   { value: REQUEST_KIND.LATE, label: 'Izin Terlambat' },
   { value: REQUEST_KIND.OVERTIME, label: 'Lembur' },
+  { value: REQUEST_KIND.SHIFT_SWAP, label: 'Tukar Shift' }, // [BARU]
 ];
 
 export const STATUS_FILTER_OPTIONS = [
@@ -59,9 +63,11 @@ export const STATUS_FILTER_OPTIONS = [
   { value: 'RECORDED', label: 'Tercatat' },
 ];
 
-// [BARU] Jenis data (REQUEST_KIND) yang tampil di riwayat tiap tab. Tab Cuti memakai
-// LeaveHistory miliknya sendiri, jadi tidak ada di sini.
+// [BARU] Jenis data (REQUEST_KIND) yang tampil di riwayat tiap tab.
+// [UBAH] Cuti & Tukar Shift sekarang ikut memakai tabel riwayat yang sama dengan tab lain.
 const TYPE_KINDS = {
+  [TYPE_KEY.LEAVE]: [REQUEST_KIND.LEAVE],
+  [TYPE_KEY.SHIFT_SWAP]: [REQUEST_KIND.SHIFT_SWAP],
   [TYPE_KEY.PERMISSION]: [REQUEST_KIND.SICK, REQUEST_KIND.LATE],
   [TYPE_KEY.OVERTIME]: [REQUEST_KIND.OVERTIME],
 };
@@ -87,6 +93,11 @@ const dateToSortKey = (date, fallbackDate) => {
 
 const withDetail = (reason, suffix) => (suffix ? `${reason || '-'} (${suffix})` : reason || '-');
 
+// [BARU] Nama jenis cuti untuk kolom "Jenis" (jenisCuti bisa berupa string atau objek { name }).
+const getLeaveTypeName = (jenisCuti) => (
+  (jenisCuti && typeof jenisCuti === 'object' ? jenisCuti.name : jenisCuti) || 'Cuti'
+);
+
 function toLeaveItem(record, leaveDetails, isSupervisorRequester) {
   const detail = leaveDetails[record.id] || null;
   const model = buildLeaveCardModel(record, detail, { isSupervisorRequester });
@@ -96,7 +107,9 @@ function toLeaveItem(record, leaveDetails, isSupervisorRequester) {
     kind: REQUEST_KIND.LEAVE,
     refId: record.id,
     sortKey: toSortKey(record.submittedAt, record.rawDetail?.startDate),
-    detailText: withDetail(record.rawDetail?.reason, record.totalHari),
+    typeLabel: getLeaveTypeName(record.jenisCuti), // [BARU] kolom Jenis = jenis cuti yang dipilih
+    // [UBAH] + rentang tanggal cuti, karena kolom Tanggal berisi tanggal pengajuan dikirim
+    detailText: withDetail(record.rawDetail?.reason, [record.stringTanggal, record.totalHari].filter(Boolean).join(', ')),
     statusCode,
     statusLabel: model.badgeLabel,
     statusTone: model.tone,
@@ -104,6 +117,32 @@ function toLeaveItem(record, leaveDetails, isSupervisorRequester) {
     requiresApproval: true,
     action: ROW_ACTION.DETAIL,
     source: record,
+  };
+}
+
+// [BARU] Tukar shift (data lokal sementara, lihat useShiftSwapRequests.js).
+// Dua status "menunggu" sama-sama berkode PENDING supaya filter status yang ada tetap berlaku.
+const SHIFT_SWAP_STATUS_CODE = {
+  PENDING_COLLEAGUE: 'PENDING',
+  PENDING_SUPERIOR: 'PENDING',
+  REJECTED_COLLEAGUE: 'REJECTED',
+};
+
+function toShiftSwapItem(request) {
+  const model = buildShiftSwapCardModel(request);
+  return {
+    key: `shift-${request.id}`,
+    kind: REQUEST_KIND.SHIFT_SWAP,
+    refId: request.id,
+    sortKey: toSortKey(request.createdAt),
+    detailText: withDetail(`${request.requesterName} \u2192 ${request.receiverName}`, request.shiftLabel),
+    statusCode: SHIFT_SWAP_STATUS_CODE[request.status] || 'PENDING',
+    statusLabel: model.badgeLabel,
+    statusTone: model.tone,
+    needsLetter: false,
+    requiresApproval: true,
+    action: ROW_ACTION.DETAIL,
+    source: request,
   };
 }
 
@@ -168,10 +207,11 @@ function toLateItem(record) {
 const isSickRecord = (record) => record.actionCode === 'MASUK' && record.reasonCode === 'SAKIT';
 const isLateRecord = (record) => record.actionCode === 'IZIN';
 
-export function buildPengajuanItems({ leaveHistory = [], leaveDetails = {}, overtimeRecords = [], attendanceRecords = [], isSupervisorRequester = false }) {
+export function buildPengajuanItems({ leaveHistory = [], leaveDetails = {}, overtimeRecords = [], attendanceRecords = [], shiftSwapRequests = [], isSupervisorRequester = false }) {
   const items = [
     ...leaveHistory.map((record) => toLeaveItem(record, leaveDetails, isSupervisorRequester)),
     ...overtimeRecords.map(toOvertimeItem),
+    ...shiftSwapRequests.map(toShiftSwapItem), // [BARU]
     ...attendanceRecords.filter(isSickRecord).map(toSickItem),
     ...attendanceRecords.filter(isLateRecord).map(toLateItem),
   ];
@@ -187,7 +227,7 @@ export function filterPengajuanItems(items, { kind = 'ALL', status = 'ALL', sear
     if (status === 'LETTER' && !item.needsLetter) return false;
     if (status !== 'ALL' && status !== 'LETTER' && item.statusCode !== status) return false;
     if (!keyword) return true;
-    const haystack = `${KIND_META[item.kind].label} ${item.detailText} ${item.statusLabel} ${getItemDateLabel(item)}`.toLowerCase();
+    const haystack = `${KIND_META[item.kind].label} ${item.typeLabel || ''} ${item.detailText} ${item.statusLabel} ${getItemDateLabel(item)}`.toLowerCase();
     return haystack.includes(keyword);
   });
 }
@@ -208,6 +248,7 @@ export function buildCardModelForItem(item, { leaveDetails = {}, isLatest = fals
   }
   if (item.kind === REQUEST_KIND.OVERTIME) return buildOvertimeCardModel(item.source, { isLatest });
   if (item.kind === REQUEST_KIND.SICK) return buildSickCardModel(item.source, { isLatest });
+  if (item.kind === REQUEST_KIND.SHIFT_SWAP) return buildShiftSwapCardModel(item.source, { isLatest }); // [BARU]
   return null;
 }
 
@@ -252,6 +293,24 @@ export function buildRequestDetail(item, cardModel) {
         { label: 'Waktu Pengajuan', value: record.time },
       ],
       sections: [{ label: 'Keterangan', value: record.note || '-' }],
+    };
+  }
+
+  // [BARU] Tukar shift: popup detail memakai langkah dari model kartu (Diajukan -> Rekan -> Atasan)
+  if (item.kind === REQUEST_KIND.SHIFT_SWAP) {
+    return {
+      ...base,
+      title: 'Detail Pengajuan Tukar Shift',
+      subtitle: 'Pantau persetujuan rekan pengganti dan atasan Anda',
+      fields: [
+        { label: 'Pemohon', value: record.requesterName },
+        { label: 'Rekan Pengganti', value: record.receiverName, accent: true },
+        { label: 'Waktu Pengajuan', value: cardModel?.sentLabel?.replace('Dikirim ', '') || '-' },
+      ],
+      sections: [
+        { label: 'Jadwal yang Ditukar', value: record.shiftLabel },
+        { label: 'Alasan Tukar Shift', value: record.reason },
+      ],
     };
   }
 

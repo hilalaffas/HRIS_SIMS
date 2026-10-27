@@ -15,17 +15,18 @@ const ReasonCoverageSection = ({
 }) => {
   return (
     <>
-      <div className="form-group">
+      {/* [UBAH] + kelas form-group--reason/--pending/--cover sebagai kait tata letak varian compact */}
+      <div className="form-group form-group--reason">
         <label className="form-label">ALASAN / KETERANGAN *</label>
         <textarea rows="3" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Berikan alasan yang jelas..." className={inputErrorClass(invalidField === 'reason', 'form-control textarea-control')} />
       </div>
 
-      <div className="form-group">
+      <div className="form-group form-group--pending">
         <label className="form-label">PEKERJAAN TERTUNDA *</label>
         <textarea rows="2" value={pendingWork} onChange={(e) => setPendingWork(e.target.value)} placeholder="Sebutkan pekerjaan apa saja yang tertunda..." className={inputErrorClass(invalidField === 'pendingWork', 'form-control textarea-control')} />
       </div>
 
-      <div className="form-group">
+      <div className="form-group form-group--cover">
         <label className="form-label">DICOVER OLEH*</label>
         <Dropdown
           name="coveredBy"

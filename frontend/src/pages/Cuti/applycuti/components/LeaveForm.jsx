@@ -1,5 +1,6 @@
 import React from 'react';
 import './LeaveForm.css';
+import './LeaveFormCompact.css'; // [BARU] gaya varian compact (hanya aktif bila variant="compact")
 import LeaveTypeDateSection from './LeaveTypeDateSection';
 import ApprovalFlowSection from './ApprovalFlowSection';
 import ReasonCoverageSection from './ReasonCoverageSection';
@@ -46,10 +47,16 @@ const LeaveForm = ({
   // prop `editForm`), supaya tidak tampil dua header bertumpuk (header modal
   // "Edit Berkas Cuti" + header form ini). Default false, jadi tampilan form
   // di halaman utama (ApplyCuti.jsx) TIDAK berubah sama sekali.
-  hideHeader = false
+  hideHeader = false,
+  // [BARU] variant="compact" -> tata letak grid rapat agar seluruh form muat dalam satu
+  // layar (dipakai halaman Pengajuan). Default 'default' = tampilan lama, TIDAK berubah.
+  variant = 'default',
+  // [BARU] Konten opsional di sisi kanan header hijau (mis. chip "Sisa cuti").
+  headerExtra = null
 }) => {
+  const isCompact = variant === 'compact';
   return (
-    <div className="form-container">
+    <div className={`form-container${isCompact ? ' form-container--compact' : ''}`}>
       {!hideHeader && (
         <div className="form-header">
           <div className="form-header-icon-title">
@@ -59,6 +66,7 @@ const LeaveForm = ({
               <p className="form-instruction">Permohonan akan diproses secara berjenjang oleh atasan Anda.</p>
             </div>
           </div>
+          {headerExtra && <div className="form-header-extra">{headerExtra}</div>}
         </div>
       )}
 

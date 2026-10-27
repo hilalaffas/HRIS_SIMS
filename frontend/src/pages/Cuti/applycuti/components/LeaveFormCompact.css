@@ -1,0 +1,97 @@
+/* src/pages/Cuti/applycuti/components/LeaveFormCompact.css
+   [BARU] Varian COMPACT untuk <LeaveForm variant="compact">: seluruh isian dirapatkan
+   ke grid 3 kolom supaya form muat satu layar tanpa scroll / zoom-out.
+   Semua aturan di-scope ke .form-container--compact, jadi form lama di halaman
+   ApplyCuti dan modal edit berkas TIDAK terpengaruh.
+
+   Tata letak (3 kolom):
+     baris 1 : Jenis Cuti | Dari Tanggal | Sampai Tanggal
+     baris 2 : info durasi (penuh)
+     baris 3 : Alur approval Leader | SPV | Manager (penuh)
+     baris 4-5 : Alasan | Pekerjaan Tertunda (masing-masing setinggi 2 baris)
+                 | Dicover Oleh (atas) + tombol Kirim (bawah) di kolom ke-3
+                 -> dasar textarea sejajar persis dengan dasar tombol Kirim */
+
+.form-container--compact .form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 14px 20px;
+}
+.form-container--compact .form-header-icon-title { gap: 12px; }
+.form-container--compact .header-form-icon { padding: 8px; font-size: 20px; }
+.form-container--compact .form-title { font-size: 16px; }
+.form-container--compact .form-instruction { margin-top: 2px; font-size: 11px; }
+.form-container--compact .form-header-extra { flex-shrink: 0; }
+
+.form-container--compact .form-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+  align-items: start;
+  padding: 16px 20px 18px;
+}
+
+/* Dari/Sampai tanggal ikut menjadi item grid (bukan baris flex sendiri) */
+.form-container--compact .form-row { display: contents; }
+.form-container--compact .form-group { min-width: 0; margin-bottom: 0; }
+.form-container--compact .form-label { margin-bottom: 5px; font-size: 10px; }
+
+.form-container--compact .form-control { padding: 7px 12px; font-size: 13px; }
+.form-container--compact .text-input-clickable { padding-right: 38px; }
+.form-container--compact .textarea-control { height: 60px; min-height: 60px; resize: vertical; }
+
+/* Alasan & Pekerjaan Tertunda: tinggi 2 baris grid, textarea mengisi sisa tinggi */
+.form-container--compact .form-group--reason,
+.form-container--compact .form-group--pending {
+  grid-row: span 2;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+.form-container--compact .form-group--reason .textarea-control,
+.form-container--compact .form-group--pending .textarea-control {
+  flex: 1;
+  height: auto;
+  min-height: 60px;
+  resize: none;
+}
+.form-container--compact .dropdown .dropdown__trigger { min-height: 36px; padding: 6px 12px; }
+
+/* Info durasi / peringatan bentrok: strip tipis selebar form */
+.form-container--compact .duration-info-alert {
+  grid-column: 1 / -1;
+  margin: 0 !important; /* menimpa inline style marginTop: -6px milik LeaveTypeDateSection */
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+/* Alur approval */
+.form-container--compact .form-group--approval { grid-column: 1 / -1; }
+.form-container--compact .approval-row { gap: 16px; margin-top: 0; }
+.form-container--compact .approval-col { gap: 4px; }
+.form-container--compact .badge-approval { padding: 0; font-size: 10px; }
+
+.form-container--compact .form-group--cover { grid-column: 3; }
+
+/* Tombol Kirim di kolom ke-3, tepat di bawah Dicover Oleh, selebar kolom */
+.form-container--compact .btn-group-right { grid-column: 3; align-self: end; margin-top: 0; }
+.form-container--compact .btn-group-right .btn { flex: 1; }
+.form-container--compact .btn-submit-dark { padding: 10px 20px; }
+
+@media (max-width: 900px) {
+  .form-container--compact .form-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-container--compact .form-group--reason,
+  .form-container--compact .form-group--pending { grid-row: auto; }
+  .form-container--compact .form-group--reason .textarea-control,
+  .form-container--compact .form-group--pending .textarea-control { height: 60px; flex: none; resize: vertical; }
+  .form-container--compact .form-group--cover { grid-column: 1 / -1; }
+  .form-container--compact .btn-group-right { grid-column: 1 / -1; justify-content: flex-end; }
+  .form-container--compact .btn-group-right .btn { flex: none; }
+}
+@media (max-width: 640px) {
+  .form-container--compact .form-body { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .form-container--compact .approval-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}

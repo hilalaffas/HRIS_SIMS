@@ -6,6 +6,8 @@
 //                           belum ada, tombolnya berubah jadi "Upload Surat" (surat susulan)
 //
 // Contoh pemakaian:
+// [UBAH] item.typeLabel (opsional) menggantikan label jenis bawaan di kolom JENIS (mis. "Cuti Tahunan");
+// prop `headerExtra` (opsional) menaruh kontrol tambahan di sisi kanan judul tabel.
 // <PengajuanHistoryTable items={items} loading={false} selectedKey={key}
 //   resetKey={`${kind}|${status}|${search}`} onSelectStatus={fn} onAction={fn} />
 import React, { useState } from 'react';
@@ -50,6 +52,7 @@ export default function PengajuanHistoryTable({
   onAction,
   title = 'Riwayat Pengajuan Saya',
   emptyMessage = 'Belum ada pengajuan yang cocok.',
+  headerExtra = null, // [BARU]
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -66,7 +69,10 @@ export default function PengajuanHistoryTable({
 
   return (
     <section className="pgj-history">
-      <h2 className="pgj-history__title">{title}</h2>
+      <header className="pgj-history__header">
+        <h2 className="pgj-history__title">{title}</h2>
+        {headerExtra && <div className="pgj-history__extra">{headerExtra}</div>}
+      </header>
 
       <div className="pgj-history__scroll">
         <table className="pgj-table">
@@ -94,7 +100,8 @@ export default function PengajuanHistoryTable({
               const kind = KIND_META[item.kind];
               const isUpload = item.action === ROW_ACTION.UPLOAD_LETTER;
               const ActionIcon = isUpload ? FileUp : FileText;
-              const actionLabel = isUpload ? 'Upload surat dokter susulan' : `Lihat detail ${kind.label}`;
+              const typeLabel = item.typeLabel || kind.label; // [BARU]
+              const actionLabel = isUpload ? 'Upload surat dokter susulan' : `Lihat detail ${typeLabel}`;
               return (
                 <tr
                   key={item.key}
@@ -102,7 +109,7 @@ export default function PengajuanHistoryTable({
                   style={{ '--rowIndex': index }}
                 >
                   <td className="pgj-strong">{getItemDateLabel(item)}</td>
-                  <td><span className={`pgj-kind pgj-kind--${kind.tone}`}>{kind.label}</span></td>
+                  <td><span className={`pgj-kind pgj-kind--${kind.tone}`}>{typeLabel}</span></td>
                   <td className="pgj-detail" title={item.detailText}>{item.detailText}</td>
                   <td>
                     <StatusCell item={item} isSelected={selectedKey === item.key} onSelectStatus={onSelectStatus} />
