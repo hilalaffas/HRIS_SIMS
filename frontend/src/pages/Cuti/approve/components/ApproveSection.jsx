@@ -1,6 +1,7 @@
 import React from 'react';
 import './ApproveSection.css';
 import { dayText } from '../../../../services/CutiService';
+import { getUserRole } from '../../../../utils/roles';
 
 /**
  * PerluDiprosesSection.jsx  ("bagianApproval")
@@ -25,7 +26,22 @@ import { dayText } from '../../../../services/CutiService';
  *  - onOpenDetail: (item) => void
  * ------------------------------------------------------------------
  */
-const ApprovalSection = ({ data, onRequestAction, onOpenDetail }) => {
+const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
+  const currentRole = getUserRole(user).toUpperCase();
+  const statusBadgeClass = (status) => {
+    const value = String(status || '').toUpperCase();
+    if (value.includes('DITOLAK')) return 'statusBadge--rose';
+    if (value.includes('REVISI') || value.includes('DIKEMBALIKAN')) return 'statusBadge--amber';
+    if (value.includes('SUDAH DI-ACC') || value.includes('DISETUJUI') || value.includes('DISETUJUI (ACC)')) return 'statusBadge--green';
+    return 'statusBadge--blue';
+  };
+  const activeRoleFromStatus = (item) => {
+    const status = String(item.approvalProgressStatus || '').toUpperCase();
+    if (status.includes('MENUNGGU PERSETUJUAN LEADER')) return 'LEADER';
+    if (status.includes('MENUNGGU PERSETUJUAN SPV')) return 'SPV';
+    if (status.includes('MENUNGGU PERSETUJUAN MANAGER')) return 'MANAGER';
+    return null;
+  };
   return (
     <div className="approvalSection">
       <div className="approvalSection__toolbar">
@@ -45,12 +61,16 @@ const ApprovalSection = ({ data, onRequestAction, onOpenDetail }) => {
             <div role="columnheader">Detail Cuti</div>
             <div role="columnheader">Keterangan</div>
             <div role="columnheader">Kuota Cuti</div>
+            <div role="columnheader">Status Persetujuan</div>
             <div role="columnheader" className="approvalSection__colActions">
               Aksi Tindakan
             </div>
           </div>
 
-          {data.map((item) => (
+          {data.map((item) => {
+            const activeRole = activeRoleFromStatus(item);
+            const canAct = activeRole === currentRole;
+            return (
             <div className="approvalSection__row" role="row" key={item.id}>
               <div role="cell">
                 <div className="approvalSection__name">
@@ -79,11 +99,17 @@ const ApprovalSection = ({ data, onRequestAction, onOpenDetail }) => {
                 </span>
               </div>
 
+              <div role="cell">
+                <span className={`approvalSection__status statusBadge ${statusBadgeClass(item.approvalProgressStatus)}`}>{item.approvalProgressStatus || 'Dalam proses persetujuan'}</span>
+              </div>
+
               <div role="cell" className="approvalSection__colActions">
                 <div className="approvalSection__actions">
                   <button
                     type="button"
                     className="alvBtnPill alvBtnPill--green"
+                    disabled={!canAct}
+                    title={!canAct ? `Menunggu persetujuan ${activeRole || 'tahap sebelumnya'}` : 'ACC'}
                     onClick={() => onRequestAction(item, "acc")}
                   >
                     ACC
@@ -91,6 +117,8 @@ const ApprovalSection = ({ data, onRequestAction, onOpenDetail }) => {
                   <button
                     type="button"
                     className="alvBtnPill alvBtnPill--amber"
+                    disabled={!canAct}
+                    title={!canAct ? `Menunggu persetujuan ${activeRole || 'tahap sebelumnya'}` : 'Revisi'}
                     onClick={() => onRequestAction(item, "revisi")}
                   >
                     Revisi
@@ -98,6 +126,8 @@ const ApprovalSection = ({ data, onRequestAction, onOpenDetail }) => {
                   <button
                     type="button"
                     className="alvBtnPill alvBtnPill--rose"
+                    disabled={!canAct}
+                    title={!canAct ? `Menunggu persetujuan ${activeRole || 'tahap sebelumnya'}` : 'Tolak'}
                     onClick={() => onRequestAction(item, "tolak")}
                   >
                     Tolak
@@ -123,7 +153,8 @@ const ApprovalSection = ({ data, onRequestAction, onOpenDetail }) => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

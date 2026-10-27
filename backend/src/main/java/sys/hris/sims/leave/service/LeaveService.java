@@ -327,11 +327,30 @@ public class LeaveService {
         return processApprovalAction(leaveRequestId, reviewerUsername, ACTION_RETURNED, note);
     }
 
+    private boolean isCurrentApprovalStep(LeaveRequestApproval candidate) {
+        List<LeaveRequestApproval> steps = approvalRepository
+                .findByLeaveRequest_LeaveRequestId(candidate.getLeaveRequest().getLeaveRequestId());
+        for (String role : REQUIRED_APPROVER_ROLES) {
+            LeaveRequestApproval step = steps.stream()
+                    .filter(a -> role.equalsIgnoreCase(a.getApproverRole()))
+                    .findFirst().orElse(null);
+            if (step == null) continue;
+            if (ACTION_APPROVED.equalsIgnoreCase(step.getAction())) continue;
+            return step.getApprovalId().equals(candidate.getApprovalId())
+                    && ACTION_PENDING.equalsIgnoreCase(step.getAction());
+        }
+        return false;
+    }
+
     public List<LeaveApprovalResponse> getApprovalTasks(String username) {
         Employee approver = getCurrentApprover(username);
+        // Tampilkan semua pengajuan pending yang ditugaskan kepada approver,
+        // termasuk tahap yang belum aktif, agar SPV/Manager dapat melihat antrean
+        // dan statusnya. Urutan tindakan tetap dipaksakan oleh processApprovalAction.
         return approvalRepository.findByApproverEmployee_EmployeeIdAndAction(approver.getEmployeeId(), ACTION_PENDING).stream()
                 .map(LeaveRequestApproval::getLeaveRequest)
                 .filter(cuti -> ACTION_PENDING.equalsIgnoreCase(cuti.getStatus().getStatusName()))
+                .distinct()
                 .map(cuti -> toApprovalResponse(cuti, approver.getEmployeeId()))
                 .toList();
     }
@@ -683,6 +702,21 @@ public class LeaveService {
 
         if (!ACTION_PENDING.equalsIgnoreCase(approval.getAction())) {
             throw new RuntimeException("Role ini sudah melakukan tindakan untuk cuti ini");
+        }
+
+        // Approval harus berurutan: Leader -> SPV -> Manager.
+        List<LeaveRequestApproval> approvalSteps = approvalRepository
+                .findByLeaveRequest_LeaveRequestId(leaveRequestId);
+        for (String requiredRole : REQUIRED_APPROVER_ROLES) {
+            LeaveRequestApproval step = approvalSteps.stream()
+                    .filter(a -> requiredRole.equalsIgnoreCase(a.getApproverRole()))
+                    .findFirst().orElse(null);
+            if (step == null) continue; // misalnya cuti milik Leader/SPV/Manager hanya perlu Manager
+            if (step.getApprovalId().equals(approval.getApprovalId())) break;
+            if (!ACTION_APPROVED.equalsIgnoreCase(step.getAction())) {
+                throw new RuntimeException("Persetujuan harus berurutan. Menunggu persetujuan "
+                        + requiredRole + " terlebih dahulu");
+            }
         }
 
         approval.setAction(action);

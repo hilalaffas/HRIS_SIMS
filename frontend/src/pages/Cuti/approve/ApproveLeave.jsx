@@ -191,6 +191,7 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
         {activeTab === "proses" && (
           <ApproveSection
             data={pending}
+            user={user}
             onRequestAction={handleRequestAction}
             onOpenDetail={handleOpenDetail}
           />

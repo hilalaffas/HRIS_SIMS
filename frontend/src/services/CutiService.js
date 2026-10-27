@@ -309,8 +309,22 @@ export function mapApproval(item, employeeLookup = {}) {
     catatan: 'Permohonan cuti diajukan.',
   }] : [];
 
+  const overallStatus = String(item.overallStatus || item.status?.statusName || item.status || 'PENDING').toUpperCase();
+  const approvalOrder = ['LEADER', 'SPV', 'MANAGER'];
+  const pendingStep = approvalOrder.find((role) => {
+    const step = logs.find((log) => String(log.approverRole || '').toUpperCase() === role);
+    return step && String(step.action || '').toUpperCase() !== 'APPROVED';
+  });
+  const approvalProgressStatus = overallStatus === 'APPROVED'
+    ? 'Cuti sudah di-ACC'
+    : overallStatus === 'REJECTED' ? 'Cuti ditolak'
+    : overallStatus === 'RETURNED' ? 'Menunggu revisi pemohon'
+    : pendingStep ? `Menunggu persetujuan ${pendingStep === 'SPV' ? 'SPV' : pendingStep === 'MANAGER' ? 'Manager' : 'Leader'}`
+    : 'Dalam proses persetujuan';
+
   return {
     id: item.leaveRequestId || item.id,
+    approvalProgressStatus,
     karyawan: {
       // [BARU] employeeId dari LeaveApprovalResponse.employeeId (backend) --
       // dipakai ApproveLeave.jsx buat mencocokkan Total Sisa Cuti milik
