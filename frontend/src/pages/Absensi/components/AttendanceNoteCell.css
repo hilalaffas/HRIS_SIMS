@@ -1,0 +1,97 @@
+/* src/pages/Absensi/components/AttendanceNoteCell.css
+   [BARU] Gaya sel "Keterangan / Catatan". Warna memakai token --color-* dan
+   --dk-* (tema gelap) dengan fallback terang, sama seperti tabel induknya. */
+
+/* Baris status kecil di bawah badge: Bukti Belum Diunggah / Verifikasi HRD / Surat Valid */
+.abs-note-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+  animation: abs-note-slide 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--abs-row-delay, 0s) + 0.25s);
+}
+
+.abs-note-notice svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.abs-note-notice.is-link:hover { text-decoration: underline; }
+
+.abs-notice-danger { color: var(--dk-text-red, var(--color-danger)); }
+.abs-notice-warning { color: var(--dk-text-amber, var(--color-warning)); }
+.abs-notice-success { color: var(--dk-text-green, var(--color-success)); }
+
+/* Ikon jam pasir bergoyang pelan: menandakan "sedang diproses" */
+.abs-notice-warning svg { animation: abs-note-hourglass 2.4s ease-in-out infinite; }
+
+/* Tombol aksi: solid (Susul Surat Dokter) atau link (Ajukan Koreksi) */
+.abs-note-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.abs-note-action svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.abs-action-solid {
+  padding: 6px 11px;
+  border-radius: var(--radius-sm, 6px);
+  color: #ffffff;
+  background: var(--color-info);
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25);
+}
+
+.abs-action-solid:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+}
+
+.abs-action-solid:active { transform: translateY(0); }
+
+.abs-action-link {
+  padding: 0;
+  background: none;
+  color: var(--dk-text-blue, var(--color-info));
+}
+
+.abs-action-link:hover { text-decoration: underline; }
+
+.abs-note-action:focus-visible,
+.abs-note-notice.is-link:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes abs-note-slide {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes abs-note-hourglass {
+  0%, 70%, 100% { transform: rotate(0); }
+  85% { transform: rotate(180deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abs-note-notice,
+  .abs-notice-warning svg { animation: none; }
+  .abs-action-solid:hover { transform: none; }
+}

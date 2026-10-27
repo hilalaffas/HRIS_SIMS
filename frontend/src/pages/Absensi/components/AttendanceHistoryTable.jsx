@@ -30,7 +30,7 @@
 // disetujui di modul Cuti (leave_requests), tambahkan sumber datanya di
 // buildMonthlyRows() -- struktur tabel tidak perlu diubah.
 import React, { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, FileDown, FileText, MapPin, Upload } from 'lucide-react'; // [UBAH] + Upload
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, FileDown, FileText } from 'lucide-react'; // [UBAH] CircleCheck, MapPin, Upload dipindah ke AttendanceNoteCell
 import { downloadCsv } from '../../../utils/csvExport';
 import {
   REPORT_HEADERS,
@@ -40,6 +40,8 @@ import {
   getCurrentPeriod,
   toReportRows,
 } from '../utils/monthlyAttendance';
+import AttendanceNoteCell from './AttendanceNoteCell'; // [BARU]
+import { IS_NOTE_DEMO_ENABLED, buildDemoNoteRows } from '../utils/dummyAttendanceNotes'; // [BARU][SEMENTARA] data dummy, hapus saat backend siap
 import './AttendanceHistoryTable.css';
 
 const COLLAPSED_ROW_COUNT = 3;
@@ -62,63 +64,6 @@ const isBlank = (value) => value === null || value === undefined || value === ''
 
 const REPORT_TITLE = 'JADWAL & LOG ABSENSI BULANAN KARYAWAN';
 
-// [UBAH] Dulu BuktiCell (kolom sendiri). Sekarang berupa chip kecil di bawah
-// catatan pada kolom Keterangan / Catatan.
-function ProofLinks({ row }) {
-  if (!row.photoUrl && !row.mapsUrl) return null;
-  return (
-    <div className="abs-link-stack">
-      {row.photoUrl && (
-        <a className="abs-photo-link" href={row.photoUrl} target="_blank" rel="noreferrer">
-          <CircleCheck aria-hidden="true" />
-          {row.proofLabel || 'Selfie GPS'}
-        </a>
-      )}
-      {row.mapsUrl && (
-        <a className="abs-maps-pin" href={row.mapsUrl} target="_blank" rel="noreferrer" title={row.locationName || undefined}>
-          <MapPin aria-hidden="true" />
-          Peta
-        </a>
-      )}
-    </div>
-  );
-}
-
-// [BARU] Surat dokter pada baris Sakit: link bila sudah diunggah, tombol
-// "Upload surat dokter (menyusul)" bila belum -- karyawan tetap WAJIB melampirkan.
-function MedicalDocumentAction({ document, onUpload }) {
-  if (!document) return null;
-  if (document.url) {
-    return (
-      <a className="abs-document-link" href={document.url} target="_blank" rel="noreferrer">
-        <FileText aria-hidden="true" />
-        Surat Dokter
-      </a>
-    );
-  }
-  return (
-    <button type="button" className="abs-document-upload" onClick={() => onUpload(document.recordId)}>
-      <Upload aria-hidden="true" />
-      Upload surat dokter (menyusul)
-    </button>
-  );
-}
-
-// [BARU] Sel Keterangan / Catatan: badge status di atas, catatan di bawah,
-// lalu link bukti (foto & peta) dan surat dokter bila ada.
-function NoteCell({ row, onUploadDocument }) {
-  const hasNote = row.note && row.note !== '-';
-  if (!row.tone && !hasNote) return <span className="abs-empty-cell">-</span>;
-  return (
-    <div className="abs-note-stack">
-      {row.tone && <span className={`abs-record-status abs-status-${row.tone}`}>{row.status}</span>}
-      {hasNote && <span className="abs-note-text">{row.note}</span>}
-      <ProofLinks row={row} />
-      <MedicalDocumentAction document={row.document} onUpload={onUploadDocument} />
-    </div>
-  );
-}
-
 // [UBAH] Sel Lembur: durasi berwarna oranye (sesuai referensi). Badge status
 // hanya muncul bila pengajuan belum ACC (Menunggu / Ditolak).
 function OvertimeCell({ overtime }) {
@@ -136,7 +81,7 @@ function OvertimeCell({ overtime }) {
   );
 }
 
-export default function AttendanceHistoryTable({ records, overtimeRecords = [], onUploadDocument }) { // [UBAH] + onUploadDocument
+export default function AttendanceHistoryTable({ records, overtimeRecords = [], corrections = {}, onUploadDocument, onRequestCorrection }) { // [UBAH] + corrections, onRequestCorrection
   const currentPeriod = useMemo(() => getCurrentPeriod(new Date()), []);
   const [period, setPeriod] = useState(currentPeriod);
   const [expanded, setExpanded] = useState(false);
@@ -149,8 +94,10 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   const periodLabel = formatPeriodLabel(period.year, period.month);
 
   const dailyRows = useMemo(
-    () => attachOvertime(buildMonthlyRows(records, period.year, period.month), overtimeRecords),
-    [records, overtimeRecords, period.year, period.month],
+    () => (IS_NOTE_DEMO_ENABLED && isCurrentPeriod
+      ? buildDemoNoteRows() // [BARU][SEMENTARA] pratinjau desain tanpa backend
+      : attachOvertime(buildMonthlyRows(records, period.year, period.month), overtimeRecords)),
+    [records, overtimeRecords, period.year, period.month, isCurrentPeriod],
   );
 
   // Urutan di layar mengikuti sort; ekspor CSV/PDF tetap urut tanggal
@@ -320,15 +267,25 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
             {visibleRows.map((row, index) => (
               <tr key={row.date} className={row.isToday ? 'is-today' : ''} style={{ '--abs-row-delay': `${index * 0.05}s` }}>
                 <td className="abs-date-cell">
-                  <strong>{row.dateLabel}</strong>
-                  {row.isToday && <span className="abs-today-tag"> (Hari ini)</span>}
+                  {/* [UBAH] Tanggal + penanda "Hari ini" dibungkus flex supaya titik hijau sejajar & berjarak tetap */}
+                  <div className="abs-date-line">
+                    <strong>{row.dateLabel}</strong>
+                    {row.isToday && <span className="abs-today-tag">(Hari ini)</span>}
+                  </div>
                 </td>
                 <td className="abs-shift-cell">{row.shift === '-' ? <span className="abs-empty-cell">-</span> : row.shift}</td>
                 <td className="abs-mono-cell">{row.checkIn || <span className="abs-empty-cell">{row.isToday ? '--:--:--' : '-'}</span>}</td>
                 <td className="abs-mono-cell">{row.checkOut || <span className="abs-empty-cell">{row.isToday ? '--:--:--' : '-'}</span>}</td>
                 <td className="abs-duration-cell">{row.duration || <span className="abs-empty-cell">-</span>}</td>
                 <td><OvertimeCell overtime={row.overtime} /></td>
-                <td className="abs-note-cell"><NoteCell row={row} onUploadDocument={onUploadDocument} /></td>
+                <td className="abs-note-cell">
+                  <AttendanceNoteCell
+                    row={row}
+                    correctionStatus={corrections[row.date]}
+                    onUploadDocument={onUploadDocument}
+                    onRequestCorrection={onRequestCorrection}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>

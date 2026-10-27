@@ -155,6 +155,7 @@ export function toDisplayRecord(item) {
     leaveDays: item.leaveDays || 1, // [BARU] lama izin sakit (hari)
     documentUrl: item.documentUrl || '', // [BARU] surat dokter; kosong = belum diunggah
     documentRequired: Boolean(item.documentRequired), // [BARU]
+    documentReviewStatus: String(item.documentReviewStatus || '').toUpperCase(), // [BARU] PENDING | VALID | REJECTED (backend belum ada -> kosong = menunggu verifikasi)
     recordedAt,
     time: formatTimeLabel(recordedAt),
   };

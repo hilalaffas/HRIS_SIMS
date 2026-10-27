@@ -27,6 +27,8 @@ import AttendancePortalCard from './components/AttendancePortalCard'; // [UBAH] 
 import AttendanceHistoryTable from './components/AttendanceHistoryTable';
 import PermissionRequestModal from './components/PermissionRequestModal'; // [BARU]
 import MedicalLetterModal from './components/MedicalLetterModal'; // [BARU]
+import CorrectionRequestModal from './components/CorrectionRequestModal'; // [BARU]
+import { submitCorrectionRequest } from '../../services/attendanceCorrectionService'; // [BARU][DUMMY] ganti isinya saat backend siap
 import CheckoutFlowModals from './components/CheckoutFlowModals'; // [UBAH] popup "Pulang Cepat" + "Check-Out Jam Kerja (17:00+)" (sebelumnya EarlyCheckoutModal)
 import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
 import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
@@ -53,6 +55,9 @@ export default function Absensi() {
   // (documentTargetId = id catatan sakit yang suratnya akan diunggah).
   const [isPermissionOpen, setIsPermissionOpen] = useState(false);
   const [documentTargetId, setDocumentTargetId] = useState(null);
+  // [BARU] Koreksi keterlambatan: tanggal yang sedang diajukan + status per tanggal ({ '2026-10-20': 'PENDING' })
+  const [correctionTargetDate, setCorrectionTargetDate] = useState(null);
+  const [corrections, setCorrections] = useState({});
 
   const [todayDate, setTodayDate] = useState(() => new Date());
 
@@ -179,6 +184,14 @@ export default function Absensi() {
     showToast('Surat dokter berhasil diunggah.', 'success');
   }, [documentTargetId, showToast]);
 
+  // [BARU] Kirim pengajuan koreksi keterlambatan (dummy). Error dilempar ke popup.
+  const handleCorrectionSubmit = useCallback(async (reason) => {
+    const saved = await submitCorrectionRequest({ attendanceDate: correctionTargetDate, reason });
+    setCorrections((current) => ({ ...current, [saved.attendanceDate]: saved.status }));
+    setCorrectionTargetDate(null);
+    showToast('Pengajuan koreksi berhasil dikirim.', 'success');
+  }, [correctionTargetDate, showToast]);
+
   const documentTarget = records.find((record) => record.id === documentTargetId);
 
   return (
@@ -195,7 +208,9 @@ export default function Absensi() {
         <AttendanceHistoryTable
           records={historyLoading ? [] : records}
           overtimeRecords={historyLoading ? [] : overtimeRecords}
+          corrections={corrections} /* [BARU] */
           onUploadDocument={setDocumentTargetId} /* [BARU] upload surat dokter susulan */
+          onRequestCorrection={setCorrectionTargetDate} /* [BARU] */
         />
       </section>
 
@@ -225,6 +240,15 @@ export default function Absensi() {
           dateLabel={documentTarget ? formatDateLabel(documentTarget.attendanceDate) : ''}
           onSubmit={handleDocumentSubmit}
           onClose={() => setDocumentTargetId(null)}
+        />
+      )}
+
+      {/* [BARU] Popup Ajukan Koreksi keterlambatan */}
+      {correctionTargetDate !== null && (
+        <CorrectionRequestModal
+          dateLabel={formatDateLabel(correctionTargetDate)}
+          onSubmit={handleCorrectionSubmit}
+          onClose={() => setCorrectionTargetDate(null)}
         />
       )}
 

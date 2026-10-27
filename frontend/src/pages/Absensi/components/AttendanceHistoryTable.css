@@ -378,6 +378,34 @@ td strong {
 .abs-log-table tr.is-today:hover td { background: var(--color-success-bg); animation: none; }
 .abs-log-table tr.is-today .abs-date-cell strong { color: var(--dk-text-green, var(--color-success)); }
 
+/* [BARU] Baris tanggal: flex + gap tetap, titik tepat di tengah vertikal teks */
+.abs-date-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.abs-today-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px; /* [UBAH] jarak titik -> teks */
+  color: var(--dk-text-green, var(--color-success));
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.abs-today-tag::before {
+  content: '';
+  flex: none; /* [UBAH] ukuran titik tidak ikut menyusut */
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-success);
+  animation: abs-today-pulse 1.6s ease-out infinite; /* [UBAH] sebelumnya abs-live-dot (cincin pakai currentColor) */
+}
+.abs-date-cell strong { color: var(--dk-text-green, var(--color-success)); }
+
 .abs-today-tag {
   display: inline-flex;
   align-items: center;
@@ -462,53 +490,6 @@ td strong {
   text-decoration: none;
   transform: translateY(-1px);
   background: var(--color-success-bg);
-}
-
-/* [BARU] Surat dokter pada baris Sakit: link (sudah diunggah) & tombol upload susulan. */
-.abs-document-link,
-.abs-document-upload {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.5;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: transform 0.15s ease, background-color 0.15s ease;
-}
-
-.abs-document-link svg,
-.abs-document-upload svg {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-
-.abs-document-link {
-  color: var(--dk-text-green, var(--color-success));
-  background: var(--color-success-bg);
-}
-
-/* Biru = aksi yang masih harus dilakukan karyawan (sama dengan tombol "Ajukan Izin / Sakit") */
-.abs-document-upload {
-  color: var(--dk-text-blue, var(--color-info));
-  background: var(--color-info-bg);
-  border: 1px dashed var(--color-info-border);
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.abs-document-link:hover,
-.abs-document-upload:hover {
-  transform: translateY(-1px);
-}
-
-.abs-document-upload:focus-visible {
-  outline: 2px solid var(--color-info);
-  outline-offset: 2px;
 }
 
 /* [BARU] "Belum Absen": titik kecil berdenyut sebagai pengingat */
@@ -600,6 +581,13 @@ td strong {
 @keyframes abs-today-sweep {
   from { background-position: 100% 0; }
   to { background-position: 0 0; }
+}
+
+/* [BARU] Cincin berdenyut titik "Hari ini": warna hijau eksplisit, tidak menggeser layout */
+@keyframes abs-today-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 55%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
 @keyframes abs-live-dot {

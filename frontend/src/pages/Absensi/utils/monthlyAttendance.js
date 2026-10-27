@@ -39,7 +39,7 @@ function formatClock(date) {
 }
 
 // "9 Jam 7 Mnt" / "45 Mnt"
-function formatDuration(totalMinutes) {
+export function formatDuration(totalMinutes) { // [UBAH] + export (dipakai utils/attendanceNote.js)
   if (totalMinutes == null || totalMinutes <= 0) return null;
   const rounded = Math.round(totalMinutes);
   const hours = Math.floor(rounded / 60);
@@ -189,6 +189,8 @@ function blankRow(key) {
     locationName: '', // [BARU]
     proofLabel: '',
     document: null, // [BARU]
+    lateMinutes: 0, // [BARU]
+    noteDetail: '', // [BARU]
   };
 }
 
@@ -198,7 +200,7 @@ function resolveRow(key, entry, todayKey) {
   // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
   const lateSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
   const noticeSuffix = `${lateSuffix}${rejectedSick ? ' · Izin sakit ditolak' : ''}`;
-  const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: SHIFT_LABEL };
+  const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: SHIFT_LABEL, lateMinutes: 0, noteDetail: '' }; // [UBAH] + lateMinutes, noteDetail
   const empty = { checkIn: null, checkOut: null, duration: null, durationMinutes: null };
 
   // [BARU] Hari lampau yang hanya punya pengajuan sakit DITOLAK: tampil "DITOLAK"
@@ -240,7 +242,7 @@ function resolveRow(key, entry, todayKey) {
       proofLabel: 'Foto Bukti',
       // [BARU] Surat dokter: link bila sudah diunggah, tombol upload susulan bila belum.
       document: isSick && checkIn.documentRequired
-        ? { recordId: checkIn.id, url: checkIn.documentUrl }
+        ? { recordId: checkIn.id, url: checkIn.documentUrl, reviewStatus: checkIn.documentReviewStatus } // [UBAH] + reviewStatus
         : null,
     };
   }
@@ -256,6 +258,15 @@ function resolveRow(key, entry, todayKey) {
   if (checkOut?.note) note += ` · ${checkOut.note}`;
   note += noticeSuffix; // [BARU]
 
+  // [BARU] Catatan TAMBAHAN untuk kolom Keterangan / Catatan (tanpa mengulang
+  // kata "Bekerja Normal" / "Terlambat N Menit" yang sudah jadi badge).
+  const noteDetail = [
+    !checkOut ? (isToday ? 'Sedang bekerja' : 'Tidak absen pulang') : '',
+    checkOut?.note || '',
+    lateNotice ? `Izin terlambat: ${lateNotice.note}` : '',
+    rejectedSick ? 'Izin sakit ditolak' : '',
+  ].filter(Boolean).join(' · ');
+
   const minutesWorked = checkIn?.recordedAt && checkOut?.recordedAt
     ? (checkOut.recordedAt.getTime() - checkIn.recordedAt.getTime()) / 60000
     : null;
@@ -268,6 +279,8 @@ function resolveRow(key, entry, todayKey) {
     durationMinutes: minutesWorked, // angka mentah, dipakai untuk sort kolom Durasi
     status: isLate ? 'TERLAMBAT' : 'HADIR TEPAT WAKTU',
     tone: isLate ? 'telat' : 'hadir',
+    lateMinutes: isLate ? lateMinutes : 0, // [BARU]
+    noteDetail, // [BARU]
     note,
     photoUrl: proof.photoUrl || checkOut?.photoUrl || '',
     mapsUrl: proof.mapsUrl || checkOut?.mapsUrl || '',
