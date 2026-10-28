@@ -66,43 +66,44 @@ export default function ShiftSwapTab({
         onSubmit={handleSubmit}
       >
         <div className="duration-info-alert duration-info-alert--warning">
-          Tampilan Tukar Shift masih sementara: pengajuan belum tersambung ke server dan hilang saat halaman dimuat ulang.
+          Tampilan sementara: belum tersambung ke server, data hilang saat halaman dimuat ulang.
         </div>
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="pgj-swap-my-shift">JADWAL ANDA (AKAN DITUKAR) *</label>
-          <Dropdown
-            id="pgj-swap-my-shift"
-            value={form.myShift}
-            onChange={(event) => updateField('myShift', event.target.value)}
-            options={shiftOptions}
-            placeholder="-- Pilih Jadwal Anda --"
-            className={dropdownErrorClass(fieldErrors.myShift)}
-            ariaLabel="Pilih jadwal Anda yang akan ditukar"
-          />
-          <FieldError message={fieldErrors.myShift} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="pgj-swap-colleague">REKAN PENGGANTI *</label>
-          <Dropdown
-            id="pgj-swap-colleague"
-            value={form.colleague}
-            onChange={(event) => updateField('colleague', event.target.value)}
-            options={colleagueOptions}
-            placeholder="-- Cari Nama Rekan --"
-            searchable
-            className={dropdownErrorClass(fieldErrors.colleague)}
-            ariaLabel="Pilih rekan pengganti"
-          />
-          <FieldError message={fieldErrors.colleague} />
+        <div className="form-row">
+          <div className="flex-1">
+            <label className="form-label" htmlFor="pgj-swap-my-shift">JADWAL ANDA (AKAN DITUKAR) *</label>
+            <Dropdown
+              id="pgj-swap-my-shift"
+              value={form.myShift}
+              onChange={(event) => updateField('myShift', event.target.value)}
+              options={shiftOptions}
+              placeholder="-- Pilih Jadwal Anda --"
+              className={dropdownErrorClass(fieldErrors.myShift)}
+              ariaLabel="Pilih jadwal Anda yang akan ditukar"
+            />
+            <FieldError message={fieldErrors.myShift} />
+          </div>
+          <div className="flex-1">
+            <label className="form-label" htmlFor="pgj-swap-colleague">REKAN PENGGANTI *</label>
+            <Dropdown
+              id="pgj-swap-colleague"
+              value={form.colleague}
+              onChange={(event) => updateField('colleague', event.target.value)}
+              options={colleagueOptions}
+              placeholder="-- Cari Nama Rekan --"
+              searchable
+              className={dropdownErrorClass(fieldErrors.colleague)}
+              ariaLabel="Pilih rekan pengganti"
+            />
+            <FieldError message={fieldErrors.colleague} />
+          </div>
         </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor="pgj-swap-reason">ALASAN TUKAR SHIFT *</label>
           <textarea
             id="pgj-swap-reason"
-            rows={3}
+            rows={2}
             maxLength={REASON_MAX_LENGTH}
             value={form.reason}
             onChange={(event) => updateField('reason', event.target.value)}

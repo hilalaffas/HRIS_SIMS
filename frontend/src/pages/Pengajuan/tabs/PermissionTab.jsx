@@ -53,7 +53,7 @@ export default function PermissionTab({ onSubmit, historyItems, loading, onSelec
           <label className="form-label" htmlFor="pgj-permission-note">KETERANGAN / ALASAN *</label>
           <textarea
             id="pgj-permission-note"
-            rows={3}
+            rows={2}
             maxLength={PERMISSION_NOTE_MAX_LENGTH}
             value={form.note}
             onChange={(event) => form.changeNote(event.target.value)}
@@ -104,14 +104,10 @@ export default function PermissionTab({ onSubmit, historyItems, loading, onSelec
             </div>
             <FieldError message={fieldErrors.days} />
 
-            {form.documentLater && (
-              <p className="pgj-hint">
-                Lama izin dikunci 1 hari selama surat dokter menyusul. Lampirkan surat sekarang bila izin lebih dari 1 hari.
-              </p>
-            )}
             <p className="pgj-hint">
-              Lama izin dihitung dalam hari kerja (Sabtu &amp; Minggu tidak dihitung). Surat dokter tetap wajib diunggah;
-              bila menyusul, unggah lewat tombol &quot;Upload Surat&quot; pada riwayat di bawah.
+              {form.documentLater
+                ? 'Lama izin dikunci 1 hari selama surat menyusul; unggah lewat tombol "Upload Surat" di riwayat.'
+                : 'Dihitung dalam hari kerja (Sabtu & Minggu tidak dihitung).'}
             </p>
           </div>
         )}

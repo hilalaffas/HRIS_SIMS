@@ -27,22 +27,21 @@ export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectS
         isSubmitting={overtime.isSubmitting}
         errorMessage={overtime.errorMessage}
       >
-        <div className="form-group">
-          <label className="form-label" htmlFor="pgj-overtime-date">TANGGAL LEMBUR *</label>
-          <input
-            id="pgj-overtime-date"
-            type="date"
-            name="overtimeDate"
-            value={form.overtimeDate}
-            max={overtime.todayKey}
-            onChange={overtime.updateField}
-            disabled={overtime.isSubmitting}
-            className={inputErrorClass(fieldErrors.overtimeDate, 'form-control')}
-          />
-          <FieldError message={fieldErrors.overtimeDate} />
-        </div>
-
         <div className="form-row">
+          <div className="flex-1">
+            <label className="form-label" htmlFor="pgj-overtime-date">TANGGAL LEMBUR *</label>
+            <input
+              id="pgj-overtime-date"
+              type="date"
+              name="overtimeDate"
+              value={form.overtimeDate}
+              max={overtime.todayKey}
+              onChange={overtime.updateField}
+              disabled={overtime.isSubmitting}
+              className={inputErrorClass(fieldErrors.overtimeDate, 'form-control')}
+            />
+            <FieldError message={fieldErrors.overtimeDate} />
+          </div>
           <div className="flex-1">
             <label className="form-label" htmlFor="pgj-overtime-start">JAM MULAI *</label>
             <input
@@ -82,7 +81,7 @@ export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectS
           <label className="form-label" htmlFor="pgj-overtime-reason">ALASAN / PEKERJAAN LEMBUR *</label>
           <textarea
             id="pgj-overtime-reason"
-            rows={3}
+            rows={2}
             name="reason"
             maxLength={OVERTIME_REASON_MAX_LENGTH}
             placeholder="Contoh: Maintenance server & backup database"
