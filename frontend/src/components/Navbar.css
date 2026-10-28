@@ -372,3 +372,56 @@
   background-color: var(--dk-bg-subtle, #f3f4f6);
   color: #ef4444;
 }
+/* ============================================================
+   [BARU] Item notifikasi yang bisa diklik (area klik + hint + fokus)
+   Hanya animasi transform/opacity/warna -> ringan, tanpa layout shift.
+   ============================================================ */
+.notification-item__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  border-radius: 0.5rem;
+}
+
+.notification-item--clickable .notification-item__main {
+  cursor: pointer;
+}
+
+.notification-item--clickable {
+  transition: background-color var(--motion-fast, 150ms) ease;
+}
+
+.notification-item--clickable:active {
+  background-color: var(--dk-border-soft, #f3f4f6);
+}
+
+.notification-item__main:focus-visible {
+  outline: 2px solid var(--color-primary-soft, #217a5b);
+  outline-offset: 4px;
+}
+
+.notification-item--clickable .notification-action-hint {
+  transition: transform var(--motion-fast, 150ms) var(--ease-out-soft, ease);
+}
+
+.notification-item--clickable:hover .notification-action-hint {
+  transform: translateX(3px);
+}
+
+/* Warna hint per tone (menggantikan inline style di Navbar.jsx) */
+.notification-action-hint--info    { color: #8b5cf6; }
+.notification-action-hint--brand   { color: var(--dk-text-blue, #0284c7); }
+.notification-action-hint--success { color: #10b981; }
+.notification-action-hint--warning { color: #f59e0b; }
+.notification-action-hint--danger  { color: #ef4444; }
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-item--clickable,
+  .notification-item--clickable .notification-action-hint {
+    transition: none;
+  }
+  .notification-item--clickable:hover .notification-action-hint {
+    transform: none;
+  }
+}

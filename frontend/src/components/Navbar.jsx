@@ -9,6 +9,7 @@ import { isDevAccessUser, isDevAccessPath } from '../config/devAccessConfig';
 import NotifPasswordResetModal from './NotifPasswordResetModal';
 import NotifLeaveApprovalModal from './NotifLeaveApprovalModal';
 import NotifBellToast from './NotifBellToast';
+import { getNotificationAction } from '../config/notificationRoutes'; // [BARU]
 import './Navbar.css';
 
 const APPROVER_ROLE_LABELS = {
@@ -17,10 +18,8 @@ const APPROVER_ROLE_LABELS = {
   MANAGER: 'Manager',
 };
 
-// [UBAH] Notifikasi yang mengarahkan ke suatu tempat saat diklik.
-// 'announcement' DIHAPUS -- lonceng notifikasi sekarang murni perihal cuti
-// (+ permintaan reset sandi), berita/pengumuman tidak lagi masuk sini.
-const CLICKABLE_TYPES = ['password-reset', 'leave-approval', 'approved', 'sick-approved', 'sick-rejected'];
+// [UBAH] CLICKABLE_TYPES DIHAPUS -- daftar tipe yang bisa diklik + tujuannya
+// sekarang ada di config/notificationRoutes.js (NOTIFICATION_ACTIONS).
 
 // [BARU] Izin Sakit (modul Absensi) yang sudah diputuskan hanya jadi notifikasi
 // selama N hari terakhir, supaya riwayat lama tidak membanjiri lonceng.
@@ -81,6 +80,11 @@ export default function Navbar({ toggleSidebar, user }) {
   const notificationOwner = user?.username || user?.name || user?.nama || 'guest';
   const notificationStorageKey = `read-leave-status-notifications:${notificationOwner}`;
   const [readRefreshToken, setReadRefreshToken] = useState(0);
+  // [BARU] Naik hanya saat dropdown DIBUKA -> memicu refresh data. Sebelumnya efek
+  // polling bergantung pada `showDropdown`, sehingga menutup dropdown (mis. saat
+  // klik notifikasi) ikut memanggil ulang 2 API tepat ketika halaman tujuan
+  // sedang dimuat -> terasa delay.
+  const [notifRefreshTick, setNotifRefreshTick] = useState(0);
 
   const readNotificationIds = (() => {
     void readRefreshToken;
@@ -228,7 +232,7 @@ export default function Navbar({ toggleSidebar, user }) {
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, [notificationOwner, notificationStorageKey, userRole, showDropdown, isDevAccount]);
+  }, [notificationOwner, notificationStorageKey, userRole, notifRefreshTick, isDevAccount]); // [UBAH] showDropdown -> notifRefreshTick
 
   // === [BARU] NOTIFIKASI STATUS IZIN SAKIT (disetujui / ditolak) ===
   // Izin Sakit disimpan sebagai data absensi (approvalStatus PENDING ->
@@ -451,12 +455,15 @@ export default function Navbar({ toggleSidebar, user }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notificationIdsKey, requiredSourcesLoaded]);
 
-  // [UBAH] Satu handler terpusat untuk semua jenis klik notifikasi:
-  // - password-reset & leave-approval: buka modal (perilaku lama, tidak berubah)
-  // - approved: hilangkan notifikasi + arahkan ke ApplyCuti dengan leaveRequestId,
-  //   supaya ApplyCuti.jsx otomatis membuka modal detail cuti tsb.
-  // Cabang 'announcement' DIHAPUS -- berita tidak lagi jadi notifikasi.
+  // [UBAH] Satu handler terpusat, digerakkan config/notificationRoutes.js:
+  // - modal (password-reset, leave-approval): buka modal (perilaku lama, tidak berubah)
+  // - navigate (approved, step-approved, returned, rejected, new, sick-*):
+  //   tutup dropdown + (opsional) hilangkan notifikasi + pindah halaman TANPA
+  //   menunggu apa pun. Tipe yang tidak terdaftar di config diabaikan.
   const handleNotifClick = (notif) => {
+    const action = getNotificationAction(notif);
+    if (!action) return;
+
     if (notif.type === 'password-reset') {
       setSelectedResetNotif(notif.raw);
       return;
@@ -465,19 +472,20 @@ export default function Navbar({ toggleSidebar, user }) {
       setSelectedLeaveNotif(notif.raw);
       return;
     }
-    if (notif.type === 'approved' && notif.raw?.id) {
-      handleDismissOne(notif.id);
-      setShowDropdown(false);
-      navigate(`/ApplyCuti?leaveRequestId=${notif.raw.id}`);
-      return;
-    }
-    // [BARU] Izin Sakit: hilangkan notifikasi + buka halaman Absensi.
-    if (notif.type === 'sick-approved' || notif.type === 'sick-rejected') {
-      handleDismissOne(notif.id);
-      setShowDropdown(false);
-      navigate('/absensi');
-      return;
-    }
+
+    const path = action.getPath?.(notif);
+    if (!path) return;
+
+    setShowDropdown(false);
+    if (action.dismissOnClick) handleDismissOne(notif.id);
+    navigate(path);
+  };
+
+  // [BARU] Aksesibilitas keyboard untuk item notifikasi (Enter / Spasi).
+  const handleNotifKeyDown = (event, notif) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    handleNotifClick(notif);
   };
 
   const handleMarkNotificationsRead = () => {
@@ -556,6 +564,7 @@ export default function Navbar({ toggleSidebar, user }) {
             title="Notifikasi"
             onClick={() => {
               setBellToast(null);
+              if (!showDropdown) setNotifRefreshTick((tick) => tick + 1); // [BARU] refresh hanya saat dibuka
               setShowDropdown(!showDropdown);
             }}
           >
@@ -586,7 +595,16 @@ export default function Navbar({ toggleSidebar, user }) {
               extraCount={bellToast.extraCount}
               anchorRef={bellButtonRef}
               onOpen={() => {
+                // [UBAH] Notifikasi tunggal -> langsung ke tujuannya. Kalau ada
+                // notifikasi lain (+N) atau tipenya tak dikenal -> buka daftar.
+                const target = bellToast.notification;
+                const canOpenDirectly = bellToast.extraCount === 0 && getNotificationAction(target);
                 setBellToast(null);
+                if (canOpenDirectly) {
+                  handleNotifClick(target);
+                  return;
+                }
+                setNotifRefreshTick((tick) => tick + 1);
                 setShowDropdown(true);
               }}
               onClose={() => setBellToast(null)}
@@ -603,13 +621,22 @@ export default function Navbar({ toggleSidebar, user }) {
                 {allNotifications.length === 0 ? (
                   <li className="notification-empty">Tidak ada notifikasi baru</li>
                 ) : (
-                  allNotifications.map(notif => (
+                  allNotifications.map((notif) => {
+                    const action = getNotificationAction(notif); // [BARU]
+                    return (
                     <li
                       key={notif.id}
-                      className="notification-item"
-                      onClick={() => handleNotifClick(notif)}
-                      style={CLICKABLE_TYPES.includes(notif.type) ? { cursor: 'pointer' } : undefined}
+                      className={`notification-item${action ? ' notification-item--clickable' : ''}`}
                     >
+                      {/* [BARU] Area klik dipisah dari tombol "×" supaya tidak ada
+                          tombol di dalam tombol, dan bisa difokus lewat keyboard. */}
+                      <div
+                        className="notification-item__main"
+                        role={action ? 'button' : undefined}
+                        tabIndex={action ? 0 : undefined}
+                        onClick={action ? () => handleNotifClick(notif) : undefined}
+                        onKeyDown={action ? (event) => handleNotifKeyDown(event, notif) : undefined}
+                      >
                       <div className="notification-icon-wrapper">
                         {notif.type === 'returned' && (
                           <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -660,19 +687,15 @@ export default function Navbar({ toggleSidebar, user }) {
                       <div className="notification-content">
                         <p className="notification-text">{notif.text}</p>
                         <span className="notification-time">{notif.date}</span>
-                        {notif.type === 'password-reset' && (
-                          <span className="notification-action-hint">Klik untuk memproses →</span>
-                        )}
-                        {notif.type === 'leave-approval' && (
-                          <span className="notification-action-hint notification-action-hint_leave">Klik untuk memproses →</span>
-                        )}
-                        {notif.type === 'approved' && (
-                          <span className="notification-action-hint" style={{ color: '#10b981' }}>Klik untuk lihat detail →</span>
-                        )}
-                        {(notif.type === 'sick-approved' || notif.type === 'sick-rejected') && (
-                          <span className="notification-action-hint" style={{ color: notif.type === 'sick-approved' ? '#10b981' : '#ef4444' }}>Klik untuk lihat di Absensi →</span>
+                        {/* [UBAH] 4 blok hint terpisah (inline style warna) diganti satu
+                            baris berbasis config/notificationRoutes.js */}
+                        {action && (
+                          <span className={`notification-action-hint notification-action-hint--${action.tone}`}>
+                            {action.hint}
+                          </span>
                         )}
                       </div>
+                      </div>{/* /notification-item__main */}
 
                       <button
                         type="button"
@@ -687,7 +710,8 @@ export default function Navbar({ toggleSidebar, user }) {
                         &times;
                       </button>
                     </li>
-                  ))
+                    );
+                  })
                 )}
               </ul>
             </div>
