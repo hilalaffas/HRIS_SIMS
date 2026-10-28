@@ -177,11 +177,10 @@ export function buildSickCardModel(record, { isLatest = false } = {}) {
     hint = 'Menunggu review atasan. Surat dokter masih perlu diunggah (boleh menyusul).';
   }
 
-  const steps = [
-    { key: 'submitted', label: 'Diajukan', state: 'done' },
-    { key: 'review', label: 'Review Atasan', state: reviewState },
-  ];
+  // Urutan tampilan: Diajukan -> Surat Dokter -> Review Atasan (review di paling akhir).
+  const steps = [{ key: 'submitted', label: 'Diajukan', state: 'done' }];
   if (record.documentRequired) steps.push({ key: 'letter', label: 'Surat Dokter', state: letterState });
+  steps.push({ key: 'review', label: 'Review Atasan', state: reviewState });
 
   return {
     tone,
