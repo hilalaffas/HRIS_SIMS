@@ -21,7 +21,13 @@ export async function syncHolidays(year) {
 // api.get. Dipakai CalendarCard.jsx (widget Dashboard, polling 30 detik
 // selalu silent). Lihat services/api.js.
 export async function getHolidaysByMonth(year, month, config = {}) {
-  return api.get(`/api/holidays/month?year=${year}&month=${month}`, config);
+  const numericYear = Number(year);
+  const numericMonth = Number(month);
+  if (!Number.isInteger(numericYear) || !Number.isInteger(numericMonth) || numericMonth < 1 || numericMonth > 12) {
+    throw new Error('Periode hari libur tidak valid. Pilih bulan dan tahun terlebih dahulu.');
+  }
+  const query = new URLSearchParams({ year: String(numericYear), month: String(numericMonth) });
+  return api.get(`/api/holidays/month?${query.toString()}`, config);
 }
 
 /**

@@ -7,7 +7,6 @@
 import { ATTENDANCE_NOTE_MAX_LENGTH } from '../hooks/useAttendanceCapture';
 
 export const MIN_WORK_HOURS = 8;
-const MIN_WORK_MINUTES = MIN_WORK_HOURS * 60;
 
 // Alasan disimpan di kolom `note` check-out dengan awalan ini, supaya HR bisa
 // mengenalinya di tabel riwayat. Sisa panjang = batas kolom DB (255) - awalan.
@@ -37,8 +36,8 @@ export function getJakartaWallClock(now) {
 
 // checkInAt = Date jam Masuk hari ini (record.recordedAt). Tidak diketahui -> false
 // (tidak memblokir; backend tetap memeriksa).
-export function isEarlyCheckout(checkInAt, now = new Date()) {
+export function isEarlyCheckout(checkInAt, now = new Date(), requiredWorkHours = MIN_WORK_HOURS) {
   if (!checkInAt) return false;
   const workedMinutes = (getJakartaWallClock(now).getTime() - checkInAt.getTime()) / 60000;
-  return workedMinutes < MIN_WORK_MINUTES;
+  return workedMinutes < (Number(requiredWorkHours) || MIN_WORK_HOURS) * 60;
 }

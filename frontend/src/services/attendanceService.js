@@ -19,6 +19,23 @@ export async function getMyAttendanceHistory(config = {}) {
   return api.get('/api/absensi/me', config);
 }
 
+export async function getMyWorkSchedule(year, month) {
+  const previous = new Date(year, month - 2, 1);
+  const queryForMonth = (targetYear, targetMonth) => {
+    const query = new URLSearchParams({ year: String(targetYear), month: String(targetMonth) });
+    return api.get(`/api/jadwal/me?${query.toString()}`);
+  };
+  const [previousData, currentData] = await Promise.all([
+    queryForMonth(previous.getFullYear(), previous.getMonth() + 1),
+    queryForMonth(year, month),
+  ]);
+  return {
+    divisionType: currentData?.divisionType || previousData?.divisionType || 'REGULAR',
+    divisionName: currentData?.divisionName || previousData?.divisionName || '',
+    schedules: [...(previousData?.schedules || []), ...(currentData?.schedules || [])],
+  };
+}
+
 // [BARU] Nama lokasi dari koordinat (reverse geocoding di backend, key Google
 // tidak pernah sampai ke browser). Hasil: { locationName: string | null }.
 export async function getLocationName(latitude, longitude) {

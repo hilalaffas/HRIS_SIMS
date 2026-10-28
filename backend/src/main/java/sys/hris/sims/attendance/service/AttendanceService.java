@@ -7,12 +7,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,9 @@ import sys.hris.sims.attendance.repository.AttendanceRepository;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.storage.CloudinaryService;
+import sys.hris.sims.schedule.entity.WorkSchedule;
+import sys.hris.sims.schedule.repository.WorkScheduleRepository;
+import sys.hris.sims.holiday.repository.HolidayRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +39,7 @@ public class AttendanceService {
     // [BARU] Jam batas dianggap "Tepat waktu" untuk check-in Masuk.
     // Sesuaikan kalau kebijakan jam masuk kantor berubah.
     private static final LocalTime ON_TIME_CUTOFF = LocalTime.of(8, 0);
+    private static final ZoneId APP_ZONE = ZoneId.of("Asia/Jakarta");
 
     // [BARU] Durasi kerja minimum sebelum boleh check-out TANPA alasan. Di bawah
     // ini, keterangan (alasan pulang cepat) wajib diisi.
@@ -49,6 +55,8 @@ public class AttendanceService {
     private final ApprovalScopeService approvalScopeService;
     // [BARU] Nama lokasi dari koordinat GPS (Google Geocoding, opsional).
     private final ReverseGeocodingService reverseGeocodingService;
+    private final WorkScheduleRepository workScheduleRepository;
+    private final HolidayRepository holidayRepository;
 
     public List<AttendanceResponse> getMyHistory(String username) {
         Employee employee = resolveEmployee(username);
@@ -65,6 +73,7 @@ public class AttendanceService {
                 .toList();
     }
 
+    @Transactional
     public AttendanceResponse submit(String username, AttendanceSubmitRequest request) {
         Employee employee = resolveEmployee(username);
 
@@ -105,26 +114,75 @@ public class AttendanceService {
             throw new IllegalArgumentException("Foto bukti kehadiran wajib diunggah.");
         }
 
-        LocalDate today = LocalDate.now();
-        if (attendanceRepository.existsActiveByAction(employee.getEmployeeId(), today, action)) { // [UBAH] sakit ditolak tidak menghalangi
+        LocalDate today = LocalDate.now(APP_ZONE);
+        LocalDateTime nowDateTime = LocalDateTime.now(APP_ZONE);
+        LocalDate workDate = today;
+        WorkSchedule schedule = findSchedule(employee.getEmployeeId(), today);
+        boolean shifting = employee.getDivisi() != null
+                && "SHIFTING".equalsIgnoreCase(employee.getDivisi().getTipeDivisi());
+
+        if (reason.equals("ABSEN") && action.equals("MASUK") && shifting
+                && (schedule == null || schedule.getShift() == null)) {
+            WorkSchedule overnight = findSchedule(employee.getEmployeeId(), today.minusDays(1));
+            if (overnight != null && overnight.getShift() != null
+                    && overnight.getShift().getEndTime().isBefore(overnight.getShift().getStartTime())
+                    && nowDateTime.isBefore(LocalDateTime.of(today, overnight.getShift().getEndTime()))) {
+                workDate = today.minusDays(1);
+                schedule = overnight;
+            } else if (schedule == null) {
+                throw new IllegalStateException("Jadwal shift Anda belum dipublikasikan untuk hari ini.");
+            }
+        }
+        if (reason.equals("ABSEN") && action.equals("MASUK") && shifting && schedule != null
+                && schedule.getShift() != null && schedule.getShift().getStartTime().isBefore(schedule.getShift().getEndTime())
+                && nowDateTime.isBefore(LocalDateTime.of(today, schedule.getShift().getStartTime()))) {
+            throw new IllegalStateException("Absensi masuk belum dibuka. Shift Anda dimulai pukul "
+                    + schedule.getShift().getStartTime() + ".");
+        }
+        if (reason.equals("ABSEN") && action.equals("MASUK") && !shifting
+                && (today.getDayOfWeek() == DayOfWeek.SATURDAY || today.getDayOfWeek() == DayOfWeek.SUNDAY)) {
+            throw new IllegalStateException("Jadwal Regular libur setiap Sabtu dan Minggu.");
+        }
+        if (reason.equals("ABSEN") && action.equals("MASUK") && !shifting && holidayRepository.existsByDate(today)) {
+            throw new IllegalStateException("Hari ini libur nasional. Absensi masuk tidak diperlukan.");
+        }
+        if (reason.equals("ABSEN") && action.equals("MASUK") && schedule != null && schedule.getShift() == null) {
+            throw new IllegalStateException("Jadwal Anda hari ini libur. Absensi masuk tidak diperlukan.");
+        }
+
+        if (reason.equals("ABSEN") && action.equals("KELUAR")) {
+            boolean checkedInToday = attendanceRepository.existsActiveByAction(employee.getEmployeeId(), today, "MASUK");
+            if (!checkedInToday) {
+                WorkSchedule overnight = findSchedule(employee.getEmployeeId(), today.minusDays(1));
+                boolean hasOvernightCheckIn = attendanceRepository.existsActiveByAction(
+                        employee.getEmployeeId(), today.minusDays(1), "MASUK");
+                if (hasOvernightCheckIn && overnight != null && overnight.getShift() != null
+                        && overnight.getShift().getEndTime().isBefore(overnight.getShift().getStartTime())
+                        && nowDateTime.isBefore(LocalDateTime.of(today, overnight.getShift().getEndTime()))) {
+                    workDate = today.minusDays(1);
+                    schedule = overnight;
+                }
+            }
+        }
+        if (attendanceRepository.existsActiveByAction(employee.getEmployeeId(), workDate, action)) { // sakit ditolak tidak menghalangi
             throw new IllegalStateException(
                     action.equals("MASUK")
                             ? "Anda sudah melakukan check-in hari ini."
                             : "Anda sudah melakukan check-out hari ini.");
         }
         // [BARU] Masih dalam masa izin sakit multi-hari (pengajuan hari sebelumnya).
-        if (action.equals("MASUK") && hasActiveSick(employee.getEmployeeId(), today)) {
+        if (action.equals("MASUK") && hasActiveSick(employee.getEmployeeId(), workDate)) {
             throw new IllegalStateException("Anda tercatat sakit hari ini, absen masuk tidak diperlukan.");
         }
         if (action.equals("KELUAR")
-                && !attendanceRepository.existsActiveByAction(employee.getEmployeeId(), today, "MASUK")) {
+                && !attendanceRepository.existsActiveByAction(employee.getEmployeeId(), workDate, "MASUK")) {
             throw new IllegalStateException("Anda belum melakukan check-in hari ini.");
         }
         // [BARU] Hari ini sudah tercatat Sakit/Izin -> tidak boleh check-out
         // (frontend sudah menonaktifkan tombol, ini pengaman di sisi server).
         if (action.equals("KELUAR")
                 && attendanceRepository.existsActiveByActionAndReasonIn(
-                        employee.getEmployeeId(), today, "MASUK", List.of("SAKIT", "IZIN"))) {
+                        employee.getEmployeeId(), workDate, "MASUK", List.of("SAKIT", "IZIN"))) {
             throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, check-out tidak diperlukan.");
         }
 
@@ -133,13 +191,15 @@ public class AttendanceService {
         // dikirim langsung ke API pun tidak bisa melewatinya. Dihitung dengan jam
         // SERVER (sama seperti Attendance.prePersist()), bukan jam perangkat.
         if (action.equals("KELUAR") && (request.getNote() == null || request.getNote().isBlank())) {
+            WorkSchedule scheduleForCheckout = schedule;
             attendanceRepository
-                    .findActiveByAction(employee.getEmployeeId(), today, "MASUK")
+                    .findActiveByAction(employee.getEmployeeId(), workDate, "MASUK")
                     .ifPresent(checkIn -> {
-                        Duration worked = Duration.between(checkIn.getRecordedAt(), LocalDateTime.now());
-                        if (worked.compareTo(MIN_WORK_DURATION) < 0) {
+                        Duration worked = Duration.between(checkIn.getRecordedAt(), LocalDateTime.now(APP_ZONE));
+                        Duration required = getRequiredShiftDuration(scheduleForCheckout);
+                        if (worked.compareTo(required) < 0) {
                             throw new IllegalArgumentException(
-                                    "Durasi kerja Anda belum memenuhi 8 jam. Alasan pulang cepat wajib diisi.");
+                                    "Durasi kerja belum memenuhi " + required.toHours() + " jam. Alasan pulang cepat wajib diisi.");
                         }
                     });
         }
@@ -152,7 +212,7 @@ public class AttendanceService {
 
         String photoUrl;
         try {
-            String publicId = "attendance-" + employee.getEmployeeId() + "-" + today + "-" + UUID.randomUUID();
+            String publicId = "attendance-" + employee.getEmployeeId() + "-" + workDate + "-" + UUID.randomUUID();
             photoUrl = cloudinaryService.uploadAttendancePhoto(request.getPhoto(), publicId);
         } catch (IOException e) {
             throw new IllegalStateException("Gagal mengunggah foto absensi. Silakan coba lagi.", e);
@@ -162,13 +222,14 @@ public class AttendanceService {
                 .employee(employee)
                 .action(action)
                 .reason(reason)
-                .status(resolveStatus(action, reason))
+                .status(resolveStatus(action, reason, schedule, workDate))
                 .note(request.getNote())
                 .approvalStatus(reason.equals("SAKIT") ? "PENDING" : "NOT_REQUIRED")
                 .photoUrl(photoUrl)
                 .latitude(BigDecimal.valueOf(request.getLatitude()))
                 .longitude(BigDecimal.valueOf(request.getLongitude()))
                 .locationName(locationName)
+                .attendanceDate(workDate)
                 .build();
 
         Attendance saved = attendanceRepository.save(attendance);
@@ -415,13 +476,30 @@ public class AttendanceService {
         return attendance;
     }
 
-    private String resolveStatus(String action, String reason) {
+    private String resolveStatus(String action, String reason, WorkSchedule schedule, LocalDate workDate) {
         if (reason.equals("SAKIT")) return "SICK";
         if (reason.equals("IZIN")) return "IZIN";
         if (action.equals("KELUAR")) return "DONE";
         // MASUK + ABSEN -- dibandingkan ke jam server (sumber kebenaran),
         // bukan jam yang (mungkin) dikirim dari perangkat klien.
-        return LocalTime.now().isAfter(ON_TIME_CUTOFF) ? "LATE" : "ON_TIME";
+        LocalDateTime cutoff = LocalDateTime.of(workDate,
+                schedule != null && schedule.getShift() != null
+                        ? schedule.getShift().getStartTime() : ON_TIME_CUTOFF);
+        return LocalDateTime.now(APP_ZONE).isAfter(cutoff) ? "LATE" : "ON_TIME";
+    }
+
+    private WorkSchedule findSchedule(Long employeeId, LocalDate date) {
+        return workScheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        employeeId, date, date)
+                .stream().findFirst().orElse(null);
+    }
+
+    private Duration getRequiredShiftDuration(WorkSchedule schedule) {
+        if (schedule == null || schedule.getShift() == null) return MIN_WORK_DURATION;
+        LocalTime start = schedule.getShift().getStartTime();
+        LocalTime end = schedule.getShift().getEndTime();
+        long minutes = (end.toSecondOfDay() - start.toSecondOfDay() + 24L * 60 * 60) % (24L * 60 * 60) / 60;
+        return Duration.ofMinutes(minutes == 0 ? 8 * 60 : minutes);
     }
 
     private Employee resolveEmployee(String username) {

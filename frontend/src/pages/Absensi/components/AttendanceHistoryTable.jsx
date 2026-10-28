@@ -29,8 +29,8 @@
 // pengajuan Izin lewat halaman Absensi. Untuk memasukkan cuti tahunan yang
 // disetujui di modul Cuti (leave_requests), tambahkan sumber datanya di
 // buildMonthlyRows() -- struktur tabel tidak perlu diubah.
-import React, { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, FileDown, FileText } from 'lucide-react'; // [UBAH] CircleCheck, MapPin, Upload dipindah ke AttendanceNoteCell
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, FileDown, FileText } from 'lucide-react'; // CircleCheck, MapPin, Upload dipindah ke AttendanceNoteCell
 import { downloadCsv } from '../../../utils/csvExport';
 import {
   REPORT_HEADERS,
@@ -43,6 +43,9 @@ import {
 import AttendanceNoteCell from './AttendanceNoteCell'; // [BARU]
 import { IS_NOTE_DEMO_ENABLED, buildDemoNoteRows } from '../utils/dummyAttendanceNotes'; // [BARU][SEMENTARA] data dummy, hapus saat backend siap
 import './AttendanceHistoryTable.css';
+import { getMyWorkSchedule } from '../../../services/attendanceService';
+import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
+import { getHolidaysByMonth } from '../../../services/holidayService';
 
 const COLLAPSED_ROW_COUNT = 3;
 const PAGE_SIZE_OPTIONS = [10, 20, 30]; // pilihan jumlah baris per halaman (mode "Lihat semua")
@@ -89,15 +92,57 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' });
   const [exporting, setExporting] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [divisionType, setDivisionType] = useState('REGULAR');
+  const [scheduleLoaded, setScheduleLoaded] = useState(false);
+  const [holidaysByDate, setHolidaysByDate] = useState(LOCAL_HOLIDAYS_2026);
 
-  const isCurrentPeriod = period.year === currentPeriod.year && period.month === currentPeriod.month;
+  useEffect(() => {
+    let active = true;
+    setScheduleLoaded(false);
+    Promise.all([
+      getMyWorkSchedule(period.year, period.month + 1),
+      getHolidaysByMonth(period.year, period.month + 1, { silent: true }).catch(() => []),
+    ])
+      .then(([result, holidayResult]) => {
+        if (!active) return;
+        setSchedules(result?.schedules || []);
+        setDivisionType(result?.divisionType || 'REGULAR');
+        const holidayMap = { ...LOCAL_HOLIDAYS_2026 };
+        (holidayResult?.data || holidayResult || []).forEach((holiday) => {
+          if (holiday?.date) holidayMap[holiday.date] = holiday.name || holiday.nama || 'Libur Nasional';
+        });
+        setHolidaysByDate(holidayMap);
+        setScheduleLoaded(true);
+      })
+      .catch(() => { if (active) { setSchedules([]); setScheduleLoaded(true); } });
+    return () => { active = false; };
+  }, [period.year, period.month]);
+
+      const isCurrentPeriod = period.year === currentPeriod.year && period.month === currentPeriod.month;
   const periodLabel = formatPeriodLabel(period.year, period.month);
+  const upcomingSchedules = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const byDate = new Map(schedules.map((item) => [item.date, item]));
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+      const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      const published = byDate.get(dateKey);
+      const weekend = date.getDay() === 0 || date.getDay() === 6;
+      if (divisionType === 'SHIFTING') {
+        return { dateKey, date, label: !scheduleLoaded ? 'Memuat jadwal…' : !published ? 'Belum dipublikasikan' : published.shiftName ? `${published.shiftName} · ${published.startTime?.slice(0, 5)}–${published.endTime?.slice(0, 5)}` : 'Libur', off: Boolean(published && !published.shiftName) };
+      }
+      const nationalHoliday = holidaysByDate[dateKey];
+      return { dateKey, date, label: weekend ? 'Libur' : nationalHoliday ? `Libur · ${nationalHoliday}` : 'Reguler · 08:00–17:00', off: weekend || Boolean(nationalHoliday) };
+    });
+  }, [schedules, divisionType, scheduleLoaded, holidaysByDate]);
 
   const dailyRows = useMemo(
     () => (IS_NOTE_DEMO_ENABLED && isCurrentPeriod
-      ? buildDemoNoteRows() // [BARU][SEMENTARA] pratinjau desain tanpa backend
-      : attachOvertime(buildMonthlyRows(records, period.year, period.month), overtimeRecords)),
-    [records, overtimeRecords, period.year, period.month, isCurrentPeriod],
+      ? buildDemoNoteRows() // [SEMENTARA] pratinjau desain tanpa backend
+      : attachOvertime(buildMonthlyRows(records, period.year, period.month, new Date(), schedules, divisionType, holidaysByDate), overtimeRecords)),
+    [records, overtimeRecords, period.year, period.month, isCurrentPeriod, schedules, divisionType, holidaysByDate],
   );
 
   // Urutan di layar mengikuti sort; ekspor CSV/PDF tetap urut tanggal
@@ -229,6 +274,21 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
           </button>
         </div>
       </div>
+
+      <section className="abs-upcoming-schedule" aria-label="Jadwal kerja tujuh hari ke depan">
+        <div className="abs-upcoming-schedule-heading">
+          <h3>Jadwal Kerja Saya</h3>
+          <span>{divisionType === 'SHIFTING' ? 'Non Regular (Shift)' : 'Regular'}</span>
+        </div>
+        <div className="abs-upcoming-schedule-list">
+          {upcomingSchedules.map(({ dateKey, date, label, off }) => (
+            <div className={`abs-upcoming-schedule-item${off ? ' is-off' : ''}`} key={dateKey}>
+              <b>{date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</b>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="abs-table-wrap">
         <table className="abs-log-table">

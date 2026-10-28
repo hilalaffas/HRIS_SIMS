@@ -27,6 +27,7 @@ const KARYAWAN_POLL_INTERVAL_MS = 15000;
 import FormCuti from '../Cuti/approve/components/Form';
 import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService';
 import { getSystemLogs } from '../../services/logService'; 
+import KelolaDivisiShift from './KelolaDivisiShift';
 // [BARU] Ekspor CSV per tab menu
 import { downloadCsv } from '../../utils/csvExport';
 import { KARYAWAN_EXPORT_CONFIG, getExportFormats } from '../../config/karyawanExportConfig';
@@ -495,7 +496,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
       />
 
       {/* [BARU] Render Tab Menu */}
-      <TabMenuKaryawan activeTab={activeTab} setActiveTab={setActiveTab} />
+      <TabMenuKaryawan activeTab={activeTab} setActiveTab={setActiveTab} user={user} />
 
       <div className="karyawan-page__body">
         {/* [BARU] Render Konten Berdasarkan Tab yang Aktif */}
@@ -537,9 +538,8 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
             />
           </div>
         )}
-        {activeTab === 'Data Divisi' && (
-          <DataDivisi karyawanList={karyawanList} />
-        )}
+        {activeTab === 'Data Divisi' && isSuperAdmin(user) && <DataDivisi karyawanList={karyawanList} />}
+        {activeTab === 'Data Divisi' && isHrAdmin(user) && <KelolaDivisiShift karyawanList={karyawanList} />}
         {activeTab === 'Log Sistem' && (
           <LogSistem logList={logList} />
         )}

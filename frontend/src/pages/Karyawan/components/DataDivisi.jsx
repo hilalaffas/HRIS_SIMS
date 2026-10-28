@@ -12,7 +12,7 @@ import DivisiTypeToggle, { DIVISI_TYPE_LABEL } from './DivisiTypeToggle';
 import DivisiShiftSettings from './DivisiShiftSettings';
 import ScheduleBuilder from './ScheduleBuilder';
 
-const DataDivisi = ({ karyawanList }) => {
+const DataDivisi = ({ karyawanList, showScheduleBuilder = true, onEditDivisi }) => {
   // State Utama
   const [divisiList, setDivisiList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +114,10 @@ const DataDivisi = ({ karyawanList }) => {
 
   // 3. Handler Edit
   const handleStartEdit = (divisi) => {
+    if (onEditDivisi) {
+      onEditDivisi(divisi);
+      return;
+    }
     setEditingId(divisi.id);
     setEditValue(divisi.namaDivisi);
     setEditType(divisi.tipeDivisi || 'REGULAR');
@@ -262,22 +266,23 @@ const DataDivisi = ({ karyawanList }) => {
         </div>
       </div>
 
-      {/* ===== KARTU 2: PENGATURAN JAM KERJA SHIFT ===== */}
-      <DivisiShiftSettings
-        shifts={shifts}
-        isLoading={isLoadingShifts}
-        error={shiftsError}
-        onSaved={fetchShifts}
-        onToast={showToastMessage}
-      />
-
-      {/* ===== KARTU 3: BUILDER JADWAL ABSENSI BULANAN ===== */}
-      <ScheduleBuilder
-        karyawanList={karyawanList}
-        divisiList={divisiList}
-        shifts={shifts}
-        onToast={showToastMessage}
-      />
+      {showScheduleBuilder && (
+        <>
+          <DivisiShiftSettings
+            shifts={shifts}
+            isLoading={isLoadingShifts}
+            error={shiftsError}
+            onSaved={fetchShifts}
+            onToast={showToastMessage}
+          />
+          <ScheduleBuilder
+            karyawanList={karyawanList}
+            divisiList={divisiList}
+            shifts={shifts}
+            onToast={showToastMessage}
+          />
+        </>
+      )}
 
       {/* MODAL EDIT */}
       {editingId && (

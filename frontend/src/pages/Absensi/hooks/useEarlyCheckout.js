@@ -12,16 +12,16 @@
 import { useCallback, useState } from 'react';
 import { buildEarlyCheckoutNote, isEarlyCheckout } from '../utils/earlyCheckout';
 
-export default function useEarlyCheckout({ openCapture, checkInAt }) {
+export default function useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours }) {
   const [isPromptOpen, setIsPromptOpen] = useState(false);
 
   const startAttendance = useCallback((action) => {
-    if (action === 'Keluar' && isEarlyCheckout(checkInAt)) {
+    if (action === 'Keluar' && isEarlyCheckout(checkInAt, new Date(), requiredWorkHours)) {
       setIsPromptOpen(true);
       return;
     }
     openCapture(action);
-  }, [checkInAt, openCapture]);
+  }, [checkInAt, openCapture, requiredWorkHours]);
 
   const confirmEarlyCheckout = useCallback((reason) => {
     setIsPromptOpen(false);

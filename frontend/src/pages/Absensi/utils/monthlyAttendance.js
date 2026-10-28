@@ -194,13 +194,23 @@ function blankRow(key) {
   };
 }
 
-function resolveRow(key, entry, todayKey) {
+function getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate = LOCAL_HOLIDAYS_2026) {
+  const schedule = schedulesByDate[key];
+  if (schedule) return schedule.shiftName
+    ? `${schedule.shiftName} (${schedule.startTime?.slice(0, 5) || '--:--'} - ${schedule.endTime?.slice(0, 5) || '--:--'})`
+    : 'Libur';
+  if (String(divisionType || '').toUpperCase() === 'SHIFTING') return 'Belum dipublikasikan';
+  return isWeekend(parseLocalDate(key)) || holidaysByDate[key] ? 'Libur' : SHIFT_LABEL;
+}
+
+function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026) {
   const { checkIn, checkOut, lateNotice, rejectedSick } = entry;
   const isToday = key === todayKey;
   // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
   const lateSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
   const noticeSuffix = `${lateSuffix}${rejectedSick ? ' · Izin sakit ditolak' : ''}`;
-  const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: SHIFT_LABEL, lateMinutes: 0, noteDetail: '' }; // [UBAH] + lateMinutes, noteDetail
+  const scheduleLabel = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
+  const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: scheduleLabel, lateMinutes: 0, noteDetail: '' }; // [UBAH] + lateMinutes, noteDetail (jadwal shift dari teman)
   const empty = { checkIn: null, checkOut: null, duration: null, durationMinutes: null };
 
   // [BARU] Hari lampau yang hanya punya pengajuan sakit DITOLAK: tampil "DITOLAK"
@@ -289,8 +299,9 @@ function resolveRow(key, entry, todayKey) {
   };
 }
 
-export function buildMonthlyRows(records, year, month, now = new Date()) {
+export function buildMonthlyRows(records, year, month, now = new Date(), schedules = [], divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026) {
   const byDate = groupByDate(records);
+  const schedulesByDate = Object.fromEntries((schedules || []).map((item) => [item.date, item]));
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayKey = dateKey(today);
   const { start, end } = getPeriodRange(year, month);
@@ -302,23 +313,45 @@ export function buildMonthlyRows(records, year, month, now = new Date()) {
 
   const rows = [];
   for (let date = new Date(start); date <= end; date = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)) {
-    if (date > today) break; // hari mendatang tidak ditampilkan
     const key = dateKey(date);
     const entry = byDate.get(key);
+
+    if (date > today && !entry) {
+      const future = blankRow(key);
+      const schedule = schedulesByDate[key];
+      future.shift = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
+      const isRegularWorkday = String(divisionType || '').toUpperCase() !== 'SHIFTING'
+        && !isWeekend(date) && !holidaysByDate[key];
+      const isShiftWorkday = String(divisionType || '').toUpperCase() === 'SHIFTING'
+        && Boolean(schedule?.shiftName);
+      if (isRegularWorkday || isShiftWorkday) {
+        future.status = 'BELUM ABSEN';
+        future.tone = 'belum';
+        future.note = 'Jadwal kerja belum dimulai';
+      }
+      rows.push(future);
+      continue;
+    }
 
     if (!entry) {
       // Tidak ada data. Hari kerja yang sudah lewat (dan tidak libur, serta
       // setelah catatan absensi pertama) dinilai "Tanpa Keterangan (Alpha)";
       // hari ini "Belum Absen". Selain itu barisnya tetap tampil, isinya "-".
       const isToday = key === todayKey;
-      const isWorkday = !isWeekend(date) && !LOCAL_HOLIDAYS_2026[key];
-      const isEvaluable = isToday || (firstRecordKey && key >= firstRecordKey);
-      if (!(isWorkday && isEvaluable)) {
-        rows.push(blankRow(key));
+      const isWorkday = !isWeekend(date) && !holidaysByDate[key];
+      const schedule = schedulesByDate[key];
+      const isScheduledWorkday = String(divisionType || '').toUpperCase() === 'SHIFTING'
+        ? Boolean(schedule?.shiftName)
+        : isWorkday;
+      const isEvaluable = isToday || (firstRecordKey && key >= firstRecordKey) || isScheduledWorkday;
+      if (!(isScheduledWorkday && isEvaluable)) {
+        const blank = blankRow(key);
+        blank.shift = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
+        rows.push(blank);
         continue;
       }
     }
-    rows.push(resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey));
+    rows.push(resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey, schedulesByDate, divisionType, holidaysByDate));
   }
 
   return rows.sort((a, b) => (a.date < b.date ? 1 : -1));

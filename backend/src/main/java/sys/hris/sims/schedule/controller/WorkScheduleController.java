@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.schedule.dto.ScheduleEntryResponse;
+import sys.hris.sims.schedule.dto.MyWorkScheduleResponse;
 import sys.hris.sims.schedule.dto.SchedulePublishRequest;
 import sys.hris.sims.schedule.dto.SchedulePublishResult;
+import sys.hris.sims.schedule.dto.ScheduleResetRequest;
 import sys.hris.sims.schedule.service.WorkScheduleService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
@@ -43,6 +45,13 @@ public class WorkScheduleController {
         return ResponseEntity.ok(scheduleService.getByMonth(year, month));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<MyWorkScheduleResponse> getMyByMonth(@RequestParam int year,
+                                                               @RequestParam int month,
+                                                               Authentication authentication) {
+        return ResponseEntity.ok(scheduleService.getMyByMonth(authentication.getName(), year, month));
+    }
+
     @PostMapping("/publish")
     public ResponseEntity<SchedulePublishResult> publish(@RequestBody SchedulePublishRequest request,
                                                          Authentication authentication,
@@ -60,5 +69,11 @@ public class WorkScheduleController {
                 httpRequest);
 
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/reset")
+    public ResponseEntity<java.util.Map<String, Long>> reset(@RequestBody ScheduleResetRequest request) {
+        long deleted = scheduleService.reset(request);
+        return ResponseEntity.ok(java.util.Map.of("deleted", deleted));
     }
 }

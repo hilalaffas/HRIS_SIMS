@@ -3,6 +3,7 @@ package sys.hris.sims.attendance.entity;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -112,9 +113,11 @@ public class Attendance {
     // sengaja TIDAK punya field jam/tanggal sama sekali.
     @PrePersist
     public void prePersist() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Jakarta"));
         this.recordedAt = now;
-        this.attendanceDate = now.toLocalDate();
+        if (this.attendanceDate == null) {
+            this.attendanceDate = now.toLocalDate();
+        }
         this.createdAt = now;
         if (this.approvalStatus == null) {
             this.approvalStatus = "NOT_REQUIRED";

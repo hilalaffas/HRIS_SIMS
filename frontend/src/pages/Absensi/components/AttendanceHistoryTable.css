@@ -18,6 +18,15 @@
   min-width: 0;
 }
 
+.abs-upcoming-schedule { display: grid; gap: 10px; margin: 15px 0; padding: 14px 16px; border: 1px solid var(--abs-border); border-radius: 10px; background: var(--color-surface-muted, #f7faf9); }
+.abs-upcoming-schedule-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.abs-upcoming-schedule-heading h3 { margin: 0; color: var(--color-text, #173a31); font-size: 15px; }
+.abs-upcoming-schedule-heading>span { color: #63758b; font-size: 12px; }
+.abs-upcoming-schedule-list { display: grid; grid-template-columns: repeat(7, minmax(105px, 1fr)); gap: 8px; overflow-x: auto; }
+.abs-upcoming-schedule-item { display: grid; gap: 4px; min-width: 105px; padding: 9px 10px; border: 1px solid #b8ead8; border-radius: 8px; background: #effbf6; color: #17694e; font-size: 12px; }
+.abs-upcoming-schedule-item.is-off { border-color: var(--abs-border); background: var(--color-surface, #fff); color: #687887; }
+
+
 .abs-section-heading {
   display: flex;
   justify-content: space-between;

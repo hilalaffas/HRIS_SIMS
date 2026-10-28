@@ -30,8 +30,8 @@ import {
 
 const IDLE_WINDOW = { status: 'idle', data: null, error: '' }; // status: idle | loading | ready | error
 
-export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubmitted }) {
-  const early = useEarlyCheckout({ openCapture, checkInAt });
+export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubmitted, shiftEndTime, requiredWorkHours }) {
+  const early = useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours });
   const { startAttendance: startEarlyAware } = early;
 
   const [step, setStep] = useState(null); // null (tertutup) | 'choice' | 'form'
@@ -70,13 +70,13 @@ export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubm
   }, []);
 
   const startAttendance = useCallback((action) => {
-    if (action === 'Keluar' && !isEarlyCheckout(checkInAt) && isAfterWorkEnd()) {
+    if (action === 'Keluar' && !isEarlyCheckout(checkInAt, new Date(), requiredWorkHours) && isAfterWorkEnd(new Date(), shiftEndTime)) {
       setStep('choice');
       loadWindow();
       return;
     }
     startEarlyAware(action); // pulang cepat -> popup peringatan; selain itu -> kamera
-  }, [checkInAt, loadWindow, startEarlyAware]);
+  }, [checkInAt, loadWindow, requiredWorkHours, shiftEndTime, startEarlyAware]);
 
   const close = useCallback(() => {
     requestRef.current += 1;

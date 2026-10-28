@@ -6,7 +6,7 @@ import sys.hris.sims.shift.entity.Shift;
 
 // [BARU] Jam dikirim sebagai string "HH:mm" supaya format-nya pasti sama
 // di frontend (tidak tergantung setting serializer Jackson).
-public record ShiftResponse(Long shiftId, String code, String name, String startTime, String endTime) {
+public record ShiftResponse(Long shiftId, String code, String name, String startTime, String endTime, Long divisionId) {
 
     private static final DateTimeFormatter HHMM = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -16,6 +16,7 @@ public record ShiftResponse(Long shiftId, String code, String name, String start
                 shift.getCode(),
                 shift.getName(),
                 shift.getStartTime().format(HHMM),
-                shift.getEndTime().format(HHMM));
+                shift.getEndTime().format(HHMM),
+                shift.getDivisionId());
     }
 }

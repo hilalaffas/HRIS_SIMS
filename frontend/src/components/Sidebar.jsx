@@ -61,6 +61,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   // Menu Khusus HRD (Gambar 3)
   const hrMenuItems = [
     { path: '/karyawan', name: 'Kelola Karyawan (HR)', icon: 'fa-solid fa-users' },
+    { path: '/kelola-divisi-shift', name: 'Kelola Divisi & Shift', icon: 'fa-solid fa-layer-group' },
   ];
 
   // Menu Khusus Super Admin (Gambar 4)

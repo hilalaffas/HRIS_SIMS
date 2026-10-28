@@ -37,6 +37,7 @@ import { SHIFT_HOURS, getSickRecordCovering, isRejectedSick, resolveSickTodaySta
 import {
   formatDateLabel,
   getMyAttendanceHistory,
+  getMyWorkSchedule,
   submitPermissionRequest, // [BARU]
   toDisplayRecord,
   uploadMedicalDocument, // [BARU]
@@ -49,6 +50,7 @@ import './Absensi.css';
 export default function Absensi() {
   const [records, setRecords] = useState([]);
   const [overtimeRecords, setOvertimeRecords] = useState([]); // [BARU]
+  const [myWorkSchedule, setMyWorkSchedule] = useState({ divisionType: 'REGULAR', schedules: [] });
   const [historyLoading, setHistoryLoading] = useState(true);
   const [toast, setToast] = useState(null);
   // [BARU] Popup pengajuan izin/sakit & popup upload surat dokter susulan
@@ -80,12 +82,15 @@ export default function Absensi() {
       // [UBAH] Riwayat absensi + data lembur diambil bersamaan. Kegagalan
       // lembur sengaja tidak menggagalkan riwayat absensi (kolom Lembur
       // cukup menampilkan "-").
-      const [data, overtimeData] = await Promise.all([
+      const now = new Date();
+      const [data, overtimeData, scheduleData] = await Promise.all([
         getMyAttendanceHistory(),
         getMyOvertime().catch(() => []),
+        getMyWorkSchedule(now.getFullYear(), now.getMonth() + 1).catch(() => null),
       ]);
       setRecords((data || []).map(toDisplayRecord));
       setOvertimeRecords((overtimeData || []).map(toDisplayOvertime));
+      if (scheduleData) setMyWorkSchedule(scheduleData);
     } catch (error) {
       showToast(error?.message || 'Gagal memuat riwayat absensi.', 'error');
     } finally {
@@ -120,6 +125,19 @@ export default function Absensi() {
     () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'MASUK' && !isRejectedSick(record)),
     [records, todayKey],
   );
+  const activeShift = useMemo(() => {
+    const scheduleDate = todayCheckIn?.attendanceDate || todayKey;
+    return (myWorkSchedule.schedules || []).find((item) => item.date === scheduleDate)
+      || (myWorkSchedule.schedules || []).find((item) => item.date === todayKey)
+      || null;
+  }, [myWorkSchedule, todayCheckIn, todayKey]);
+  const requiredWorkHours = useMemo(() => {
+    if (String(myWorkSchedule.divisionType || '').toUpperCase() !== 'SHIFTING') return 8;
+    if (!activeShift?.startTime || !activeShift?.endTime) return 8;
+    const [startHour, startMinute] = activeShift.startTime.slice(0, 5).split(':').map(Number);
+    const [endHour, endMinute] = activeShift.endTime.slice(0, 5).split(':').map(Number);
+    return ((endHour * 60 + endMinute - startHour * 60 - startMinute + 1440) % 1440) / 60 || 8;
+  }, [activeShift, myWorkSchedule.divisionType]);
   const todayCheckOut = useMemo(
     () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'KELUAR'),
     [records, todayKey],
@@ -155,6 +173,8 @@ export default function Absensi() {
   const checkoutFlow = useCheckoutFlow({
     openCapture: capture.open,
     checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
+    shiftEndTime: activeShift?.endTime || '17:00',
+    requiredWorkHours,
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 

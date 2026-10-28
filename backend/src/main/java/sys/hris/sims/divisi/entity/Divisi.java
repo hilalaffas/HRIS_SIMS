@@ -6,6 +6,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
+import java.util.ArrayList;
+import java.util.List;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 
 @Entity
@@ -23,4 +29,9 @@ public class Divisi {
     // [BARU] REGULAR atau SHIFTING (Non Regular). Default REGULAR.
     @Column(name = "tipe_divisi", nullable = false, length = 20)
     private String tipeDivisi = "REGULAR";
+
+    @OneToMany(mappedBy = "divisi", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    @JsonManagedReference
+    private List<DivisiShift> shifts = new ArrayList<>();
 }

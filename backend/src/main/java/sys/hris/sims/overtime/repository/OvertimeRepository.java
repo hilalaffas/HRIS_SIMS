@@ -26,4 +26,7 @@ public interface OvertimeRepository extends JpaRepository<OvertimeRequest, Long>
     // menentukan jam mulai lembur tambahan saat check-out.
     List<OvertimeRequest> findByEmployee_EmployeeIdAndOvertimeDateAndStatusInOrderByStartTimeAscOvertimeIdAsc(
             Long employeeId, LocalDate overtimeDate, List<String> statuses);
+
+    List<OvertimeRequest> findByEmployee_EmployeeIdAndOvertimeDateBetweenAndStatusIn(
+            Long employeeId, LocalDate startDate, LocalDate endDate, List<String> statuses);
 }

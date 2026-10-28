@@ -1,7 +1,13 @@
 package sys.hris.sims.schedule.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.temporal.TemporalAdjusters;
+import java.time.DayOfWeek;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -16,8 +22,10 @@ import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.schedule.dto.ScheduleEntryRequest;
 import sys.hris.sims.schedule.dto.ScheduleEntryResponse;
+import sys.hris.sims.schedule.dto.MyWorkScheduleResponse;
 import sys.hris.sims.schedule.dto.SchedulePublishRequest;
 import sys.hris.sims.schedule.dto.SchedulePublishResult;
+import sys.hris.sims.schedule.dto.ScheduleResetRequest;
 import sys.hris.sims.schedule.entity.WorkSchedule;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 import sys.hris.sims.shift.entity.Shift;
@@ -52,6 +60,19 @@ public class WorkScheduleService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public MyWorkScheduleResponse getMyByMonth(String username, int year, int month) {
+        YearMonth ym = YearMonth.of(year, month);
+        Employee employee = employeeRepository.findFirstByUser_Username(username)
+                .orElseThrow(() -> new IllegalStateException("Data karyawan tidak ditemukan untuk user ini"));
+        List<ScheduleEntryResponse> schedules = scheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        employee.getEmployeeId(), ym.atDay(1), ym.atEndOfMonth())
+                .stream().map(ScheduleEntryResponse::from).toList();
+        String divisionType = employee.getDivisi() == null ? "REGULAR" : employee.getDivisi().getTipeDivisi();
+        String divisionName = employee.getDivisi() == null ? null : employee.getDivisi().getNamaDivisi();
+        return new MyWorkScheduleResponse(divisionType, divisionName, schedules);
+    }
+
     // Upsert: entri yang sudah ada (karyawan + tanggal sama) ditimpa.
     @Transactional
     public SchedulePublishResult publish(SchedulePublishRequest request, String publishedBy) {
@@ -83,6 +104,25 @@ public class WorkScheduleService {
 
         Map<Long, Shift> shifts = shiftRepository.findAll().stream()
                 .collect(Collectors.toMap(Shift::getShiftId, s -> s));
+
+        Set<String> entryKeys = new HashSet<>();
+        for (ScheduleEntryRequest entry : entries) {
+            Employee employee = employees.get(entry.employeeId());
+            if (employee.getDivisi() == null || !"SHIFTING".equalsIgnoreCase(employee.getDivisi().getTipeDivisi())) {
+                throw new IllegalArgumentException("Jadwal publish hanya berlaku untuk divisi Non Regular (Shift).");
+            }
+            if (entry.shiftId() != null) {
+                Shift shift = shifts.get(entry.shiftId());
+                if (shift == null || !employee.getDivisi().getId().equals(shift.getDivisionId())) {
+                    throw new IllegalArgumentException("Shift yang dipilih tidak sesuai dengan divisi karyawan.");
+                }
+            }
+            if (!entryKeys.add(key(entry.employeeId(), entry.date()))) {
+                throw new IllegalArgumentException("Ada tanggal jadwal yang sama lebih dari satu kali untuk karyawan.");
+            }
+        }
+
+        validateShiftRoster(entries, employees, shifts);
 
         // Baris lama pada rentang yang sama, diindeks "employeeId|date".
         Map<String, WorkSchedule> existing = new HashMap<>();
@@ -120,7 +160,104 @@ public class WorkScheduleService {
         return new SchedulePublishResult(created, updated);
     }
 
+    @Transactional
+    public long reset(ScheduleResetRequest request) {
+        if (request == null || request.employeeIds() == null || request.employeeIds().isEmpty()) {
+            throw new IllegalArgumentException("Pilih karyawan Non Regular yang jadwalnya akan direset.");
+        }
+        YearMonth ym;
+        try {
+            ym = YearMonth.of(request.year(), request.month());
+        } catch (RuntimeException ex) {
+            throw new IllegalArgumentException("Periode bulan tidak valid.");
+        }
+
+        Set<Long> employeeIds = new HashSet<>(request.employeeIds());
+        Map<Long, Employee> employees = employeeRepository.findAllById(employeeIds).stream()
+                .collect(Collectors.toMap(Employee::getEmployeeId, employee -> employee));
+        if (employees.size() != employeeIds.size()) {
+            throw new IllegalArgumentException("Ada karyawan yang tidak ditemukan.");
+        }
+        boolean containsRegular = employees.values().stream()
+                .anyMatch(employee -> employee.getDivisi() == null
+                        || !"SHIFTING".equalsIgnoreCase(employee.getDivisi().getTipeDivisi()));
+        if (containsRegular) {
+            throw new IllegalArgumentException("Reset jadwal hanya tersedia untuk karyawan divisi Non Regular (Shift).");
+        }
+        return scheduleRepository.deleteByEmployee_EmployeeIdInAndWorkDateBetween(
+                employeeIds, ym.atDay(1), ym.atEndOfMonth());
+    }
+
     private String key(Long employeeId, LocalDate date) {
         return employeeId + "|" + date;
     }
+
+    private void validateShiftRoster(List<ScheduleEntryRequest> entries,
+                                     Map<Long, Employee> employees,
+                                     Map<Long, Shift> shifts) {
+        Map<String, WeeklyRoster> weeks = new HashMap<>();
+        Map<Long, List<ShiftInterval>> intervalsByEmployee = new HashMap<>();
+
+        for (ScheduleEntryRequest entry : entries) {
+            Employee employee = employees.get(entry.employeeId());
+            LocalDate monday = entry.date().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            String weekKey = entry.employeeId() + "|" + monday;
+            WeeklyRoster week = weeks.computeIfAbsent(weekKey, ignored -> new WeeklyRoster());
+            if (entry.shiftId() == null) {
+                week.hasRestDay = true;
+                continue;
+            }
+
+            Shift shift = shifts.get(entry.shiftId());
+            long minutes = shiftDurationMinutes(shift);
+            week.workMinutes += minutes;
+
+            LocalDateTime start = LocalDateTime.of(entry.date(), shift.getStartTime());
+            LocalDateTime end = LocalDateTime.of(entry.date(), shift.getEndTime());
+            if (!shift.getEndTime().isAfter(shift.getStartTime())) {
+                end = end.plusDays(1);
+            }
+            intervalsByEmployee.computeIfAbsent(employee.getEmployeeId(), ignored -> new ArrayList<>())
+                    .add(new ShiftInterval(start, end));
+        }
+
+        for (Map.Entry<String, WeeklyRoster> item : weeks.entrySet()) {
+            WeeklyRoster week = item.getValue();
+            if (week.workMinutes > 40 * 60) {
+                throw new IllegalArgumentException("Jadwal shift melewati batas 40 jam kerja per minggu untuk karyawan "
+                        + item.getKey().substring(0, item.getKey().indexOf('|')) + ".");
+            }
+            if (!week.hasRestDay) {
+                throw new IllegalArgumentException("Setiap karyawan wajib memiliki minimal 1 hari libur pada setiap minggu jadwal.");
+            }
+        }
+
+        for (Map.Entry<Long, List<ShiftInterval>> item : intervalsByEmployee.entrySet()) {
+            List<ShiftInterval> intervals = item.getValue();
+            intervals.sort(Comparator.comparing(ShiftInterval::start));
+            for (int i = 1; i < intervals.size(); i++) {
+                if (intervals.get(i - 1).end().isAfter(intervals.get(i).start())) {
+                    throw new IllegalArgumentException("Jadwal shift karyawan " + item.getKey()
+                            + " bentrok/overlap dengan shift pada tanggal berikutnya.");
+                }
+            }
+        }
+    }
+
+    private long shiftDurationMinutes(Shift shift) {
+        LocalTime start = shift.getStartTime();
+        LocalTime end = shift.getEndTime();
+        long minutes = (end.toSecondOfDay() - start.toSecondOfDay() + 24L * 60 * 60) % (24L * 60 * 60) / 60;
+        if (minutes <= 0 || minutes > 12 * 60) {
+            throw new IllegalArgumentException("Durasi shift tidak valid. Periksa pengaturan shift divisi.");
+        }
+        return minutes;
+    }
+
+    private static class WeeklyRoster {
+        private long workMinutes;
+        private boolean hasRestDay;
+    }
+
+    private record ShiftInterval(LocalDateTime start, LocalDateTime end) { }
 }

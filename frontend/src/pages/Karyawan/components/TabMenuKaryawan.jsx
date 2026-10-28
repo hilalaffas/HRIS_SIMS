@@ -1,8 +1,11 @@
 import React from 'react';
 import './TabMenuKaryawan.css';
+import { isSuperAdmin, isHrAdmin } from '../../../utils/roles';
 
-const TabMenuKaryawan = ({ activeTab, setActiveTab }) => {
-  const tabs = ['List Karyawan', 'Cuti Karyawan', 'Data Divisi', 'Log Sistem'];
+const TabMenuKaryawan = ({ activeTab, setActiveTab, user }) => {
+  const tabs = isSuperAdmin(user)
+    ? ['List Karyawan', 'Cuti Karyawan', 'Data Divisi', 'Log Sistem']
+    : isHrAdmin(user) ? ['List Karyawan', 'Cuti Karyawan', 'Data Divisi', 'Log Sistem'] : [];
 
   return (
     <div className="tab-menu-container">

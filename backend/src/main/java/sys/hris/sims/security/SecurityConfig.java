@@ -202,10 +202,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/shift/**")
                         .hasAnyRole(ADMIN_ROLES)
 
+                        .requestMatchers(HttpMethod.GET, "/api/jadwal/me")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/api/jadwal")
                         .hasAnyRole(ADMIN_ROLES)
 
                         .requestMatchers(HttpMethod.POST, "/api/jadwal/publish")
+                        .hasAnyRole(ADMIN_ROLES)
+
+                        .requestMatchers(HttpMethod.POST, "/api/jadwal/reset")
                         .hasAnyRole(ADMIN_ROLES)
 
                         // ==========================

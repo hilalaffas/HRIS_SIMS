@@ -35,4 +35,7 @@ public class Shift {
 
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;
+
+    @Column(name = "division_id")
+    private Long divisionId;
 }

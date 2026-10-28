@@ -5,7 +5,10 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Locale;
 
@@ -25,6 +28,8 @@ import sys.hris.sims.overtime.dto.OvertimeResponse;
 import sys.hris.sims.overtime.dto.OvertimeSubmitRequest;
 import sys.hris.sims.overtime.entity.OvertimeRequest;
 import sys.hris.sims.overtime.repository.OvertimeRepository;
+import sys.hris.sims.schedule.entity.WorkSchedule;
+import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +37,8 @@ public class OvertimeService {
 
     private static final int MAX_REASON_LENGTH = 500;
 
-    // [BARU] Lembur tambahan saat check-out. Jam kerja berakhir 17:00 WIB (sama
-    // dengan Shift Normal di frontend). Waktu SELALU dibaca dalam zona WIB,
-    // bukan zona bawaan server, supaya "17:00" tidak bergeser di server UTC.
+    // Jam kerja reguler berakhir 17:00 WIB; divisi shift memakai jam akhir
+    // jadwal karyawan yang dipublikasikan.
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Jakarta");
     private static final LocalTime WORK_END_TIME = LocalTime.of(17, 0);
     private static final List<String> ACTIVE_STATUSES = List.of("PENDING", "APPROVED");
@@ -49,6 +53,7 @@ public class OvertimeService {
     private final AttendanceRepository attendanceRepository;
     // [BARU] Aturan siapa boleh melihat / memutuskan lembur siapa.
     private final ApprovalScopeService approvalScopeService;
+    private final WorkScheduleRepository workScheduleRepository;
 
     public List<OvertimeResponse> getMyOvertime(String username) {
         Employee employee = resolveEmployee(username);
@@ -91,13 +96,14 @@ public class OvertimeService {
         return toResponse(overtimeRepository.save(overtime));
     }
 
+    @Transactional
     public OvertimeResponse submit(String username, OvertimeSubmitRequest request) {
         Employee employee = resolveEmployee(username);
 
         if (request.getOvertimeDate() == null) {
             throw new IllegalArgumentException("Tanggal lembur wajib diisi.");
         }
-        if (request.getOvertimeDate().isAfter(LocalDate.now())) {
+        if (request.getOvertimeDate().isAfter(LocalDate.now(APP_ZONE))) {
             throw new IllegalArgumentException("Tanggal lembur tidak boleh melebihi hari ini.");
         }
         if (request.getStartTime() == null || request.getEndTime() == null) {
@@ -121,6 +127,7 @@ public class OvertimeService {
         }
 
         int totalMinutes = (int) Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
+        validateShiftOvertime(employee, request.getOvertimeDate(), totalMinutes);
 
         OvertimeRequest saved = overtimeRepository.save(OvertimeRequest.builder()
                 .employee(employee)
@@ -140,7 +147,8 @@ public class OvertimeService {
     // lembur apa saja yang sudah tercatat hari ini.
     public OvertimeExtensionWindowResponse getExtensionWindow(String username) {
         Employee employee = resolveEmployee(username);
-        return buildExtensionWindow(employee, ZonedDateTime.now(APP_ZONE));
+        ZonedDateTime now = ZonedDateTime.now(APP_ZONE);
+        return buildExtensionWindow(employee, now, resolveScheduleContext(employee, now));
     }
 
     // [BARU] "Tambah Lembur" saat check-out: lembur susulan yang TIDAK sesuai
@@ -153,18 +161,19 @@ public class OvertimeService {
         Employee employee = resolveEmployee(username);
         Long employeeId = employee.getEmployeeId();
         ZonedDateTime now = ZonedDateTime.now(APP_ZONE);
-        LocalDate today = now.toLocalDate();
+        ScheduleContext context = resolveScheduleContext(employee, now);
+        LocalDate workDate = context.workDate();
 
         // Hanya sah selama user sedang bekerja: sudah check-in, belum check-out,
         // dan bukan hari Sakit/Izin. Setelah check-out, pakai menu Pengajuan Lembur.
-        if (!attendanceRepository.existsActiveByAction(employeeId, today, "MASUK")) { // [UBAH] sakit ditolak diabaikan
+        if (!attendanceRepository.existsActiveByAction(employeeId, workDate, "MASUK")) { // sakit ditolak diabaikan
             throw new IllegalStateException("Anda belum melakukan check-in hari ini.");
         }
         if (attendanceRepository.existsActiveByActionAndReasonIn(
-                employeeId, today, "MASUK", List.of("SAKIT", "IZIN"))) {
+                employeeId, workDate, "MASUK", List.of("SAKIT", "IZIN"))) {
             throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, lembur tidak dapat diajukan.");
         }
-        if (attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employeeId, today, "KELUAR")) {
+        if (attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employeeId, workDate, "KELUAR")) {
             throw new IllegalStateException(
                     "Anda sudah check-out hari ini. Ajukan lembur melalui menu Pengajuan Lembur.");
         }
@@ -174,7 +183,7 @@ public class OvertimeService {
         }
 
         // Jam mulai & batas atas dihitung SERVER (bukan dari klien).
-        OvertimeExtensionWindowResponse window = buildExtensionWindow(employee, now);
+        OvertimeExtensionWindowResponse window = buildExtensionWindow(employee, now, context);
         LocalTime start = window.getStartTime();
         LocalTime end = request.getEndTime().truncatedTo(ChronoUnit.MINUTES);
 
@@ -195,12 +204,15 @@ public class OvertimeService {
             throw new IllegalArgumentException("Alasan lembur maksimal " + maxReasonLength + " karakter.");
         }
 
+        int requestedMinutes = (int) Duration.between(start, end).toMinutes();
+        validateShiftOvertime(employee, workDate, requestedMinutes);
+
         OvertimeRequest saved = overtimeRepository.save(OvertimeRequest.builder()
                 .employee(employee)
-                .overtimeDate(today)
+                .overtimeDate(workDate)
                 .startTime(start)
                 .endTime(end)
-                .totalMinutes((int) Duration.between(start, end).toMinutes())
+                .totalMinutes(requestedMinutes)
                 .reason(EXTENSION_REASON_PREFIX + reason)
                 .status("PENDING")
                 .build());
@@ -208,14 +220,16 @@ public class OvertimeService {
         return toResponse(saved);
     }
 
-    private OvertimeExtensionWindowResponse buildExtensionWindow(Employee employee, ZonedDateTime now) {
-        LocalDate today = now.toLocalDate();
+    private OvertimeExtensionWindowResponse buildExtensionWindow(Employee employee, ZonedDateTime now, ScheduleContext context) {
+        LocalDate workDate = context.workDate();
         List<OvertimeRequest> active = overtimeRepository
                 .findByEmployee_EmployeeIdAndOvertimeDateAndStatusInOrderByStartTimeAscOvertimeIdAsc(
-                        employee.getEmployeeId(), today, ACTIVE_STATUSES);
+                        employee.getEmployeeId(), workDate, ACTIVE_STATUSES);
 
         // Mulai dari jam pulang, lalu geser ke akhir lembur aktif yang paling akhir.
-        LocalTime start = WORK_END_TIME;
+        LocalTime workEnd = context.schedule() != null && context.schedule().getShift() != null
+                ? context.schedule().getShift().getEndTime() : WORK_END_TIME;
+        LocalTime start = workEnd;
         for (OvertimeRequest overtime : active) {
             if (overtime.getEndTime().isAfter(start)) {
                 start = overtime.getEndTime();
@@ -224,15 +238,75 @@ public class OvertimeService {
         // Lembur susulan = pekerjaan yang SUDAH terjadi, jadi paling jauh sampai menit ini.
         LocalTime maxEnd = now.toLocalTime().truncatedTo(ChronoUnit.MINUTES);
 
+        boolean afterWorkEnd = hasPassedWorkEnd(context, now);
         return OvertimeExtensionWindowResponse.builder()
-                .overtimeDate(today)
-                .workEndTime(WORK_END_TIME)
+                .overtimeDate(workDate)
+                .workEndTime(workEnd)
                 .startTime(start)
                 .maxEndTime(maxEnd)
-                .canExtend(maxEnd.isAfter(start))
+                .canExtend(afterWorkEnd && maxEnd.isAfter(start))
                 .entries(active.stream().map(this::toResponse).toList())
                 .build();
     }
+
+    private ScheduleContext resolveScheduleContext(Employee employee, ZonedDateTime now) {
+        LocalDate today = now.toLocalDate();
+        WorkSchedule todaySchedule = findSchedule(employee.getEmployeeId(), today);
+        LocalDate previousDate = today.minusDays(1);
+        WorkSchedule previousSchedule = findSchedule(employee.getEmployeeId(), previousDate);
+        boolean continuingOvernight = previousSchedule != null && previousSchedule.getShift() != null
+                && previousSchedule.getShift().getEndTime().isBefore(previousSchedule.getShift().getStartTime())
+                && now.toLocalDateTime().isBefore(LocalDateTime.of(today, previousSchedule.getShift().getEndTime()))
+                && attendanceRepository.existsActiveByAction(employee.getEmployeeId(), previousDate, "MASUK");
+        return continuingOvernight
+                ? new ScheduleContext(previousDate, previousSchedule)
+                : new ScheduleContext(today, todaySchedule);
+    }
+
+    private boolean hasPassedWorkEnd(ScheduleContext context, ZonedDateTime now) {
+        LocalTime end = context.schedule() != null && context.schedule().getShift() != null
+                ? context.schedule().getShift().getEndTime() : WORK_END_TIME;
+        LocalDate endDate = context.workDate();
+        if (context.schedule() != null && context.schedule().getShift() != null
+                && end.isBefore(context.schedule().getShift().getStartTime())) {
+            endDate = endDate.plusDays(1);
+        }
+        return !now.toLocalDateTime().isBefore(LocalDateTime.of(endDate, end));
+    }
+
+    private WorkSchedule findSchedule(Long employeeId, LocalDate date) {
+        return workScheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        employeeId, date, date)
+                .stream().findFirst().orElse(null);
+    }
+
+    private void validateShiftOvertime(Employee employee, LocalDate date, int requestedMinutes) {
+        if (employee.getDivisi() == null
+                || !"SHIFTING".equalsIgnoreCase(employee.getDivisi().getTipeDivisi())) {
+            return;
+        }
+        if (requestedMinutes <= 0 || requestedMinutes > 4 * 60) {
+            throw new IllegalArgumentException("Lembur karyawan shift maksimal 4 jam per hari.");
+        }
+
+        LocalDate weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate weekEnd = weekStart.plusDays(6);
+        List<OvertimeRequest> active = overtimeRepository.findByEmployee_EmployeeIdAndOvertimeDateBetweenAndStatusIn(
+                employee.getEmployeeId(), weekStart, weekEnd, ACTIVE_STATUSES);
+        int dailyMinutes = active.stream()
+                .filter(item -> date.equals(item.getOvertimeDate()))
+                .mapToInt(OvertimeRequest::getTotalMinutes)
+                .sum();
+        int weeklyMinutes = active.stream().mapToInt(OvertimeRequest::getTotalMinutes).sum();
+        if (dailyMinutes + requestedMinutes > 4 * 60) {
+            throw new IllegalArgumentException("Total lembur karyawan shift tidak boleh melebihi 4 jam per hari.");
+        }
+        if (weeklyMinutes + requestedMinutes > 18 * 60) {
+            throw new IllegalArgumentException("Total lembur karyawan shift tidak boleh melebihi 18 jam per minggu.");
+        }
+    }
+
+    private record ScheduleContext(LocalDate workDate, WorkSchedule schedule) { }
 
     private Employee resolveEmployee(String username) {
         return employeeRepository.findFirstByUser_Username(username)

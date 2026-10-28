@@ -14,4 +14,11 @@ public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Long
 
     List<WorkSchedule> findByEmployee_EmployeeIdInAndWorkDateBetween(
             Collection<Long> employeeIds, LocalDate start, LocalDate end);
+
+    List<WorkSchedule> findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+            Long employeeId, LocalDate start, LocalDate end);
+
+    long deleteByEmployee_EmployeeIdInAndWorkDateBetween(
+            Collection<Long> employeeIds, LocalDate start, LocalDate end);
+
 }
