@@ -281,6 +281,21 @@ export async function getTeamLeaveByYear(year, config = {}) {
   return { byDate, list };
 }
 
+// [BARU] Status tiap approver (Leader/SPV/Manager) dari log approval backend, dipakai stepper progres
+// di popup detail cuti. Role yang tidak ada di log (mis. pemohon level atasan) otomatis dilewati.
+const APPROVER_ROLES = ['LEADER', 'SPV', 'MANAGER'];
+const buildApprovalSteps = (logs, chain) => APPROVER_ROLES.map((role) => {
+  const log = logs.find((entry) => String(entry.approverRole || '').toUpperCase() === role);
+  if (!log) return null;
+  const action = String(log.action || 'PENDING').toUpperCase();
+  return {
+    role,
+    name: log.approverName || chain[role.toLowerCase()] || '-',
+    action,
+    actedAt: action === 'PENDING' ? null : logDateText(log.actedAt),
+  };
+}).filter(Boolean);
+
 export function mapApproval(item, employeeLookup = {}) {
   if (!item) return {};
   const logs = Array.isArray(item.approvalLogs) ? item.approvalLogs : [];
@@ -348,6 +363,7 @@ export function mapApproval(item, employeeLookup = {}) {
     dicoverOleh: item.coveredBy || '-',
     statusBerkas: statusCode(item.overallStatus || item.status?.statusName || item.status),
     approvalChain: chain,
+    approvalSteps: buildApprovalSteps(logs, chain), // [BARU]
     submittedAt: item.submittedAt || null, 
     riwayatLog: [
       ...submissionLog,
@@ -417,6 +433,7 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     pekerjaanTertunda: item.pendingWork || '-',
     dicoverOleh: item.coveredBy || '-',
     approvalChain: chain,
+    approvalSteps: buildApprovalSteps(logs, chain), // [BARU]
     riwayatLog: hasBeenReviewed ? [{
       nama: item.reviewedBy?.fullName || 'Sistem',
       waktu: logDateText(item.approvedAt || item.returnedAt),

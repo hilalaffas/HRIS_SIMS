@@ -112,28 +112,45 @@ button.pgj-status:focus-visible { outline: 2px solid #57b89a; outline-offset: 2p
 .pgj-status.is-active { box-shadow: 0 0 0 2px currentColor; }
 button.pgj-status.is-active:hover { box-shadow: 0 0 0 2px currentColor, 0 3px 8px rgba(26, 52, 67, 0.14); }
 
-/* ----- Tombol aksi (Detail / Upload Surat) ----- */
+/* ----- Tombol aksi: pil berwarna sesuai status (DI REVIEW / DISETUJUI / DITOLAK / REVISI / ...) ----- */
 .pgj-action {
+  --pill-from: #64748b;
+  --pill-to: #94a3b8;
+  --pill-glow: rgba(100, 116, 139, 0.32);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 10px;
+  min-width: 128px;
+  padding: 8px 18px;
   font: inherit;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--dk-text-green, #078b6b);
-  background: transparent;
-  border: 1px solid var(--color-border, #dbe5e2);
-  border-radius: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  white-space: nowrap;
+  background: linear-gradient(135deg, var(--pill-from), var(--pill-to));
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 3px 8px var(--pill-glow);
   cursor: pointer;
-  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, filter 0.2s ease;
 }
-.pgj-action:hover { background: var(--dk-tint-green, #effaf6); border-color: #9ed8c5; transform: translateY(-1px); }
-.pgj-action:active { transform: scale(0.97); }
-.pgj-action:focus-visible { outline: 2px solid #57b89a; outline-offset: 2px; }
-.pgj-action svg { width: 14px; height: 14px; }
-.pgj-action--upload { color: #e11d48; border-color: #fecdd3; }
-.pgj-action--upload:hover { background: var(--dk-tint-red, #fff1f2); border-color: #fda4af; }
+.pgj-action:hover { transform: translateY(-2px); box-shadow: 0 6px 14px var(--pill-glow); filter: brightness(1.05); }
+.pgj-action:active { transform: scale(0.96); box-shadow: 0 2px 5px var(--pill-glow); }
+.pgj-action:focus-visible { outline: 2px solid var(--pill-from); outline-offset: 2px; }
+.pgj-action svg { width: 14px; height: 14px; flex-shrink: 0; }
+.pgj-action--review { --pill-from: #ff7a1a; --pill-to: #fbbf24; --pill-glow: rgba(249, 115, 22, 0.35); }
+.pgj-action--approved { --pill-from: #10b981; --pill-to: #34d399; --pill-glow: rgba(16, 185, 129, 0.35); }
+.pgj-action--rejected { --pill-from: #f43f5e; --pill-to: #fb7185; --pill-glow: rgba(244, 63, 94, 0.35); }
+.pgj-action--returned { --pill-from: #3b82f6; --pill-to: #60a5fa; --pill-glow: rgba(59, 130, 246, 0.35); }
+.pgj-action--upload { --pill-from: #8b5cf6; --pill-to: #a78bfa; --pill-glow: rgba(139, 92, 246, 0.35); }
+/* Jam pasir berputar pelan: penanda berkas masih diproses */
+.pgj-action--review svg { animation: pgjHourglassTurn 2.4s ease-in-out infinite; }
+@keyframes pgjHourglassTurn {
+  0%, 55% { transform: rotate(0deg); }
+  80%, 100% { transform: rotate(180deg); }
+}
 
 .pgj-history__footer {
   display: flex;
@@ -174,4 +191,5 @@ button.pgj-status.is-active:hover { box-shadow: 0 0 0 2px currentColor, 0 3px 8p
 @media (prefers-reduced-motion: reduce) {
   .pgj-history, .pgj-table tbody tr, .pgj-skeleton { animation: none; }
   .pgj-action, button.pgj-status, .pgj-more { transition: none; }
+  .pgj-action--review svg { animation: none; }
 }

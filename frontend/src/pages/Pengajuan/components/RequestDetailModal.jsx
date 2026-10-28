@@ -5,20 +5,25 @@
 // memakai popup FormCuti yang sudah ada). Isinya disiapkan
 // buildRequestDetail() di utils/pengajuanItems.js.
 //
+// [UBAH] Compact (lebih sedikit scroll) dan alur persetujuan memakai <ApprovalProgressStepper>
+// yang sama dengan popup detail cuti.
+//
 // Contoh pemakaian:
 // <RequestDetailModal detail={detail} onClose={fn} />
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
+import ApprovalProgressStepper from '../../../components/ApprovalProgressStepper';
 import useModalExit from '../../../hooks/useModalExit';
 import './RequestDetailModal.css';
 
-const STEP_STATE_LABEL = {
+// Keterangan di bawah tiap tahap pada stepper
+const STEP_CAPTION = {
   done: 'Selesai',
-  current: 'Menunggu',
+  current: 'Sedang diproses',
   rejected: 'Ditolak',
   returned: 'Dikembalikan',
   cancelled: 'Dibatalkan',
-  upcoming: 'Belum diproses',
+  upcoming: 'Menunggu giliran',
 };
 
 export default function RequestDetailModal({ detail, onClose }) {
@@ -32,6 +37,14 @@ export default function RequestDetailModal({ detail, onClose }) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [close, onClose]);
+
+  // Langkah "Diajukan" selalu selesai, jadi dilewati: stepper hanya menampilkan tahap persetujuan.
+  const progressSteps = useMemo(
+    () => (detail?.steps || [])
+      .filter((step) => step.key !== 'submitted')
+      .map((step) => ({ key: step.key, label: step.label, caption: STEP_CAPTION[step.state], state: step.state })),
+    [detail],
+  );
 
   if (!detail) return null;
 
@@ -74,24 +87,16 @@ export default function RequestDetailModal({ detail, onClose }) {
             </div>
           </div>
 
-          {detail.sections.map((section) => (
-            <div className="pgj-detail-section" key={section.label}>
-              <span className="pgj-detail-label">{section.label}</span>
-              <div className="pgj-detail-box">{section.value || '-'}</div>
-            </div>
-          ))}
+          {progressSteps.length > 0 && <ApprovalProgressStepper steps={progressSteps} />}
 
-          {detail.steps.length > 0 && (
-            <div className="pgj-detail-section">
-              <span className="pgj-detail-label">Alur Persetujuan</span>
-              <ol className="pgj-detail-steps">
-                {detail.steps.map((step) => (
-                  <li key={step.key} className={`pgj-detail-step pgj-detail-step--${step.state}`}>
-                    <span className="pgj-detail-step-name">{step.label}</span>
-                    <span className="pgj-detail-step-state">{STEP_STATE_LABEL[step.state]}</span>
-                  </li>
-                ))}
-              </ol>
+          {detail.sections.length > 0 && (
+            <div className="pgj-detail-sections">
+              {detail.sections.map((section) => (
+                <div className="pgj-detail-section" key={section.label}>
+                  <span className="pgj-detail-label">{section.label}</span>
+                  <div className="pgj-detail-box">{section.value || '-'}</div>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -1,9 +1,11 @@
 // src/pages/Pengajuan/components/PengajuanHistoryTable.jsx
 //
 // Tabel "Riwayat Pengajuan Saya": gabungan semua jenis pengajuan.
-//  - klik tombol STATUS  -> kartu alur persetujuan di atas berpindah ke pengajuan itu
-//  - klik tombol DETAIL  -> popup detail pengajuan; khusus izin sakit yang suratnya
-//                           belum ada, tombolnya berubah jadi "Upload Surat" (surat susulan)
+//  - kolom STATUS: badge status. Hanya bisa diklik bila prop `onSelectStatus` diberikan
+//    (saat ini dimatikan lewat PENGAJUAN_VISIBILITY.statusPopup = false).
+//  - kolom AKSI  : [UBAH] tombol pil berwarna sesuai status (DI REVIEW / DISETUJUI / DITOLAK /
+//    REVISI / TERCATAT); klik -> popup detail pengajuan. Khusus izin sakit yang suratnya belum
+//    ada, tombolnya berubah jadi "UPLOAD SURAT" (surat susulan).
 //
 // Contoh pemakaian:
 // [UBAH] item.typeLabel (opsional) menggantikan label jenis bawaan di kolom JENIS (mis. "Cuti Tahunan");
@@ -11,7 +13,7 @@
 // <PengajuanHistoryTable items={items} loading={false} selectedKey={key}
 //   resetKey={`${kind}|${status}|${search}`} onSelectStatus={fn} onAction={fn} />
 import React, { useState } from 'react';
-import { Check, Clock3, FileText, FileUp, RotateCcw } from 'lucide-react';
+import { Check, CheckCircle2, ClipboardCheck, Clock3, FileText, FileUp, Hourglass, RotateCcw, RotateCw, XCircle } from 'lucide-react';
 import { KIND_META, ROW_ACTION, getItemDateLabel } from '../utils/pengajuanItems';
 import './PengajuanHistoryTable.css';
 
@@ -20,13 +22,31 @@ const SKELETON_ROWS = 3;
 
 const STATUS_ICON = { warning: Clock3, success: Check, info: RotateCcw };
 
+// [BARU] Tombol AKSI berbentuk pil, label & warna mengikuti kode status pengajuan.
+const ACTION_PILL = {
+  PENDING: { label: 'DI REVIEW', Icon: Hourglass, tone: 'review' },
+  APPROVED: { label: 'DISETUJUI', Icon: CheckCircle2, tone: 'approved' },
+  REJECTED: { label: 'DITOLAK', Icon: XCircle, tone: 'rejected' },
+  RETURNED: { label: 'REVISI', Icon: RotateCw, tone: 'returned' },
+  RECORDED: { label: 'TERCATAT', Icon: ClipboardCheck, tone: 'recorded' },
+};
+const DEFAULT_ACTION_PILL = { label: 'DETAIL', Icon: FileText, tone: 'recorded' };
+const UPLOAD_ACTION_PILL = { label: 'UPLOAD SURAT', Icon: FileUp, tone: 'upload' };
+
 function StatusCell({ item, isSelected, onSelectStatus }) {
-  // Pengajuan tanpa alur persetujuan (izin terlambat): badge status biasa, tidak bisa diklik.
-  if (!item.requiresApproval) {
-    return <span className={`pgj-status pgj-status--${item.statusTone}`}>{item.statusLabel}</span>;
+  const Icon = STATUS_ICON[item.statusTone];
+
+  // Badge biasa (tidak bisa diklik): izin terlambat (tanpa alur persetujuan) atau bila klik status
+  // dimatikan (`onSelectStatus` tidak diberikan).
+  if (!item.requiresApproval || !onSelectStatus) {
+    return (
+      <span className={`pgj-status pgj-status--${item.statusTone}`}>
+        {item.requiresApproval && Icon && <Icon aria-hidden="true" />}
+        {item.statusLabel}
+      </span>
+    );
   }
 
-  const Icon = STATUS_ICON[item.statusTone];
   return (
     <button
       type="button"
@@ -99,9 +119,10 @@ export default function PengajuanHistoryTable({
             {!loading && visibleItems.map((item, index) => {
               const kind = KIND_META[item.kind];
               const isUpload = item.action === ROW_ACTION.UPLOAD_LETTER;
-              const ActionIcon = isUpload ? FileUp : FileText;
               const typeLabel = item.typeLabel || kind.label; // [BARU]
-              const actionLabel = isUpload ? 'Upload surat dokter susulan' : `Lihat detail ${typeLabel}`;
+              const pill = isUpload ? UPLOAD_ACTION_PILL : (ACTION_PILL[item.statusCode] || DEFAULT_ACTION_PILL);
+              const ActionIcon = pill.Icon;
+              const actionLabel = isUpload ? 'Upload surat dokter susulan' : `${pill.label}: lihat detail ${typeLabel}`;
               return (
                 <tr
                   key={item.key}
@@ -117,13 +138,13 @@ export default function PengajuanHistoryTable({
                   <td className="pgj-right">
                     <button
                       type="button"
-                      className={`pgj-action${isUpload ? ' pgj-action--upload' : ''}`}
+                      className={`pgj-action pgj-action--${pill.tone}`}
                       onClick={() => onAction(item)}
                       aria-label={actionLabel}
                       title={actionLabel}
                     >
                       <ActionIcon aria-hidden="true" />
-                      {isUpload ? 'Upload Surat' : 'Detail'}
+                      {pill.label}
                     </button>
                   </td>
                 </tr>

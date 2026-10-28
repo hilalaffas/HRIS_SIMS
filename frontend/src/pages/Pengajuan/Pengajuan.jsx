@@ -165,8 +165,10 @@ export default function Pengajuan({ user }) {
   const letterTarget = attendanceRecords.find((record) => record.id === letterTargetId);
 
   // ===================== HANDLER =====================
-  // [UBAH] Tombol status di riwayat (semua tab) membuka POPUP kartu alur persetujuan bergaris
-  const handleSelectStatus = (item) => setStatusKey(item.key);
+  // [UBAH] Klik tombol status di riwayat (semua tab) membuka POPUP kartu alur persetujuan bergaris.
+  // Saat ini dimatikan lewat PENGAJUAN_VISIBILITY.statusPopup = false: tabel tidak menerima handler,
+  // jadi badge status tampil statis. Kode popup (ApprovalStatusModal) tetap ada untuk diaktifkan lagi.
+  const handleSelectStatus = PENGAJUAN_VISIBILITY.statusPopup ? (item) => setStatusKey(item.key) : undefined;
 
   const handleRowAction = (item) => {
     if (item.kind === REQUEST_KIND.LEAVE) leave.handleOpenDetail(item.source);

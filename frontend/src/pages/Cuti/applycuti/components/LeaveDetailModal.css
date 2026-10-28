@@ -286,21 +286,21 @@
 .form-cuti__modal {
   background-color: var(--dk-bg-card, #ffffff);
   width: 100%;
-  max-width: 620px; 
+  max-width: 720px; /* [UBAH] sedikit lebih lebar agar isi tersusun 2 kolom & tidak panjang ke bawah */
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  animation: formCutiPopIn 0.25s ease-out;
+  animation: formCutiPopIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* HEADER MODAL - Warna Hijau Gelap */
 .form-cuti__header {
   background-color: #0f4c3a; /* Hijau gelap sesuai gambar */
   color: #ffffff;
-  padding: 20px 24px;
+  padding: 14px 20px; /* [UBAH] lebih ringkas */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -343,18 +343,19 @@
 
 /* BODY MODAL - Area Konten Ber-scroll */
 .form-cuti__body {
-  padding: 24px;
+  padding: 16px 20px; /* [UBAH] compact: sebelumnya 24px */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px; /* [UBAH] sebelumnya 18px */
 }
 
 /* GRID SYSTEM - Baris Informasi Utama */
+/* [UBAH] 4 info utama sejajar dalam satu baris (sebelumnya 2 baris x 2 kolom) */
 .form-cuti__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: 1.1fr 1fr 1.5fr 0.9fr;
+  gap: 12px 16px;
 }
 
 /* Grid Khusus 3 Kolom Untuk Struktur Approval Menyamping */
@@ -400,8 +401,8 @@
   background-color: var(--dk-bg-subtle, #f8fafc);
   border: 1px solid var(--dk-border, #e2e8f0);
   border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 13.5px;
+  padding: 8px 12px; /* [UBAH] compact */
+  font-size: 13px;
   color: var(--dk-text, #334155);
   margin-top: 6px;
   min-height: 20px;
@@ -420,8 +421,17 @@
 .form-cuti__section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px; /* [UBAH] compact: sebelumnya 12px */
 }
+
+/* [BARU] Alasan & Pekerjaan Tertunda berdampingan */
+.form-cuti__duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.form-cuti__duo--single { grid-template-columns: minmax(0, 1fr); }
+.form-cuti__duo .form-cuti__box { margin-top: 0; overflow-wrap: anywhere; }
 
 
 /* Alert Box Merah Tambahan (Jika Data Dikembalikan) */
@@ -447,7 +457,7 @@
 
 /* FOOTER MODAL */
 .form-cuti__footer {
-  padding: 16px 24px;
+  padding: 10px 20px; /* [UBAH] compact */
   background-color: var(--dk-bg-card, #ffffff);
   border-top: 1px solid var(--dk-border-soft, #f1f5f9);
   display: flex;
@@ -591,4 +601,19 @@
 @keyframes slideUp {
   from { transform: translateY(15px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+/* [BARU] Animasi keluar popup (useModalExit) + responsif */
+.form-cuti__overlay { animation: formCutiFadeIn 0.2s ease-out both; }
+.form-cuti__overlay.is-closing { animation: formCutiFadeOut 0.18s ease-in both; }
+.form-cuti__overlay.is-closing .form-cuti__modal { animation: formCutiPopOut 0.18s ease-in both; }
+@keyframes formCutiFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes formCutiFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes formCutiPopOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(0.97); } }
+
+@media (max-width: 720px) {
+  .form-cuti__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-cuti__duo { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-cuti__overlay, .form-cuti__modal { animation: none !important; }
 }

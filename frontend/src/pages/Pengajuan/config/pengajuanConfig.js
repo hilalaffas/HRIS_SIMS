@@ -25,5 +25,6 @@ export const SHIFT_SWAP_DEMO = {
 
 export const PENGAJUAN_VISIBILITY = {
   approvalCard: false, // kartu alur persetujuan (ApprovalStatusCard)
+  statusPopup: false, // [BARU] klik badge STATUS di tabel membuka popup kartu alur (ApprovalStatusModal)
   combinedHistory: false, // filter + tabel "Riwayat Pengajuan Saya" gabungan
 };

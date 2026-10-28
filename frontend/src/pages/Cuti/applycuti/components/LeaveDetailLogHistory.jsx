@@ -18,11 +18,12 @@ const LeaveDetailLogHistory = ({ finalLogs = [], allHistory = [], currentId }) =
   });
 
   return (
-    <>
+    // [UBAH] dua daftar berdampingan (grid 2 kolom) agar popup tidak panjang ke bawah
+    <div className="form-cuti__logs">
       {/* Riwayat Log Pemeriksaan Berjenjang */}
       <div className="form-cuti__section">
         <h3 className="form-cuti__title">Riwayat Log Pemeriksaan Berjenjang</h3>
-        <div className="form-cuti__log-list">
+        <div className="form-cuti__log-list form-cuti__log-list--scroll">
           {finalLogs.map((log, idx) => (
             <div className="form-cuti__log-item" key={idx}>
               <div className="form-cuti__log-dot" />
@@ -43,7 +44,7 @@ const LeaveDetailLogHistory = ({ finalLogs = [], allHistory = [], currentId }) =
       {/* Riwayat Pengajuan Cuti Sebelumnya */}
       <div className="form-cuti__section">
         <span className="form-cuti__label">Semua Riwayat Pengajuan Cuti Anda</span>
-        <div className="form-cuti__log-list" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+        <div className="form-cuti__log-list form-cuti__log-list--scroll">
           {sortedHistory.length > 0 ? (
             sortedHistory.map((item, idx) => {
               const isAcc = item.status?.toLowerCase().includes('setujui') || item.status === 'APPROVED';
@@ -82,7 +83,7 @@ const LeaveDetailLogHistory = ({ finalLogs = [], allHistory = [], currentId }) =
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

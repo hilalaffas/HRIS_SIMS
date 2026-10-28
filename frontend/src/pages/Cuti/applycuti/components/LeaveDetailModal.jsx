@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { getApprovalDetail, getMyLeaveDetail, takeApprovalAction, mapApproval } from '../../../../services/CutiService'; // PERBAIKAN: Import Service API Nyata
 import LeaveDetailLogHistory from './LeaveDetailLogHistory';
+import ApprovalProgressStepper from '../../../../components/ApprovalProgressStepper'; // [BARU]
+import useModalExit from '../../../../hooks/useModalExit'; // [BARU] animasi keluar popup
+import { buildLeaveProgressSteps } from '../../../../utils/approvalProgress'; // [BARU]
 import './LeaveDetailModal.css'; 
 
 const STATUS_LABEL = {
@@ -37,6 +40,8 @@ const formatShortDateRange = (fullStr) => {
 const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshData, allHistory = [], employeeLookup = {}, handleEditKembali }) => {
   const [detailData, setDetailData] = useState(selectedDetail);
   const [isLoading, setIsLoading] = useState(false);
+  const { closing, close } = useModalExit();
+  const requestClose = React.useCallback(() => close(onClose), [close, onClose]); // [BARU]
 
   const pemohon = detailData.karyawan?.nama || detailData.pemohon || 'Karyawan';
   const jenisCuti = detailData.jenisCuti;
@@ -55,11 +60,11 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [requestClose]);
 
   // =========================================================================
   // 1. KONEKSI API NYATA: GET DETAIL REAL-TIME FETCH
@@ -166,7 +171,7 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
       
       alert(`Berkas berhasil diperbarui!`);
       if (onRefreshData) onRefreshData(); 
-      onClose(); 
+      requestClose(); 
     } catch (error) {
       alert("Gagal memperbarui status persetujuan: " + (error.message || 'Error Server'));
     }
@@ -175,8 +180,11 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
   // Cek apakah user saat ini adalah atasan yang berwenang di alur dokumen ini
   const isAtasan = ['LEADER', 'SPV', 'MANAGER'].includes(String(currentUserRole).toUpperCase());
 
+  // [BARU] Tahap persetujuan untuk stepper progres (Leader -> SPV -> Manager)
+  const progressSteps = buildLeaveProgressSteps(detailData);
+
   return (
-    <div className="form-cuti__overlay" onMouseDown={onClose}>
+    <div className={`form-cuti__overlay${closing ? ' is-closing' : ''}`} onMouseDown={requestClose}>
       <div className="form-cuti__modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
         
         {/* HEADER MODAL */}
@@ -185,7 +193,7 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
             <h2 className="form-cuti__title">Informasi Detail Berkas Cuti {isLoading && "(Memuat...)"}</h2>
             <p className="form-cuti__subtitle">Pantau alur verifikasi berkas secara berjenjang</p>
           </div>
-          <button type="button" className="form-cuti__close" onClick={onClose}>&times;</button>
+          <button type="button" className="form-cuti__close" onClick={requestClose} aria-label="Tutup detail">&times;</button>
         </div>
 
         {/* BODY MODAL */}
@@ -211,41 +219,28 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
             </div>
           </div>
 
-          <div className="form-cuti__divider" />
+          {/* [UBAH] Alur approval: stepper progres berjenjang (sebelumnya 3 teks nama Leader/SPV/Manager).
+              leaderName/spvName/managerName tetap dipakai sebagai cadangan di buildLeaveProgressSteps. */}
+          <ApprovalProgressStepper steps={progressSteps} />
 
-          {/* Alur Approval Menyamping */}
-          <div className="form-cuti__grid form-cuti__grid--three">
-            <div className="form-cuti__field">
-              <span className="form-cuti__label">Leader</span>
-              <span className="form-cuti__value">{leaderName}</span>
-            </div>
-            <div className="form-cuti__field">
-              <span className="form-cuti__label">SPV</span>
-              <span className="form-cuti__value">{spvName}</span>
-            </div>
-            <div className="form-cuti__field">
-              <span className="form-cuti__label">Manager</span>
-              <span className="form-cuti__value">{managerName}</span>
-            </div>
-          </div>
-
-          {/* Keterangan & Alasan */}
-          <div className="form-cuti__section">
-            <span className="form-cuti__label">Alasan Keterangan</span>
-            <div className="form-cuti__box">{alasan}</div>
-          </div>
-
-          {/* Pekerjaan Tertunda & Backup PIC */}
-          {(pekerjaanTertunda || coverOleh) && (
+          {/* [UBAH] Alasan dan Pekerjaan Tertunda berdampingan agar popup lebih pendek */}
+          <div className={`form-cuti__duo${(pekerjaanTertunda || coverOleh) ? '' : ' form-cuti__duo--single'}`}>
             <div className="form-cuti__section">
-              <span className="form-cuti__label">Pekerjaan Tertunda &amp; Dicover Oleh</span>
-              <div className="form-cuti__box form-cuti__box--warn">
-                {pekerjaanTertunda || '-'}
-                {pekerjaanTertunda && coverOleh ? ' - ' : ''}
-                {coverOleh ? `Dicover Oleh: ${coverOleh}` : ''}
-              </div>
+              <span className="form-cuti__label">Alasan Keterangan</span>
+              <div className="form-cuti__box">{alasan}</div>
             </div>
-          )}
+
+            {(pekerjaanTertunda || coverOleh) && (
+              <div className="form-cuti__section">
+                <span className="form-cuti__label">Pekerjaan Tertunda &amp; Dicover Oleh</span>
+                <div className="form-cuti__box form-cuti__box--warn">
+                  {pekerjaanTertunda || '-'}
+                  {pekerjaanTertunda && coverOleh ? ' - ' : ''}
+                  {coverOleh ? `Dicover Oleh: ${coverOleh}` : ''}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Riwayat Log Pemeriksaan Berjenjang + Semua Riwayat Pengajuan Cuti Anda */}
           <LeaveDetailLogHistory
@@ -271,7 +266,7 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
               <button type="button" className="btn-approve" onClick={() => handleActionApproval('Approved')}>Setujui (ACC)</button>
               <button type="button" className="btn-return" onClick={() => handleActionApproval('Returned')}>Kembalikan</button>
               <button type="button" className="btn-reject" onClick={() => handleActionApproval('Rejected')}>Tolak</button>
-              <button type="button" className="btn-cancel-detail" onClick={onClose}>Batal</button>
+              <button type="button" className="btn-cancel-detail" onClick={requestClose}>Batal</button>
             </div>
           ) : (
             <div className="form-cuti__footer-actions">
@@ -281,13 +276,13 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
                   className="form-cuti__edit-btn" 
                   onClick={() => {
                     handleEditKembali(detailData.id || selectedDetail.id); // Mengisi form otomatis
-                    onClose(); // Menutup modal detail setelah mengisi form
+                    requestClose(); // Menutup modal detail setelah mengisi form
                   }}
                 >
                   Edit Berkas
                 </button>
               )}
-              <button type="button" className="form-cuti__close-btn" onClick={onClose}>Tutup Detail</button>
+              <button type="button" className="form-cuti__close-btn" onClick={requestClose}>Tutup Detail</button>
             </div>
           )}
         </div>
