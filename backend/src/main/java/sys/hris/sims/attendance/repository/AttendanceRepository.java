@@ -89,4 +89,19 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     Optional<Attendance> findActiveByAction(@Param("employeeId") Long employeeId,
                                             @Param("attendanceDate") LocalDate attendanceDate,
                                             @Param("action") String action);
+
+    // [BARU] Laporan Absensi (HRD): catatan absensi banyak karyawan sekaligus pada
+    // rentang tanggal, dalam SATU query (join fetch employee + divisi) supaya tidak
+    // terjadi N+1 saat dipetakan ke AttendanceResponse.
+    @Query("""
+            select a from Attendance a
+            join fetch a.employee e
+            left join fetch e.divisi
+            where e.employeeId in :employeeIds
+              and a.attendanceDate between :startDate and :endDate
+            order by a.recordedAt asc
+            """)
+    List<Attendance> findForReport(@Param("employeeIds") List<Long> employeeIds,
+                                   @Param("startDate") LocalDate startDate,
+                                   @Param("endDate") LocalDate endDate);
 }

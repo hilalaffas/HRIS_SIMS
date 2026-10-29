@@ -62,6 +62,8 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   const hrMenuItems = [
     { path: '/karyawan', name: 'Kelola Karyawan (HR)', icon: 'fa-solid fa-users' },
     { path: '/kelola-divisi-shift', name: 'Kelola Divisi & Shift', icon: 'fa-solid fa-layer-group' },
+    // [BARU] Menu Laporan hanya untuk role HRD_ADMIN (bukan role "admin" lain)
+    ...(userRole === 'hrd_admin' ? [{ path: '/laporan', name: 'Laporan', icon: 'fa-solid fa-file-lines' }] : []),
   ];
 
   // Menu Khusus Super Admin (Gambar 4)

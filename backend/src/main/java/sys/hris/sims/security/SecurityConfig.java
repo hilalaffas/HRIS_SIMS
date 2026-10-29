@@ -370,6 +370,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi/location-name")
                         .authenticated()
 
+                        // [BARU] Laporan Absensi -- hanya HRD_ADMIN & SUPER_ADMIN (lebih ketat
+                        // dari ADMIN_ROLES, tidak termasuk role "ADMIN" generik).
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/laporan")
+                        .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN")
+
                         .requestMatchers(HttpMethod.GET, "/api/absensi")
                         .hasAnyRole(ADMIN_ROLES)
 

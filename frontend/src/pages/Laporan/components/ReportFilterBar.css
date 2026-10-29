@@ -1,0 +1,118 @@
+/* src/pages/Laporan/components/ReportFilterBar.css */
+.lpr-filter-card {
+  padding: 16px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.lpr-filter-row {
+  display: grid;
+  grid-template-columns: auto minmax(200px, 280px) minmax(200px, 1fr);
+  gap: 16px;
+  align-items: end;
+}
+
+.lpr-filter-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lpr-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.lpr-period-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 6px;
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+.lpr-period-picker strong { padding: 0 4px; font-size: 13px; color: var(--color-text); white-space: nowrap; }
+.lpr-period-picker button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--motion-fast, 150ms) ease, color var(--motion-fast, 150ms) ease;
+}
+.lpr-period-picker button:hover:not(:disabled) { color: var(--color-primary); background: var(--dk-bg-hover, #e2e8f0); }
+.lpr-period-picker button:disabled { opacity: 0.35; cursor: not-allowed; }
+.lpr-period-picker svg { width: 16px; height: 16px; }
+
+.lpr-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition: border-color var(--motion-fast, 150ms) ease, box-shadow var(--motion-fast, 150ms) ease;
+}
+.lpr-search-box:focus-within { border-color: var(--color-primary-soft); box-shadow: 0 0 0 3px rgba(33, 122, 91, 0.15); }
+.lpr-search-box svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-muted); }
+.lpr-search-box input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.lpr-export-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-border);
+}
+.lpr-export-caption { margin: 0; font-size: 12px; color: var(--color-text-secondary); }
+.lpr-export-caption strong { color: var(--dk-text-green, var(--color-primary)); }
+
+.lpr-export-actions { display: flex; gap: 8px; }
+.lpr-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform var(--motion-fast, 150ms) ease, background var(--motion-fast, 150ms) ease, box-shadow var(--motion-fast, 150ms) ease;
+}
+.lpr-export-btn svg { width: 16px; height: 16px; }
+.lpr-export-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.lpr-export-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.lpr-export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.lpr-export-btn:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
+
+.lpr-export-btn--xlsx { color: #ffffff; background: var(--color-success); }
+.lpr-export-btn--xlsx:hover:not(:disabled) { background: var(--color-primary-soft); }
+.lpr-export-btn--csv { color: var(--dk-text-green, var(--color-primary)); background: var(--color-success-bg); border-color: var(--color-success-border); }
+.lpr-export-btn--pdf { color: var(--dk-text-red, var(--color-danger)); background: var(--color-danger-bg); border-color: var(--color-danger-border); }
+
+@media (max-width: 900px) {
+  .lpr-filter-row { grid-template-columns: 1fr; }
+  .lpr-export-row { align-items: stretch; flex-direction: column; }
+  .lpr-export-actions .lpr-export-btn { flex: 1; justify-content: center; }
+}

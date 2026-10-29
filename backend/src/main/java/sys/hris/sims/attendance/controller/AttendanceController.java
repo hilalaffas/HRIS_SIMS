@@ -1,9 +1,11 @@
 package sys.hris.sims.attendance.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,10 +23,12 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.attendance.dto.AttendanceReportResponse;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
 import sys.hris.sims.attendance.dto.LocationNameResponse;
 import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
+import sys.hris.sims.attendance.service.AttendanceReportService;
 import sys.hris.sims.attendance.service.AttendanceService;
 import sys.hris.sims.attendance.service.ReverseGeocodingService;
 import sys.hris.sims.common.dto.ApprovalDecisionRequest;
@@ -42,6 +46,8 @@ import sys.hris.sims.user.repository.UserRepository;
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
+    // [BARU] Laporan Absensi (HRD)
+    private final AttendanceReportService attendanceReportService;
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
     // [BARU] Nama lokasi dari koordinat (popup absen Dashboard).
@@ -178,5 +184,24 @@ public class AttendanceController {
     public ResponseEntity<List<AttendanceResponse>> getAllHistory(Authentication authentication, HttpServletRequest httpRequest) {
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_ALL_ABSENSI", "attendances", null, "Melihat semua data absensi", httpRequest);
         return ResponseEntity.ok(attendanceService.getAllHistory());
+    }
+
+    // [BARU] Laporan Absensi (HRD_ADMIN / SUPER_ADMIN -- dibatasi di SecurityConfig).
+    // GET /api/absensi/laporan?from=2026-09-21&to=2026-10-20[&divisiId=3]
+    // divisiId kosong = semua divisi.
+    @GetMapping("/laporan")
+    public ResponseEntity<AttendanceReportResponse> getReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Long divisiId,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        AttendanceReportResponse report = attendanceReportService.buildReport(from, to, divisiId);
+        activityLogService.log(authentication.getName(), getCurrentUserId(authentication),
+                "GET_LAPORAN_ABSENSI", "attendances", null,
+                "Melihat laporan absensi " + from + " s/d " + to
+                        + (divisiId == null ? " (semua divisi)" : " (divisi " + divisiId + ")"),
+                httpRequest);
+        return ResponseEntity.ok(report);
     }
 }

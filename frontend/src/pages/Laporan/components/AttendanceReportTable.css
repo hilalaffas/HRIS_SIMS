@@ -1,0 +1,133 @@
+/* src/pages/Laporan/components/AttendanceReportTable.css */
+.lpr-table-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.lpr-table-scroll { overflow-x: auto; }
+
+.lpr-table { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 13px; }
+
+.lpr-table thead th {
+  position: sticky;
+  top: 0;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  background: var(--dk-bg-subtle, #f8fafc);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.lpr-table tbody td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--dk-border-soft, #f0f2f5);
+}
+
+.lpr-col-no { width: 52px; color: var(--color-text-muted); }
+.lpr-col-num { text-align: center !important; white-space: nowrap; }
+.lpr-col-action { width: 1%; text-align: right; white-space: nowrap; }
+
+.lpr-row {
+  cursor: pointer;
+  animation: sims-rise-in var(--motion-base, 220ms) var(--ease-out-expo, ease-out) both;
+  transition: background var(--motion-fast, 150ms) ease;
+}
+.lpr-row:hover { background: var(--color-primary-tint); }
+
+.lpr-employee-name { display: block; font-weight: 700; color: var(--color-text); }
+.lpr-employee-meta { display: block; margin-top: 2px; font-size: 11.5px; color: var(--color-text-secondary); }
+
+.lpr-division-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dk-text-green, var(--color-primary));
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  border-radius: 999px;
+}
+
+/* Angka ringkasan: pill kecil berwarna sesuai jenis status */
+.lpr-count {
+  display: inline-block;
+  min-width: 30px;
+  padding: 3px 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 999px;
+}
+.lpr-count--zero  { color: var(--color-text-muted); font-weight: 500; }
+.lpr-count--hadir { color: var(--dk-text-green, #059669);  background: var(--color-success-bg); }
+.lpr-count--telat { color: var(--dk-text-amber, #b45309);  background: var(--color-warning-bg); }
+.lpr-count--sakit { color: var(--dk-text-purple, #4338ca); background: var(--dk-bg-purple, #eef2ff); }
+.lpr-count--izin  { color: var(--dk-text-blue, #2563eb);   background: var(--color-info-bg); }
+.lpr-count--alpha { color: var(--dk-text-red, #e11d48);    background: var(--color-danger-bg); }
+.lpr-count--lembur { color: var(--dk-text-amber, #b45309); background: var(--color-warning-bg); }
+
+.lpr-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dk-text-green, var(--color-primary));
+  background: transparent;
+  border: 1px solid var(--color-success-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--motion-fast, 150ms) ease, transform var(--motion-fast, 150ms) ease;
+}
+.lpr-detail-btn:hover { background: var(--color-success-bg); }
+.lpr-detail-btn:active { transform: scale(0.96); }
+.lpr-detail-btn:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
+.lpr-detail-btn svg { width: 14px; height: 14px; }
+
+.lpr-empty { padding: 40px 16px !important; text-align: center; color: var(--color-text-secondary); }
+
+.lpr-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+}
+.lpr-pagination-info { font-size: 12px; color: var(--color-text-secondary); }
+.lpr-pagination-controls { display: flex; align-items: center; gap: 8px; }
+.lpr-pagination-controls > button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-text-secondary);
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.lpr-pagination-controls > button:hover:not(:disabled) { color: var(--color-primary); border-color: var(--color-primary-soft); }
+.lpr-pagination-controls > button:disabled { opacity: 0.4; cursor: not-allowed; }
+.lpr-pagination-controls svg { width: 16px; height: 16px; }
+.lpr-page-indicator { min-width: 48px; font-size: 12px; font-weight: 700; text-align: center; color: var(--color-text); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

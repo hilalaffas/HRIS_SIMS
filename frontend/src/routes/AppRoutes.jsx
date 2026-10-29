@@ -37,6 +37,8 @@ const Lembur = lazyPage(() => import('../pages/Lembur/Lembur'));
 const Persetujuan = lazyPage(() => import('../pages/Persetujuan/Persetujuan'));
 // [BARU] Halaman Pusat Pengajuan Karyawan -- wadah Cuti, Sakit & Izin, Lembur, Tukar Shift
 const Pengajuan = lazyPage(() => import('../pages/Pengajuan/Pengajuan'));
+// [BARU] Halaman Laporan (khusus HRD_ADMIN) -- tab pertama: Laporan Absen
+const Laporan = lazyPage(() => import('../pages/Laporan/Laporan'));
 import { isManagerOrSpv, isSuperAdmin, isHrAdmin } from '../utils/roles';
 import KelolaDivisiShift from '../pages/Karyawan/KelolaDivisiShift';
 
@@ -110,6 +112,9 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           {/* Wadah Halaman Manajemen Karyawan */}
           <Route path="/karyawan" element={<Karyawan user={user} />} />
           <Route path="/kelola-divisi-shift" element={isHrAdmin(user) ? <KelolaDivisiShift standalone /> : <Navigate to="/dashboard" replace />} />
+
+          {/* [BARU] Laporan -- hanya HRD_ADMIN (backend juga membatasi: 403 untuk role lain) */}
+          <Route path="/laporan" element={isHrAdmin(user) ? <Laporan /> : <Navigate to="/dashboard" replace />} />
 
           <Route path={DEV_ACCESS_PATH} element={<DevSettings />} />
 

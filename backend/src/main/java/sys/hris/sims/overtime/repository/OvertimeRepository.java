@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import sys.hris.sims.overtime.entity.OvertimeRequest;
@@ -29,4 +31,16 @@ public interface OvertimeRepository extends JpaRepository<OvertimeRequest, Long>
 
     List<OvertimeRequest> findByEmployee_EmployeeIdAndOvertimeDateBetweenAndStatusIn(
             Long employeeId, LocalDate startDate, LocalDate endDate, List<String> statuses);
+
+    // [BARU] Laporan Absensi (HRD): lembur banyak karyawan sekaligus pada rentang tanggal.
+    @Query("""
+            select o from OvertimeRequest o
+            join fetch o.employee e
+            where e.employeeId in :employeeIds
+              and o.overtimeDate between :startDate and :endDate
+            order by o.overtimeDate asc, o.startTime asc
+            """)
+    List<OvertimeRequest> findForReport(@Param("employeeIds") List<Long> employeeIds,
+                                        @Param("startDate") LocalDate startDate,
+                                        @Param("endDate") LocalDate endDate);
 }

@@ -511,7 +511,9 @@ public class AttendanceService {
         return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
     }
 
-    private AttendanceResponse toResponse(Attendance attendance) {
+    // [UBAH] private -> package-private: dipakai juga AttendanceReportService
+    // (satu sumber pemetaan entity -> response, tidak diduplikasi).
+    AttendanceResponse toResponse(Attendance attendance) {
         return AttendanceResponse.builder()
                 .attendanceId(attendance.getAttendanceId())
                 .employeeId(attendance.getEmployee().getEmployeeId())

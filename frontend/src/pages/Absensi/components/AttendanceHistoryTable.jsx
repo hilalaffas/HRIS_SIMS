@@ -46,6 +46,8 @@ import './AttendanceHistoryTable.css';
 import { getMyWorkSchedule } from '../../../services/attendanceService';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { getHolidaysByMonth } from '../../../services/holidayService';
+import { getRiwayatByUser } from '../../../services/CutiService'; // [BARU] cuti disetujui
+import { attachApprovedLeave, filterApprovedLeaves } from '../utils/approvedLeave'; // [BARU]
 
 const COLLAPSED_ROW_COUNT = 3;
 const PAGE_SIZE_OPTIONS = [10, 20, 30]; // pilihan jumlah baris per halaman (mode "Lihat semua")
@@ -96,21 +98,39 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   const [divisionType, setDivisionType] = useState('REGULAR');
   const [scheduleLoaded, setScheduleLoaded] = useState(false);
   const [holidaysByDate, setHolidaysByDate] = useState(LOCAL_HOLIDAYS_2026);
+  const [approvedLeaves, setApprovedLeaves] = useState([]); // [BARU] cuti disetujui milik sendiri
+
+  // [BARU] Cuti disetujui dimuat sekali; gagal memuat = tabel tetap tampil tanpa tempelan cuti.
+  useEffect(() => {
+    let active = true;
+    getRiwayatByUser({ silent: true })
+      .then((leaves) => { if (active) setApprovedLeaves(filterApprovedLeaves(leaves)); })
+      .catch(() => { if (active) setApprovedLeaves([]); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
+    const previousMonth = new Date(period.year, period.month - 1, 1); // aman untuk Januari -> Desember tahun lalu
     setScheduleLoaded(false);
     Promise.all([
       getMyWorkSchedule(period.year, period.month + 1),
-      getHolidaysByMonth(period.year, period.month + 1, { silent: true }).catch(() => []),
+      // [UBAH] Periode tutup buku (21 s/d 20) melewati DUA bulan kalender: libur bulan
+      // sebelumnya (tgl 21-akhir bulan) ikut diambil, sebelumnya hanya bulan akhir.
+      Promise.all([
+        getHolidaysByMonth(previousMonth.getFullYear(), previousMonth.getMonth() + 1, { silent: true }).catch(() => []),
+        getHolidaysByMonth(period.year, period.month + 1, { silent: true }).catch(() => []),
+      ]),
     ])
-      .then(([result, holidayResult]) => {
+      .then(([result, holidayResults]) => {
         if (!active) return;
         setSchedules(result?.schedules || []);
         setDivisionType(result?.divisionType || 'REGULAR');
         const holidayMap = { ...LOCAL_HOLIDAYS_2026 };
-        (holidayResult?.data || holidayResult || []).forEach((holiday) => {
-          if (holiday?.date) holidayMap[holiday.date] = holiday.name || holiday.nama || 'Libur Nasional';
+        holidayResults.forEach((holidayResult) => {
+          (holidayResult?.data || holidayResult || []).forEach((holiday) => {
+            if (holiday?.date) holidayMap[holiday.date] = holiday.name || holiday.nama || 'Libur Nasional';
+          });
         });
         setHolidaysByDate(holidayMap);
         setScheduleLoaded(true);
@@ -141,8 +161,11 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   const dailyRows = useMemo(
     () => (IS_NOTE_DEMO_ENABLED && isCurrentPeriod
       ? buildDemoNoteRows() // [SEMENTARA] pratinjau desain tanpa backend
-      : attachOvertime(buildMonthlyRows(records, period.year, period.month, new Date(), schedules, divisionType, holidaysByDate), overtimeRecords)),
-    [records, overtimeRecords, period.year, period.month, isCurrentPeriod, schedules, divisionType, holidaysByDate],
+      : attachApprovedLeave( // [UBAH] hari cuti disetujui tidak lagi terbaca Alpha
+        attachOvertime(buildMonthlyRows(records, period.year, period.month, new Date(), schedules, divisionType, holidaysByDate), overtimeRecords),
+        approvedLeaves,
+      )),
+    [records, overtimeRecords, period.year, period.month, isCurrentPeriod, schedules, divisionType, holidaysByDate, approvedLeaves],
   );
 
   // Urutan di layar mengikuti sort; ekspor CSV/PDF tetap urut tanggal

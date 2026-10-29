@@ -1,0 +1,40 @@
+/* src/pages/Laporan/components/ReportStatCards.css */
+.lpr-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lpr-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--stat-border);
+  border-radius: 14px;
+  background: var(--stat-bg);
+  animation: sims-rise-in var(--motion-slow, 320ms) var(--ease-out-expo, ease-out) both;
+}
+
+.lpr-stat-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  color: var(--stat-fg);
+  background: var(--color-surface);
+  border-radius: 10px;
+}
+.lpr-stat-icon svg { width: 19px; height: 19px; }
+
+.lpr-stat-label { margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+.lpr-stat-value { margin: 0; font-size: 22px; font-weight: 800; line-height: 1.15; color: var(--stat-fg); }
+
+.lpr-stat-card--blue   { --stat-bg: var(--color-info-bg);    --stat-border: var(--color-info-border);    --stat-fg: var(--dk-text-blue, var(--color-info)); }
+.lpr-stat-card--green  { --stat-bg: var(--color-success-bg); --stat-border: var(--color-success-border); --stat-fg: var(--dk-text-green, var(--color-success)); }
+.lpr-stat-card--orange { --stat-bg: var(--color-warning-bg); --stat-border: var(--color-warning-border); --stat-fg: var(--dk-text-amber, var(--color-warning)); }
+.lpr-stat-card--red    { --stat-bg: var(--color-danger-bg);  --stat-border: var(--color-danger-border);  --stat-fg: var(--dk-text-red, var(--color-danger)); }
+
+@media (max-width: 900px) { .lpr-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .lpr-stat-grid { grid-template-columns: 1fr; } }
