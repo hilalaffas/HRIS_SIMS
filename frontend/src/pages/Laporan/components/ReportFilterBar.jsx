@@ -1,26 +1,27 @@
 // src/pages/Laporan/components/ReportFilterBar.jsx
 //
 // [BARU] Bilah filter & ekspor Laporan Absen:
-//   - periode tutup buku (21 s/d 20) dengan tombol sebelumnya/berikutnya
+//   - periode tutup buku (21 s/d 20): panah sebelumnya/berikutnya + klik label untuk
+//     memilih periode mana pun (PeriodPicker)
 //   - pilihan divisi (Semua Divisi / satu divisi) = CAKUPAN tabel DAN ekspor
 //   - pencarian nama / NIK (hanya menyaring tampilan tabel, bukan isi ekspor)
 //   - tombol Unduh XLSX / CSV / PDF (satu karyawan = satu sheet)
 //
 // Contoh pemakaian:
-// <ReportFilterBar periodLabel="21 Sep 2026 - 20 Okt 2026" ... onExport={handleExport} />
+// <ReportFilterBar period={{ year: 2026, month: 9 }} maxPeriod={currentPeriod} onPeriodChange={setPeriod} ... onExport={handleExport} />
 import React from 'react';
-import { ChevronLeft, ChevronRight, FileDown, FileSpreadsheet, FileText, Search } from 'lucide-react';
+import { FileDown, FileSpreadsheet, FileText, Search } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
 import { EXPORT_FORMATS } from '../config/laporanConfig';
+import PeriodPicker from './PeriodPicker';
 import './ReportFilterBar.css';
 
 const EXPORT_ICONS = { sheet: FileSpreadsheet, text: FileText, pdf: FileDown };
 
 export default function ReportFilterBar({
-  periodLabel,
-  canGoNext,
-  onPreviousPeriod,
-  onNextPeriod,
+  period,
+  maxPeriod,
+  onPeriodChange,
   divisionOptions,
   divisionId,
   onDivisionChange,
@@ -37,15 +38,7 @@ export default function ReportFilterBar({
       <div className="lpr-filter-row">
         <div className="lpr-filter-field">
           <span className="lpr-filter-label">Periode Tutup Buku</span>
-          <div className="lpr-period-picker">
-            <button type="button" onClick={onPreviousPeriod} aria-label="Periode sebelumnya">
-              <ChevronLeft />
-            </button>
-            <strong>{periodLabel}</strong>
-            <button type="button" onClick={onNextPeriod} disabled={!canGoNext} aria-label="Periode berikutnya">
-              <ChevronRight />
-            </button>
-          </div>
+          <PeriodPicker value={period} maxValue={maxPeriod} onChange={onPeriodChange} />
         </div>
 
         <div className="lpr-filter-field lpr-filter-field--division">
@@ -77,7 +70,7 @@ export default function ReportFilterBar({
 
       <div className="lpr-export-row">
         <p className="lpr-export-caption">
-          Ekspor: <strong>{scopeLabel}</strong> · {employeeCount} karyawan · satu karyawan per sheet
+          Ekspor: <strong>{scopeLabel}</strong> · {employeeCount} karyawan · XLSX/PDF satu karyawan per sheet, CSV satu tabel
         </p>
         <div className="lpr-export-actions">
           {EXPORT_FORMATS.map((format) => {

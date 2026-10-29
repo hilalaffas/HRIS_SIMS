@@ -28,7 +28,7 @@ import QuickAttendanceModal from './QuickAttendanceModal'; // [BARU]
 import CheckoutFlowModals from '../../Absensi/components/CheckoutFlowModals'; // [UBAH] popup "Pulang Cepat" + "Check-Out Jam Kerja (17:00+)" (sebelumnya EarlyCheckoutModal)
 import useCheckoutFlow from '../../Absensi/hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from '../../Absensi/utils/overtimeCheckout'; // [BARU]
-import { TODAY_STATUS_CONFIG } from '../../Absensi/utils/todayStatusConfig'; // [UBAH] dipindah dari file ini
+import { getTodayStatusConfig } from '../../Absensi/utils/todayStatusConfig'; // [UBAH] dipindah dari file ini; + teks dinamis cuti setengah hari
 import { buildLeaveBalanceNote } from '../../../utils/leaveBalanceNote';
 import { SHIFT_HOURS, SHIFT_LABEL } from '../../Absensi/utils/monthlyAttendance'; // [UBAH] + SHIFT_HOURS
 import './DashboardSummaryCard.css';
@@ -107,7 +107,7 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 
-  const statusConfig = TODAY_STATUS_CONFIG[attendance.todayStatus];
+  const statusConfig = getTodayStatusConfig(attendance.todayStatus, attendance.leaveOpensLabel);
   const ActionIcon = statusConfig.buttonIcon;
   const PillIcon = statusConfig.PillIcon;
   const periodNote = attendance.periodShort ? `Periode ${attendance.periodShort}` : 'Periode berjalan';

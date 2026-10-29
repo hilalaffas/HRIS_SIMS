@@ -1,10 +1,12 @@
 // src/pages/Laporan/utils/attendanceReportSheets.js
 //
-// [BARU] Menyusun "sheet" ekspor dari laporan karyawan. SATU sumber untuk CSV
-// dan PDF (dan siap dipakai XLSX bila nanti dibutuhkan):
-//   - sheet pertama  : "Ringkasan" semua karyawan (hanya bila > 1 karyawan)
-//   - sheet berikutnya: SATU karyawan = SATU sheet (PDF: satu halaman,
-//                       CSV: satu blok bertitle, dipisah baris kosong)
+// [BARU] Menyusun data ekspor dari laporan karyawan.
+//   XLSX & PDF -> "sheet" (buildExportSheets):
+//     - sheet pertama   : "Ringkasan" semua karyawan (hanya bila > 1 karyawan)
+//     - sheet berikutnya: SATU karyawan = SATU sheet / halaman
+//   CSV -> SATU tabel panjang tanpa ringkasan (buildFlatCsvTable): satu baris per
+//     karyawan per hari, kolom identitas karyawan di depan. Berlaku sama untuk
+//     semua divisi maupun satu divisi.
 import { formatOvertimeDuration } from '../../../services/overtimeService';
 import { parseLocalDate } from '../../../services/attendanceService';
 
@@ -13,9 +15,13 @@ export const SUMMARY_HEADERS = [
   'Hadir', 'Terlambat', 'Sakit', 'Izin', 'Cuti', 'Alpha', 'Lembur (ACC)',
 ];
 
+// [UBAH] Kolom "Lembur" dipecah: Jam Mulai Lembur, Jam Selesai Lembur, Total Lembur.
 export const DAILY_HEADERS = [
-  'Tanggal', 'Hari', 'Jadwal Shift', 'Jam Masuk', 'Jam Pulang', 'Durasi', 'Status', 'Lembur', 'Keterangan',
+  'Tanggal', 'Hari', 'Jadwal Shift', 'Jam Masuk', 'Jam Pulang', 'Durasi', 'Status',
+  'Jam Mulai Lembur', 'Jam Selesai Lembur', 'Total Lembur', 'Keterangan',
 ];
+// Kolom identitas yang ditaruh di depan setiap baris CSV (tabel datar).
+export const CSV_IDENTITY_HEADERS = ['NIK', 'Nama Karyawan', 'Jabatan', 'Divisi'];
 export const DAILY_STATUS_COLUMN = 6; // indeks kolom "Status" (diberi warna di PDF)
 
 const formatDayName = (dateKey) => parseLocalDate(dateKey)
@@ -23,11 +29,13 @@ const formatDayName = (dateKey) => parseLocalDate(dateKey)
 
 const formatLeaveDays = (value) => (value ? String(Number(value.toFixed(1))).replace('.', ',') : '0');
 
-const formatOvertimeText = (overtime) => {
+// Total lembur: "2 Jam (ACC)" / "Ditolak" / "-". Jam mulai & selesai: "17:00" / "-".
+const formatOvertimeTotal = (overtime) => {
   if (!overtime) return '-';
   if (overtime.tone === 'rejected') return 'Ditolak';
   return `${overtime.duration} (${overtime.statusLabel})`;
 };
+const formatOvertimeClock = (value) => value || '-';
 
 export function buildSummaryRows(reports) {
   return reports.map((report, index) => {
@@ -58,9 +66,22 @@ export function buildDailyRows(report) {
     row.checkOut || '-',
     row.duration || '-',
     row.status,
-    formatOvertimeText(row.overtime),
+    formatOvertimeClock(row.overtime?.startTime),
+    formatOvertimeClock(row.overtime?.endTime),
+    formatOvertimeTotal(row.overtime),
     row.note,
   ]);
+}
+
+// [BARU] Tabel CSV datar: satu header, lalu SEMUA baris harian semua karyawan berurutan.
+export function buildFlatCsvTable(reports) {
+  return {
+    headers: [...CSV_IDENTITY_HEADERS, ...DAILY_HEADERS],
+    rows: reports.flatMap((report) => {
+      const identity = [report.nik, report.fullName, report.position, report.divisionName];
+      return buildDailyRows(report).map((dailyRow) => [...identity, ...dailyRow]);
+    }),
+  };
 }
 
 const buildSummaryLine = ({ summary }) => [

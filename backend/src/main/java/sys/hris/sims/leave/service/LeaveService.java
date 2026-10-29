@@ -27,6 +27,7 @@ import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
+import sys.hris.sims.attendance.service.LeaveAttendancePolicy;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.entity.LeaveRequestApproval;
 import sys.hris.sims.leave.repository.LeaveRepository;
@@ -67,6 +68,7 @@ public class LeaveService {
     private final LeaveTypeRepository leaveTypeRepository;
     private final UserRepository userRepository;
     private final HolidayRepository holidayRepository;
+    private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] hapus absen di tanggal cuti saat disetujui
 
     public List<LeaveRequest> getAllCuti() {
         return cutiRepository.findAll();
@@ -284,7 +286,10 @@ public class LeaveService {
         // Susulan: statusnya sudah APPROVED langsung, jadi Leader/SPV/Manager
         // tidak dipilih & tidak dicatat. Siapa yang menginput terekam di
         // reviewedBy + reviewNote (ditampilkan lewat toApprovalResponse()).
-        return cutiRepository.save(cuti);
+        LeaveRequest savedCuti = cutiRepository.save(cuti);
+        // [BARU] Cuti susulan langsung APPROVED: absen yang sudah tercatat di tanggal cuti dihapus.
+        leaveAttendancePolicy.reconcileOnApproval(savedCuti);
+        return savedCuti;
     }
 
     private void ensureNoOverlap(Employee employee, LeaveRequest cuti) {
@@ -303,12 +308,14 @@ public class LeaveService {
         }
     }
 
+    @Transactional // [BARU] approval + sinkronisasi absen satu kesatuan
     public LeaveRequest approveCuti(Long leaveRequestId, Long reviewerId) {
         Employee reviewer = karyawanRepository.findById(reviewerId)
                 .orElseThrow(() -> new RuntimeException("Reviewer tidak ditemukan"));
         return approveCuti(leaveRequestId, reviewer.getUser().getUsername(), null);
     }
 
+    @Transactional // [BARU] approval + sinkronisasi absen satu kesatuan
     public LeaveRequest approveCuti(Long leaveRequestId, String reviewerUsername, String note) {
         return processApprovalAction(leaveRequestId, reviewerUsername, ACTION_APPROVED, note);
     }
@@ -752,6 +759,12 @@ public class LeaveService {
             allocateManualLeaveOnApproval(cuti);
             cuti.setStatus(getStatus(ACTION_APPROVED));
             cuti.setApprovedAt(LocalDateTime.now());
+
+            // [BARU] Approval terakhir: absen yang terlanjur tercatat (saat cuti masih PENDING)
+            // dihapus & hari itu tampil sebagai CUTI. Satu transaksi dengan approval.
+            LeaveRequest approvedCuti = cutiRepository.save(cuti);
+            leaveAttendancePolicy.reconcileOnApproval(approvedCuti);
+            return approvedCuti;
         }
 
         return cutiRepository.save(cuti);

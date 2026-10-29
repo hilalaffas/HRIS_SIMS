@@ -10,7 +10,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Toast from '../../../components/Toast';
 import { getAllDivisi } from '../../../services/divisiService';
-import { downloadCsvSections } from '../../../utils/csvExport';
+import { downloadCsv } from '../../../utils/csvExport';
 import { formatPeriodLabel, getCurrentPeriod } from '../../Absensi/utils/monthlyAttendance';
 import AttendanceReportTable from '../components/AttendanceReportTable';
 import EmployeeReportModal from '../components/EmployeeReportModal';
@@ -19,7 +19,7 @@ import ReportStatCards from '../components/ReportStatCards';
 import { ALL_DIVISIONS_LABEL, ALL_DIVISIONS_VALUE, DEFAULT_PAGE_SIZE } from '../config/laporanConfig';
 import useAttendanceReport from '../hooks/useAttendanceReport';
 import { summarizeAll } from '../utils/attendanceReportBuilder';
-import { buildExportSheets, toFileSlug } from '../utils/attendanceReportSheets';
+import { buildExportSheets, buildFlatCsvTable, toFileSlug } from '../utils/attendanceReportSheets';
 import './AttendanceReportTab.css';
 
 const TOAST_DURATION_MS = 3500;
@@ -88,10 +88,10 @@ export default function AttendanceReportTab() {
   const selectedReport = reports.find((report) => report.employeeId === selectedEmployeeId) || null;
 
   // ---------- handler filter (semua mengembalikan tabel ke halaman pertama) ----------
-  const shiftPeriod = (delta) => {
-    const target = new Date(period.year, period.month + delta, 1);
-    if (target > new Date(currentPeriod.year, currentPeriod.month, 1)) return; // tidak boleh melewati periode berjalan
-    setPeriod({ year: target.getFullYear(), month: target.getMonth() });
+  // [UBAH] Periode dipilih langsung dari PeriodPicker (panah / klik label) -- tidak boleh
+  // melewati periode berjalan (dijaga PeriodPicker lewat maxValue).
+  const handlePeriodChange = (nextPeriod) => {
+    setPeriod(nextPeriod);
     setPage(0);
   };
 
@@ -112,15 +112,18 @@ export default function AttendanceReportTab() {
     exportingRef.current = true;
     setExportingKind(kind);
     try {
-      const sheets = buildExportSheets(targetReports, { periodLabel, scopeLabel });
       const fileNamePrefix = `laporan-absensi_${toFileSlug(fileLabel)}_${period.year}-${String(period.month + 1).padStart(2, '0')}`;
       if (kind === 'csv') {
-        downloadCsvSections({ sections: sheets, fileNamePrefix });
+        // [UBAH] CSV = satu tabel panjang tanpa ringkasan (bukan satu blok per karyawan).
+        const { headers, rows } = buildFlatCsvTable(targetReports);
+        downloadCsv({ headers, rows, fileNamePrefix });
       } else if (kind === 'xlsx') {
+        const sheets = buildExportSheets(targetReports, { periodLabel, scopeLabel });
         // Library Excel di-load lazy: baru diunduh browser saat tombol XLSX diklik.
         const { downloadSheetsXlsx } = await import('../../../utils/attendanceReportXlsx');
         await downloadSheetsXlsx({ sheets, fileNamePrefix });
       } else {
+        const sheets = buildExportSheets(targetReports, { periodLabel, scopeLabel });
         // jsPDF di-load lazy: baru diunduh browser saat tombol PDF diklik.
         const { downloadSheetsPdf } = await import('../../../utils/attendanceReportPdf');
         downloadSheetsPdf({ sheets, fileNamePrefix });
@@ -137,10 +140,9 @@ export default function AttendanceReportTab() {
   return (
     <div className="lpr-attendance-tab">
       <ReportFilterBar
-        periodLabel={periodLabel}
-        canGoNext={period.year < currentPeriod.year || (period.year === currentPeriod.year && period.month < currentPeriod.month)}
-        onPreviousPeriod={() => shiftPeriod(-1)}
-        onNextPeriod={() => shiftPeriod(1)}
+        period={period}
+        maxPeriod={currentPeriod}
+        onPeriodChange={handlePeriodChange}
         divisionOptions={divisionOptions}
         divisionId={divisionId}
         onDivisionChange={handleDivisionChange}

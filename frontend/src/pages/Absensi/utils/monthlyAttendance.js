@@ -383,6 +383,8 @@ export function attachOvertime(rows, overtimeRecords = []) {
         overtime: {
           minutes: records[0].totalMinutes,
           duration: records[0].duration,
+          startTime: records[0].startTime, // [BARU] jam mulai/selesai untuk kolom laporan
+          endTime: records[0].endTime,
           statusLabel: status.shortLabel,
           tone: status.tone,
         },
@@ -394,11 +396,16 @@ export function attachOvertime(rows, overtimeRecords = []) {
       .filter((record) => record.statusCode === 'PENDING')
       .reduce((sum, record) => sum + (record.totalMinutes || 0), 0);
     const status = getOvertimeStatus(pendingMinutes > 0 ? 'PENDING' : 'APPROVED');
+    // [BARU] Lebih dari satu sesi lembur di hari yang sama: mulai = sesi paling awal,
+    // selesai = akhir sesi paling akhir ("HH:mm" bisa diurutkan sebagai teks).
+    const bySession = [...active].sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)));
     return {
       ...row,
       overtime: {
         minutes: totalMinutes,
         duration: formatOvertimeDuration(totalMinutes),
+        startTime: bySession[0].startTime,
+        endTime: bySession[bySession.length - 1].endTime,
         statusLabel: status.shortLabel,
         tone: status.tone,
         // Rincian untuk tooltip: "17:00-19:00 (ACC) | 19:00-20:00 (MENUNGGU)"

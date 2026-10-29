@@ -22,6 +22,7 @@ import sys.hris.sims.common.service.ApprovalScopeService;
 import sys.hris.sims.common.service.ApprovalScopeService.ApprovalScope;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
+import sys.hris.sims.attendance.dto.LeaveTodayResponse;
 import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
 import sys.hris.sims.attendance.entity.Attendance;
 import sys.hris.sims.attendance.repository.AttendanceRepository;
@@ -57,6 +58,7 @@ public class AttendanceService {
     private final ReverseGeocodingService reverseGeocodingService;
     private final WorkScheduleRepository workScheduleRepository;
     private final HolidayRepository holidayRepository;
+    private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] aturan cuti <-> absen
 
     public List<AttendanceResponse> getMyHistory(String username) {
         Employee employee = resolveEmployee(username);
@@ -164,6 +166,14 @@ public class AttendanceService {
                 }
             }
         }
+        // [BARU] Cuti yang sudah DISETUJUI: sehari penuh -> absen ditolak; setengah hari pagi ->
+        // absen masuk baru dibuka satu jam sebelum cuti berakhir. Cuti PENDING tidak memblokir.
+        // Hanya absen biasa (reason ABSEN); alur Sakit/Izin punya aturannya sendiri.
+        LeaveAttendancePolicy.LeaveToday leaveToday = reason.equals("ABSEN")
+                ? leaveAttendancePolicy.resolve(employee, workDate, schedule)
+                : LeaveAttendancePolicy.LeaveToday.NONE;
+        leaveAttendancePolicy.assertCanAttend(leaveToday, action, nowDateTime);
+
         if (attendanceRepository.existsActiveByAction(employee.getEmployeeId(), workDate, action)) { // sakit ditolak tidak menghalangi
             throw new IllegalStateException(
                     action.equals("MASUK")
@@ -190,7 +200,10 @@ public class AttendanceService {
         // Popup peringatan di frontend hanya UX; aturan ini menjaga agar request yang
         // dikirim langsung ke API pun tidak bisa melewatinya. Dihitung dengan jam
         // SERVER (sama seperti Attendance.prePersist()), bukan jam perangkat.
-        if (action.equals("KELUAR") && (request.getNote() == null || request.getNote().isBlank())) {
+        // [UBAH] Cuti setengah hari: karyawan memang hanya bekerja setengah shift, jadi
+        // aturan durasi minimum ("pulang cepat") tidak berlaku.
+        if (action.equals("KELUAR") && !leaveToday.isHalfDay()
+                && (request.getNote() == null || request.getNote().isBlank())) {
             WorkSchedule scheduleForCheckout = schedule;
             attendanceRepository
                     .findActiveByAction(employee.getEmployeeId(), workDate, "MASUK")
@@ -222,7 +235,7 @@ public class AttendanceService {
                 .employee(employee)
                 .action(action)
                 .reason(reason)
-                .status(resolveStatus(action, reason, schedule, workDate))
+                .status(resolveStatus(action, reason, schedule, workDate, leaveToday))
                 .note(request.getNote())
                 .approvalStatus(reason.equals("SAKIT") ? "PENDING" : "NOT_REQUIRED")
                 .photoUrl(photoUrl)
@@ -263,6 +276,13 @@ public class AttendanceService {
         boolean isSick = type.equals("SAKIT");
         if (!isSick && !type.equals("TERLAMBAT")) {
             throw new IllegalArgumentException("Jenis izin tidak valid. Gunakan Sakit atau Terlambat.");
+        }
+
+        // [BARU] Sedang cuti sehari penuh (sudah disetujui): tidak perlu izin sakit / terlambat.
+        LocalDate permissionDate = LocalDate.now(APP_ZONE);
+        if (leaveAttendancePolicy.resolve(employee, permissionDate, null).mode()
+                == LeaveAttendancePolicy.Mode.FULL_DAY) {
+            throw new IllegalStateException("Anda sedang cuti hari ini, pengajuan izin tidak diperlukan.");
         }
 
         String note = request.getNote() == null ? "" : request.getNote().trim();
@@ -476,16 +496,31 @@ public class AttendanceService {
         return attendance;
     }
 
-    private String resolveStatus(String action, String reason, WorkSchedule schedule, LocalDate workDate) {
+    private String resolveStatus(String action, String reason, WorkSchedule schedule, LocalDate workDate,
+                                 LeaveAttendancePolicy.LeaveToday leaveToday) {
         if (reason.equals("SAKIT")) return "SICK";
         if (reason.equals("IZIN")) return "IZIN";
         if (action.equals("KELUAR")) return "DONE";
         // MASUK + ABSEN -- dibandingkan ke jam server (sumber kebenaran),
         // bukan jam yang (mungkin) dikirim dari perangkat klien.
-        LocalDateTime cutoff = LocalDateTime.of(workDate,
-                schedule != null && schedule.getShift() != null
-                        ? schedule.getShift().getStartTime() : ON_TIME_CUTOFF);
+        // [UBAH] Cuti setengah hari pagi: batas tepat waktu = akhir cuti, bukan jam masuk shift
+        // (kalau tidak, karyawan yang absen jam 12:00 langsung tercatat terlambat).
+        LocalDateTime cutoff = leaveToday.mode() == LeaveAttendancePolicy.Mode.HALF_MORNING
+                ? leaveToday.boundary()
+                : LocalDateTime.of(workDate,
+                        schedule != null && schedule.getShift() != null
+                                ? schedule.getShift().getStartTime() : ON_TIME_CUTOFF);
         return LocalDateTime.now(APP_ZONE).isAfter(cutoff) ? "LATE" : "ON_TIME";
+    }
+
+    // [BARU] Status cuti hari ini untuk tombol absen (GET /api/absensi/me/leave-today).
+    @Transactional(readOnly = true)
+    public LeaveTodayResponse getMyLeaveToday(String username) {
+        Employee employee = resolveEmployee(username);
+        LocalDate today = LocalDate.now(APP_ZONE);
+        LeaveAttendancePolicy.LeaveToday leave = leaveAttendancePolicy.resolve(
+                employee, today, findSchedule(employee.getEmployeeId(), today));
+        return new LeaveTodayResponse(leave.mode().name(), leave.leaveTypeName(), leave.boundary(), leave.opensAt());
     }
 
     private WorkSchedule findSchedule(Long employeeId, LocalDate date) {

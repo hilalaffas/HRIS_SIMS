@@ -41,4 +41,20 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
     List<LeaveRequest> findApprovedForReport(@Param("employeeIds") List<Long> employeeIds,
                                              @Param("startDate") LocalDate startDate,
                                              @Param("endDate") LocalDate endDate);
+
+    // [BARU] Cuti yang sudah DISETUJUI dan mencakup satu tanggal untuk satu karyawan.
+    // Dipakai LeaveAttendancePolicy supaya karyawan yang sedang cuti tidak bisa absen
+    // (cuti PENDING sengaja tidak ikut: baru memblokir setelah disetujui).
+    @Query("""
+            select l from LeaveRequest l
+            join fetch l.status s
+            join fetch l.leaveType t
+            where l.employee.employeeId = :employeeId
+              and upper(s.statusName) = 'APPROVED'
+              and l.startDate <= :date
+              and l.endDate >= :date
+            order by l.startDate asc
+            """)
+    List<LeaveRequest> findApprovedCovering(@Param("employeeId") Long employeeId,
+                                            @Param("date") LocalDate date);
 }

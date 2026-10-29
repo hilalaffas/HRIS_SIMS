@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -104,4 +105,18 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     List<Attendance> findForReport(@Param("employeeIds") List<Long> employeeIds,
                                    @Param("startDate") LocalDate startDate,
                                    @Param("endDate") LocalDate endDate);
+
+    // [BARU] Hapus absen biasa (reason ABSEN) satu karyawan pada rentang tanggal --
+    // dipakai saat cuti DISETUJUI (lihat LeaveAttendancePolicy.reconcileOnApproval).
+    // Catatan Sakit / Izin terlambat TIDAK ikut terhapus.
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            delete from Attendance a
+            where a.employee.employeeId = :employeeId
+              and a.attendanceDate between :startDate and :endDate
+              and a.reason = 'ABSEN'
+            """)
+    int deleteAbsenInRange(@Param("employeeId") Long employeeId,
+                           @Param("startDate") LocalDate startDate,
+                           @Param("endDate") LocalDate endDate);
 }

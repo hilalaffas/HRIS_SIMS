@@ -16,7 +16,7 @@ export const ALL_DIVISIONS_LABEL = 'Semua Divisi';
 // yang dipetakan di komponen (ReportFilterBar & EmployeeReportModal).
 export const EXPORT_FORMATS = [
   { key: 'xlsx', label: 'XLSX', icon: 'sheet', hint: 'Excel, satu sheet per karyawan' },
-  { key: 'csv', label: 'CSV', icon: 'text', hint: 'Teks, satu blok per karyawan' },
+  { key: 'csv', label: 'CSV', icon: 'text', hint: 'Teks, satu tabel panjang tanpa ringkasan' },
   { key: 'pdf', label: 'PDF', icon: 'pdf', hint: 'Cetak, satu halaman per karyawan' },
 ];
 

@@ -1,0 +1,196 @@
+/* src/pages/Laporan/components/PeriodPicker.css
+ * Pil periode + panel pilih periode. Animasi HANYA transform/opacity (GPU) dan memakai
+ * token --motion-* / --ease-* dari styles/motion.css, jadi otomatis ikut
+ * prefers-reduced-motion. */
+
+.lpr-pp { position: relative; display: inline-block; }
+
+.lpr-pp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 40px;
+  padding: 0 5px;
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition: border-color var(--motion-fast, 150ms) ease, box-shadow var(--motion-fast, 150ms) ease;
+}
+.lpr-pp-pill.is-open,
+.lpr-pp-pill:focus-within {
+  border-color: var(--color-primary-soft);
+  box-shadow: 0 0 0 3px rgba(33, 122, 91, 0.15);
+}
+
+.lpr-pp-step {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--motion-fast, 150ms) ease, color var(--motion-fast, 150ms) ease;
+}
+.lpr-pp-step:hover:not(:disabled) { color: var(--color-primary); background: var(--dk-bg-hover, #e2e8f0); }
+.lpr-pp-step:disabled { opacity: 0.35; cursor: not-allowed; }
+.lpr-pp-step svg { width: 16px; height: 16px; }
+
+.lpr-pp-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--motion-fast, 150ms) ease;
+}
+.lpr-pp-trigger:hover { background: var(--dk-bg-hover, #e2e8f0); }
+.lpr-pp-trigger:focus-visible,
+.lpr-pp-step:focus-visible,
+.lpr-pp-today:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
+
+.lpr-pp-trigger-icon { width: 15px; height: 15px; color: var(--color-primary-soft); }
+.lpr-pp-label { font-size: 13px; white-space: nowrap; animation: sims-pp-label var(--motion-base, 220ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+.lpr-pp-caret { width: 14px; height: 14px; color: var(--color-text-muted); transition: transform var(--motion-base, 220ms) var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1)); }
+.lpr-pp-pill.is-open .lpr-pp-caret { transform: rotate(180deg); }
+
+/* ---------- panel ---------- */
+.lpr-pp-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  padding: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.28);
+  transform-origin: top left;
+  animation: sims-pp-in var(--motion-base, 220ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+.lpr-pp-pop.is-closing {
+  pointer-events: none;
+  animation: sims-pp-out var(--motion-fast, 150ms) var(--ease-in, cubic-bezier(0.4, 0, 1, 1)) both;
+}
+
+.lpr-pp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.lpr-pp-year {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  animation: sims-pp-label var(--motion-base, 220ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.lpr-pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.lpr-pp-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  color: var(--color-text);
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  animation: sims-pp-cell calc(var(--motion-base, 220ms) + 60ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  animation-delay: calc(var(--i, 0) * 14ms);
+  transition: background var(--motion-fast, 150ms) ease, border-color var(--motion-fast, 150ms) ease,
+    color var(--motion-fast, 150ms) ease, transform var(--motion-fast, 150ms) var(--ease-out-soft, ease);
+}
+.lpr-pp-cell:hover:not(:disabled):not(.is-selected) {
+  background: var(--color-primary-tint);
+  border-color: var(--color-primary-soft);
+  transform: translateY(-1px);
+}
+.lpr-pp-cell:active:not(:disabled) { transform: scale(0.97); }
+.lpr-pp-cell:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
+.lpr-pp-cell:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.lpr-pp-cell-name { font-size: 14px; font-weight: 800; }
+.lpr-pp-cell-range { font-size: 10.5px; color: var(--color-text-muted); white-space: nowrap; }
+
+.lpr-pp-cell.is-selected { color: #fff; background: var(--color-primary); border-color: var(--color-primary); }
+.lpr-pp-cell.is-selected .lpr-pp-cell-range { color: rgba(255, 255, 255, 0.78); }
+
+/* titik kecil = periode berjalan */
+.lpr-pp-cell.is-current::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary-soft);
+  border-radius: 50%;
+}
+.lpr-pp-cell.is-selected.is-current::after { background: #fff; }
+
+.lpr-pp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--dk-border-soft, #f0f2f5);
+}
+.lpr-pp-today {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-tint);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--motion-fast, 150ms) ease;
+}
+.lpr-pp-today svg { width: 13px; height: 13px; }
+.lpr-pp-today:hover:not(:disabled) { background: var(--dk-bg-hover, #e2e8f0); }
+.lpr-pp-today:disabled { opacity: 0.4; cursor: default; }
+
+@keyframes sims-pp-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sims-pp-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+@keyframes sims-pp-cell {
+  from { opacity: 0; transform: translate(var(--pp-shift, 0), 6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sims-pp-label {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 480px) {
+  .lpr-pp-pop { width: min(320px, calc(100vw - 32px)); }
+}

@@ -19,6 +19,13 @@ export async function getMyAttendanceHistory(config = {}) {
   return api.get('/api/absensi/me', config);
 }
 
+// [BARU] Status cuti karyawan HARI INI (kunci tombol Absen Masuk/Keluar).
+// Hasil: { mode: 'NONE' | 'FULL_DAY' | 'HALF_MORNING' | 'HALF_AFTERNOON',
+//          leaveTypeName, boundary, opensAt } -- boundary/opensAt = "2026-10-29T12:00:00".
+export async function getMyLeaveToday(config = {}) {
+  return api.get('/api/absensi/me/leave-today', config);
+}
+
 export async function getMyWorkSchedule(year, month) {
   const previous = new Date(year, month - 2, 1);
   const queryForMonth = (targetYear, targetMonth) => {

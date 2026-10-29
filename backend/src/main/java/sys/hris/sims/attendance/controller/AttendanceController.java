@@ -26,6 +26,7 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.attendance.dto.AttendanceReportResponse;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
+import sys.hris.sims.attendance.dto.LeaveTodayResponse;
 import sys.hris.sims.attendance.dto.LocationNameResponse;
 import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
 import sys.hris.sims.attendance.service.AttendanceReportService;
@@ -62,6 +63,13 @@ public class AttendanceController {
     @GetMapping("/me")
     public ResponseEntity<List<AttendanceResponse>> getMyHistory(Authentication authentication) {
         return ResponseEntity.ok(attendanceService.getMyHistory(authentication.getName()));
+    }
+
+    // [BARU] Status cuti hari ini (NONE | FULL_DAY | HALF_MORNING | HALF_AFTERNOON)
+    // supaya tombol Absen Masuk/Keluar tahu kapan harus terkunci.
+    @GetMapping("/me/leave-today")
+    public ResponseEntity<LeaveTodayResponse> getMyLeaveToday(Authentication authentication) {
+        return ResponseEntity.ok(attendanceService.getMyLeaveToday(authentication.getName()));
     }
 
     // POST catat absensi (Masuk/Keluar) -- multipart/form-data: action,

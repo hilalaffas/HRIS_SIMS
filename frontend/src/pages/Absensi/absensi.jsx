@@ -33,6 +33,8 @@ import CheckoutFlowModals from './components/CheckoutFlowModals'; // [UBAH] popu
 import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
 import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
+import useTodayLeave from './hooks/useTodayLeave'; // [BARU] cuti disetujui mengunci tombol absen
+import { applyLeaveGate } from './utils/leaveToday'; // [BARU]
 import { SHIFT_HOURS, getSickRecordCovering, isRejectedSick, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
 import {
   formatDateLabel,
@@ -153,11 +155,16 @@ export default function Absensi() {
 
   // idle -> "Masuk", checkedIn -> "Keluar", done -> abu-abu,
   // sick -> abu-abu juga (Masuk/Keluar tidak bisa diklik).
-  const attendanceStatus = todaySickRecord
+  // [BARU] Cuti yang sudah disetujui: sehari penuh -> 'onLeave'; setengah hari pagi ->
+  // 'leaveWait' sampai satu jam sebelum cuti berakhir. Cuti PENDING tidak mengunci.
+  const { gate: leaveGate, leaveOpensLabel } = useTodayLeave();
+  const baseAttendanceStatus = todaySickRecord
     ? resolveSickTodayStatus(todaySickRecord) // [UBAH] sick | sickPending
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
-  // [UBAH] Izin/Sakit hanya bisa diajukan sebelum check-in dan selama belum tercatat sakit.
-  const disablePermission = Boolean(todayCheckIn) || Boolean(todaySickRecord);
+  const attendanceStatus = applyLeaveGate(baseAttendanceStatus, leaveGate);
+  // [UBAH] Izin/Sakit hanya bisa diajukan sebelum check-in, selama belum tercatat sakit,
+  // dan tidak sedang cuti sehari penuh.
+  const disablePermission = Boolean(todayCheckIn) || Boolean(todaySickRecord) || leaveGate === 'onLeave';
 
   // [BARU] Setelah "Tambah Lembur" saat check-out terkirim: toast + muat ulang
   // kolom Lembur di tabel riwayat (diam-diam, tabel tidak dikosongkan).
@@ -221,6 +228,7 @@ export default function Absensi() {
           attendanceStatus={attendanceStatus}
           isLoading={historyLoading} /* status baru valid setelah riwayat termuat */
           disablePermission={disablePermission}
+          leaveOpensLabel={leaveOpensLabel} /* [BARU] "Absen Dibuka 12:00" saat cuti setengah hari pagi */
           onStartAttendance={handleStartAttendance}
           onOpenPermission={() => setIsPermissionOpen(true)}
         />

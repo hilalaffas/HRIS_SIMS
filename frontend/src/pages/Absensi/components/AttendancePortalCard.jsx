@@ -14,17 +14,18 @@
 // <AttendancePortalCard attendanceStatus="idle" onStartAttendance={fn} onOpenPermission={fn} />
 import React from 'react';
 import { FilePenLine, Fingerprint } from 'lucide-react';
-import { TODAY_STATUS_CONFIG } from '../utils/todayStatusConfig';
+import { getTodayStatusConfig } from '../utils/todayStatusConfig';
 import './AttendancePortalCard.css';
 
 export default function AttendancePortalCard({
   attendanceStatus = 'idle',
   isLoading = false,
   disablePermission = false,
+  leaveOpensLabel = '', // [BARU] jam absen dibuka (cuti setengah hari pagi), mis. "12:00"
   onStartAttendance,
   onOpenPermission,
 }) {
-  const statusConfig = TODAY_STATUS_CONFIG[attendanceStatus] ?? TODAY_STATUS_CONFIG.idle;
+  const statusConfig = getTodayStatusConfig(attendanceStatus, leaveOpensLabel); // [UBAH] + teks jam dibuka
   const MainIcon = statusConfig.buttonIcon;
 
   return (

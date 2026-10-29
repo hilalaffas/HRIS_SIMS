@@ -40,21 +40,3 @@ export const downloadCsv = ({ headers, rows, fileNamePrefix }) => {
 
   saveCsvFile(csvContent, fileNamePrefix);
 };
-
-// [BARU] Satu file CSV berisi BEBERAPA blok ("sheet"), dipisah dua baris kosong.
-// CSV tidak mengenal sheet, jadi tiap blok diawali baris judul (+ subjudul),
-// baris header kolom, data, dan baris penutup opsional (footer).
-// sections: [{ title, subtitle?, headers, rows, footer? }]
-export const downloadCsvSections = ({ sections, fileNamePrefix }) => {
-  const lines = [];
-  sections.forEach((section, index) => {
-    if (index > 0) lines.push('', '');
-    lines.push(escapeCsv(section.title));
-    if (section.subtitle) lines.push(escapeCsv(section.subtitle));
-    lines.push(section.headers.map((header) => escapeCsv(header)).join(','));
-    section.rows.forEach((row) => lines.push(row.map((cell) => escapeCsv(cell)).join(',')));
-    if (section.footer) lines.push(escapeCsv(section.footer));
-  });
-
-  saveCsvFile(lines.join('\n'), fileNamePrefix);
-};

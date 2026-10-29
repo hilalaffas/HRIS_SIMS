@@ -7,6 +7,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'; // [UBAH] + useCallback, useRef
 import { getMyAttendanceHistory, toDisplayRecord } from '../../../services/attendanceService';
 import { getMyProfile } from '../../../services/profileService';
+import useTodayLeave from '../../Absensi/hooks/useTodayLeave'; // [BARU] cuti disetujui mengunci tombol absen
+import { applyLeaveGate } from '../../Absensi/utils/leaveToday'; // [BARU]
 import {
   buildMonthlyRows,
   dateKey,
@@ -27,7 +29,7 @@ const INITIAL_STATE = {
   permit: 0,
   periodShort: '',
   periodRange: '',
-  todayStatus: 'idle', // idle | checkedIn | done | sick | sickPending
+  todayStatus: 'idle', // idle | checkedIn | done | sick | sickPending (+ onLeave | leaveWait dari useTodayLeave)
   checkInTime: '',
   checkInAt: null, // [BARU] Date jam Masuk hari ini -- dasar hitung "pulang cepat"
   division: '',
@@ -121,5 +123,13 @@ export default function useAttendanceSummary() {
     if (isMountedRef.current) setState((previous) => applyResult(previous, next));
   }, []);
 
-  return { ...state, refresh };
+  // [BARU] Cuti yang sudah disetujui menimpa status tombol (sakit tetap menang).
+  const { gate: leaveGate, leaveOpensLabel } = useTodayLeave();
+
+  return {
+    ...state,
+    todayStatus: applyLeaveGate(state.todayStatus, leaveGate),
+    leaveOpensLabel,
+    refresh,
+  };
 }

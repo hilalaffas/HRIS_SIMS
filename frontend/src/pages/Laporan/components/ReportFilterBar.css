@@ -23,33 +23,6 @@
   color: var(--color-text-secondary);
 }
 
-.lpr-period-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  height: 40px;
-  padding: 0 6px;
-  background: var(--dk-bg-subtle, #f8fafc);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-}
-.lpr-period-picker strong { padding: 0 4px; font-size: 13px; color: var(--color-text); white-space: nowrap; }
-.lpr-period-picker button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background var(--motion-fast, 150ms) ease, color var(--motion-fast, 150ms) ease;
-}
-.lpr-period-picker button:hover:not(:disabled) { color: var(--color-primary); background: var(--dk-bg-hover, #e2e8f0); }
-.lpr-period-picker button:disabled { opacity: 0.35; cursor: not-allowed; }
-.lpr-period-picker svg { width: 16px; height: 16px; }
-
 .lpr-search-box {
   display: flex;
   align-items: center;

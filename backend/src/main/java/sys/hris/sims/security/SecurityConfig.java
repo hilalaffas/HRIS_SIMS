@@ -355,6 +355,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi/me")
                         .authenticated()
 
+                        // [BARU] Status cuti hari ini (kunci tombol absen).
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/me/leave-today")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.POST, "/api/absensi/me")
                         .authenticated()
 
