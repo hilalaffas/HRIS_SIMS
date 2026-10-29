@@ -23,3 +23,4 @@ const TabMenuKaryawan = ({ activeTab, setActiveTab, user }) => {
 };
 
 export default TabMenuKaryawan;
+
