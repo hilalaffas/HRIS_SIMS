@@ -4,8 +4,8 @@ import { isSuperAdmin, isHrAdmin } from '../../../utils/roles';
 
 const TabMenuKaryawan = ({ activeTab, setActiveTab, user }) => {
   const tabs = isSuperAdmin(user)
-    ? ['List Karyawan', 'Cuti Karyawan', 'Data Divisi', 'Log Sistem']
-    : isHrAdmin(user) ? ['List Karyawan', 'Cuti Karyawan', 'Data Divisi', 'Log Sistem'] : [];
+    ? ['List Karyawan', 'Cuti Karyawan', 'Log Sistem']
+    : isHrAdmin(user) ? ['List Karyawan', 'Cuti Karyawan', 'Log Sistem'] : [];
 
   return (
     <div className="tab-menu-container">
