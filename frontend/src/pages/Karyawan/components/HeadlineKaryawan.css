@@ -29,8 +29,8 @@
   
   /* Padding sedikit dibesarkan agar icon 24px tidak terlihat sesak */
   padding: 6px 8px; 
-  background-color: #a7a9ac;
-  color: #ffffff;
+  background-color: var(--dk-border-strong, #a7a9ac);
+  color: var(--dk-text, #ffffff);
   border: none;
   border-radius: 6px;
   font-weight: 500;

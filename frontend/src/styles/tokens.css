@@ -134,16 +134,21 @@
   --dk-text-amber: #fcd34d;
   --dk-text-blue: #93c5fd;
   --dk-text-purple: #c4b5fd;
+  --dk-text-orange: #fdba74;  /* [BARU] */
+  --dk-btn-success-hover: #065f46;
+  --dk-btn-success: #047857;  /* [BARU] tombol hijau solid + teks putih (kontras 5.5:1, bukan 3.8:1) */
   /* Latar badge / alert berwarna */
   --dk-tint-green: #0f2a20;   --dk-tint-green-strong: #14532d;
   --dk-tint-red: #2d1218;     --dk-tint-red-strong: #6b1d2c;
   --dk-tint-amber: #2a2008;   --dk-tint-amber-strong: #5c4a12;
   --dk-tint-blue: #0f1f3d;    --dk-tint-blue-strong: #1e3a6e;
   --dk-tint-purple: #231a3a;  --dk-tint-purple-strong: #3b2a66;
+  --dk-tint-orange: #2e1a0a;  /* [BARU] kode shift "SO" (Kelola Divisi & Shift) */
   /* Garis berwarna */
   --dk-border-green: #14532d;
   --dk-border-red: #6b1d2c;
   --dk-border-amber: #5c4a12;
   --dk-border-blue: #1e3a6e;
   --dk-border-purple: #3b2a66;
+  --dk-border-orange: #7c3a10; /* [BARU] */
 }

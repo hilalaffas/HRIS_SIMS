@@ -86,7 +86,7 @@
 }
 
 .input-new_data_divisi:focus {
-  border-color: #064e3b;
+  border-color: var(--dk-text-green, #064e3b);
 }
 
 /* [BARU] State error saat submit "+ Tambah" dengan nama divisi kosong */

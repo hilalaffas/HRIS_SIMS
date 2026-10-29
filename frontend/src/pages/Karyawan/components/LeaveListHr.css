@@ -95,5 +95,5 @@
 .modal-footer_leaveListHr { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 .btn-batal_leaveListHr { padding: 8px 16px; background: var(--dk-bg-card, #fff); border: 1px solid var(--dk-border-strong, #d1d5db); border-radius: 6px; font-size: 14px; font-weight: 600; color: var(--dk-text, #374151); cursor: pointer; transition: 0.2s; }
 .btn-batal_leaveListHr:hover { background: var(--dk-bg-subtle, #f3f4f6); }
-.btn-pulihkan_leaveListHr { padding: 8px 16px; background: #10b981; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: 0.2s; }
-.btn-pulihkan_leaveListHr:hover { background: #059669; }
+.btn-pulihkan_leaveListHr { padding: 8px 16px; background: var(--dk-btn-success, #10b981); border: none; border-radius: 6px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: 0.2s; }
+.btn-pulihkan_leaveListHr:hover { background: var(--dk-btn-success-hover, #059669); }
