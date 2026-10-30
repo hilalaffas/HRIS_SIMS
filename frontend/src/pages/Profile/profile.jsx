@@ -6,6 +6,7 @@ import ProfileManager from './ProfileManager';
 import ProfileHRKaryawan from './ProfileHRKaryawan';
 import ProfileAdmin from './ProfileAdmin';
 import ProfileSuperAdmin from './ProfileSuperAdmin';
+import ProfileDev from './ProfileDev'; // [BARU]
 import { ROLES } from './config/profileFieldConfig';
 
 // Peta role -> komponen. Sinkron dengan MOCK_USERS di authService.js.
@@ -18,6 +19,7 @@ const PROFILE_BY_ROLE = {
   [ROLES.HRD_KARYAWAN]: ProfileHRKaryawan, // 'HRD_Karyawan'
   [ROLES.HRD_ADMIN]: ProfileAdmin,       // 'HRD_Admin'
   [ROLES.SUPER_ADMIN]: ProfileSuperAdmin, // 'SUPER_ADMIN'
+  [ROLES.DEV]: ProfileDev,               // [BARU] 'DEV'
 };
 
 // `role` didapat dari user yang sedang login, contoh:

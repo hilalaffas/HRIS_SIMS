@@ -11,6 +11,7 @@ export const ROLES = {
   HRD_KARYAWAN: 'HRD_Karyawan', // authService: 'HRD_Karyawan'
   HRD_ADMIN: 'HRD_Admin',       // authService: 'HRD_Admin'
   SUPER_ADMIN: 'SUPER_ADMIN',   // authService: 'SUPER_ADMIN'
+  DEV: 'DEV',                   // [BARU] authService: 'DEV' (akun dev)
 };
 
 // Field-field berikut (NIK, Jabatan, Divisi, Tanggal Bergabung) TIDAK BOLEH diedit
