@@ -33,3 +33,14 @@ export function isManagerOrSpv(user) {
 export function isHrAdmin(user) {
   return getUserRole(user) === ROLES.HR_ADMIN;
 }
+
+/**
+ * [BARU] Karyawan yang boleh muncul di laporan/ekspor: akun SUPER_ADMIN
+ * (termasuk akun dev supersecret) disembunyikan, hanya karyawan asli.
+ * [UBAH] Role DEV ikut disembunyikan.
+ * Dipakai ekspor di halaman Manajemen Karyawan.
+ */
+export function isReportEmployee(employee) {
+  const roleName = String(employee?.user?.roleId?.roleName || '').toLowerCase();
+  return roleName !== ROLES.SUPER_ADMIN && roleName !== 'superadmin' && roleName !== 'dev';
+}

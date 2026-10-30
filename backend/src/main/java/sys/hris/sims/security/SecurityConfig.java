@@ -32,7 +32,8 @@ public class SecurityConfig {
     private static final String[] ADMIN_ROLES = {
             "ADMIN",
             "HRD_ADMIN",
-            "SUPER_ADMIN"
+            "SUPER_ADMIN",
+            "DEV"
     };
 
     private static final String[] APPROVER_ROLES = {
@@ -40,7 +41,8 @@ public class SecurityConfig {
             "SPV",
             "MANAGER",
             "HRD_ADMIN",
-            "SUPER_ADMIN"
+            "SUPER_ADMIN",
+            "DEV"
     };
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
@@ -220,7 +222,7 @@ public class SecurityConfig {
                         // [BARU] SUPER_ADMIN saja di sini; pembatasan ke akun dev
                         // dilakukan lagi di DevToolsController (DevAccessService).
                         .requestMatchers("/api/dev/**")
-                        .hasRole("SUPER_ADMIN")
+                        .hasAnyRole("SUPER_ADMIN", "DEV")
 
                         // ==========================
                         // FEATURE FLAG (saklar fitur global, dikelola dari panel /devAccess)
@@ -232,7 +234,7 @@ public class SecurityConfig {
                         .authenticated()
 
                         .requestMatchers(HttpMethod.PUT, "/api/feature-flags/**")
-                        .hasRole("SUPER_ADMIN")
+                        .hasAnyRole("SUPER_ADMIN", "DEV")
 
                         // ==========================
                         // LEAVE
@@ -307,6 +309,7 @@ public class SecurityConfig {
                                 "ADMIN",
                                 "HRD_ADMIN",
                                 "SUPER_ADMIN",
+                                "DEV",
                                 "LEADER",
                                 "SPV",
                                 "MANAGER")
@@ -377,7 +380,7 @@ public class SecurityConfig {
                         // [BARU] Laporan Absensi -- hanya HRD_ADMIN & SUPER_ADMIN (lebih ketat
                         // dari ADMIN_ROLES, tidak termasuk role "ADMIN" generik).
                         .requestMatchers(HttpMethod.GET, "/api/absensi/laporan")
-                        .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN")
+                        .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN", "DEV")
 
                         .requestMatchers(HttpMethod.GET, "/api/absensi")
                         .hasAnyRole(ADMIN_ROLES)
@@ -410,10 +413,10 @@ public class SecurityConfig {
                         // [UBAH] Persetujuan Lembur -- Leader, SPV, Manager, SuperAdmin.
                         // Cakupan per divisi dicek di OvertimeService.
                         .requestMatchers(HttpMethod.GET, "/api/lembur/approvals")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN", "DEV")
 
                         .requestMatchers(HttpMethod.PUT, "/api/lembur/*/approval")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN", "DEV")
 
                         // ==========================
                         // LEAVE TYPE

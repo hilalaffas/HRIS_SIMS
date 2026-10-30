@@ -28,6 +28,7 @@ import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.attendance.service.LeaveAttendancePolicy;
+import sys.hris.sims.common.service.ReportScopeService;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.entity.LeaveRequestApproval;
 import sys.hris.sims.leave.repository.LeaveRepository;
@@ -69,9 +70,14 @@ public class LeaveService {
     private final UserRepository userRepository;
     private final HolidayRepository holidayRepository;
     private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] hapus absen di tanggal cuti saat disetujui
+    private final ReportScopeService reportScopeService; // [BARU] sembunyikan superadmin & akun dev dari laporan
 
+    // [UBAH] Sumber data tab "Cuti Karyawan" & ekspor cuti: pengajuan milik
+    // SUPER_ADMIN / akun dev tidak ditampilkan, hanya karyawan asli.
     public List<LeaveRequest> getAllCuti() {
-        return cutiRepository.findAll();
+        return cutiRepository.findAll().stream()
+                .filter(cuti -> !reportScopeService.isExcludedFromReports(cuti.getEmployee()))
+                .toList();
     }
 
     public LeaveRequest getCutiById(Long id) {
@@ -405,7 +411,7 @@ public class LeaveService {
     // dipakai /balance/me & /balance/{employeeId}, supaya 3-3nya selalu
     // konsisten satu sama lain.
     public List<LeaveBalanceResponse> getAllLeaveBalances() {
-        return karyawanRepository.findAll().stream()
+        return reportScopeService.withoutDevEmployees(karyawanRepository.findAll()).stream() // [UBAH] tanpa akun dev
                 .map(this::getLeaveBalance)
                 .toList();
     }

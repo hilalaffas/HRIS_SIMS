@@ -33,16 +33,16 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
     // berdiri sendiri digabung jadi satu menu "Pengajuan" (cuti, sakit & izin,
     // lembur, tukar shift). Halaman lama (/ApplyCuti, /lembur) tetap bisa
     // diakses lewat URL / notifikasi, hanya tidak lagi tampil di sidebar.
-    mainMenuItems.push({
-      path: '/pengajuan',
-      name: 'Pengajuan',
-      icon: 'fa-solid fa-clipboard-list',
-      hasDot: notificationCounts?.leaveRequest ?? false
-    });
     mainMenuItems.push({ 
       path: '/absensi', 
       name: 'Absensi saya', 
       icon: 'fa-regular fa-clock',
+      hasDot: notificationCounts?.leaveRequest ?? false
+    });
+    mainMenuItems.push({
+      path: '/pengajuan',
+      name: 'Pengajuan',
+      icon: 'fa-solid fa-clipboard-list',
       hasDot: notificationCounts?.leaveRequest ?? false
     });
   }

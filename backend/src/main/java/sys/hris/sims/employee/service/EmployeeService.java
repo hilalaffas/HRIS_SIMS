@@ -2,6 +2,7 @@ package sys.hris.sims.employee.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import sys.hris.sims.common.service.ReportScopeService;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.user.repository.UserRepository;
@@ -12,9 +13,11 @@ import java.util.List;
 public class EmployeeService {
     private final EmployeeRepository karyawanRepository;
     private final UserRepository userRepository;
+    private final ReportScopeService reportScopeService; // [BARU] sembunyikan akun dev dari daftar karyawan
 
+    // [UBAH] Akun dev (role DEV / supersecret) tidak ikut daftar karyawan.
     public List<Employee> getAllKaryawan() {
-        return karyawanRepository.findAll();
+        return reportScopeService.withoutDevEmployees(karyawanRepository.findAll());
     }
 
     public List<Employee> getApproversByRole(String role) {
