@@ -57,7 +57,7 @@ public class PasswordResetController {
     }
 
     @GetMapping("/pending")
-    @PreAuthorize("hasAnyRole('ADMIN','HRD_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','HRD_ADMIN','SUPER_ADMIN','DEV')")
     public ResponseEntity<List<PendingPasswordResetResponse>> getPendingRequests(
             Authentication authentication, 
             HttpServletRequest httpRequest) {
@@ -70,7 +70,7 @@ public class PasswordResetController {
     }
 
     @GetMapping("/count")
-    @PreAuthorize("hasAnyRole('ADMIN','HRD_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','HRD_ADMIN','SUPER_ADMIN','DEV')")
     public ResponseEntity<Map<String, Long>> getPendingCount(
             Authentication authentication, 
             HttpServletRequest httpRequest) {
@@ -84,7 +84,7 @@ public class PasswordResetController {
     }
 
     @PutMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN','HRD_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','HRD_ADMIN','SUPER_ADMIN','DEV')")
     public ResponseEntity<String> approveRequest(
             @PathVariable Long id,
             @RequestBody ApprovePasswordResetRequest request,

@@ -15,6 +15,7 @@ import sys.hris.sims.attendance.dto.AttendanceReportResponse.EmployeeReport;
 import sys.hris.sims.attendance.dto.AttendanceReportResponse.LeaveEntry;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.repository.AttendanceRepository;
+import sys.hris.sims.common.service.ReportScopeService;
 import sys.hris.sims.divisi.entity.Divisi;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
@@ -46,14 +47,17 @@ public class AttendanceReportService {
     private final OvertimeRepository overtimeRepository;
     private final LeaveRepository leaveRepository;
     private final AttendanceService attendanceService;
+    private final ReportScopeService reportScopeService; // [BARU] sembunyikan superadmin & akun dev dari laporan
 
     @Transactional(readOnly = true)
     public AttendanceReportResponse buildReport(LocalDate from, LocalDate to, Long divisionId) {
         validateRange(from, to);
 
-        List<Employee> employees = divisionId == null
-                ? employeeRepository.findActiveForReport()
-                : employeeRepository.findActiveForReportByDivisi(divisionId);
+        // [UBAH] Akun SUPER_ADMIN & akun dev tidak ikut laporan: hanya karyawan asli.
+        List<Employee> employees = reportScopeService.onlyReportableEmployees(
+                divisionId == null
+                        ? employeeRepository.findActiveForReport()
+                        : employeeRepository.findActiveForReportByDivisi(divisionId));
         if (employees.isEmpty()) {
             return new AttendanceReportResponse(from, to, List.of());
         }

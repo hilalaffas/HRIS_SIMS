@@ -23,7 +23,10 @@ export const loginUser = async (username, password) => {
 
   const userData = {
     username: data.username,
-    role: data.role,
+    // [UBAH] Role DEV (akun supersecret) dipetakan ke SUPER_ADMIN untuk logika tampilan,
+    // supaya halaman/menu yang sudah ada tidak berubah. Hak akses sebenarnya tetap
+    // ditentukan backend, dan akun dev dikenali lewat devAccess.
+    role: data.role === 'DEV' ? 'SUPER_ADMIN' : data.role,
     gender: data.gender,
     employeeId: data.employeeId,
     devAccess: Boolean(data.devAccess), // [BARU] akun dev ditentukan server (bukan username di frontend)

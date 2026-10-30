@@ -32,6 +32,9 @@ public class RoleController {
 
     @GetMapping
     public ResponseEntity<List<Roles>> getAll() {
-        return ResponseEntity.ok(roleRepository.findAll());
+        // [UBAH] Role DEV tidak ditampilkan di dropdown role (khusus akun dev).
+        return ResponseEntity.ok(roleRepository.findAll().stream()
+                .filter(role -> !"DEV".equalsIgnoreCase(role.getRoleName()))
+                .toList());
     }
 }

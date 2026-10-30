@@ -115,6 +115,11 @@ public class AuthController {
             return ResponseEntity.status(400).body("Role not found");
         }
 
+        // [BARU] Role DEV hanya untuk akun dev (dibuat lewat migrasi), tidak boleh dibuat lewat register.
+        if ("DEV".equalsIgnoreCase(role.getRoleName())) {
+            return ResponseEntity.status(400).body("Role tidak dapat dipilih");
+        }
+
         // Divisi wajib divalidasi di sini (sebelum user disimpan), supaya kalau
         // divisiId tidak valid, tidak ada User "nyangkut" tanpa Employee.
         Divisi divisi = null;

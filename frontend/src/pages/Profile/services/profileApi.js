@@ -22,7 +22,7 @@
 // 5. Divisi CONFIRMED: field `namaDivisi` dan `id` (lihat Divisi.java). GET /api/divisi
 //    sudah tersedia publik kalau nanti butuh dropdown divisi di halaman lain.
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 function getToken() {
   // Sesuaikan key ini dengan tempat token JWT disimpan setelah login.

@@ -166,7 +166,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
             ) : (
               /* 4. Render menggunakan pageData di sini (hasil filter + pagination) */
               pageData.map((emp) => {
-              const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://sims-backend-api-61je.onrender.com';
+              const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
               const photoUrl = emp.photo
                 ? (emp.photo.startsWith('http') ? emp.photo : `${API_BASE_URL}/${emp.photo}`)
                 : `https://ui-avatars.com/api/?name=${emp.fullName}`;

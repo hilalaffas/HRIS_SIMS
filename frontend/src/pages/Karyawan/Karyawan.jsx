@@ -7,7 +7,7 @@ import TableKaryawan from './components/TableKaryawan';
 import FormKaryawan from './components/FormKaryawan';
 import ModalDetailKaryawan from './components/ModalDetailKaryawan'; // [BARU] Import komponen modal baru
 import ConfirmDeleteModal from './components/ConfirmDeleteModal';
-import { isSuperAdmin, isHrAdmin } from '../../utils/roles';
+import { isSuperAdmin, isHrAdmin, isReportEmployee } from '../../utils/roles';
 import { buildLeaveBalanceTimeline } from '../../utils/leaveBalanceTimeline'; // [BARU] sisa cuti per baris riwayat
 import DataDivisi from './components/DataDivisi';
 import LogSistem from './components/LogSistem';
@@ -418,7 +418,18 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
     setIsExporting(true);
     try {
-      const exportContext = { karyawanList, riwayatCuti, balanceAfterByLeaveId, logList };
+      // [UBAH] Ekspor (CSV & PDF) hanya memuat karyawan asli: akun SUPER_ADMIN
+      // / supersecret disaring dari daftar karyawan, dan cuti milik mereka
+      // dibuang berdasarkan employeeId.
+      const excludedEmployeeIds = new Set(
+        karyawanList.filter((k) => !isReportEmployee(k)).map((k) => k.employeeId ?? k.id)
+      );
+      const exportContext = {
+        karyawanList: karyawanList.filter(isReportEmployee),
+        riwayatCuti: riwayatCuti.filter((item) => !excludedEmployeeIds.has(item.employeeId)),
+        balanceAfterByLeaveId,
+        logList,
+      };
 
       if (format === 'pdf' && exportConfig.pdf) {
         const { pdf } = exportConfig;

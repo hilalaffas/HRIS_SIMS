@@ -24,13 +24,15 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 public class ApprovalScopeService {
 
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
+    private static final String ROLE_DEV = "ROLE_DEV"; // [BARU] akun dev punya cakupan sama dengan SUPER_ADMIN
 
     private final EmployeeRepository employeeRepository;
 
     // Dipanggil sekali per request, hasilnya dipakai untuk memfilter banyak baris.
     public ApprovalScope resolve(Authentication authentication) {
         boolean superAdmin = authentication.getAuthorities().stream()
-                .anyMatch(authority -> ROLE_SUPER_ADMIN.equals(authority.getAuthority()));
+                .anyMatch(authority -> ROLE_SUPER_ADMIN.equals(authority.getAuthority())
+                        || ROLE_DEV.equals(authority.getAuthority()));
         if (superAdmin) {
             return new ApprovalScope(true, null, null, 0);
         }

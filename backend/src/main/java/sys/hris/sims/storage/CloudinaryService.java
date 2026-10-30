@@ -51,6 +51,16 @@ public class CloudinaryService {
     @Value("${storage.local.public-base-url:http://localhost:8080}")
     private String localPublicBaseUrl;
 
+    // [BARU] Awalan folder per environment (mis. "dev"). Kosong = production.
+    @Value("${cloudinary.folder-prefix:}")
+    private String folderPrefix;
+
+    private String folder(String name) {
+        return (folderPrefix == null || folderPrefix.isBlank())
+                ? name
+                : folderPrefix.trim() + "/" + name;
+    }
+
     private boolean isLocalMode() {
         return storageMode != null && "local".equalsIgnoreCase(storageMode.trim());
     }
@@ -125,7 +135,7 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
             ObjectUtils.asMap(
-                "folder", "employees",
+                "folder", folder("employees"),
                 "public_id", publicId,
                 "overwrite", true,
                 "invalidate", true,
@@ -175,7 +185,7 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
             ObjectUtils.asMap(
-                "folder", "news",
+                "folder", folder("news"),
                 "public_id", "news-" + java.util.UUID.randomUUID(),
                 "resource_type", "image"
             )
@@ -251,7 +261,7 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
             ObjectUtils.asMap(
-                "folder", "medical-documents",
+                "folder", folder("medical-documents"),
                 "public_id", isPdf ? publicId + ".pdf" : publicId,
                 "overwrite", false,
                 "resource_type", isPdf ? "raw" : "image"
@@ -267,7 +277,7 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
             ObjectUtils.asMap(
-                "folder", "attendance",
+                "folder", folder("attendance"),
                 "public_id", publicId,
                 "overwrite", false,
                 "resource_type", "image"
