@@ -435,9 +435,11 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
     setFormData((current) => ({
       ...current,
       [field]: value,
-      ...(field === 'startDate' && current.endDate < value ? { endDate: '' } : {}),
+      // [UBAH] Pilih DARI TANGGAL -> SAMPAI TANGGAL otomatis ikut (sebelumnya
+      // dikosongkan kalau lebih awal dari DARI TANGGAL, selain itu dibiarkan).
+      ...(field === 'startDate' ? { endDate: value } : {}),
     }));
-    setErrors((prev) => ({ ...prev, [field]: undefined }));
+    setErrors((prev) => ({ ...prev, [field]: undefined, ...(field === 'startDate' ? { endDate: undefined } : {}) }));
     setActiveDatePicker(null);
   };
 
@@ -463,7 +465,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
             return <button key={value} type="button" disabled={disabled} onClick={() => chooseDate(field, day)} title={isBooked ? 'Tanggal sudah terpakai pengajuan cuti' : isHoliday ? 'Hari libur nasional' : isWeekend ? 'Akhir pekan' : undefined} className={`${!day.isCurrentMonth ? 'is-outside ' : ''}${isHoliday || isWeekend ? 'is-red-day ' : ''}${isBooked ? 'is-booked ' : ''}${disabled ? 'is-disabled-rule ' : ''}${value === formData[field] ? 'is-selected ' : ''}${value === todayKey ? 'is-today' : ''}`}>{day.day}</button>;
           })}
         </div>
-        <div className="superadmin-date-calendar__footer"><button type="button" onClick={() => { setFormData((current) => ({ ...current, [field]: '' })); setActiveDatePicker(null); }}>Clear</button><button type="button" onClick={() => { if (field === 'endDate' && (todayKey < formData.startDate || (maxEndDate && todayKey > maxEndDate))) return; setFormData((current) => ({ ...current, [field]: todayKey })); setActiveDatePicker(null); }}>Today</button></div>
+        <div className="superadmin-date-calendar__footer"><button type="button" onClick={() => { setFormData((current) => ({ ...current, [field]: '' })); setActiveDatePicker(null); }}>Clear</button><button type="button" onClick={() => { if (field === 'endDate' && (todayKey < formData.startDate || (maxEndDate && todayKey > maxEndDate))) return; setFormData((current) => ({ ...current, [field]: todayKey, ...(field === 'startDate' ? { endDate: todayKey } : {}) })); setActiveDatePicker(null); }}>Today</button></div>
       </div>
     );
   };

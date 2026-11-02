@@ -231,11 +231,15 @@ const LeaveTypeDateSection = ({
     });
   })();
 
-  const handleSelectDate = (item, setDateState, setShowCalendar, minDateStr = null, maxDateStr = null) => {
+  // [UBAH] Parameter baru `onAfterSelect` (opsional): dipanggil dengan tanggal
+  // terpilih setelah lolos validasi min/max. Dipakai DARI TANGGAL supaya
+  // SAMPAI TANGGAL otomatis ikut ke tanggal yang baru dipilih.
+  const handleSelectDate = (item, setDateState, setShowCalendar, minDateStr = null, maxDateStr = null, onAfterSelect = null) => {
     const selectedStr = `${item.year}-${String(item.month + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
     if (minDateStr && new Date(selectedStr) < new Date(minDateStr)) return;
     if (maxDateStr && new Date(selectedStr) > new Date(maxDateStr)) return;
     setDateState(selectedStr);
+    if (onAfterSelect) onAfterSelect(selectedStr);
     setShowCalendar(false);
   };
 
@@ -336,7 +340,7 @@ const LeaveTypeDateSection = ({
           </div>
           {showDariCalendar && (() => {
             const batasMinDariStr = isMendesak ? todayStr : dinamisBatasMinStr;
-            return renderMiniCalendar(dariViewDate, setDariViewDate, startDate, (item) => handleSelectDate(item, setStartDate, setShowDariCalendar, batasMinDariStr), batasMinDariStr);
+            return renderMiniCalendar(dariViewDate, setDariViewDate, startDate, (item) => handleSelectDate(item, setStartDate, setShowDariCalendar, batasMinDariStr, null, setEndDate), batasMinDariStr);
           })()}
         </div>
 
