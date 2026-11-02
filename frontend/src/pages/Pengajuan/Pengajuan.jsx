@@ -30,6 +30,7 @@ import PengajuanFilterBar from './components/PengajuanFilterBar';
 import PengajuanHistoryTable from './components/PengajuanHistoryTable';
 import RequestDetailModal from './components/RequestDetailModal';
 import ApprovalStatusModal from './components/ApprovalStatusModal'; // [BARU]
+import OvertimeApproverEditModal from './components/OvertimeApproverEditModal';
 import LeaveTab from './tabs/LeaveTab'; // [BARU]
 import PermissionTab from './tabs/PermissionTab'; // [BARU]
 import OvertimeTab from './tabs/OvertimeTab'; // [BARU]
@@ -51,7 +52,7 @@ import {
   getCardItems,
 } from './utils/pengajuanItems';
 import { formatDateLabel, submitPermissionRequest, toDisplayRecord, uploadMedicalDocument } from '../../services/attendanceService';
-import { submitOvertime } from '../../services/overtimeService';
+import { submitOvertime, updateOvertimeApprovers } from '../../services/overtimeService';
 import { isMyDivisionShifting } from '../../services/divisiService';
 import './Pengajuan.css';
 
@@ -65,6 +66,7 @@ export default function Pengajuan({ user }) {
   const [selectedKey, setSelectedKey] = useState(null); // null = kartu mengikuti pengajuan TERBARU
   const [filters, setFilters] = useState({ kind: 'ALL', status: 'ALL', search: '' });
   const [isShifting, setIsShifting] = useState(false);
+  const [overtimeApproverTarget, setOvertimeApproverTarget] = useState(null);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
@@ -171,7 +173,10 @@ export default function Pengajuan({ user }) {
   const handleSelectStatus = PENGAJUAN_VISIBILITY.statusPopup ? (item) => setStatusKey(item.key) : undefined;
 
   const handleRowAction = (item) => {
-    if (item.kind === REQUEST_KIND.LEAVE) leave.handleOpenDetail(item.source);
+    if (item.kind === REQUEST_KIND.OVERTIME && item.statusCode === 'PENDING' && !(item.source?.approvals || []).length) {
+      setOvertimeApproverTarget(item.source);
+    }
+    else if (item.kind === REQUEST_KIND.LEAVE) leave.handleOpenDetail(item.source);
     else if (item.action === ROW_ACTION.UPLOAD_LETTER) setLetterTargetId(item.refId);
     else setDetailKey(item.key);
   };
@@ -197,6 +202,13 @@ export default function Pengajuan({ user }) {
     await submitOvertime(formValues);
     setSelectedKey(null);
     showToast('Pengajuan lembur berhasil dikirim.');
+    reload();
+  };
+
+  const handleOvertimeApproverUpdate = async (values) => {
+    await updateOvertimeApprovers(overtimeApproverTarget.id, values);
+    setOvertimeApproverTarget(null);
+    showToast('Nama approval pengajuan lembur berhasil dilengkapi.');
     reload();
   };
 
@@ -261,6 +273,9 @@ export default function Pengajuan({ user }) {
           loading={loading}
           onSelectStatus={handleSelectStatus}
           onAction={handleRowAction}
+          approvers={leave.formProps.approvers}
+          requesterRole={user?.role || user?.jabatan || 'MEMBER'}
+          requesterEmployeeId={user?.employeeId || user?.employee?.employeeId || null}
         />
       </PengajuanTabPanel>
 
@@ -325,6 +340,17 @@ export default function Pengajuan({ user }) {
 
       {/* Popup error + konfirmasi kirim + detail/edit berkas cuti */}
       <LeaveRequestDialogs leave={leave} />
+
+      {overtimeApproverTarget && (
+        <OvertimeApproverEditModal
+          record={overtimeApproverTarget}
+          approvers={leave.formProps.approvers}
+          requesterRole={user?.role || user?.jabatan || 'MEMBER'}
+          requesterEmployeeId={user?.employeeId || null}
+          onClose={() => setOvertimeApproverTarget(null)}
+          onSubmit={handleOvertimeApproverUpdate}
+        />
+      )}
 
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </div>

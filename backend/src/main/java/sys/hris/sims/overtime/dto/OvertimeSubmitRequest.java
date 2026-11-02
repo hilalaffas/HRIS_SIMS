@@ -13,4 +13,7 @@ public class OvertimeSubmitRequest {
     private LocalTime startTime;
     private LocalTime endTime;
     private String reason;
+    private Long leaderEmployeeId;
+    private Long spvEmployeeId;
+    private Long managerEmployeeId;
 }

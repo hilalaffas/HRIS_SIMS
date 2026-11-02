@@ -93,3 +93,33 @@
 
 .apv-decided-approved { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
 .apv-decided-rejected { background: var(--color-danger-bg); color: var(--dk-text-red, var(--color-danger)); }
+
+
+.apv-status { display:inline-block; max-width:260px; padding:5px 9px; border-radius:999px; font-size:10px; line-height:1.35; font-weight:700; }
+.apv-status--blue { background:#e8f1ff; color:#2457a6; }
+.apv-status--amber { background:#fff2d6; color:#946200; }
+.apv-status--green { background:#e3f6e9; color:#18713a; }
+.apv-status--rose { background:#ffe7e7; color:#a52b35; }
+.apv-actions { align-items:center; }
+.apv-btn:disabled { opacity:.42; cursor:not-allowed; }
+.apv-detail-btn { display:inline-flex; align-items:center; justify-content:center; width:29px; height:27px; border:1px solid var(--color-border); border-radius:6px; background:var(--dk-bg-subtle,#f6f8fa); color:var(--color-text-secondary); cursor:pointer; }
+.apv-detail-btn:hover { color:var(--color-primary); border-color:var(--color-primary); }
+.apv-detail-overlay { position:fixed; inset:0; z-index:1200; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.48); }
+.apv-detail-modal { width:min(620px,100%); max-height:85vh; overflow:auto; padding:20px; border-radius:14px; background:var(--color-surface,#fff); color:var(--color-text); box-shadow:0 18px 55px rgba(0,0,0,.22); }
+.apv-detail-modal header,.apv-detail-modal footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.apv-detail-modal header h2 { margin:0; font-size:18px; }
+.apv-detail-modal header button { border:0; background:transparent; font-size:25px; cursor:pointer; color:inherit; }
+.apv-detail-modal dl { display:grid; gap:10px; margin:18px 0; }
+.apv-detail-modal dl div { display:grid; grid-template-columns:135px 1fr; gap:12px; }
+.apv-detail-modal dt { color:var(--color-text-secondary); font-size:12px; }
+.apv-detail-modal dd { margin:0; font-size:13px; font-weight:600; }
+.apv-detail-modal h3 { margin:18px 0 8px; font-size:14px; }
+.apv-timeline { margin:0; padding-left:22px; }
+.apv-timeline li { padding:5px 0 10px 4px; }
+.apv-timeline li span,.apv-timeline li em,.apv-timeline li small { display:block; margin-top:3px; font-size:12px; font-style:normal; }
+.apv-step-approved { color:#18713a; } .apv-step-rejected { color:#a52b35; } .apv-step-pending { color:#946200; }
+.apv-detail-modal footer { justify-content:flex-end; margin-top:18px; }
+.apv-detail-modal footer button { padding:7px 16px; border:1px solid var(--color-border); border-radius:7px; background:var(--dk-bg-subtle,#f6f8fa); color:inherit; cursor:pointer; }
+@media (max-width:640px) { .apv-detail-modal dl div { grid-template-columns:1fr; gap:3px; } .apv-actions { flex-wrap:wrap; } }
+
+.apv-waiting-hint { display:block; margin-top:5px; color:var(--color-text-muted); font-size:10px; }

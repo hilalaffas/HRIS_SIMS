@@ -64,14 +64,21 @@ public class OvertimeController {
         activityLogService.log(
                 authentication.getName(),
                 getCurrentUserId(authentication),
-                "APPROVED".equals(response.getStatus()) ? "APPROVE_LEMBUR" : "REJECT_LEMBUR",
+                "APPROVED".equalsIgnoreCase(request.getStatus()) ? "APPROVE_LEMBUR" : "REJECT_LEMBUR",
                 "overtime_requests",
                 response.getOvertimeId(),
                 "Lembur " + response.getEmployeeName() + " tanggal " + response.getOvertimeDate() + " "
-                        + ("APPROVED".equals(response.getStatus()) ? "disetujui" : "ditolak"),
+                        + ("APPROVED".equalsIgnoreCase(request.getStatus()) ? "diproses/disetujui pada tahap ini" : "ditolak"),
                 httpRequest);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{overtimeId}/approvers")
+    public ResponseEntity<OvertimeResponse> updateApprovers(
+            @PathVariable Long overtimeId, @RequestBody OvertimeSubmitRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(overtimeService.updateApprovers(overtimeId, request, authentication.getName()));
     }
 
     @PostMapping("/me")

@@ -12,10 +12,16 @@ import { BriefcaseBusiness } from 'lucide-react';
 import PengajuanFormCard, { FieldError } from '../components/PengajuanFormCard';
 import PengajuanHistoryTable from '../components/PengajuanHistoryTable';
 import useOvertimeForm, { OVERTIME_REASON_MAX_LENGTH } from '../hooks/useOvertimeForm';
-import { inputErrorClass } from '../../../utils/validation';
+import { inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
+import Dropdown from '../../../components/Dropdown';
+import '../../Cuti/applycuti/components/LeaveForm.css';
 
-export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectStatus, onAction }) {
-  const { form, fieldErrors, ...overtime } = useOvertimeForm(onSubmit);
+export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectStatus, onAction, approvers = { LEADER: [], SPV: [], MANAGER: [] }, requesterRole = 'MEMBER', requesterEmployeeId = null }) {
+  const role = String(requesterRole || 'MEMBER').toUpperCase().replace(/^ROLE_/, '');
+  const isLeader = role === 'LEADER';
+  const isSpv = role === 'SPV' || role === 'SUPERVISOR';
+  const isManager = role === 'MANAGER';
+  const { form, fieldErrors, ...overtime } = useOvertimeForm(onSubmit, { requesterRole: role, requesterEmployeeId });
 
   return (
     <>
@@ -75,6 +81,51 @@ export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectS
           aria-live="polite"
         >
           Total jam lembur:&nbsp;<strong>{overtime.totalLabel}</strong>
+        </div>
+
+        <div className="form-group form-group--approval">
+          <label className="form-label">PILIH ALUR APPROVAL LEMBUR *</label>
+          <div className="approval-row">
+            <div className="approval-col">
+              <span className="badge-approval leader">Leader</span>
+              <Dropdown
+                name="leaderEmployeeId"
+                value={form.leaderEmployeeId}
+                onChange={overtime.updateField}
+                options={(approvers.LEADER || []).map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
+                placeholder={isLeader ? 'Anda (Leader)' : isSpv || isManager ? 'Tidak diperlukan' : 'Pilih Leader...'}
+                disabled={isLeader || isSpv || isManager || overtime.isSubmitting}
+                className={dropdownErrorClass(Boolean(fieldErrors.leaderEmployeeId))}
+              />
+              <FieldError message={fieldErrors.leaderEmployeeId} />
+            </div>
+            <div className="approval-col">
+              <span className="badge-approval spv">SPV</span>
+              <Dropdown
+                name="spvEmployeeId"
+                value={form.spvEmployeeId}
+                onChange={overtime.updateField}
+                options={(approvers.SPV || []).map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
+                placeholder={isSpv ? 'Anda (SPV)' : isManager ? 'Tidak diperlukan' : 'Pilih SPV...'}
+                disabled={isSpv || isManager || overtime.isSubmitting}
+                className={dropdownErrorClass(Boolean(fieldErrors.spvEmployeeId))}
+              />
+              <FieldError message={fieldErrors.spvEmployeeId} />
+            </div>
+            <div className="approval-col">
+              <span className="badge-approval manager">Manager</span>
+              <Dropdown
+                name="managerEmployeeId"
+                value={form.managerEmployeeId}
+                onChange={overtime.updateField}
+                options={(approvers.MANAGER || []).map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
+                placeholder="Pilih Manager..."
+                disabled={overtime.isSubmitting}
+                className={dropdownErrorClass(Boolean(fieldErrors.managerEmployeeId))}
+              />
+              <FieldError message={fieldErrors.managerEmployeeId} />
+            </div>
+          </div>
         </div>
 
         <div className="form-group">

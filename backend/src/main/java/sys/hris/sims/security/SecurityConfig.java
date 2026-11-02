@@ -418,6 +418,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/lembur/*/approval")
                         .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN", "DEV")
 
+                        // [BARU] Pemohon melengkapi nama approver (Leader/SPV/Manager) untuk
+                        // pengajuannya sendiri. Kepemilikan dicek di OvertimeService.updateApprovers().
+                        .requestMatchers(HttpMethod.PUT, "/api/lembur/*/approvers")
+                        .authenticated()
+
                         // ==========================
                         // LEAVE TYPE
                         // ==========================

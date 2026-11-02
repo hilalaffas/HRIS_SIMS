@@ -13,13 +13,17 @@ export async function getMyOvertime(config = {}) {
 }
 
 // POST pengajuan lembur. Total jam & status dihitung backend, jadi tidak dikirim.
-export async function submitOvertime({ overtimeDate, startTime, endTime, reason }) {
-  return api.post('/api/lembur/me', { overtimeDate, startTime, endTime, reason });
+export async function submitOvertime({ overtimeDate, startTime, endTime, reason, leaderEmployeeId, spvEmployeeId, managerEmployeeId }) {
+  return api.post('/api/lembur/me', { overtimeDate, startTime, endTime, reason, leaderEmployeeId, spvEmployeeId, managerEmployeeId });
 }
 
 // [BARU] Tambah Lembur saat check-out (setelah 17:00).
 // Jendela jam dihitung SERVER: { overtimeDate, workEndTime, startTime, maxEndTime, canExtend, entries }.
 // `silent`: popup check-out punya indikator loading sendiri, jadi tidak perlu splash global.
+export async function updateOvertimeApprovers(overtimeId, values) {
+  return api.put(`/api/lembur/${overtimeId}/approvers`, values);
+}
+
 export async function getOvertimeExtensionWindow() {
   return api.get('/api/lembur/me/extension-window', { silent: true });
 }
@@ -41,7 +45,7 @@ export async function decideOvertimeApproval(overtimeId, status) {
 }
 
 export const OVERTIME_STATUS = {
-  PENDING: { label: 'MENUNGGU ACC', shortLabel: 'MENUNGGU', tone: 'pending' },
+  PENDING: { label: 'MENUNGGU PERSETUJUAN', shortLabel: 'MENUNGGU', tone: 'pending' },
   APPROVED: { label: 'APPROVED (ACC)', shortLabel: 'ACC', tone: 'approved' },
   REJECTED: { label: 'DITOLAK', shortLabel: 'DITOLAK', tone: 'rejected' },
 };
@@ -75,7 +79,12 @@ export function toDisplayOvertime(item) {
     reason: item.reason || '-',
     statusCode: String(item.status || '').toUpperCase(),
     createdAt: item.createdAt, // [BARU] "2026-10-05T20:05:11" -> label "Dikirim ..." di kartu alur
-    approvalLevelIndex: item.approvalLevelIndex ?? null, // [BARU] opsional, belum dikirim backend
+    approvalLevelIndex: item.approvalLevelIndex ?? null,
+    currentApproverEmployeeId: item.currentApproverEmployeeId,
+    approvals: (item.approvals || []).map((step) => ({
+      role: step.role, employeeId: step.employeeId, employeeName: step.employeeName,
+      action: step.action, actedAt: step.actedAt, note: step.note,
+    })),
   };
 }
 

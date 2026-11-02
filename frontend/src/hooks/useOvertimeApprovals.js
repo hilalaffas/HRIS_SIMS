@@ -13,6 +13,15 @@ import {
 const clockLabel = (time) => (time ? String(time).slice(0, 5) : '-');
 
 // Bentuk baris untuk tabel persetujuan.
+const getProgressStatus = (item) => {
+  const approvals = item.approvals || [];
+  const pending = approvals.find((step) => step.action === 'PENDING');
+  if (pending) return `Menunggu Persetujuan ${pending.role}`;
+  if (String(item.status).toUpperCase() === 'APPROVED') return 'Sudah Di-ACC';
+  if (String(item.status).toUpperCase() === 'REJECTED') return 'Ditolak';
+  return approvals.length ? 'Dalam Proses Persetujuan' : 'Menunggu tahap sebelumnya / nama approval';
+};
+
 const toOvertimeRow = (item) => ({
   rowKey: `lembur-${item.overtimeId}`,
   id: item.overtimeId,
@@ -21,6 +30,11 @@ const toOvertimeRow = (item) => ({
   detail: item.reason || '-',
   subDetail: `${clockLabel(item.startTime)} - ${clockLabel(item.endTime)} (${formatOvertimeDuration(item.totalMinutes)})`,
   status: String(item.status || '').toUpperCase(),
+  canAct: Boolean(item.canAct),
+  approvalProgressStatus: getProgressStatus(item),
+  approvals: item.approvals || [],
+  totalMinutes: item.totalMinutes,
+  employeeId: item.employeeId,
 });
 
 // Menunggu paling atas, lalu tanggal terbaru.
@@ -80,7 +94,7 @@ export default function useOvertimeApprovals(enabled = true) {
       // Baris tetap ada di daftar "Semua" dengan status baru; di filter
       // "Menunggu" otomatis hilang karena bukan PENDING lagi.
       setRows((current) => current
-        .map((item) => (item.rowKey === row.rowKey ? { ...item, status } : item))
+        .map((item) => (item.rowKey === row.rowKey ? { ...item, status, canAct: false, approvalProgressStatus: status === 'APPROVED' ? 'Sudah Di-ACC' : 'Ditolak' } : item))
         .sort(sortRows));
       showToast(status === 'APPROVED' ? 'Pengajuan disetujui.' : 'Pengajuan ditolak.');
     } catch (error) {

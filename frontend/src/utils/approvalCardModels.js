@@ -35,7 +35,18 @@ export function buildOvertimeCardModel(record, { isLatest = false } = {}) {
       { label: 'Total', value: record.duration, emphasis: true },
     ],
     note: { label: 'Pekerjaan', text: record.reason },
-    steps: buildTimeline(flowRequest).map(({ key, label, state }) => ({ key, label, state })),
+    steps: (record.approvals?.length
+      ? [
+          { key: 'submitted', label: 'Diajukan', state: 'done' },
+          ...record.approvals.map((step) => ({
+            key: String(step.role || '').toLowerCase(),
+            label: `${({ LEADER: 'Review Leader', SPV: 'Review SPV', MANAGER: 'ACC Manager' })[step.role] || step.role}${step.employeeName ? `: ${step.employeeName}` : ''}`,
+            state: step.action === 'APPROVED' ? 'done'
+              : step.action === 'REJECTED' ? 'rejected'
+                : record.statusCode === 'PENDING' && record.approvals.find((item) => item.action === 'PENDING') === step ? 'current' : 'upcoming',
+          })),
+        ]
+      : buildTimeline(flowRequest).map(({ key, label, state }) => ({ key, label, state }))),
     hint: statusMeta.hint,
     // Tombol Batalkan butuh endpoint backend; belum ada, jadi selalu false.
     cancellable: flowRequest.status === 'pending',

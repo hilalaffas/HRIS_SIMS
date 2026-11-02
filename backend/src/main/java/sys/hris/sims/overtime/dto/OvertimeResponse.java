@@ -3,6 +3,7 @@ package sys.hris.sims.overtime.dto;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,4 +30,17 @@ public class OvertimeResponse {
     private String status; // PENDING / APPROVED / REJECTED
 
     private LocalDateTime createdAt;
+    private List<OvertimeApprovalStep> approvals;
+    private Long currentApproverEmployeeId;
+    private Boolean canAct;
+
+    @lombok.Data @lombok.AllArgsConstructor @lombok.NoArgsConstructor
+    public static class OvertimeApprovalStep {
+        private String role;
+        private Long employeeId;
+        private String employeeName;
+        private String action;
+        private LocalDateTime actedAt;
+        private String note;
+    }
 }

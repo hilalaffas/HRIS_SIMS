@@ -61,6 +61,10 @@ public class OvertimeRequest {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @jakarta.persistence.Transient private Long leaderEmployeeId;
+    @jakarta.persistence.Transient private Long spvEmployeeId;
+    @jakarta.persistence.Transient private Long managerEmployeeId;
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();

@@ -32,6 +32,7 @@ const ACTION_PILL = {
 };
 const DEFAULT_ACTION_PILL = { label: 'DETAIL', Icon: FileText, tone: 'recorded' };
 const UPLOAD_ACTION_PILL = { label: 'UPLOAD SURAT', Icon: FileUp, tone: 'upload' };
+const COMPLETE_APPROVAL_PILL = { label: 'LENGKAPI APPROVAL', Icon: FileText, tone: 'review' };
 
 function StatusCell({ item, isSelected, onSelectStatus }) {
   const Icon = STATUS_ICON[item.statusTone];
@@ -119,10 +120,14 @@ export default function PengajuanHistoryTable({
             {!loading && visibleItems.map((item, index) => {
               const kind = KIND_META[item.kind];
               const isUpload = item.action === ROW_ACTION.UPLOAD_LETTER;
+              const needsOvertimeApprovers = item.kind === 'OVERTIME' && item.statusCode === 'PENDING'
+                && !(item.source?.approvals || []).length;
               const typeLabel = item.typeLabel || kind.label; // [BARU]
-              const pill = isUpload ? UPLOAD_ACTION_PILL : (ACTION_PILL[item.statusCode] || DEFAULT_ACTION_PILL);
+              const pill = isUpload ? UPLOAD_ACTION_PILL : (needsOvertimeApprovers ? COMPLETE_APPROVAL_PILL : (ACTION_PILL[item.statusCode] || DEFAULT_ACTION_PILL));
               const ActionIcon = pill.Icon;
-              const actionLabel = isUpload ? 'Upload surat dokter susulan' : `${pill.label}: lihat detail ${typeLabel}`;
+              const actionLabel = isUpload ? 'Upload surat dokter susulan' : (needsOvertimeApprovers
+                ? 'Lengkapi nama Leader, SPV, dan Manager untuk pengajuan lembur lama'
+                : `${pill.label}: lihat detail ${typeLabel}`);
               return (
                 <tr
                   key={item.key}

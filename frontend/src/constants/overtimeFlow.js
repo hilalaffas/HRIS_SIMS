@@ -76,11 +76,13 @@ const flowStatusByCode = {
 };
 
 export function resolveFlowState(record) {
-  const maxLevel = approvalLevels.length - 1;
-  const rawLevel = Number.isInteger(record.approvalLevelIndex) ? record.approvalLevelIndex : 0;
-
-  return {
-    status: flowStatusByCode[record.statusCode] ?? 'pending',
-    levelIndex: Math.min(Math.max(rawLevel, 0), maxLevel),
-  };
+  const approvals = Array.isArray(record.approvals) ? record.approvals : [];
+  const order = ['LEADER', 'SPV', 'MANAGER'];
+  const currentIndex = approvals.findIndex((step) => step.action === 'PENDING');
+  const rejectedIndex = approvals.findIndex((step) => step.action === 'REJECTED');
+  let levelIndex = currentIndex >= 0 ? order.indexOf(approvals[currentIndex].role) : 0;
+  if (rejectedIndex >= 0) levelIndex = order.indexOf(approvals[rejectedIndex].role);
+  if (levelIndex < 0) levelIndex = 0;
+  const status = flowStatusByCode[record.statusCode] ?? 'pending';
+  return { status, levelIndex };
 }

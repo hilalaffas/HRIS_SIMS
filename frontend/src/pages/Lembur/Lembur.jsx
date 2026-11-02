@@ -10,13 +10,14 @@ import Toast from '../../components/Toast';
 import OvertimeHistoryTable from './components/OvertimeHistoryTable';
 import OvertimeStatusCard from './components/OvertimeStatusCard'; // [BARU]
 import OvertimeFormModal from './components/OvertimeFormModal';
-import { getMyOvertime, submitOvertime, toDisplayOvertime } from '../../services/overtimeService';
+import { getMyOvertime, submitOvertime, updateOvertimeApprovers, toDisplayOvertime } from '../../services/overtimeService';
 import './Lembur.css';
 
 export default function Lembur() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingApprovers, setEditingApprovers] = useState(false);
   const [toast, setToast] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   // [UBAH] null = kartu alur mengikuti pengajuan TERBARU; terisi = user memilih baris lain
@@ -50,7 +51,12 @@ export default function Lembur() {
   // Dilempar ke OvertimeFormModal; error sengaja dilempar ulang supaya modal
   // tetap terbuka dan menampilkan pesan dari backend.
   const handleSubmit = async (formValues) => {
-    await submitOvertime(formValues);
+    if (editingApprovers && activeRecord) {
+      await updateOvertimeApprovers(activeRecord.id, formValues);
+      setEditingApprovers(false);
+    } else {
+      await submitOvertime(formValues);
+    }
     setModalOpen(false);
     setSelectedId(null); // [BARU] setelah submit, kartu kembali menampilkan pengajuan terbaru
     showToast('Pengajuan lembur berhasil dikirim.');
@@ -88,6 +94,14 @@ export default function Lembur() {
       </header>
 
       {/* [UBAH] Kartu alur persetujuan selalu tampil (default: pengajuan terbaru), tanpa tombol tutup */}
+      {activeRecord && activeRecord.statusCode === 'PENDING' && activeRecord.approvals.length === 0 && (
+        <div className="lmb-legacy-approval-notice">
+          <p>Pengajuan lembur lama ini belum memiliki nama approval. Lengkapi nama Leader, SPV, dan Manager agar dapat diproses.</p>
+          <button type="button" className="lmb-primary-button" onClick={() => { setEditingApprovers(true); setModalOpen(true); }}>
+            Lengkapi Nama Approval
+          </button>
+        </div>
+      )}
       {activeRecord && (
         <OvertimeStatusCard
           key={activeRecord.id}
@@ -105,7 +119,11 @@ export default function Lembur() {
       />
 
       {modalOpen && (
-        <OvertimeFormModal onClose={() => setModalOpen(false)} onSubmit={handleSubmit} />
+        <OvertimeFormModal
+          onClose={() => { setModalOpen(false); setEditingApprovers(false); }}
+          onSubmit={handleSubmit}
+          initialData={editingApprovers ? activeRecord : null}
+        />
       )}
 
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
