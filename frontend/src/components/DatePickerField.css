@@ -1,0 +1,112 @@
+/* src/components/DatePickerField.css
+   [BARU] Gaya kalender mini DatePickerField -- visual mengikuti .custom-mini-calendar
+   di form Ajukan Cuti (LeaveForm.css), memakai token --dk-* agar ikut tema gelap. */
+.dpf { position: relative; display: inline-block; }
+
+.dpf-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  min-width: 146px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color var(--motion-fast, 150ms) ease, box-shadow var(--motion-fast, 150ms) ease;
+}
+.dpf-trigger svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-muted); }
+.dpf-trigger:hover, .dpf-trigger.is-open { border-color: var(--color-primary-soft); }
+.dpf-trigger:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
+.dpf-placeholder { font-weight: 500; color: var(--color-text-muted); }
+
+.dpf-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  width: 268px;
+  padding: 12px;
+  background: var(--dk-bg-card, #ffffff);
+  border: 1px solid var(--dk-border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.12);
+  animation: dpf-pop-in var(--motion-fast, 150ms) ease-out both;
+}
+@keyframes dpf-pop-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dpf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--dk-text, #1e293b);
+}
+.dpf-nav { display: flex; gap: 4px; }
+.dpf-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--dk-text, #334155);
+  background: transparent;
+  border: 1px solid var(--dk-border, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dpf-nav button svg { width: 14px; height: 14px; }
+.dpf-nav button:hover:not(:disabled) { background: var(--dk-bg-subtle, #f1f5f9); }
+.dpf-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.dpf-weekdays, .dpf-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.dpf-weekdays { margin-bottom: 6px; text-align: center; font-size: 10px; font-weight: 600; color: var(--dk-text-4, #94a3b8); }
+.dpf-weekdays .is-weekend { color: #ef4444; }
+.dpf-grid { gap: 4px; }
+
+.dpf-day {
+  height: 28px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dk-text, #334155);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--motion-fast, 150ms) ease;
+}
+.dpf-day:hover:not(:disabled) { background: var(--dk-bg-subtle, #f1f5f9); }
+.dpf-day:disabled { color: var(--dk-text-4, #cbd5e1); opacity: 0.55; cursor: not-allowed; }
+.dpf-day.is-weekend:not(:disabled) { color: #ef4444; }
+.dpf-day.is-holiday:not(:disabled) {
+  font-weight: 700;
+  color: var(--dk-text-red, #dc2626);
+  background: var(--dk-tint-red, #fee2e2);
+}
+.dpf-day.is-today { border-color: var(--color-primary); }
+.dpf-day.is-selected, .dpf-day.is-selected:hover:not(:disabled) {
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+.dpf-legend { display: flex; gap: 14px; margin-top: 10px; font-size: 10.5px; color: var(--color-text-secondary); }
+.dpf-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dpf-dot { width: 9px; height: 9px; border-radius: 3px; }
+.dpf-dot--today { border: 1.5px solid var(--color-primary); }
+.dpf-dot--holiday { background: var(--dk-tint-red, #fee2e2); border: 1px solid var(--dk-text-red, #dc2626); }
+
+@media (max-width: 640px) {
+  .dpf-pop { width: min(268px, calc(100vw - 64px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dpf-pop { animation: none; }
+}

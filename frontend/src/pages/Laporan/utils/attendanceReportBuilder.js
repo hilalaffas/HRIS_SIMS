@@ -19,6 +19,7 @@ import {
   attachOvertime,
   buildMonthlyRows,
   dateKey,
+  getCurrentPeriod,
   getPeriodRange,
 } from '../../Absensi/utils/monthlyAttendance';
 
@@ -29,6 +30,21 @@ const OPEN_TONES = ['alpha', 'belum']; // baris yang boleh ditimpa cuti / "belum
 export function getReportDateRange(period) {
   const { start, end } = getPeriodRange(period.year, period.month);
   return { from: dateKey(start), to: dateKey(end), start, end };
+}
+
+// [BARU] Periode tutup buku yang menyentuh rentang [from, to] (urut naik). Rentang
+// "Hari Ini" / tanggal pilihan bisa jatuh di dalam satu periode atau melewati beberapa.
+function listPeriodsInRange(from, to) {
+  const last = getCurrentPeriod(parseLocalDate(to));
+  const lastIndex = last.year * 12 + last.month;
+  const periods = [];
+  let cursor = getCurrentPeriod(parseLocalDate(from));
+  while (cursor.year * 12 + cursor.month <= lastIndex) {
+    periods.push(cursor);
+    const next = new Date(cursor.year, cursor.month + 1, 1);
+    cursor = { year: next.getFullYear(), month: next.getMonth() };
+  }
+  return periods;
 }
 
 // ---------- penyesuaian baris ----------
@@ -135,25 +151,28 @@ export function summarizeRows(rows, overtimes = []) {
 // ---------- entry point ----------
 
 // employee = satu elemen `employees` dari GET /api/absensi/laporan.
-// Baris dikembalikan URUT TANGGAL NAIK (laporan dibaca dari awal periode).
+// [UBAH] range = { from, to } ('YYYY-MM-DD'), menggantikan `period`: baris dibangun per
+// periode tutup buku yang tersentuh lalu dipotong ke [from, to].
+// Baris dikembalikan URUT TANGGAL NAIK (laporan dibaca dari awal rentang).
 export function buildEmployeeReport(
   employee,
-  { period, holidaysByDate = LOCAL_HOLIDAYS_2026, now = new Date() },
+  { range, holidaysByDate = LOCAL_HOLIDAYS_2026, now = new Date() },
 ) {
   const records = (employee.attendances || []).map(toDisplayRecord);
   const overtimes = (employee.overtimes || []).map(toDisplayOvertime);
   const leaveDayMap = buildLeaveDayMap(employee.leaves);
 
-  const baseRows = attachOvertime(
+  const baseRows = listPeriodsInRange(range.from, range.to).flatMap((period) => attachOvertime(
     buildMonthlyRows(
       records, period.year, period.month, now,
       employee.schedules || [], employee.divisionType, holidaysByDate,
     ),
     overtimes,
-  );
+  ));
   const rows = baseRows
+    .filter((row) => row.date >= range.from && row.date <= range.to)
     .map((row) => normalizeRow(row, { joinDate: employee.joinDate, leaveDayMap }))
-    .reverse(); // buildMonthlyRows: terbaru dulu -> dibalik jadi terlama dulu
+    .sort((a, b) => (a.date < b.date ? -1 : 1)); // terlama dulu
 
   return {
     employeeId: employee.employeeId,

@@ -10,13 +10,26 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { getAttendanceReport } from '../../../services/attendanceReportService';
 import { getHolidaysByMonth } from '../../../services/holidayService';
-import { buildEmployeeReport, getReportDateRange } from '../utils/attendanceReportBuilder';
+import { parseLocalDate } from '../../../services/attendanceService';
+import { buildEmployeeReport } from '../utils/attendanceReportBuilder';
 
-// Periode tutup buku (21 s/d 20) melewati DUA bulan kalender -> ambil libur keduanya.
-async function loadHolidayMap(start, end) {
-  const months = [start, end]
-    .map((date) => ({ year: date.getFullYear(), month: date.getMonth() + 1 }))
-    .filter((item, index, list) => list.findIndex((other) => other.year === item.year && other.month === item.month) === index);
+// [UBAH] Semua bulan kalender yang disentuh rentang [from, to] (periode tutup buku =
+// 2 bulan, tanggal pilihan bisa lebih) -> ambil libur tiap bulan.
+function listMonthsInRange(from, to) {
+  const end = parseLocalDate(to);
+  const months = [];
+  for (
+    let cursor = parseLocalDate(from);
+    cursor <= end;
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
+  ) {
+    months.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 });
+  }
+  return months;
+}
+
+async function loadHolidayMap(from, to) {
+  const months = listMonthsInRange(from, to);
 
   const results = await Promise.all(
     months.map(({ year, month }) => getHolidaysByMonth(year, month, { silent: true }).catch(() => [])),
@@ -31,18 +44,18 @@ async function loadHolidayMap(start, end) {
   return holidayMap;
 }
 
-export default function useAttendanceReport({ period, divisionId }) {
+// [UBAH] Menerima `from` & `to` ('YYYY-MM-DD') menggantikan `period`.
+export default function useAttendanceReport({ from, to, divisionId }) {
   const [result, setResult] = useState({ key: '', report: null, holidaysByDate: null, error: '' });
   const [reloadCount, setReloadCount] = useState(0);
-  const requestKey = `${period.year}-${period.month}-${divisionId || 'all'}-${reloadCount}`;
+  const requestKey = `${from}-${to}-${divisionId || 'all'}-${reloadCount}`;
 
   useEffect(() => {
     let cancelled = false;
-    const { from, to, start, end } = getReportDateRange(period);
 
     Promise.all([
       getAttendanceReport({ from, to, divisionId }, { silent: true }),
-      loadHolidayMap(start, end),
+      loadHolidayMap(from, to),
     ])
       .then(([report, holidaysByDate]) => {
         if (!cancelled) setResult({ key: requestKey, report, holidaysByDate, error: '' });
@@ -59,16 +72,16 @@ export default function useAttendanceReport({ period, divisionId }) {
       });
 
     return () => { cancelled = true; };
-  }, [period, divisionId, requestKey]);
+  }, [from, to, divisionId, requestKey]);
 
   const isLoading = result.key !== requestKey;
 
   const reports = useMemo(() => {
     if (isLoading || !result.report) return [];
     return (result.report.employees || []).map((employee) => (
-      buildEmployeeReport(employee, { period, holidaysByDate: result.holidaysByDate })
+      buildEmployeeReport(employee, { range: { from, to }, holidaysByDate: result.holidaysByDate })
     ));
-  }, [isLoading, result, period]);
+  }, [isLoading, result, from, to]);
 
   const reload = useCallback(() => setReloadCount((count) => count + 1), []);
 

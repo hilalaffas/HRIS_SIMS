@@ -4,19 +4,23 @@
 // jumlah Hadir / Terlambat / Sakit / Izin / Cuti / Alpha / Lembur (ACC) per
 // karyawan, plus paginasi. Klik baris (atau tombol "Detail") membuka sheet
 // harian karyawan tersebut.
+// [BARU] Bila rentang laporan hanya SATU hari (Hari Ini / satu tanggal pilihan),
+// kolom hitungan diganti Jam Masuk / Jam Pulang / Status / Lembur hari itu.
 //
 // Contoh pemakaian:
-// <AttendanceReportTable rows={pageRows} startIndex={0} isLoading={false}
+// <AttendanceReportTable rows={pageRows} startIndex={0} isLoading={false} isSingleDay={false}
 //   totalItems={86} page={0} pageSize={20} onPageChange={fn} onPageSizeChange={fn} onSelect={fn} />
 import React from 'react';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
 import Skeleton from '../../../components/Skeleton';
 import { formatOvertimeDuration } from '../../../services/overtimeService';
-import { PAGE_SIZE_OPTIONS } from '../config/laporanConfig';
+import { PAGE_SIZE_OPTIONS, STATUS_TONE_CLASS } from '../config/laporanConfig';
 import './AttendanceReportTable.css';
 
 const SKELETON_ROW_COUNT = 8;
+const SUMMARY_COLUMN_COUNT = 11; // [BARU] jumlah kolom tampilan ringkasan
+const SINGLE_DAY_COLUMN_COUNT = 8; // [BARU] jumlah kolom tampilan satu hari
 
 const formatLeave = (value) => String(Number(value.toFixed(1))).replace('.', ',');
 
@@ -26,10 +30,25 @@ function CountCell({ value, tone, display }) {
   return <span className={`lpr-count lpr-count--${tone}`}>{display ?? value}</span>;
 }
 
+// [BARU] Status satu hari. Badge `lpr-badge*` didefinisikan di EmployeeReportModal.css
+// (satu tab, selalu ikut termuat). Hari tanpa status (libur/akhir pekan) tampil teks biasa.
+function DayStatusCell({ row }) {
+  if (!row) return <span className="lpr-count lpr-count--zero">-</span>;
+  if (!row.tone) return <span className="lpr-count lpr-count--zero">{row.status}</span>;
+  return <span className={`lpr-badge lpr-badge--${STATUS_TONE_CLASS[row.tone] || 'belum'}`}>{row.status}</span>;
+}
+
+// [BARU] "2 Jam (ACC)" / "Ditolak" / "-" -- sama seperti kolom Total Lembur di ekspor.
+function formatDayOvertime(overtime) {
+  if (!overtime) return '-';
+  return overtime.tone === 'rejected' ? 'Ditolak' : `${overtime.duration} (${overtime.statusLabel})`;
+}
+
 export default function AttendanceReportTable({
   rows,
   startIndex,
   isLoading,
+  isSingleDay = false, // [BARU]
   totalItems,
   page,
   pageSize,
@@ -40,6 +59,7 @@ export default function AttendanceReportTable({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const firstShown = totalItems === 0 ? 0 : page * pageSize + 1;
   const lastShown = Math.min(totalItems, (page + 1) * pageSize);
+  const columnCount = isSingleDay ? SINGLE_DAY_COLUMN_COUNT : SUMMARY_COLUMN_COUNT; // [BARU]
 
   return (
     <section className="lpr-table-card">
@@ -50,13 +70,24 @@ export default function AttendanceReportTable({
               <th className="lpr-col-no">No</th>
               <th>Karyawan</th>
               <th>Divisi</th>
-              <th className="lpr-col-num" title="Hari hadir (sudah termasuk yang terlambat)">Hadir</th>
-              <th className="lpr-col-num">Terlambat</th>
-              <th className="lpr-col-num">Sakit</th>
-              <th className="lpr-col-num">Izin</th>
-              <th className="lpr-col-num">Cuti</th>
-              <th className="lpr-col-num" title="Hari kerja tanpa keterangan">Alpha</th>
-              <th className="lpr-col-num" title="Total lembur yang sudah disetujui">Lembur (ACC)</th>
+              {isSingleDay ? (
+                <>
+                  <th className="lpr-col-num">Jam Masuk</th>
+                  <th className="lpr-col-num">Jam Pulang</th>
+                  <th>Status</th>
+                  <th className="lpr-col-num">Lembur</th>
+                </>
+              ) : (
+                <>
+                  <th className="lpr-col-num" title="Hari hadir (sudah termasuk yang terlambat)">Hadir</th>
+                  <th className="lpr-col-num">Terlambat</th>
+                  <th className="lpr-col-num">Sakit</th>
+                  <th className="lpr-col-num">Izin</th>
+                  <th className="lpr-col-num">Cuti</th>
+                  <th className="lpr-col-num" title="Hari kerja tanpa keterangan">Alpha</th>
+                  <th className="lpr-col-num" title="Total lembur yang sudah disetujui">Lembur (ACC)</th>
+                </>
+              )}
               <th className="lpr-col-action"><span className="sr-only">Aksi</span></th>
             </tr>
           </thead>
@@ -66,13 +97,14 @@ export default function AttendanceReportTable({
                 <td><Skeleton width={20} /></td>
                 <td><Skeleton width="70%" /><Skeleton width="40%" height={10} style={{ marginTop: 6 }} /></td>
                 <td><Skeleton width="60%" /></td>
-                {Array.from({ length: 7 }, (__, cell) => <td key={cell} className="lpr-col-num"><Skeleton width={26} /></td>)}
+                {Array.from({ length: columnCount - 4 }, (__, cell) => <td key={cell} className="lpr-col-num"><Skeleton width={26} /></td>)}
                 <td />
               </tr>
             ))}
 
             {!isLoading && rows.map((report, index) => {
               const { summary } = report;
+              const dayRow = report.rows[0]; // [BARU] satu-satunya baris saat rentang = 1 hari
               return (
                 <tr
                   key={report.employeeId}
@@ -86,15 +118,26 @@ export default function AttendanceReportTable({
                     <span className="lpr-employee-meta">{report.nik} · {report.position}</span>
                   </td>
                   <td><span className="lpr-division-chip">{report.divisionName}</span></td>
-                  <td className="lpr-col-num"><CountCell value={summary.present} tone="hadir" /></td>
-                  <td className="lpr-col-num"><CountCell value={summary.late} tone="telat" /></td>
-                  <td className="lpr-col-num"><CountCell value={summary.sick} tone="sakit" /></td>
-                  <td className="lpr-col-num"><CountCell value={summary.izin} tone="izin" /></td>
-                  <td className="lpr-col-num"><CountCell value={summary.leave} tone="izin" display={formatLeave(summary.leave)} /></td>
-                  <td className="lpr-col-num"><CountCell value={summary.absent} tone="alpha" /></td>
-                  <td className="lpr-col-num">
-                    <CountCell value={summary.overtimeMinutes} tone="lembur" display={formatOvertimeDuration(summary.overtimeMinutes)} />
-                  </td>
+                  {isSingleDay ? (
+                    <>
+                      <td className="lpr-col-num">{dayRow?.checkIn || '-'}</td>
+                      <td className="lpr-col-num">{dayRow?.checkOut || '-'}</td>
+                      <td><DayStatusCell row={dayRow} /></td>
+                      <td className="lpr-col-num">{formatDayOvertime(dayRow?.overtime)}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="lpr-col-num"><CountCell value={summary.present} tone="hadir" /></td>
+                      <td className="lpr-col-num"><CountCell value={summary.late} tone="telat" /></td>
+                      <td className="lpr-col-num"><CountCell value={summary.sick} tone="sakit" /></td>
+                      <td className="lpr-col-num"><CountCell value={summary.izin} tone="izin" /></td>
+                      <td className="lpr-col-num"><CountCell value={summary.leave} tone="izin" display={formatLeave(summary.leave)} /></td>
+                      <td className="lpr-col-num"><CountCell value={summary.absent} tone="alpha" /></td>
+                      <td className="lpr-col-num">
+                        <CountCell value={summary.overtimeMinutes} tone="lembur" display={formatOvertimeDuration(summary.overtimeMinutes)} />
+                      </td>
+                    </>
+                  )}
                   <td className="lpr-col-action">
                     <button
                       type="button"
@@ -111,7 +154,7 @@ export default function AttendanceReportTable({
 
             {!isLoading && rows.length === 0 && (
               <tr>
-                <td colSpan={11} className="lpr-empty">Tidak ada karyawan yang cocok dengan filter ini.</td>
+                <td colSpan={columnCount} className="lpr-empty">Tidak ada karyawan yang cocok dengan filter ini.</td>
               </tr>
             )}
           </tbody>

@@ -1,27 +1,24 @@
 // src/pages/Laporan/components/ReportFilterBar.jsx
 //
 // [BARU] Bilah filter & ekspor Laporan Absen:
-//   - periode tutup buku (21 s/d 20): panah sebelumnya/berikutnya + klik label untuk
-//     memilih periode mana pun (PeriodPicker)
+//   - rentang laporan (slot `rangeControl`): per periode tutup buku, hari ini, atau
+//     tanggal pilihan -- lihat ReportRangeControl
 //   - pilihan divisi (Semua Divisi / satu divisi) = CAKUPAN tabel DAN ekspor
 //   - pencarian nama / NIK (hanya menyaring tampilan tabel, bukan isi ekspor)
 //   - tombol Unduh XLSX / CSV / PDF (satu karyawan = satu sheet)
 //
 // Contoh pemakaian:
-// <ReportFilterBar period={{ year: 2026, month: 9 }} maxPeriod={currentPeriod} onPeriodChange={setPeriod} ... onExport={handleExport} />
+// <ReportFilterBar rangeControl={<ReportRangeControl ... />} divisionOptions={options} ... onExport={handleExport} />
 import React from 'react';
 import { FileDown, FileSpreadsheet, FileText, Search } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
 import { EXPORT_FORMATS } from '../config/laporanConfig';
-import PeriodPicker from './PeriodPicker';
 import './ReportFilterBar.css';
 
 const EXPORT_ICONS = { sheet: FileSpreadsheet, text: FileText, pdf: FileDown };
 
 export default function ReportFilterBar({
-  period,
-  maxPeriod,
-  onPeriodChange,
+  rangeControl,
   divisionOptions,
   divisionId,
   onDivisionChange,
@@ -36,9 +33,9 @@ export default function ReportFilterBar({
   return (
     <section className="lpr-filter-card" aria-label="Filter dan ekspor laporan absen">
       <div className="lpr-filter-row">
-        <div className="lpr-filter-field">
-          <span className="lpr-filter-label">Periode Tutup Buku</span>
-          <PeriodPicker value={period} maxValue={maxPeriod} onChange={onPeriodChange} />
+        <div className="lpr-filter-field lpr-filter-field--range">
+          <span className="lpr-filter-label">Rentang Laporan</span>
+          {rangeControl}
         </div>
 
         <div className="lpr-filter-field lpr-filter-field--division">
