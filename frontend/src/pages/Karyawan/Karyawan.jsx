@@ -14,6 +14,7 @@ import LogSistem from './components/LogSistem';
 import LeaveFormHr from './components/LeaveFormHr';
 import LeaveListHr from './components/LeaveListHr';
 import LeaveSummaryTable from './components/LeaveSummaryTable'; // [BARU] tab Ringkasan Cuti
+import LeaveLedgerTable from './components/LeaveLedgerTable'; // [BARU] tab Histori Cuti (format ledger)
 // [BARU] Toast sukses/gagal untuk aksi HR di halaman ini (mis. Cuti Susulan),
 // pola sama seperti FormKaryawan.jsx.
 import Toast from '../../components/Toast';
@@ -552,6 +553,8 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
         )}
         {/* [BARU] TAB RINGKASAN CUTI: total/terpakai/tersedia sejak tanggal masuk. Mengambil datanya sendiri. */}
         {activeTab === 'Ringkasan Cuti' && <LeaveSummaryTable />}
+        {/* [BARU] TAB HISTORI CUTI: tabel format ledger Excel + export. Mengambil datanya sendiri. */}
+        {activeTab === 'Histori Cuti' && <LeaveLedgerTable />}
         {activeTab === 'Data Divisi' && isSuperAdmin(user) && <DataDivisi karyawanList={karyawanList} />}
         {activeTab === 'Data Divisi' && isHrAdmin(user) && <KelolaDivisiShift karyawanList={karyawanList} />}
         {activeTab === 'Log Sistem' && (

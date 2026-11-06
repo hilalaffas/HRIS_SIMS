@@ -260,8 +260,11 @@ public class SecurityConfig {
                         // [BARU] Ringkasan cuti global semua karyawan (tabel "Ringkasan Cuti"):
                         // data seluruh karyawan -> ADMIN_ROLES saja. HARUS sebelum catch-all
                         // "/api/cuti/**" di bawah.
+                        // [BARU] + tab Histori Cuti (tabel & export format ledger).
                         .requestMatchers(HttpMethod.GET,
-                                "/api/cuti/summary/all")
+                                "/api/cuti/summary/all",
+                                "/api/cuti/ledger",
+                                "/api/cuti/ledger/**")
                         .hasAnyRole(ADMIN_ROLES)
 
                         // [BARU] Sisa cuti tahunan karyawan LAIN (dipakai form

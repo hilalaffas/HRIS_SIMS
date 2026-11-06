@@ -138,6 +138,13 @@ public class DevLeaveHistoryService {
         return LeaveLedgerXlsx.write(buildExportRows(from, to, true));
     }
 
+    // [BARU] Baris export Excel untuk tampilan tab "Histori Cuti" (LeaveLedgerController): isi yang sama
+    // dengan exportXlsx -- cuti khusus bernilai 0 + komentar tipe, dan baris hangus/expired. from & to
+    // null = seluruh riwayat.
+    public List<ExportEmployee> exportRows(LocalDate from, LocalDate to) {
+        return buildExportRows(from, to, true);
+    }
+
     private List<ExportEmployee> buildExportRows(LocalDate from, LocalDate to, boolean includeSpecialLeave) {
         if ((from == null) != (to == null)) {
             throw new IllegalArgumentException("Isi kedua tanggal periode (dari dan sampai), atau kosongkan keduanya.");
