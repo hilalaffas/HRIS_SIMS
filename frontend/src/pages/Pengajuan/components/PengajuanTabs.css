@@ -207,6 +207,12 @@
   .pgj-live__dot { animation: none; }
 }
 
+/* [BARU] Filter tanggal cuti + tombol reset di judul riwayat cuti */
+.pgj-dateField { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-secondary, #718092); }
+.pgj-dateInput { box-sizing: border-box; height: 30px; padding: 0 8px; font-size: 12px; border: 1px solid var(--color-border, #dde5e2); border-radius: 999px; background: var(--color-surface, #fff); color: var(--color-text, #243042); }
+.pgj-dateInput:focus-visible { outline: 2px solid #10b981; outline-offset: 1px; }
+.pgj-resetBtn { padding: 0 4px; font-size: 12px; font-weight: 600; border: none; background: none; color: #059669; text-decoration: underline; cursor: pointer; }
+
 /* ==========================================================================
    [BARU] FORM KOMPAK -- Sakit & Izin, Lembur, Tukar Shift
    Semua aturan dibatasi ke .pgj-form-card, jadi formulir Cuti (yang memakai

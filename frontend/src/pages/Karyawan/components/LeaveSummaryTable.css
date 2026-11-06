@@ -3,8 +3,17 @@
 .leaveSummary__toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .leaveSummary__title { margin: 0; font-size: 16px; font-weight: 700; color: var(--dk-text, #111827); }
 .leaveSummary__subtitle { margin: 4px 0 0; font-size: 13px; color: var(--dk-text-3, #6b7280); }
-.leaveSummary__search { min-width: 240px; padding: 8px 12px; font-size: 14px; border: 1px solid var(--dk-border, #d1d5db); border-radius: 8px; background: var(--dk-bg-card, #fff); color: var(--dk-text, #111827); }
-.leaveSummary__search:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.leaveSummary__filters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.leaveSummary__input { box-sizing: border-box; min-height: 34px; padding: 6px 10px; font-size: 13px; border: 1px solid var(--dk-border, #d1d5db); border-radius: 8px; background: var(--dk-bg-card, #fff); color: var(--dk-text, #111827); }
+.leaveSummary__input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.leaveSummary__search { width: 210px; }
+.leaveSummary__dateField { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dk-text-3, #6b7280); }
+.leaveSummary__reset { min-height: 34px; padding: 6px 10px; font-size: 13px; font-weight: 600; border: none; background: none; color: #2563eb; text-decoration: underline; cursor: pointer; }
+.leaveSummary__sort { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: none; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; white-space: nowrap; }
+.leaveSummary__sort svg { width: 12px; height: 12px; opacity: 0.45; flex-shrink: 0; }
+.leaveSummary__sort.is-active { color: #2563eb; }
+.leaveSummary__sort.is-active svg { opacity: 1; }
+.leaveSummary__sort:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 4px; }
 .leaveSummary__state { text-align: center; padding: 32px; font-size: 14px; color: var(--dk-text-3, #6b7280); background: var(--dk-bg-subtle, #f9fafb); border-radius: 8px; }
 .leaveSummary__state--error { color: var(--dk-text-red, #be123c); }
 .leaveSummary__retry { background: none; border: none; padding: 0; font: inherit; font-weight: 600; text-decoration: underline; color: inherit; cursor: pointer; }

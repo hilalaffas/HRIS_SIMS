@@ -59,6 +59,13 @@
 .pgj-table tbody tr.pgj-row-active { background: var(--dk-tint-green, #f0faf7); }
 
 .pgj-right { text-align: right !important; }
+
+/* [BARU] Judul kolom yang bisa disortir (opsional, lihat SortHeader di PengajuanHistoryTable.jsx) */
+.pgj-sort { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: none; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
+.pgj-sort svg { width: 12px; height: 12px; opacity: 0.45; }
+.pgj-sort.is-active { color: var(--color-text, #243042); }
+.pgj-sort.is-active svg { opacity: 1; }
+.pgj-sort:focus-visible { outline: 2px solid #10b981; outline-offset: 2px; border-radius: 4px; }
 .pgj-strong { font-weight: 600; white-space: nowrap; }
 .pgj-detail { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pgj-empty {

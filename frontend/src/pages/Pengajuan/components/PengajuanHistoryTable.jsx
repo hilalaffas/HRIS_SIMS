@@ -13,7 +13,7 @@
 // <PengajuanHistoryTable items={items} loading={false} selectedKey={key}
 //   resetKey={`${kind}|${status}|${search}`} onSelectStatus={fn} onAction={fn} />
 import React, { useState } from 'react';
-import { Check, CheckCircle2, ClipboardCheck, Clock3, FileText, FileUp, Hourglass, RotateCcw, RotateCw, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, ChevronDown, ChevronUp, ChevronsUpDown, ClipboardCheck, Clock3, FileText, FileUp, Hourglass, RotateCcw, RotateCw, XCircle } from 'lucide-react';
 import { KIND_META, ROW_ACTION, getItemDateLabel } from '../utils/pengajuanItems';
 import './PengajuanHistoryTable.css';
 
@@ -33,6 +33,23 @@ const ACTION_PILL = {
 const DEFAULT_ACTION_PILL = { label: 'DETAIL', Icon: FileText, tone: 'recorded' };
 const UPLOAD_ACTION_PILL = { label: 'UPLOAD SURAT', Icon: FileUp, tone: 'upload' };
 const COMPLETE_APPROVAL_PILL = { label: 'LENGKAPI APPROVAL', Icon: FileText, tone: 'review' };
+
+// [BARU] Judul kolom yang bisa diklik untuk sortir naik/turun. Tanpa `onSortChange` tampil sebagai
+// judul biasa (tab Sakit & Izin, Lembur, Tukar Shift tidak berubah).
+function SortHeader({ label, sortKey, sortConfig, onSortChange }) {
+  if (!onSortChange) return <th>{label}</th>;
+  const isActive = sortConfig?.key === sortKey;
+  const isAscending = sortConfig?.direction === 'asc';
+  const Icon = !isActive ? ChevronsUpDown : (isAscending ? ChevronUp : ChevronDown);
+  return (
+    <th aria-sort={!isActive ? 'none' : (isAscending ? 'ascending' : 'descending')}>
+      <button type="button" className={`pgj-sort${isActive ? ' is-active' : ''}`} onClick={() => onSortChange(sortKey)}>
+        {label}
+        <Icon aria-hidden="true" />
+      </button>
+    </th>
+  );
+}
 
 function StatusCell({ item, isSelected, onSelectStatus }) {
   const Icon = STATUS_ICON[item.statusTone];
@@ -74,6 +91,8 @@ export default function PengajuanHistoryTable({
   title = 'Riwayat Pengajuan Saya',
   emptyMessage = 'Belum ada pengajuan yang cocok.',
   headerExtra = null, // [BARU]
+  sortConfig = null, // [BARU] { key: 'date' | 'type' | 'status', direction: 'asc' | 'desc' }
+  onSortChange = null, // [BARU] (key) => void; bila ada, judul TANGGAL/JENIS/STATUS bisa diklik
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -99,10 +118,10 @@ export default function PengajuanHistoryTable({
         <table className="pgj-table">
           <thead>
             <tr>
-              <th>TANGGAL</th>
-              <th>JENIS</th>
+              <SortHeader label="TANGGAL" sortKey="date" sortConfig={sortConfig} onSortChange={onSortChange} />
+              <SortHeader label="JENIS" sortKey="type" sortConfig={sortConfig} onSortChange={onSortChange} />
               <th>DETAIL SINGKAT</th>
-              <th>STATUS</th>
+              <SortHeader label="STATUS" sortKey="status" sortConfig={sortConfig} onSortChange={onSortChange} />
               <th className="pgj-right">AKSI</th>
             </tr>
           </thead>
