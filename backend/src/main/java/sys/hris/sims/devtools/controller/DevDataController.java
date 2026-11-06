@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.function.Supplier; // [BARU]
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,6 +35,7 @@ import sys.hris.sims.devtools.service.DevAccessService;
 import sys.hris.sims.devtools.service.DevEmployeeDataService;
 import sys.hris.sims.devtools.service.DevLeaveDataService;
 import sys.hris.sims.devtools.service.DevLeaveHistoryService; // [BARU]
+import sys.hris.sims.devtools.service.ImportValidationRegistry; // [BARU]
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
@@ -52,6 +54,11 @@ public class DevDataController {
     private static final MediaType CSV_UTF8 = new MediaType("text", "csv", StandardCharsets.UTF_8);
     // [BARU] Batas file Excel import riwayat cuti (sama dengan batas file CSV di frontend).
     private static final long MAX_XLSX_BYTES = 2L * 1024 * 1024;
+    // [BARU] Jenis import untuk gerbang Pre-flight Validation (ImportValidationRegistry).
+    private static final String KIND_EMPLOYEES = "EMPLOYEES";
+    private static final String KIND_LEAVE_BALANCE = "LEAVE_BALANCE";
+    private static final String KIND_LEAVE_HISTORY_CSV = "LEAVE_HISTORY_CSV";
+    private static final String KIND_LEAVE_HISTORY_XLSX = "LEAVE_HISTORY_XLSX";
 
     private final DevAccessService devAccessService;
     private final DevEmployeeDataService employeeDataService;
@@ -59,6 +66,7 @@ public class DevDataController {
     private final DevLeaveHistoryService leaveHistoryService; // [BARU]
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
+    private final ImportValidationRegistry validationRegistry; // [BARU]
 
     private boolean isDevAccount(Authentication authentication) {
         return devAccessService.isDevAccount(authentication.getName());
@@ -81,6 +89,20 @@ public class DevDataController {
 
     private static ResponseEntity<String> csvResponse(String csv) {
         return ResponseEntity.ok().contentType(CSV_UTF8).body(csv);
+    }
+
+    // [BARU] Gerbang Pre-flight Validation untuk SEMUA import:
+    //  - dryRun = true  -> jalankan validasi (tidak ada yang disimpan), lalu catat sidik jari isi file.
+    //  - dryRun = false -> hanya berjalan bila isi file + opsi yang sama baru saja divalidasi akun ini.
+    private ImportResultResponse runGuardedImport(Authentication authentication, String kind, String digest,
+                                                  boolean dryRun, Supplier<ImportResultResponse> action) {
+        if (dryRun) {
+            ImportResultResponse result = action.get();
+            validationRegistry.remember(authentication.getName(), kind, digest);
+            return result;
+        }
+        validationRegistry.requireValidated(authentication.getName(), kind, digest);
+        return action.get();
     }
 
     // ============================== KARYAWAN ==============================
@@ -113,10 +135,15 @@ public class DevDataController {
         if (!isDevAccount(authentication)) {
             return forbidden();
         }
-        ImportResultResponse result = employeeDataService.importCsv(request.csvText(), request.defaultPassword());
-        log(authentication, httpRequest, "DEV_IMPORT_KARYAWAN", "employees", null,
-                "Dev: import karyawan dari CSV (" + result.success() + " ditambahkan, "
-                        + result.skipped() + " dilewati dari " + result.total() + " baris)");
+        boolean dryRun = Boolean.TRUE.equals(request.dryRun()); // [BARU] Pre-flight Validation
+        String digest = ImportValidationRegistry.digestOfText(KIND_EMPLOYEES, "", request.csvText());
+        ImportResultResponse result = runGuardedImport(authentication, KIND_EMPLOYEES, digest, dryRun,
+                () -> employeeDataService.importCsv(request.csvText(), request.defaultPassword(), dryRun)); // [UBAH]
+        if (!dryRun) { // [UBAH] validasi tidak dicatat sebagai perubahan data
+            log(authentication, httpRequest, "DEV_IMPORT_KARYAWAN", "employees", null,
+                    "Dev: import karyawan dari CSV (" + result.success() + " ditambahkan, "
+                            + result.skipped() + " dilewati dari " + result.total() + " baris)");
+        }
         return ResponseEntity.ok(result);
     }
 
@@ -163,10 +190,15 @@ public class DevDataController {
         if (!isDevAccount(authentication)) {
             return forbidden();
         }
-        ImportResultResponse result = leaveDataService.importCsv(request.csvText());
-        log(authentication, httpRequest, "DEV_IMPORT_CUTI", "employees", null,
-                "Dev: import saldo cuti dari CSV (" + result.success() + " diperbarui, "
-                        + result.skipped() + " dilewati dari " + result.total() + " baris)");
+        boolean dryRun = Boolean.TRUE.equals(request.dryRun()); // [BARU] Pre-flight Validation
+        String digest = ImportValidationRegistry.digestOfText(KIND_LEAVE_BALANCE, "", request.csvText());
+        ImportResultResponse result = runGuardedImport(authentication, KIND_LEAVE_BALANCE, digest, dryRun,
+                () -> leaveDataService.importCsv(request.csvText(), dryRun)); // [UBAH]
+        if (!dryRun) { // [UBAH]
+            log(authentication, httpRequest, "DEV_IMPORT_CUTI", "employees", null,
+                    "Dev: import saldo cuti dari CSV (" + result.success() + " diperbarui, "
+                            + result.skipped() + " dilewati dari " + result.total() + " baris)");
+        }
         return ResponseEntity.ok(result);
     }
 
@@ -235,7 +267,10 @@ public class DevDataController {
         }
         boolean applyRemaining = Boolean.TRUE.equals(request.applyRemaining());
         boolean dryRun = Boolean.TRUE.equals(request.dryRun()); // [BARU] pratinjau tanpa menyimpan
-        ImportResultResponse result = leaveHistoryService.importCsv(request.csvText(), applyRemaining, dryRun);
+        String digest = ImportValidationRegistry.digestOfText(
+                KIND_LEAVE_HISTORY_CSV, "applyRemaining=" + applyRemaining, request.csvText()); // [BARU]
+        ImportResultResponse result = runGuardedImport(authentication, KIND_LEAVE_HISTORY_CSV, digest, dryRun,
+                () -> leaveHistoryService.importCsv(request.csvText(), applyRemaining, dryRun)); // [UBAH]
         if (!dryRun) {
             log(authentication, httpRequest, "DEV_IMPORT_RIWAYAT_CUTI", "leave_requests", null,
                     "Dev: import riwayat cuti dari CSV (" + result.success() + " tanggal ditambahkan, "
@@ -257,7 +292,10 @@ public class DevDataController {
             return forbidden();
         }
         byte[] content = readXlsxUpload(file);
-        ImportResultResponse result = leaveHistoryService.importXlsx(content, applyRemaining, dryRun);
+        String digest = ImportValidationRegistry.digestOf(
+                KIND_LEAVE_HISTORY_XLSX, "applyRemaining=" + applyRemaining, content); // [BARU]
+        ImportResultResponse result = runGuardedImport(authentication, KIND_LEAVE_HISTORY_XLSX, digest, dryRun,
+                () -> leaveHistoryService.importXlsx(content, applyRemaining, dryRun)); // [UBAH]
         if (!dryRun) {
             log(authentication, httpRequest, "DEV_IMPORT_RIWAYAT_CUTI", "leave_requests", null,
                     "Dev: import riwayat cuti dari Excel (" + result.success() + " baris berhasil, "

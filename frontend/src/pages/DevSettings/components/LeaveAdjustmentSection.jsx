@@ -169,7 +169,8 @@ export default function LeaveAdjustmentSection() {
           templateHref="/templates/template-import-sisa-cuti.csv"
           exampleHref="/templates/contoh-import-sisa-cuti.csv"
           loadingMessage="Mengimpor saldo cuti..."
-          onImport={importLeaveCsv}
+          onValidate={(csvText) => importLeaveCsv(csvText, true)} // [BARU]
+          onImport={(csvText) => importLeaveCsv(csvText, false)} // [UBAH] dulu onImport={importLeaveCsv}
           onImported={loadRows}
         />
       </div>

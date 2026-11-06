@@ -1,19 +1,34 @@
 // src/pages/DevSettings/components/CsvImportPanel.jsx
 //
-// [BARU] Panel import CSV yang dipakai ulang oleh import karyawan dan import cuti:
-// pilih / seret file .csv -> konfirmasi -> proses (layar loading buku membalik) -> ringkasan
-// + daftar baris yang dilewati beserta alasannya (bisa diunduh sebagai laporan CSV).
+// [BARU] Panel import CSV/Excel yang dipakai ulang oleh import karyawan, saldo cuti, dan riwayat cuti.
+// [UBAH] Alur sekarang WAJIB lewat Pre-flight Validation sebelum data disimpan:
 //
-// onImport(csvText, file) harus mengembalikan { total, success, skipped, rows } dari backend.
-// [BARU] onPreview(csvText, file) (opsional) -> tombol "Pratinjau": memanggil backend dengan dryRun sehingga
-// hasil pemetaan per baris tampil lebih dulu dan TIDAK ada yang disimpan.
+//   pilih / seret file
+//     -> "Jalankan Pre-flight Validation"  (backend dryRun: semua aturan diperiksa, TIDAK ada yang disimpan)
+//     -> tinjau Validation Summary + Skipped Records Log (ImportValidationReport)
+//     -> setujui secara eksplisit ("Setujui & Mulai Import"; bila ada Row Skipped, centang pernyataan dulu)
+//     -> import sungguhan (layar loading) -> Import Summary + log baris yang dilewati
+//
+// Tombol import langsung sudah dihapus. Server juga menolak import yang tidak didahului validasi
+// untuk isi file yang sama (ImportValidationRegistry), jadi alur ini tidak bisa dilewati lewat API.
+//
+// Props penting:
+//   onValidate(csvText, file)  WAJIB. Memanggil backend dengan dryRun = true; mengembalikan
+//                              { total, success, skipped, rows, notes }.
+//   onImport(csvText, file)    Memanggil backend dengan dryRun = false; bentuk respons sama.
+//   validationKey              Teks yang berubah bila opsi yang memengaruhi hasil berubah (mis. kotak centang
+//                              "terapkan sisa cuti"). Bila berubah setelah validasi, hasil validasi dianggap
+//                              kedaluwarsa dan pengguna harus memvalidasi ulang.
 // [UBAH] acceptXlsx = true -> file Excel (.xlsx) juga diterima. Untuk .xlsx, csvText kosong dan file
 // aslinya dikirim lewat argumen kedua (komentar sel hanya bisa dibaca dari file asli, bukan CSV).
 //
 // Contoh pemakaian:
 //   <CsvImportPanel title="Import karyawan" templateHref="/templates/template-import-karyawan.csv"
-//     exampleHref="/templates/contoh-import-karyawan.csv" onImport={(csv) => importEmployeesCsv(csv, password)} />
+//     exampleHref="/templates/contoh-import-karyawan.csv"
+//     onValidate={(csv) => importEmployeesCsv(csv, password, true)}
+//     onImport={(csv) => importEmployeesCsv(csv, password, false)} />
 import React, { useRef, useState } from 'react';
+import { IMPORT_PHASE, VALIDATION_VERDICT, getValidationVerdict } from '../../../constants/importValidation';
 import {
   MAX_CSV_FILE_BYTES,
   buildImportReportCsv,
@@ -23,10 +38,15 @@ import {
 } from '../../../utils/csvFile';
 import { CloudUploadIcon, FileCsvIcon, UploadIcon } from './DevDataIcons';
 import DevLoadingOverlay from './DevLoadingOverlay';
+import ImportValidationReport from './ImportValidationReport';
 import './DevDataSections.css';
 
-const MAX_VISIBLE_SKIPPED_ROWS = 200;
-const SUCCESS_STATUS = 'BERHASIL';
+const STEP = {
+  idle: 'idle',
+  validating: 'validating',
+  review: 'review',
+  importing: 'importing',
+};
 
 export default function CsvImportPanel({
   title,
@@ -34,25 +54,31 @@ export default function CsvImportPanel({
   templateHref,
   exampleHref,
   extraFields = null,
-  keyLabel = 'Username', // [BARU] judul kolom kunci di tabel baris dilewati (mis. "Karyawan")
+  keyLabel = 'Username', // [BARU] judul kolom kunci di tabel log (mis. "Karyawan")
   acceptXlsx = false, // [BARU] izinkan file Excel (.xlsx)
   extraLinks = [], // [BARU] tautan unduhan tambahan: [{ href, label }]
   dropzoneHint = 'Pemisah kolom titik koma (;), maksimal 2 MB', // [UBAH] bisa diganti per pemakaian
   canImport = true,
   blockedReason = '',
+  validationKey = '', // [BARU]
   loadingMessage = 'Mengimpor data...',
+  validatingMessage = 'Menjalankan Pre-flight Validation...', // [BARU]
+  onValidate, // [BARU] menggantikan onPreview
   onImport,
-  onPreview = null, // [BARU]
   onImported,
 }) {
   const fileInputRef = useRef(null);
+  const busyRef = useRef(false); // [BARU] gerbang sinkron anti klik ganda (state saja terlambat satu render)
   const [fileName, setFileName] = useState('');
   const [csvText, setCsvText] = useState('');
   const [selectedFile, setSelectedFile] = useState(null); // [BARU] file asli (dipakai untuk .xlsx)
-  const [step, setStep] = useState('idle'); // idle | confirm | running
+  const [step, setStep] = useState(STEP.idle);
   const [isDragging, setIsDragging] = useState(false);
+  const [validation, setValidation] = useState(null); // [BARU] hasil Pre-flight Validation
+  const [validatedKey, setValidatedKey] = useState(''); // [BARU] validationKey saat validasi dijalankan
+  const [isAcknowledged, setIsAcknowledged] = useState(false); // [BARU] pernyataan "saya paham N baris dilewati"
   const [result, setResult] = useState(null);
-  const [preview, setPreview] = useState(null); // [BARU] hasil pratinjau (dry-run)
+  const [expectedSkipped, setExpectedSkipped] = useState(null); // [BARU] Row Skipped saat validasi
   const [errorMessage, setErrorMessage] = useState('');
 
   const clearFile = () => {
@@ -62,11 +88,17 @@ export default function CsvImportPanel({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const resetReview = () => {
+    setValidation(null);
+    setIsAcknowledged(false);
+    setExpectedSkipped(null);
+  };
+
   const loadFile = async (file) => {
     setResult(null);
-    setPreview(null);
+    resetReview();
     setErrorMessage('');
-    setStep('idle');
+    setStep(STEP.idle);
     if (!file) {
       clearFile();
       return;
@@ -112,42 +144,72 @@ export default function CsvImportPanel({
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-    if (step === 'running') return;
+    if (step === STEP.validating || step === STEP.importing) return;
     loadFile(event.dataTransfer.files?.[0]);
   };
 
-  // [BARU] Pratinjau: sama seperti import tetapi dengan dryRun di backend.
-  const handleRunPreview = async () => {
-    setStep('running');
+  // [BARU] Langkah 1: Pre-flight Validation (dryRun di backend, tidak ada yang disimpan).
+  const handleRunValidation = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setStep(STEP.validating);
     setErrorMessage('');
     setResult(null);
+    resetReview();
     try {
-      setPreview(await onPreview(csvText, selectedFile));
+      const data = await onValidate(csvText, selectedFile);
+      setValidation(data);
+      setValidatedKey(validationKey);
+      setStep(STEP.review);
     } catch (error) {
-      setErrorMessage(error?.message || 'Pratinjau gagal. Coba lagi.');
+      setErrorMessage(error?.message || 'Pre-flight Validation gagal. Coba lagi.');
+      setStep(STEP.idle);
     } finally {
-      setStep('idle');
+      busyRef.current = false;
     }
   };
 
-  const handleRunImport = async () => {
-    setStep('running');
+  // [UBAH] Langkah 2: import sungguhan, hanya dari tahap review setelah disetujui.
+  const handleApproveImport = async () => {
+    if (busyRef.current || step !== STEP.review) return;
+    busyRef.current = true;
+    const skippedAtValidation = validation?.skipped ?? 0;
+    setStep(STEP.importing);
     setErrorMessage('');
-    setPreview(null);
     try {
       const data = await onImport(csvText, selectedFile);
+      setExpectedSkipped(skippedAtValidation);
       setResult(data);
+      setValidation(null);
+      setIsAcknowledged(false);
       clearFile();
       if (onImported) onImported(data);
+      setStep(STEP.idle);
     } catch (error) {
-      setErrorMessage(error?.message || 'Import gagal. Coba lagi.');
+      // Server memakai satu kali persetujuan validasi, jadi pengguna harus memvalidasi ulang.
+      setErrorMessage(error?.message || 'Import gagal. Jalankan Pre-flight Validation ulang.');
+      resetReview();
+      setStep(STEP.idle);
     } finally {
-      setStep('idle');
+      busyRef.current = false;
     }
   };
 
-  const skippedRows = result ? result.rows.filter((row) => row.status !== SUCCESS_STATUS) : [];
-  const canSubmit = Boolean(selectedFile) && canImport && step === 'idle'; // [UBAH] dulu Boolean(csvText)
+  const handleCancelReview = () => {
+    resetReview();
+    setStep(STEP.idle);
+  };
+
+  const isBusy = step === STEP.validating || step === STEP.importing;
+  const canValidate = Boolean(selectedFile) && canImport && step === STEP.idle;
+
+  // Hasil validasi yang dibuat dengan opsi berbeda dari opsi sekarang tidak boleh disetujui.
+  const isStale = Boolean(validation) && validatedKey !== validationKey;
+  const verdict = validation ? getValidationVerdict(validation) : null;
+  const hasSkippedRows = Boolean(validation) && validation.skipped > 0;
+  const isImportBlocked = verdict === VALIDATION_VERDICT.failed;
+  const isApprovalReady = step === STEP.review && !isImportBlocked && !isStale && canImport
+    && (!hasSkippedRows || isAcknowledged);
 
   return (
     <div className="devdata-import">
@@ -184,7 +246,7 @@ export default function CsvImportPanel({
           type="file"
           accept={acceptXlsx ? '.csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : '.csv,text/csv'}
           onChange={(event) => loadFile(event.target.files?.[0])}
-          disabled={step === 'running'}
+          disabled={isBusy}
         />
         <CloudUploadIcon />
         <span className="devdata-dropzone__text">
@@ -193,150 +255,94 @@ export default function CsvImportPanel({
         <span className="devdata-dropzone__hint">{dropzoneHint}</span>
       </label>
 
-      {step === 'confirm' ? (
-        <div className="devdata-confirm" role="alert">
-          <p>
-            Import <strong>{fileName}</strong> sekarang? Baris yang valid langsung tersimpan ke database.
-          </p>
-          <div className="devdata-actions">
-            <button type="button" className="devdata-btn devdata-btn--primary" onClick={handleRunImport}>
-              <UploadIcon /> Ya, import
-            </button>
-            <button type="button" className="devdata-btn" onClick={() => setStep('idle')}>
-              Batal
-            </button>
-          </div>
-        </div>
-      ) : (
+      {step !== STEP.review && (
         <div className="devdata-actions">
           <button
             type="button"
             className="devdata-btn devdata-btn--primary"
-            onClick={() => setStep('confirm')}
-            disabled={!canSubmit}
+            onClick={handleRunValidation}
+            disabled={!canValidate}
           >
-            <UploadIcon className={step === 'running' ? 'is-busy' : ''} />
-            Import
+            <UploadIcon className={step === STEP.validating ? 'is-busy' : ''} />
+            Jalankan Pre-flight Validation
           </button>
-          {onPreview && (
-            <button type="button" className="devdata-btn" onClick={handleRunPreview} disabled={!canSubmit}>
-              Pratinjau
-            </button>
-          )}
           {!canImport && blockedReason && <span className="devsettings-hint">{blockedReason}</span>}
         </div>
       )}
 
       {errorMessage && <p className="devsettings-error">{errorMessage}</p>}
 
-      {preview && (
-        <div className="devdata-result devdata-result--preview" aria-live="polite">
-          <p className="devdata-result__summary">
-            <strong>Pratinjau</strong> &mdash; belum ada data yang disimpan. Total <strong>{preview.total}</strong> baris ·{' '}
-            <span className="is-success">Akan masuk {preview.success}</span> ·{' '}
-            <span className={preview.skipped > 0 ? 'is-warning' : ''}>Dilewati {preview.skipped}</span>
-          </p>
-          {preview.notes?.length > 0 && (
-            <ul className="devdata-notes">
-              {preview.notes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-            </ul>
-          )}
-          {preview.rows.length > 0 && (
-            <div className="devdata-table-wrap">
-              <table className="devdata-table">
-                <thead>
-                  <tr>
-                    <th>Baris</th>
-                    <th>{keyLabel}</th>
-                    <th>Status</th>
-                    <th>Keterangan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.rows.slice(0, MAX_VISIBLE_SKIPPED_ROWS).map((row) => (
-                    <tr key={`${row.row}-${row.key}-${row.message}`}>
-                      <td>{row.row}</td>
-                      <td>{row.key || '-'}</td>
-                      <td className={row.status === SUCCESS_STATUS ? 'is-success' : 'is-warning'}>
-                        {row.status === SUCCESS_STATUS ? 'Akan masuk' : 'Dilewati'}
-                      </td>
-                      <td>{row.message}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {validation && (
+        <>
+          <ImportValidationReport
+            summary={validation}
+            phase={IMPORT_PHASE.validation}
+            keyLabel={keyLabel}
+          />
+
+          <div className="devdata-confirm" role="group" aria-label="Persetujuan import">
+            {isImportBlocked && (
+              <p>
+                Import diblokir karena tidak ada baris yang lolos validasi. Perbaiki file sesuai Skipped Records Log,
+                lalu pilih ulang file dan jalankan validasi lagi.
+              </p>
+            )}
+
+            {isStale && (
+              <p>Opsi import berubah setelah validasi. Jalankan Pre-flight Validation ulang sebelum melanjutkan.</p>
+            )}
+
+            {!isImportBlocked && !isStale && (
+              <p>
+                Tinjau Validation Summary di atas. Data baru disimpan ke database setelah Anda menyetujui import
+                {hasSkippedRows ? `; ${validation.skipped} baris berstatus Row Skipped tidak akan diimpor` : ''}.
+              </p>
+            )}
+
+            {hasSkippedRows && !isImportBlocked && !isStale && (
+              <label className="devdata-check">
+                <input
+                  type="checkbox"
+                  checked={isAcknowledged}
+                  onChange={(event) => setIsAcknowledged(event.target.checked)}
+                />
+                <span>
+                  Saya telah meninjau Skipped Records Log dan memahami bahwa {validation.skipped} baris tidak akan
+                  diimpor.
+                </span>
+              </label>
+            )}
+
+            <div className="devdata-actions">
+              {!isImportBlocked && (
+                <button
+                  type="button"
+                  className="devdata-btn devdata-btn--primary"
+                  onClick={handleApproveImport}
+                  disabled={!isApprovalReady}
+                >
+                  <UploadIcon /> Setujui &amp; Mulai Import ({validation.success} baris)
+                </button>
+              )}
+              <button type="button" className="devdata-btn" onClick={handleRunValidation} disabled={!selectedFile || !canImport}>
+                Validasi Ulang
+              </button>
+              <button type="button" className="devdata-btn" onClick={handleCancelReview}>
+                Batalkan
+              </button>
             </div>
-          )}
-          {preview.rows.length > MAX_VISIBLE_SKIPPED_ROWS && (
-            <p className="devsettings-hint">
-              Menampilkan {MAX_VISIBLE_SKIPPED_ROWS} dari {preview.rows.length} baris.
-            </p>
-          )}
-          <div className="devdata-actions">
-            <button
-              type="button"
-              className="devdata-btn devdata-btn--primary"
-              onClick={() => setStep('confirm')}
-              disabled={!canSubmit || preview.success === 0}
-            >
-              <UploadIcon /> Import sekarang
-            </button>
-            <button type="button" className="devdata-btn" onClick={() => setPreview(null)}>
-              Tutup pratinjau
-            </button>
           </div>
-        </div>
+        </>
       )}
 
       {result && (
-        <div className="devdata-result" aria-live="polite">
-          <p className="devdata-result__summary">
-            Total <strong>{result.total}</strong> baris ·{' '}
-            <span className="is-success">Berhasil {result.success}</span> ·{' '}
-            <span className={result.skipped > 0 ? 'is-warning' : ''}>Dilewati {result.skipped}</span>
-          </p>
-
-          {/* [BARU] Catatan ringkas dari backend (mis. jumlah baris 0 hari yang diabaikan) */}
-          {result.notes?.length > 0 && (
-            <ul className="devdata-notes">
-              {result.notes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-            </ul>
-          )}
-
-          {skippedRows.length > 0 && (
-            <>
-              <div className="devdata-table-wrap">
-                <table className="devdata-table">
-                  <thead>
-                    <tr>
-                      <th>Baris</th>
-                      <th>{keyLabel}</th>
-                      <th>Alasan dilewati</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {skippedRows.slice(0, MAX_VISIBLE_SKIPPED_ROWS).map((row) => (
-                      <tr key={`${row.row}-${row.key}`}>
-                        <td>{row.row}</td>
-                        <td>{row.key || '-'}</td>
-                        <td>{row.message}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {skippedRows.length > MAX_VISIBLE_SKIPPED_ROWS && (
-                <p className="devsettings-hint">
-                  Menampilkan {MAX_VISIBLE_SKIPPED_ROWS} dari {skippedRows.length} baris. Unduh laporan untuk daftar lengkap.
-                </p>
-              )}
-            </>
-          )}
-
+        <>
+          <ImportValidationReport
+            summary={result}
+            phase={IMPORT_PHASE.result}
+            keyLabel={keyLabel}
+            expectedSkipped={expectedSkipped}
+          />
           <button
             type="button"
             className="devdata-btn"
@@ -344,10 +350,11 @@ export default function CsvImportPanel({
           >
             Unduh laporan lengkap
           </button>
-        </div>
+        </>
       )}
 
-      {step === 'running' && <DevLoadingOverlay message={loadingMessage} />}
+      {step === STEP.validating && <DevLoadingOverlay message={validatingMessage} />}
+      {step === STEP.importing && <DevLoadingOverlay message={loadingMessage} />}
     </div>
   );
 }

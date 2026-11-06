@@ -5,7 +5,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet; // [BARU]
 import java.util.List;
+import java.util.Locale; // [BARU]
+import java.util.Set; // [BARU]
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,7 +142,11 @@ public class DevLeaveDataService {
 
     // Karyawan dicocokkan lewat username. Kolom kosong = tidak diubah; kolom terisi MENIMPA nilai lama.
     // Tiap baris punya transaksi sendiri: baris bermasalah dilewati, baris lain tetap diproses.
-    public ImportResultResponse importCsv(String csvText) {
+    // [UBAH] dryRun = true -> Pre-flight Validation: SELURUH aturan dijalankan persis seperti import
+    // sungguhan (termasuk perhitungan saldo), lalu transaksi baris di-ROLLBACK sehingga tidak ada yang
+    // tersimpan. Aman dilakukan di sini karena import saldo hanya mengubah kolom employees (tidak ada
+    // sequence yang terpakai, berbeda dengan import karyawan).
+    public ImportResultResponse importCsv(String csvText, boolean dryRun) {
         CsvTable table = CsvUtil.parse(csvText);
         if (!table.headers().contains("username")) {
             throw new IllegalArgumentException("Kolom wajib tidak ditemukan di header CSV: username");
@@ -152,11 +159,23 @@ public class DevLeaveDataService {
         }
 
         List<ImportRowResult> results = new ArrayList<>();
+        Set<String> seenUsernames = new HashSet<>(); // [BARU] username ganda di file = ambigu, baris berikutnya dilewati
         for (CsvRow row : table.rows()) {
             String username = row.get("username");
             try {
-                String message = transactionTemplate.execute(status -> importRow(row));
-                results.add(ImportRowResult.success(row.number(), username, message));
+                if (!username.isEmpty() && !seenUsernames.add(username.toLowerCase(Locale.ROOT))) { // [BARU]
+                    throw new IllegalArgumentException("Username '" + username
+                            + "' muncul lebih dari satu kali di file ini; hanya kemunculan pertama yang diproses.");
+                }
+                String message = transactionTemplate.execute(status -> {
+                    String rowMessage = importRow(row);
+                    if (dryRun) {
+                        status.setRollbackOnly(); // [BARU] pratinjau: buang semua perubahan baris ini
+                    }
+                    return rowMessage;
+                });
+                results.add(ImportRowResult.success(row.number(), username,
+                        dryRun ? "Cuti akan diperbarui." : message)); // [UBAH]
             } catch (IllegalArgumentException ex) {
                 results.add(ImportRowResult.skipped(row.number(), username, ex.getMessage()));
             } catch (DataIntegrityViolationException ex) {
@@ -167,7 +186,10 @@ public class DevLeaveDataService {
                 results.add(ImportRowResult.skipped(row.number(), username, "Gagal diproses: " + ex.getMessage()));
             }
         }
-        return ImportResultResponse.of(results);
+        List<String> notes = dryRun
+                ? List.of("Pre-flight Validation: belum ada data yang disimpan.")
+                : List.of(); // [BARU]
+        return ImportResultResponse.of(results, notes);
     }
 
     private String importRow(CsvRow row) {

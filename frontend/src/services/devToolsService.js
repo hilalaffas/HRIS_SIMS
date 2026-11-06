@@ -10,11 +10,11 @@
 // [BARU] Import/export karyawan, penyesuaian cuti, dan edit NIK:
 // GET  /api/dev/employees                 -> daftar karyawan (panel NIK)
 // GET  /api/dev/employees/export          -> CSV data karyawan (teks)
-// POST /api/dev/employees/import          -> { csvText, defaultPassword } -> ringkasan + hasil per baris
+// POST /api/dev/employees/import          -> { csvText, defaultPassword, dryRun } -> ringkasan + hasil per baris
 // PUT  /api/dev/employees/{id}/nik        -> { nik } [UBAH] angka urut 4-6 digit (contoh 0012)
 // GET  /api/dev/leave/employees           -> saldo cuti semua karyawan
 // GET  /api/dev/leave/export              -> CSV saldo cuti (teks)
-// POST /api/dev/leave/import              -> { csvText } -> ringkasan + hasil per baris
+// POST /api/dev/leave/import              -> { csvText, dryRun } -> ringkasan + hasil per baris
 // PUT  /api/dev/leave/employees/{id}      -> { joinDate, oldLeaveBalance, currentYearRemaining }
 //
 // [BARU] Riwayat cuti format ledger (satu baris per tanggal):
@@ -22,6 +22,9 @@
 // POST /api/dev/leave-history/import      -> { csvText, applyRemaining } -> ringkasan + hasil per baris + notes
 // [BARU] POST /api/dev/leave-history/import-xlsx -> multipart { file (.xlsx), applyRemaining, dryRun }; komentar sel = tipe cuti
 // [BARU] dryRun = true (import CSV maupun Excel) -> pratinjau: diperiksa seperti import sungguhan, tidak ada yang disimpan
+// [BARU] Pre-flight Validation: SEMUA import di atas wajib didahului panggilan dengan dryRun = true
+// (periksa saja, tidak menyimpan) untuk isi file yang sama. Import sungguhan (dryRun = false) tanpa
+// validasi sebelumnya, atau dengan file/opsi yang sudah berubah, ditolak server (HTTP 400).
 // [BARU] GET  /api/dev/leave-history/export-xlsx  -> file Excel; tipe cuti (selain tahunan & setengah hari) jadi komentar sel
 import { api, getStoredToken, toApiUrl } from './api';
 
@@ -40,8 +43,9 @@ export const getDevEmployees = () => api.get('/api/dev/employees', { silent: tru
 
 export const exportEmployeesCsv = () => api.get('/api/dev/employees/export', { silent: true });
 
-export const importEmployeesCsv = (csvText, defaultPassword) =>
-  api.post('/api/dev/employees/import', { csvText, defaultPassword });
+// [UBAH] + dryRun: true -> Pre-flight Validation (tidak ada yang disimpan).
+export const importEmployeesCsv = (csvText, defaultPassword, dryRun = false) =>
+  api.post('/api/dev/employees/import', { csvText, defaultPassword, dryRun });
 
 export const updateEmployeeNik = (employeeId, nik) =>
   api.put(`/api/dev/employees/${employeeId}/nik`, { nik });
@@ -52,7 +56,8 @@ export const getDevLeaveRows = () => api.get('/api/dev/leave/employees', { silen
 
 export const exportLeaveCsv = () => api.get('/api/dev/leave/export', { silent: true });
 
-export const importLeaveCsv = (csvText) => api.post('/api/dev/leave/import', { csvText });
+// [UBAH] + dryRun: true -> Pre-flight Validation (tidak ada yang disimpan).
+export const importLeaveCsv = (csvText, dryRun = false) => api.post('/api/dev/leave/import', { csvText, dryRun });
 
 // payload: { joinDate?, oldLeaveBalance?, currentYearRemaining? } -- field yang tidak dikirim tidak diubah.
 export const updateLeaveAdjustment = (employeeId, payload) =>

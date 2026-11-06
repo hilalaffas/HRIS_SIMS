@@ -10,7 +10,8 @@
 //
 // Export: [UBAH] file Excel インドネシア有給管理台帳_<tanggal export>.xlsx, atau _<dari>_<sampai>.xlsx bila
 // periode diisi; tipe cuti selain tahunan & setengah hari ditulis sebagai komentar sel.
-// [BARU] Tombol "Pratinjau" di panel import memeriksa file tanpa menyimpan apa pun. [UBAH] Tanggal export dan import HANYA format YYYY-MM-DD.
+// [UBAH] Import WAJIB lewat Pre-flight Validation (periksa tanpa menyimpan -> tinjau -> setujui) di panel import.
+// [UBAH] Tanggal export dan import HANYA format YYYY-MM-DD.
 //
 // [UBAH] Export dan Import sekarang berada di sub-tab masing-masing (DevTabBar) supaya tidak menumpuk.
 // [BARU] Import menerima file Excel (.xlsx): KOMENTAR SEL pada sel jumlah hari (atau sel tanggal)
@@ -66,7 +67,7 @@ export default function LeaveHistorySection() {
     ? `${LEDGER_FILE_BASE}_${periodFrom}_${periodTo}.xlsx`
     : `${LEDGER_FILE_BASE}_${getTodayStamp()}.xlsx`; // [UBAH] .csv -> .xlsx (komentar tipe cuti hanya bisa di Excel)
 
-  // [BARU] Import dan pratinjau memakai jalur yang sama; hanya flag dryRun yang berbeda.
+  // [BARU] Import dan Pre-flight Validation memakai jalur yang sama; hanya flag dryRun yang berbeda.
   const runImport = (csvText, file, dryRun) =>
     /\.xlsx$/i.test(file?.name ?? '')
       ? importLeaveHistoryXlsx(file, applyRemaining, dryRun)
@@ -186,8 +187,9 @@ export default function LeaveHistorySection() {
           keyLabel="Karyawan"
           extraFields={applyRemainingField}
           loadingMessage="Mengimpor riwayat cuti..."
+          validationKey={String(applyRemaining)} // [BARU] opsi ini memengaruhi hasil -> validasi harus diulang bila berubah
+          onValidate={(csvText, file) => runImport(csvText, file, true)} // [UBAH] dulu onPreview
           onImport={(csvText, file) => runImport(csvText, file, false)}
-          onPreview={(csvText, file) => runImport(csvText, file, true)}
         />
       </div>
       </DevTabPanel>

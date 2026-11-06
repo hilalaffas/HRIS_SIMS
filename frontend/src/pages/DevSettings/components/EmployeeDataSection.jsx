@@ -63,7 +63,8 @@ export default function EmployeeDataSection() {
           canImport={isPasswordValid}
           blockedReason={`Isi password default (minimal ${MIN_PASSWORD_LENGTH} karakter) dulu.`}
           loadingMessage="Mengimpor data karyawan..."
-          onImport={(csvText) => importEmployeesCsv(csvText, defaultPassword)}
+          onValidate={(csvText) => importEmployeesCsv(csvText, defaultPassword, true)} // [BARU]
+          onImport={(csvText) => importEmployeesCsv(csvText, defaultPassword, false)} // [UBAH]
         />
       </div>
     </section>

@@ -4,9 +4,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet; // [BARU]
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set; // [BARU]
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,8 +175,13 @@ public class DevEmployeeDataService {
 
     // ============================== IMPORT ==============================
 
+    // [UBAH] Satu jalur validasi untuk Pre-flight Validation (dryRun = true) dan import sungguhan:
+    // validateRow() memeriksa semua aturan TANPA menulis apa pun, persistEmployee() baru menyimpan.
+    // Kenapa dryRun tidak memakai "simpan lalu rollback": NIK otomatis diambil dari sequence database
+    // (nik_karyawan_seq) yang TIDAK ikut rollback, sehingga nomor NIK berurutan akan berlubang.
+    //
     // Tanpa @Transactional di level method ini: tiap baris punya transaksi sendiri (TransactionTemplate).
-    public ImportResultResponse importCsv(String csvText, String defaultPassword) {
+    public ImportResultResponse importCsv(String csvText, String defaultPassword, boolean dryRun) {
         if (defaultPassword == null || defaultPassword.length() < MIN_PASSWORD_LENGTH) {
             throw new IllegalArgumentException(
                     "Password default wajib diisi (minimal " + MIN_PASSWORD_LENGTH + " karakter).");
@@ -194,14 +201,23 @@ public class DevEmployeeDataService {
             throw new IllegalArgumentException("Maksimal " + MAX_IMPORT_ROWS + " baris per import.");
         }
 
-        ImportContext context = buildContext(defaultPassword);
+        ImportContext context = buildContext(defaultPassword, dryRun);
         List<ImportRowResult> results = new ArrayList<>();
+        Set<String> seenUsernames = new HashSet<>(); // [BARU] deteksi duplikat di dalam file yang sama
+        Set<String> seenNiks = new HashSet<>();
 
         for (CsvRow row : table.rows()) {
             String username = row.get("username");
             try {
-                transactionTemplate.executeWithoutResult(status -> createEmployee(row, context));
-                results.add(ImportRowResult.success(row.number(), username, "Karyawan ditambahkan."));
+                EmployeeDraft draft = validateRow(row, context, seenUsernames, seenNiks);
+                if (!dryRun) {
+                    transactionTemplate.executeWithoutResult(status -> persistEmployee(draft, context));
+                }
+                seenUsernames.add(key(draft.username()));
+                if (draft.nik() != null) {
+                    seenNiks.add(draft.nik());
+                }
+                results.add(ImportRowResult.success(row.number(), username, successMessage(draft, dryRun)));
             } catch (IllegalArgumentException ex) {
                 results.add(ImportRowResult.skipped(row.number(), username, ex.getMessage()));
             } catch (DataIntegrityViolationException ex) {
@@ -213,10 +229,23 @@ public class DevEmployeeDataService {
                 results.add(ImportRowResult.skipped(row.number(), username, "Gagal diproses: " + ex.getMessage()));
             }
         }
-        return ImportResultResponse.of(results);
+        List<String> notes = dryRun
+                ? List.of("Pre-flight Validation: belum ada data yang disimpan.")
+                : List.of();
+        return ImportResultResponse.of(results, notes);
     }
 
-    private ImportContext buildContext(String defaultPassword) {
+    private static String successMessage(EmployeeDraft draft, boolean dryRun) {
+        if (!dryRun) {
+            return "Karyawan ditambahkan.";
+        }
+        return draft.nik() == null
+                ? "Karyawan akan ditambahkan (NIK dibuat otomatis)."
+                : "Karyawan akan ditambahkan (NIK " + draft.nik() + ").";
+    }
+
+    // [UBAH] passwordHash null pada dryRun: hash bcrypt tidak diperlukan karena tidak ada akun yang dibuat.
+    private ImportContext buildContext(String defaultPassword, boolean dryRun) {
         Map<String, Divisi> divisiByName = new HashMap<>();
         divisiRepository.findAll().forEach(divisi -> divisiByName.put(key(divisi.getNamaDivisi()), divisi));
 
@@ -226,11 +255,21 @@ public class DevEmployeeDataService {
         Map<String, EmergencyContactRelationship> relationByName = new HashMap<>();
         relationshipRepository.findAll().forEach(relation -> relationByName.put(key(relation.getName()), relation));
 
-        return new ImportContext(divisiByName, roleByName, relationByName, passwordEncoder.encode(defaultPassword));
+        String passwordHash = dryRun ? null : passwordEncoder.encode(defaultPassword);
+        return new ImportContext(divisiByName, roleByName, relationByName, passwordHash);
     }
 
-    // Melempar IllegalArgumentException (alasan dilewati) -> transaksi baris ini di-rollback.
-    private void createEmployee(CsvRow row, ImportContext context) {
+    // [BARU] Nilai satu baris yang sudah lolos validasi dan siap disimpan.
+    private record EmployeeDraft(
+            String username, String email, String fullName, String gender, LocalDate joinDate,
+            Divisi divisi, Roles role, String position, String address, String phone,
+            String emergencyName, String emergencyPhone, EmergencyContactRelationship relation,
+            boolean active, String nik) {
+    }
+
+    // [UBAH] Dulu bagian atas createEmployee(). HANYA membaca & memeriksa -- tidak menulis ke database.
+    // Melempar IllegalArgumentException (alasan baris dilewati).
+    private EmployeeDraft validateRow(CsvRow row, ImportContext context, Set<String> seenUsernames, Set<String> seenNiks) {
         String username = required(row, "username", "Username");
         if (!username.matches("^[A-Za-z0-9._-]{3,50}$")) {
             throw new IllegalArgumentException(
@@ -238,6 +277,10 @@ public class DevEmployeeDataService {
         }
         if (devAccessService.isDevAccount(username)) {
             throw new IllegalArgumentException("Username ini dicadangkan untuk akun dev.");
+        }
+        if (seenUsernames.contains(key(username))) { // [BARU]
+            throw new IllegalArgumentException(
+                    "Username '" + username + "' muncul lebih dari satu kali di file ini; hanya kemunculan pertama yang diproses.");
         }
         if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new IllegalArgumentException("Username '" + username + "' sudah terdaftar, tidak ditimpa.");
@@ -289,36 +332,45 @@ public class DevEmployeeDataService {
         if (!row.get("nik").isEmpty()) {
             nik = devNikService.normalize(row.get("nik"));
             devNikService.validateFormat(nik);
+            if (seenNiks.contains(nik)) { // [BARU]
+                throw new IllegalArgumentException("NIK " + nik + " muncul lebih dari satu kali di file ini.");
+            }
             devNikService.validateUnique(nik, null);
         }
 
+        return new EmployeeDraft(username, email, fullName, gender, joinDate, divisi, role, position, address,
+                phone, emergencyName, emergencyPhone, relation, active, nik);
+    }
+
+    // [UBAH] Dulu bagian bawah createEmployee(). Hanya dipanggil pada import sungguhan, di dalam transaksi baris.
+    private void persistEmployee(EmployeeDraft draft, ImportContext context) {
         User user = userRepository.save(User.builder()
-                .username(username)
+                .username(draft.username())
                 .password(context.passwordHash())
-                .email(email)
-                .roleId(role)
+                .email(draft.email())
+                .roleId(draft.role())
                 .failedAttempts(0)
-                .isActive(active)
+                .isActive(draft.active())
                 .build());
 
         Employee employee = employeeRepository.saveAndFlush(Employee.builder()
                 .user(user)
-                .divisi(divisi)
-                .fullName(fullName)
-                .address(address)
-                .phoneNumber(phone)
-                .gender(gender)
-                .joinDate(joinDate)
-                .position(position)
-                .emergencyContactName(emergencyName)
-                .emergencyContactPhone(emergencyPhone)
-                .emergencyContactRelationship(relation)
-                .isActive(active)
+                .divisi(draft.divisi())
+                .fullName(draft.fullName())
+                .address(draft.address())
+                .phoneNumber(draft.phone())
+                .gender(draft.gender())
+                .joinDate(draft.joinDate())
+                .position(draft.position())
+                .emergencyContactName(draft.emergencyName())
+                .emergencyContactPhone(draft.emergencyPhone())
+                .emergencyContactRelationship(draft.relation())
+                .isActive(draft.active())
                 .build());
 
         // NIK kosong -> sudah dibuat trigger saat INSERT. NIK diisi -> timpa hasil trigger.
-        if (nik != null) {
-            devNikService.applyNik(employee.getEmployeeId(), nik);
+        if (draft.nik() != null) {
+            devNikService.applyNik(employee.getEmployeeId(), draft.nik());
         }
     }
 

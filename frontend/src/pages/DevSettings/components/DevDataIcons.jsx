@@ -65,3 +65,33 @@ export function FileCsvIcon({ className = '' }) {
     </svg>
   );
 }
+
+// [BARU] Ikon status Pre-flight Validation. Animasi (centang tergambar, tanda seru berdenyut)
+// ada di ImportValidationReport.css; mati otomatis pada prefers-reduced-motion.
+export function ShieldCheckIcon({ className = '' }) {
+  return (
+    <svg {...baseProps} className={`devicon devicon--shield ${className}`.trim()}>
+      <path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6z" />
+      <path className="devicon__check" d="m8.8 12.2 2.2 2.2 4.2-4.6" />
+    </svg>
+  );
+}
+
+export function ShieldAlertIcon({ className = '' }) {
+  return (
+    <svg {...baseProps} className={`devicon devicon--shield ${className}`.trim()}>
+      <path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6z" />
+      <path className="devicon__mark" d="M12 8.5v4.2" />
+      <path className="devicon__mark" d="M12 15.6h.01" />
+    </svg>
+  );
+}
+
+export function ShieldXIcon({ className = '' }) {
+  return (
+    <svg {...baseProps} className={`devicon devicon--shield ${className}`.trim()}>
+      <path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6z" />
+      <path className="devicon__mark" d="m9.6 9.6 4.8 4.8M14.4 9.6l-4.8 4.8" />
+    </svg>
+  );
+}
