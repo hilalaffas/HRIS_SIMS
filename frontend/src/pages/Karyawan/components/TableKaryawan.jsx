@@ -196,7 +196,9 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
                     <p className="emp-position">{emp.position || 'Staff'}</p>
                     <p className="emp-division">{emp.divisi?.namaDivisi || 'Umum'}</p>
                   </td>
-                  <td className="text-center font-bold text-green">{emp.totalRemainingLeave ?? emp.manualLeaveBalance ?? 0}</td>
+                  <td className={`text-center font-bold ${Number(emp.totalRemainingLeave ?? emp.manualLeaveBalance ?? 0) < 0 ? 'text-red' : 'text-green'}`}>
+                    {emp.totalRemainingLeave ?? emp.manualLeaveBalance ?? 0}
+                  </td>
                   <td>
                     <span className={`badge-status ${!emp.isActive ? 'inactive' : ''}`}>
                       {emp.isActive ? 'AKTIF' : 'NONAKTIF'}

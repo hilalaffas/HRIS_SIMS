@@ -452,7 +452,7 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
                   name="manualLeaveBalance"
                   value={formData.manualLeaveBalance}
                   onChange={handleInputChange}
-                  title="Alokasi awal yang diisi HR (boleh desimal, mis. 2,25). Sisa yang benar-benar tersisa (setelah kepakai cuti) otomatis muncul di kolom Total di bawah."
+                  title="Alokasi awal yang diisi HR (boleh desimal, mis. 2,25; boleh negatif untuk defisit, mis. -2). Sisa yang benar-benar tersisa (setelah kepakai cuti) otomatis muncul di kolom Total di bawah."
                 />
               </div>
             </div>

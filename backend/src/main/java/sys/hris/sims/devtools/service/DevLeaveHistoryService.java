@@ -410,10 +410,8 @@ public class DevLeaveHistoryService {
             if (applyRemaining && !dryRun && !block.remainingText().isEmpty()) {
                 try {
                     BigDecimal total = LeaveLedgerCsv.parseRemaining(block.remainingText());
-                    if (total != null && total.signum() < 0) {
-                        remainingProblems.add(displayName + ": sisa negatif (" + total.toPlainString()
-                                + ") tidak bisa diterapkan");
-                    } else if (total != null) {
+                    // [UBAH] Sisa negatif (defisit) sekarang ikut diterapkan, tidak lagi ditolak.
+                    if (total != null) {
                         transactionTemplate.executeWithoutResult(status -> {
                             Employee fresh = employeeRepository.findById(employeeId).orElseThrow();
                             devLeaveDataService.applyTotalRemaining(fresh, total);

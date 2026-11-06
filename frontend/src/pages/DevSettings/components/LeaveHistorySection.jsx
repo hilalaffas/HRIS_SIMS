@@ -82,7 +82,7 @@ export default function LeaveHistorySection() {
       />
       <span>
         Terapkan juga sisa cuti dari file (baris 2). Angka di file dianggap total sisa: sisa tahun
-        berjalan dipertahankan, selisihnya masuk Sisa Cuti Lama. Nilai negatif dilewati.
+        berjalan dipertahankan, selisihnya masuk Sisa Cuti Lama. Sisa negatif (defisit) ikut diterapkan.
       </span>
     </label>
   );

@@ -53,6 +53,8 @@ public class DevLeaveDataService {
 
     private static final int MAX_IMPORT_ROWS = 2000;
     private static final BigDecimal MAX_BALANCE = new BigDecimal("9999.99"); // NUMERIC(6,2)
+    // [BARU] Saldo BOLEH negatif (defisit cuti, sama seperti sisa cuti tahunan yang boleh minus di LeaveService).
+    private static final BigDecimal MIN_BALANCE = MAX_BALANCE.negate();
 
     private final EmployeeRepository employeeRepository;
     private final LeaveService leaveService;
@@ -244,6 +246,14 @@ public class DevLeaveDataService {
                     + " + sisa tahun berjalan " + annualRemaining.toPlainString();
         }
 
+        // [BARU] Total negatif pada karyawan yang belum berhak cuti tahunan: tidak ada sisa tahun berjalan
+        // yang bisa diturunkan, jadi defisit dicatat di Sisa Cuti Lama.
+        if (!eligible) {
+            applyAdjustment(employee, null, total, null);
+            return "total " + total.toPlainString() + " = sisa lama " + total.toPlainString()
+                    + " (belum berhak cuti tahunan)";
+        }
+
         applyAdjustment(employee, null, BigDecimal.ZERO, total);
         return "total " + total.toPlainString() + " = sisa tahun berjalan " + total.toPlainString()
                 + " (sisa lama 0)";
@@ -317,8 +327,9 @@ public class DevLeaveDataService {
         if (value == null) {
             return;
         }
-        if (value.signum() < 0) {
-            throw new IllegalArgumentException(label + " tidak boleh negatif.");
+        // [UBAH] Nilai negatif sekarang diizinkan (defisit); hanya dibatasi kapasitas kolom NUMERIC(6,2).
+        if (value.compareTo(MIN_BALANCE) < 0) {
+            throw new IllegalArgumentException(label + " terlalu kecil (minimal " + MIN_BALANCE.toPlainString() + ").");
         }
         if (value.compareTo(MAX_BALANCE) > 0) {
             throw new IllegalArgumentException(label + " terlalu besar (maksimal " + MAX_BALANCE.toPlainString() + ").");

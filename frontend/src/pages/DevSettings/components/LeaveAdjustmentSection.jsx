@@ -240,7 +240,6 @@ export default function LeaveAdjustmentSection() {
                       <td>
                         <input
                           type="number"
-                          min="0"
                           step="0.01"
                           value={draft?.oldBalance ?? String(row.oldLeaveBalance ?? 0)}
                           onChange={(event) => setDraftField(row.employeeId, 'oldBalance', event.target.value)}
@@ -249,7 +248,6 @@ export default function LeaveAdjustmentSection() {
                       <td>
                         <input
                           type="number"
-                          min="0"
                           step="0.01"
                           disabled={!row.eligible}
                           placeholder={row.eligible ? '' : 'Belum berhak'}
