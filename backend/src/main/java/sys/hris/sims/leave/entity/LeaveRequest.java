@@ -91,6 +91,12 @@ public class LeaveRequest {
     @Column(name = "pending_work")
     private String pendingWork;
 
+    // [BARU V56] TRUE = catatan hasil import riwayat (ledger lama, satu baris per tanggal).
+    // Tidak ikut perhitungan saldo (LeaveService.getLeaveBalance), hanya riwayat/laporan/bentrok.
+    @Builder.Default
+    @Column(name = "is_imported_history", nullable = false)
+    private Boolean importedHistory = false;
+
     @Column(name = "covered_by")
     private String coveredBy;
 

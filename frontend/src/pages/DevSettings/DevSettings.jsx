@@ -12,37 +12,54 @@
 // di sini SUDAH DIHAPUS, jadi akun ini tidak lagi punya jalan pintas UI ke
 // Dashboard/Karyawan/Cuti dari halaman ini.
 //
-// [UBAH] Sekarang ada dua flag (lihat utils/featureFlags.js):
-//   1. splash logo loading screen (components/LoadingScreen.jsx)
-//   2. tombol tema terang/gelap di footer (components/ThemeToggle.jsx,
-//      dipakai layouts/MainLayout.jsx) -- disimpan di SERVER sehingga berlaku
-//      di semua browser (lihat services/featureFlagService.js)
+// [UBAH] Saklar fitur (lihat utils/featureFlags.js): tombol tema terang/gelap di footer
+// (components/ThemeToggle.jsx, dipakai layouts/MainLayout.jsx) -- disimpan di SERVER sehingga
+// berlaku di semua browser (lihat services/featureFlagService.js).
+// [HAPUS] Saklar "Splash Logo Loading Screen" beserta komponennya sudah dihapus.
 import React, { useState } from 'react';
-import {
-  isLoadingScreenEnabled,
-  setLoadingScreenEnabled,
-  isThemeToggleEnabled,
-} from '../../utils/featureFlags';
+import { useSearchParams } from 'react-router-dom'; // [BARU] tab aktif tersimpan di URL (?tab=...)
+import { isThemeToggleEnabled } from '../../utils/featureFlags';
 import useFeatureFlag from '../../hooks/useFeatureFlag'; // [BARU]
 import { updateFeatureFlag } from '../../services/featureFlagService'; // [BARU]
 import PermissionResetSection from './components/PermissionResetSection'; // [BARU]
+import EmployeeDataSection from './components/EmployeeDataSection'; // [BARU] import/export karyawan
+import LeaveAdjustmentSection from './components/LeaveAdjustmentSection'; // [BARU] penyesuaian cuti
+import NikEditorSection from './components/NikEditorSection'; // [BARU] edit NIK manual
+import LeaveHistorySection from './components/LeaveHistorySection'; // [BARU] import/export riwayat cuti (ledger)
+import { DevTabBar } from './components/DevTabBar'; // [BARU]
 import './DevSettings.css';
 
+// [BARU] Tab halaman dev. Tab "features" = isi lama halaman ini (saklar fitur + reset izin/sakit).
+const TAB_FEATURES = 'features';
+const TAB_EMPLOYEES = 'employees';
+// [UBAH] Tab "Cuti & NIK" (dulu menumpuk 3 bagian sekaligus) dipecah menjadi 3 tab sendiri.
+const TAB_LEAVE_BALANCE = 'leaveBalance';
+const TAB_LEAVE_HISTORY = 'leaveHistory';
+const TAB_NIK = 'nik';
+
+const TABS = [
+  { id: TAB_FEATURES, label: 'Pengaturan Fitur' },
+  { id: TAB_EMPLOYEES, label: 'Data Karyawan' },
+  { id: TAB_LEAVE_BALANCE, label: 'Saldo Cuti' },
+  { id: TAB_LEAVE_HISTORY, label: 'Riwayat Cuti' },
+  { id: TAB_NIK, label: 'NIK' },
+];
+
+const VALID_TAB_IDS = TABS.map((tab) => tab.id);
+
 export default function DevSettings() {
-  const [loadingScreenOn, setLoadingScreenOn] = useState(isLoadingScreenEnabled());
-  const [previewing, setPreviewing] = useState(false);
+  // [UBAH] Tab aktif dibaca dari query ?tab= supaya tetap sama setelah halaman di-refresh.
+  // Nilai yang tidak dikenal jatuh ke tab pertama.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const activeTab = VALID_TAB_IDS.includes(requestedTab) ? requestedTab : TAB_FEATURES;
+  const setActiveTab = (tabId) => setSearchParams({ tab: tabId }, { replace: true });
   // [UBAH] Saklar tombol tema terang/gelap sekarang tersimpan di SERVER.
   // Nilai tampilannya dibaca dari cache yang disinkronkan dari server
   // (useFeatureFlag), bukan state lokal, supaya selalu sama dengan server.
   const themeToggleOn = useFeatureFlag(isThemeToggleEnabled);
   const [themeToggleSaving, setThemeToggleSaving] = useState(false);
   const [themeToggleError, setThemeToggleError] = useState('');
-
-  const handleToggle = () => {
-    const next = !loadingScreenOn;
-    setLoadingScreenEnabled(next);
-    setLoadingScreenOn(next);
-  };
 
   // [UBAH] Menyimpan ke server (PUT /api/feature-flags/themeToggle). Mematikan
   // = tombol tema hilang dari footer SEMUA akun di SEMUA browser (maksimal ~1
@@ -60,19 +77,6 @@ export default function DevSettings() {
     }
   };
 
-  // [BARU] Simulasikan satu siklus loading (tanpa perlu benar-benar fetch
-  // apa pun) supaya efeknya langsung kelihatan -- dispatch event yang PERSIS
-  // sama dengan yang dipakai services/api.js untuk request GET asli.
-  const handlePreview = () => {
-    if (previewing) return;
-    setPreviewing(true);
-    window.dispatchEvent(new CustomEvent('sims:loading-start'));
-    window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('sims:loading-end'));
-      setPreviewing(false);
-    }, 2000);
-  };
-
   return (
     <div className="devsettings-page">
       <div className="devsettings-card">
@@ -81,66 +85,48 @@ export default function DevSettings() {
           Halaman ini tidak muncul di menu mana pun -- cuma bisa diakses lewat URL ini langsung.
         </p>
 
-        <div className="devsettings-row">
-          <div>
-            <p className="devsettings-row__label">Splash Logo Loading Screen</p>
-            <p className="devsettings-row__desc">
-              Layar penuh dengan logo &amp; progress bar yang muncul saat data halaman sedang
-              dimuat. Skeleton loading di tiap halaman (Karyawan, Cuti, Profile, Dashboard) tidak
-              terpengaruh oleh switch ini -- tetap selalu aktif. Pengaturan ini hanya berlaku di
-              browser ini.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={loadingScreenOn}
-            className={`devsettings-switch ${loadingScreenOn ? 'is-on' : ''}`}
-            onClick={handleToggle}
-          >
-            <span className="devsettings-switch__knob" />
-          </button>
-        </div>
+        {/* [BARU] Tab */}
+        <DevTabBar tabs={TABS} activeId={activeTab} onChange={setActiveTab} label="Bagian panel dev" />
 
-        <button
-          type="button"
-          className="devsettings-preview-btn"
-          onClick={handlePreview}
-          disabled={!loadingScreenOn || previewing}
-        >
-          {previewing ? 'Menampilkan...' : 'Coba sekarang'}
-        </button>
-        {!loadingScreenOn && (
-          <p className="devsettings-hint">Aktifkan switch di atas dulu untuk mencoba pratinjaunya.</p>
+        {activeTab === TAB_FEATURES && (
+          <>
+            {/* [BARU] Saklar tombol tema terang/gelap */}
+            <div className="devsettings-row">
+              <div>
+                <p className="devsettings-row__label">Tombol Tema Terang/Gelap</p>
+                <p className="devsettings-row__desc">
+                  Tombol matahari/bulan di footer. Jika dimatikan, tombol hilang untuk semua role dan
+                  tampilan kembali ke tema terang. Pengaturan disimpan di server, jadi berlaku untuk
+                  semua akun di semua browser dan perangkat (tab yang sudah terbuka menyusul dalam
+                  sekitar 1 menit). Pilihan tema yang pernah disimpan user tidak dihapus.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={themeToggleOn}
+                aria-label="Tombol tema terang/gelap"
+                className={`devsettings-switch ${themeToggleOn ? 'is-on' : ''}`}
+                onClick={handleThemeToggleSwitch}
+                disabled={themeToggleSaving}
+              >
+                <span className="devsettings-switch__knob" />
+              </button>
+            </div>
+            {themeToggleError && <p className="devsettings-error">{themeToggleError}</p>}
+
+            {/* [BARU] Reset data izin/sakit untuk uji ulang pengajuan & persetujuan */}
+            <PermissionResetSection />
+          </>
         )}
 
-        {/* [BARU] Saklar tombol tema terang/gelap */}
-        <div className="devsettings-row devsettings-row--spaced">
-          <div>
-            <p className="devsettings-row__label">Tombol Tema Terang/Gelap</p>
-            <p className="devsettings-row__desc">
-              Tombol matahari/bulan di footer. Jika dimatikan, tombol hilang untuk semua role dan
-              tampilan kembali ke tema terang. Pengaturan disimpan di server, jadi berlaku untuk
-              semua akun di semua browser dan perangkat (tab yang sudah terbuka menyusul dalam
-              sekitar 1 menit). Pilihan tema yang pernah disimpan user tidak dihapus.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={themeToggleOn}
-            aria-label="Tombol tema terang/gelap"
-            className={`devsettings-switch ${themeToggleOn ? 'is-on' : ''}`}
-            onClick={handleThemeToggleSwitch}
-            disabled={themeToggleSaving}
-          >
-            <span className="devsettings-switch__knob" />
-          </button>
-        </div>
-        {themeToggleError && <p className="devsettings-error">{themeToggleError}</p>}
+        {/* [BARU] Import/export karyawan */}
+        {activeTab === TAB_EMPLOYEES && <EmployeeDataSection />}
 
-        {/* [BARU] Reset data izin/sakit untuk uji ulang pengajuan & persetujuan */}
-        <PermissionResetSection />
+        {/* [UBAH] Tiap fungsi punya tab sendiri */}
+        {activeTab === TAB_LEAVE_BALANCE && <LeaveAdjustmentSection />}
+        {activeTab === TAB_LEAVE_HISTORY && <LeaveHistorySection />}
+        {activeTab === TAB_NIK && <NikEditorSection />}
       </div>
     </div>
   );

@@ -14,8 +14,11 @@ public class LeaveTypeService {
 
     private final LeaveTypeRepository jenisCutiRepository;
 
+    // [UBAH] Jenis sistem "Cuti hangus" tidak ditawarkan di form pengajuan cuti.
     public List<LeaveType> getAllJenisCuti() {
-        return jenisCutiRepository.findAll();
+        return jenisCutiRepository.findAll().stream()
+                .filter(type -> !Boolean.TRUE.equals(type.getForfeiture()))
+                .toList();
     }
 
     public LeaveType getJenisCutiById(Long id) {

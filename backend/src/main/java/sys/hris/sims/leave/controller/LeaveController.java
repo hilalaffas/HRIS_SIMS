@@ -24,8 +24,10 @@ import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
+import sys.hris.sims.leave.dto.LeaveSummaryResponse;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.service.LeaveService;
+import sys.hris.sims.leave.service.LeaveSummaryService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
@@ -35,6 +37,7 @@ import sys.hris.sims.user.repository.UserRepository;
 public class LeaveController {
 
     private final LeaveService cutiService;
+    private final LeaveSummaryService leaveSummaryService; // [BARU] ringkasan cuti global
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
@@ -139,6 +142,13 @@ public class LeaveController {
     @GetMapping("/balance/all")
     public ResponseEntity<List<LeaveBalanceResponse>> getAllLeaveBalances() {
         return ResponseEntity.ok(cutiService.getAllLeaveBalances());
+    }
+
+    // [BARU] GET ringkasan cuti global SEMUA karyawan sejak tanggal masuk sampai hari ini
+    // (tabel "Ringkasan Cuti" di halaman Karyawan). Dibatasi ADMIN_ROLES di SecurityConfig.
+    @GetMapping("/summary/all")
+    public ResponseEntity<List<LeaveSummaryResponse>> getAllLeaveSummaries() {
+        return ResponseEntity.ok(leaveSummaryService.getAllSummaries());
     }
 
     // GET cuti yang perlu diproses oleh role atasan yang sedang login

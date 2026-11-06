@@ -50,7 +50,9 @@ export const buildLeaveBalanceTimeline = (leaveList, currentBalanceByEmployeeId 
 
   const approvedByEmployeeId = {};
   leaveList.forEach((leave) => {
-    if (leave.statusBerkas !== APPROVED_STATUS || leave.employeeId == null) return;
+    // [UBAH] Riwayat hasil import ledger tidak memotong saldo, jadi tidak ikut dihitung mundur
+    // (kolom sisa cuti barisnya tampil "-").
+    if (leave.statusBerkas !== APPROVED_STATUS || leave.employeeId == null || leave.importedHistory) return;
     if (!approvedByEmployeeId[leave.employeeId]) approvedByEmployeeId[leave.employeeId] = [];
     approvedByEmployeeId[leave.employeeId].push(leave);
   });

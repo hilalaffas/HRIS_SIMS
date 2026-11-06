@@ -5,7 +5,6 @@ import AppRoutes from './routes/AppRoutes';
 import Toast from './components/Toast';
 import LogoutModal from './components/LogoutModal';
 import SessionExpiredModal from './components/SessionExpiredModal'; // [BARU]
-import LoadingScreen from './components/LoadingScreen'; // [BARU] splash loading global saat fetch data halaman apapun
 import { logoutUser } from './services/authService';
 import { getMyProfile } from './services/profileService'; // [BARU] untuk hydrate foto profil di awal sesi
 import { expireSessionForInactivity, getAndClearRedirectPath, getTokenExpiryMs, refreshSession } from './services/api'; // [BARU] redirect terakhir & sliding session
@@ -317,13 +316,6 @@ const AppContent = () => {
 
   return (
     <div className="app-container">
-      {/* [BARU] Global Loading Screen -- tampil otomatis setiap kali ada
-          request GET (data halaman) sedang berjalan di mana pun, dipicu
-          event 'sims:loading-start' / 'sims:loading-end' dari services/api.js.
-          Komponen ini mengatur tampil/sembunyinya sendiri, jadi cukup
-          dirender sekali di sini, tidak perlu prop apa pun. */}
-      <LoadingScreen />
-
       {/* Global Toast Notification -- selalu di-render (lihat Toast.jsx),
           visibilitas & animasi masuk/keluar dikendalikan lewat prop `show`. */}
       <Toast key={toast.id} show={toast.show} message={toast.message} type={toast.type} />

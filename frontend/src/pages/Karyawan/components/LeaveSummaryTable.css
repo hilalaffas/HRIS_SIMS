@@ -1,0 +1,19 @@
+/* [BARU] Tab Ringkasan Cuti. Warna memakai token tema gelap: var(--dk-*, <hex terang asli>) */
+.leaveSummary { background: var(--dk-bg-card, #fff); border: 1px solid var(--dk-border, #e5e7eb); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.leaveSummary__toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.leaveSummary__title { margin: 0; font-size: 16px; font-weight: 700; color: var(--dk-text, #111827); }
+.leaveSummary__subtitle { margin: 4px 0 0; font-size: 13px; color: var(--dk-text-3, #6b7280); }
+.leaveSummary__search { min-width: 240px; padding: 8px 12px; font-size: 14px; border: 1px solid var(--dk-border, #d1d5db); border-radius: 8px; background: var(--dk-bg-card, #fff); color: var(--dk-text, #111827); }
+.leaveSummary__search:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.leaveSummary__state { text-align: center; padding: 32px; font-size: 14px; color: var(--dk-text-3, #6b7280); background: var(--dk-bg-subtle, #f9fafb); border-radius: 8px; }
+.leaveSummary__state--error { color: var(--dk-text-red, #be123c); }
+.leaveSummary__retry { background: none; border: none; padding: 0; font: inherit; font-weight: 600; text-decoration: underline; color: inherit; cursor: pointer; }
+.leaveSummary__scroll { overflow-x: auto; border: 1px solid var(--dk-border, #e5e7eb); border-radius: 8px; }
+.leaveSummary__table { width: 100%; min-width: 860px; border-collapse: collapse; font-size: 14px; }
+.leaveSummary__table th { padding: 12px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; white-space: nowrap; color: var(--dk-text-2, #4b5563); background: var(--dk-bg-subtle, #f3f4f6); }
+.leaveSummary__table td { padding: 12px 14px; color: var(--dk-text, #111827); border-top: 1px solid var(--dk-border, #e5e7eb); }
+.leaveSummary__table tbody tr:hover { background: var(--dk-bg-subtle, #f9fafb); }
+.leaveSummary .leaveSummary__num { text-align: right; font-variant-numeric: tabular-nums; }
+.leaveSummary__num--negative { color: var(--dk-text-red, #be123c); font-weight: 600; }
+.leaveSummary__name { font-weight: 600; }
+.leaveSummary__meta { margin-top: 2px; font-size: 12px; color: var(--dk-text-3, #6b7280); }

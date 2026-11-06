@@ -12,7 +12,7 @@ import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.user.entity.User;
 
 // [BARU] Satu-satunya tempat yang menentukan akun mana yang disembunyikan.
-//   - Akun DEV (role DEV / username dari env DEV_ACCESS_USERNAME, mis. supersecret):
+//   - Akun DEV (role DEV / username dari env DEV_ACCESS_USERNAME, mis. sys_dev):
 //     disembunyikan DI MANA PUN (daftar karyawan, pemilihan karyawan, laporan).
 //   - Akun SUPER_ADMIN: hanya disembunyikan dari LAPORAN.
 @Service

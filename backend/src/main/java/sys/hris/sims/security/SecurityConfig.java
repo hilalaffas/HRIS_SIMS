@@ -257,6 +257,13 @@ public class SecurityConfig {
                                 "/api/cuti/balance/all")
                         .hasAnyRole(APPROVER_ROLES)
 
+                        // [BARU] Ringkasan cuti global semua karyawan (tabel "Ringkasan Cuti"):
+                        // data seluruh karyawan -> ADMIN_ROLES saja. HARUS sebelum catch-all
+                        // "/api/cuti/**" di bawah.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/cuti/summary/all")
+                        .hasAnyRole(ADMIN_ROLES)
+
                         // [BARU] Sisa cuti tahunan karyawan LAIN (dipakai form
                         // Manajemen Data Pegawai) -- dibatasi ADMIN_ROLES saja,
                         // ditaruh SEBELUM catch-all "/api/cuti/**" di bawah

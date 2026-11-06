@@ -17,6 +17,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findByFullNameContainingIgnoreCase(String nama);
     Optional<Employee> findFirstByUserOrderByEmployeeIdAsc(User user);
 
+    // [BARU] Cek NIK bentrok -- dipakai alat dev (edit NIK manual & import karyawan)
+    boolean existsByNikKaryawanAndEmployeeIdNot(String nikKaryawan, Long employeeId);
+    boolean existsByNikKaryawan(String nikKaryawan);
+
     // [BARU] Laporan Absensi (HRD): karyawan AKTIF beserta divisinya, terurut
     // divisi lalu nama. Dua query terpisah (semua divisi / satu divisi) -- bukan
     // satu query dengan ":divisiId is null" karena parameter null bertipe Long

@@ -70,7 +70,7 @@ public class OvertimeService {
 
     // [UBAH] Super Admin / DEV tetap melihat semua pengajuan (hanya lihat, tidak bisa
     // memutuskan). Leader/SPV/Manager hanya melihat pengajuan yang menugaskan mereka
-    // sebagai approver. Akun DEV (supersecret) tidak punya profil karyawan, jadi
+    // sebagai approver. Akun DEV (sys_dev) tidak punya profil karyawan, jadi
     // tidak boleh memanggil resolveEmployee() di jalur Super Admin.
     public List<OvertimeResponse> getAllForApproval(Authentication authentication) {
         ApprovalScope scope = approvalScopeService.resolve(authentication);

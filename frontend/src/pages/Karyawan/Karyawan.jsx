@@ -13,6 +13,7 @@ import DataDivisi from './components/DataDivisi';
 import LogSistem from './components/LogSistem';
 import LeaveFormHr from './components/LeaveFormHr';
 import LeaveListHr from './components/LeaveListHr';
+import LeaveSummaryTable from './components/LeaveSummaryTable'; // [BARU] tab Ringkasan Cuti
 // [BARU] Toast sukses/gagal untuk aksi HR di halaman ini (mis. Cuti Susulan),
 // pola sama seperti FormKaryawan.jsx.
 import Toast from '../../components/Toast';
@@ -419,7 +420,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     setIsExporting(true);
     try {
       // [UBAH] Ekspor (CSV & PDF) hanya memuat karyawan asli: akun SUPER_ADMIN
-      // / supersecret disaring dari daftar karyawan, dan cuti milik mereka
+      // / sys_dev disaring dari daftar karyawan, dan cuti milik mereka
       // dibuang berdasarkan employeeId.
       const excludedEmployeeIds = new Set(
         karyawanList.filter((k) => !isReportEmployee(k)).map((k) => k.employeeId ?? k.id)
@@ -549,6 +550,8 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
             />
           </div>
         )}
+        {/* [BARU] TAB RINGKASAN CUTI: total/terpakai/tersedia sejak tanggal masuk. Mengambil datanya sendiri. */}
+        {activeTab === 'Ringkasan Cuti' && <LeaveSummaryTable />}
         {activeTab === 'Data Divisi' && isSuperAdmin(user) && <DataDivisi karyawanList={karyawanList} />}
         {activeTab === 'Data Divisi' && isHrAdmin(user) && <KelolaDivisiShift karyawanList={karyawanList} />}
         {activeTab === 'Log Sistem' && (

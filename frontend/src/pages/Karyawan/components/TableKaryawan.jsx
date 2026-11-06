@@ -3,6 +3,7 @@ import Dropdown from '../../../components/Dropdown';
 import { DropdownPortalContext } from '../../../components/DropdownPortalContext';
 import Skeleton from '../../../components/Skeleton'; // [BARU]
 import './TableKaryawan.css';
+import { compareByNik } from '../../../utils/sortByNik'; // [BARU] urut NIK
 
 // [BARU] Opsi jumlah data per halaman untuk pagination Direktori Karyawan.
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -33,6 +34,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
   //const uniqueJabatan = [...new Set(data.map(emp => emp.position).filter(Boolean))];
 
   // 2. Buat fungsi filter untuk Search dan Jabatan
+  // [UBAH] Diurutkan berdasarkan NIK (kecil ke besar) setelah difilter.
   const filteredData = data.filter((emp) => {
     // Cek kecocokan search dengan Nama atau NIK (Abaikan besar/kecil huruf)
     const matchSearch =
@@ -43,7 +45,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
     const matchJabatan = filterJabatan === '' || emp.position === filterJabatan;
 
     return matchSearch && matchJabatan;
-  });
+  }).sort(compareByNik);
 
   // [BARU] Reset ke halaman 1 setiap kali pencarian/filter berubah atau
   // jumlah data berubah (mis. ada karyawan baru masuk dari polling live).

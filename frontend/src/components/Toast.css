@@ -17,7 +17,7 @@
   bottom: var(--space-6);
   right: var(--space-6);
   /* [UBAH] 1000 -> 10000: sebelumnya toast (mis. "Selamat datang" setelah login)
-     tertutup LoadingScreen (9500) & modal (9999) karena z-index-nya lebih rendah. */
+     tertutup modal (9999) karena z-index-nya lebih rendah. */
   z-index: 10000;
   display: flex;
   flex-direction: column;

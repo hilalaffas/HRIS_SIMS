@@ -83,6 +83,7 @@ function getAvatarColor(name) {
 function normalizeSelfRow(item) {
   return {
     id: item.id,
+    startDate: item.rawDetail?.startDate || null, // [BARU] untuk urutan tanggal cuti
     employeeName: null,
     leaveType: item.jenisCuti || 'Cuti',
     period: item.totalHari ? `${item.stringTanggal} (${item.totalHari})` : item.stringTanggal,
@@ -95,6 +96,7 @@ function normalizeSelfRow(item) {
 function normalizeOthersRow(item) {
   return {
     id: item.id,
+    startDate: item.startDate || null, // [BARU] untuk urutan tanggal cuti
     employeeName: item.karyawan?.nama || 'Karyawan',
     leaveType: item.jenisCuti || 'Cuti',
     period: item.durasi,
@@ -131,10 +133,14 @@ export default function RiwayatCuti({ user }) {
       } else {
         rows = (await getRiwayatByUser({ silent })).map(normalizeSelfRow);
       }
-      // id (leave_request_id) auto-increment, jadi urutan ID terbesar =
-      // pengajuan paling baru. Dipakai sebagai patokan urutan terbaru di
-      // atas, konsisten untuk ketiga sumber data di atas.
-      rows.sort((a, b) => (b.id || 0) - (a.id || 0));
+      // [UBAH] Urut menurut TANGGAL CUTI terbaru -> terlama (riwayat hasil import ledger tidak
+      // punya urutan ID yang berarti). Tanggal sama / kosong -> ID terbesar di atas.
+      rows.sort((a, b) => {
+        const dateA = String(a.startDate || '').slice(0, 10);
+        const dateB = String(b.startDate || '').slice(0, 10);
+        if (dateA !== dateB) return dateA < dateB ? 1 : -1;
+        return (b.id || 0) - (a.id || 0);
+      });
       setAllData(rows);
       setLastSyncedAt(new Date());
       setError('');

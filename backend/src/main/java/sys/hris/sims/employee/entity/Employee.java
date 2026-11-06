@@ -46,7 +46,7 @@ public class Employee {
 
     // [UBAH V30] Long -> String, dan insertable/updatable = false.
     // NIK sekarang otomatis dibuat oleh trigger di database (format
-    // SYS-{tahun masuk}-{4 digit urut}, lihat V30__auto_generate_nik_karyawan_code.sql)
+    // angka urut 4 digit tanpa awalan, contoh 0021 -- lihat V30 dan V58__nik_numeric_format.sql)
     // saat baris baru di-INSERT, jadi tidak boleh lagi diisi/diubah manual
     // dari sisi aplikasi (Java hanya baca nilainya, tidak pernah menulis).
     @Column(name = "nik_karyawan", insertable = false, updatable = false)
@@ -83,4 +83,16 @@ public class Employee {
     @Builder.Default
     @Column(name = "manual_leave_balance", nullable = false, precision = 6, scale = 2)
     private BigDecimal manualLeaveBalance = BigDecimal.ZERO;
+
+    // [BARU V55] Cuti tahunan yang sudah terpakai DI LUAR sistem (data manual sebelum SIMS
+    // dipakai). Hanya berlaku untuk satu periode anniversary, yaitu yang dimulai pada
+    // annualUsedOutsidePeriodStart; di periode lain nilainya diabaikan (lihat
+    // LeaveService.getAnnualUsedOutsideSystem). Diisi dari halaman /devAccess.
+    // precision/scale WAJIB sama dengan NUMERIC(6,2) di V55 (ddl-auto=validate).
+    @Builder.Default
+    @Column(name = "annual_used_outside_system", nullable = false, precision = 6, scale = 2)
+    private BigDecimal annualUsedOutsideSystem = BigDecimal.ZERO;
+
+    @Column(name = "annual_used_outside_period_start")
+    private LocalDate annualUsedOutsidePeriodStart;
 }

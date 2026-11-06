@@ -1,0 +1,3 @@
+﻿username;email;nama_lengkap;jenis_kelamin;tanggal_masuk;divisi;role;jabatan;no_telepon;alamat;kontak_darurat_nama;kontak_darurat_telepon;kontak_darurat_hubungan;status;nik
+budi.santoso;budi.santoso@contoh.com;Budi Santoso;L;2023-03-15;IT;Member;Staff;081234567890;Jl. Merdeka No. 10 Jakarta;Siti Santoso;081298765432;Suami / Istri;AKTIF;
+ani.lestari;ani.lestari@contoh.com;Ani Lestari;P;2024-07-01;IT;Member;Staff;081211112222;Jl. Sudirman No. 5 Bandung;Hadi Lestari;081233334444;Orang Tua;AKTIF;0012

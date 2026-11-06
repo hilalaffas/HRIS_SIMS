@@ -1,21 +1,16 @@
 // src/utils/featureFlags.js
 //
-// [BARU] Penyimpanan on/off untuk fitur yang bisa diaktif/nonaktifkan sendiri
-// tanpa perlu redeploy -- disimpan di localStorage (per-browser). Dipakai
-// bersama halaman pengaturan tersembunyi (lihat pages/DevSettings) dan
-// komponen yang membaca flag ini (lihat components/LoadingScreen.jsx).
+// [BARU] Cache on/off untuk fitur yang bisa diaktif/nonaktifkan tanpa redeploy.
+// Sumber kebenaran flag ada di SERVER (lihat services/featureFlagService.js);
+// localStorage di sini hanya cache per-browser. Dipakai bersama halaman
+// pengaturan tersembunyi (pages/DevSettings).
 //
-// Pola event-nya sengaja disamakan dengan 'sims:session-expired' /
-// 'sims:loading-start' di services/api.js: siapa pun yang perlu tahu
-// perubahan flag tinggal dengar CustomEvent ini, tidak perlu context/props.
+// Pola event-nya sengaja disamakan dengan 'sims:session-expired' di
+// services/api.js: siapa pun yang perlu tahu perubahan flag tinggal dengar
+// CustomEvent ini, tidak perlu context/props.
 const STORAGE_PREFIX = 'sims:feature:';
 export const FEATURE_FLAG_CHANGE_EVENT = 'sims:feature-flag-changed';
 
-// [UBAH] Splash logo loading screen sekarang default MATI. Sebelumnya selalu
-// nyala di setiap request GET, dirasa terlalu sering muncul -- skeleton
-// loading per-halaman (Karyawan/Cuti/Profile/Dashboard) sudah cukup untuk
-// menunjukkan "sedang memuat", jadi splash logo dijadikan opsional, aktifkan
-// manual lewat halaman tersembunyi kalau memang diinginkan.
 // [UBAH] themeToggle: tombol tema terang/gelap di footer (components/ThemeToggle.jsx).
 // Flag ini sumber kebenarannya di SERVER (tabel feature_flags), BUKAN lagi
 // localStorage -- lihat services/featureFlagService.js. localStorage di sini
@@ -23,7 +18,6 @@ export const FEATURE_FLAG_CHANGE_EVENT = 'sims:feature-flag-changed';
 // berkedip saat halaman dibuka. Default false = tombol tidak tampil sampai
 // server menjawab (aman untuk browser yang belum punya cache).
 const DEFAULTS = {
-  loadingScreen: false,
   themeToggle: false,
 };
 
@@ -41,8 +35,6 @@ function writeFlag(key, value) {
   window.dispatchEvent(new CustomEvent(FEATURE_FLAG_CHANGE_EVENT, { detail: { key, value } }));
 }
 
-export const isLoadingScreenEnabled = () => readFlag('loadingScreen');
-export const setLoadingScreenEnabled = (value) => writeFlag('loadingScreen', value);
 // [BARU] Menyalin nilai dari server ke cache. Hanya menulis (dan memicu event)
 // kalau nilainya benar-benar berubah, jadi polling tiap menit tidak membuat
 // komponen render ulang percuma.

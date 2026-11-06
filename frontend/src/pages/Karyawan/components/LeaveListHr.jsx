@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import './LeaveListHr.css';
 import FilterStatusDropdown from './FilterStatusDropdown'; // Pastikan path ini benar di project Anda
+import Dropdown from '../../../components/Dropdown'; // [BARU] pilihan jumlah data per halaman
 import { SORT_DIRECTION, sortRows, toDateTimestamp } from '../../../utils/tableSort';
 
 const STATUS_OPTIONS = [
@@ -34,6 +35,9 @@ const SORT_COLUMNS = [
   { key: "status", label: "Status Berkas", className: "leaveList__colStatus_leaveListHr" },
 ];
 
+// [BARU] Pagination: default 20 data per halaman.
+const PAGE_SIZE_OPTIONS = [20, 50, 100];
+
 // [BARU] Default: tanggal cuti terbaru -> terlama.
 const DEFAULT_SORT = { key: "leaveDate", direction: SORT_DIRECTION.desc };
 
@@ -47,7 +51,13 @@ const SortIcon = ({ direction }) => (
 
 const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUserRole, onRevokeLeave }) => {
   const [statusFilter, setStatusFilter] = useState("ALL");
-  
+  // [BARU] Pencarian nama, filter rentang tanggal (YYYY-MM-DD), dan pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [currentPage, setCurrentPage] = useState(1);
+
   // State untuk modal revoke
   const [revokeItem, setRevokeItem] = useState(null);
 
@@ -56,9 +66,31 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
 
   const filteredData = useMemo(() => {
     if (!data) return [];
-    if (statusFilter === "ALL") return data;
-    return data.filter((item) => item.statusBerkas === statusFilter);
-  }, [data, statusFilter]);
+    const query = searchTerm.trim().toLowerCase();
+    const fromTime = toDateTimestamp(dateFrom);
+    const toTime = toDateTimestamp(dateTo);
+
+    return data.filter((item) => {
+      if (statusFilter !== "ALL" && item.statusBerkas !== statusFilter) return false;
+
+      // [BARU] Cari nama karyawan (kode/NIK ikut dicocokkan supaya praktis)
+      if (query) {
+        const haystack = `${item.karyawan?.nama ?? ""} ${item.karyawan?.kode ?? ""}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+
+      // [BARU] Filter tanggal = rentang cuti BERIRISAN dengan [dari, sampai].
+      // Boleh isi salah satu saja. Cuti 5-7 Nov tampil untuk filter 6 Nov.
+      if (fromTime !== null || toTime !== null) {
+        const leaveStart = toDateTimestamp(item.startDate);
+        const leaveEnd = toDateTimestamp(item.endDate) ?? leaveStart;
+        if (leaveStart === null) return false;
+        if (fromTime !== null && leaveEnd < fromTime) return false;
+        if (toTime !== null && leaveStart > toTime) return false;
+      }
+      return true;
+    });
+  }, [data, statusFilter, searchTerm, dateFrom, dateTo]);
 
   // [BARU] Ambil nilai yang dibandingkan untuk tiap kolom.
   const getSortValue = (item, key) => {
@@ -101,6 +133,32 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
     });
   };
 
+  // [BARU] Kembali ke halaman 1 setiap filter/pencarian/jumlah data berubah.
+  // (Pola "sesuaikan state saat render" dari React, bukan useEffect, supaya tidak render ganda.)
+  const filterKey = `${statusFilter}|${searchTerm}|${dateFrom}|${dateTo}|${pageSize}|${data?.length ?? 0}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (prevFilterKey !== filterKey) {
+    setPrevFilterKey(filterKey);
+    setCurrentPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageData = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return sortedData.slice(start, start + pageSize);
+  }, [sortedData, safeCurrentPage, pageSize]);
+  const rangeStart = sortedData.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safeCurrentPage * pageSize, sortedData.length);
+
+  const hasActiveFilter = searchTerm !== "" || dateFrom !== "" || dateTo !== "" || statusFilter !== "ALL";
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setDateFrom("");
+    setDateTo("");
+    setStatusFilter("ALL");
+  };
+
   const getSortAriaLabel = (label, isActive) => {
     if (!isActive) return `Urutkan berdasarkan ${label}`;
     const current = sortConfig.direction === SORT_DIRECTION.asc ? "naik" : "turun";
@@ -122,11 +180,57 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
         <div className="leaveList__total_leaveListHr">
           Total Riwayat: <strong>{filteredData.length} Data</strong>
         </div>
-        <FilterStatusDropdown value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
+        <div className="leaveList__filters_leaveListHr">
+          {/* [BARU] Cari nama */}
+          <input
+            type="search"
+            className="leaveList__input_leaveListHr leaveList__search_leaveListHr"
+            placeholder="Cari nama karyawan..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            aria-label="Cari nama karyawan"
+          />
+          {/* [BARU] Filter tanggal cuti (rentang) */}
+          <label className="leaveList__dateField_leaveListHr">
+            <span>Dari</span>
+            <input
+              type="date"
+              className="leaveList__input_leaveListHr"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(event) => setDateFrom(event.target.value)}
+            />
+          </label>
+          <label className="leaveList__dateField_leaveListHr">
+            <span>Sampai</span>
+            <input
+              type="date"
+              className="leaveList__input_leaveListHr"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(event) => setDateTo(event.target.value)}
+            />
+          </label>
+          <FilterStatusDropdown value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} />
+          <Dropdown
+            variant="pill"
+            value={pageSize}
+            onChange={(event) => setPageSize(Number(event.target.value))}
+            options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size} / halaman` }))}
+            ariaLabel="Jumlah data per halaman"
+          />
+          {hasActiveFilter && (
+            <button type="button" className="leaveList__resetBtn_leaveListHr" onClick={handleResetFilters}>
+              Reset
+            </button>
+          )}
+        </div>
       </div>
 
       {filteredData.length === 0 ? (
-        <div className="leaveList__empty_leaveListHr">Belum ada riwayat cuti untuk status ini.</div>
+        <div className="leaveList__empty_leaveListHr">
+          {hasActiveFilter ? "Tidak ada riwayat cuti yang cocok dengan pencarian/filter." : "Belum ada riwayat cuti."}
+        </div>
       ) : (
         <div className="leaveList__table_leaveListHr">
           <div className="leaveList__row_leaveListHr leaveList__row--head_leaveListHr">
@@ -151,8 +255,8 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
             <div className="leaveList__colLog_leaveListHr">Aksi</div>
           </div>
 
-          {/* [UBAH] filteredData.map -> sortedData.map */}
-          {sortedData.map((item) => {
+          {/* [UBAH] sortedData.map -> pageData.map (hanya data halaman aktif) */}
+          {pageData.map((item) => {
             // [UBAH] Sisa cuti sekarang PER BARIS (saldo setelah cuti ini
             // disetujui, urut waktu approval) -- lihat balanceAfterByLeaveId
             // di Karyawan.jsx & utils/leaveBalanceTimeline.js. Baris yang
@@ -198,6 +302,34 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* [BARU] Kontrol pagination */}
+      {sortedData.length > 0 && (
+        <div className="leaveList__pagination_leaveListHr">
+          <span className="leaveList__pageInfo_leaveListHr">
+            Menampilkan {rangeStart}-{rangeEnd} dari {sortedData.length} data
+          </span>
+          <div className="leaveList__pageControls_leaveListHr">
+            <button
+              type="button"
+              className="leaveList__pageBtn_leaveListHr"
+              onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+              disabled={safeCurrentPage === 1}
+            >
+              Sebelumnya
+            </button>
+            <span className="leaveList__pageLabel_leaveListHr">Halaman {safeCurrentPage} dari {totalPages}</span>
+            <button
+              type="button"
+              className="leaveList__pageBtn_leaveListHr"
+              onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+              disabled={safeCurrentPage >= totalPages}
+            >
+              Berikutnya
+            </button>
+          </div>
         </div>
       )}
 

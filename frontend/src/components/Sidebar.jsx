@@ -69,8 +69,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   // Menu Khusus Super Admin (Gambar 4)
   const superAdminMenuItems = [
     { path: '/karyawan', name: 'Pengaturan Akun', icon: 'fa-solid fa-gear' },
-    // SuperAdmin tidak punya halaman Persetujuan Cuti, jadi tetap langsung ke Persetujuan Lembur (semua divisi).
-    { path: '/persetujuan', name: 'Persetujuan Lembur', icon: 'fa-solid fa-clipboard-check' },
+    { path: '/kelola-divisi-shift', name: 'Kelola Divisi & Shift', icon: 'fa-solid fa-layer-group' },
   ];
 
   // LOGIKA HELPER INDIVIDU
