@@ -57,6 +57,19 @@ public class DevNikService {
         }
     }
 
+    // [BARU] Selaraskan nomor urut NIK berikutnya = NIK terbesar + 1. Setiap INSERT karyawan memakai satu
+    // nomor sequence (trigger) walau NIK-nya lalu ditimpa dari CSV, jadi sesudah import sequence bisa
+    // melompat jauh melewati NIK terakhir (mis. NIK terakhir 0212 tetapi karyawan baru jadi 0214 atau 0423).
+    // Aman dipanggil kapan saja: nomor berikutnya selalu di atas semua NIK yang ada, jadi tidak bentrok.
+    // Mengembalikan nomor NIK yang akan dipakai karyawan baru berikutnya.
+    @Transactional
+    public long resyncNextNik() {
+        Number next = (Number) entityManager
+                .createNativeQuery("SELECT setval('nik_karyawan_seq', COALESCE((SELECT MAX(nik_urut) FROM employees), 0) + 1, false)")
+                .getSingleResult();
+        return next.longValue();
+    }
+
     @Transactional
     public void applyNik(Long employeeId, String rawNik) {
         String nik = normalize(rawNik);

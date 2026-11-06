@@ -229,9 +229,11 @@ public class DevEmployeeDataService {
                 results.add(ImportRowResult.skipped(row.number(), username, "Gagal diproses: " + ex.getMessage()));
             }
         }
+        // [BARU] Setelah import sungguhan, nomor NIK berikutnya diselaraskan ke NIK terbesar + 1
+        // (lihat DevNikService.resyncNextNik) dan ditampilkan di catatan hasil import.
         List<String> notes = dryRun
                 ? List.of("Pre-flight Validation: belum ada data yang disimpan.")
-                : List.of();
+                : List.of("NIK karyawan baru berikutnya: " + String.format("%04d", devNikService.resyncNextNik()) + ".");
         return ImportResultResponse.of(results, notes);
     }
 
