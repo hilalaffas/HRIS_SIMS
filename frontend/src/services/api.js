@@ -43,7 +43,7 @@ export class SessionExpiredError extends Error {
   }
 }
 
-function triggerSessionExpired(message) {
+function triggerSessionExpired(message, reasonKey) {
   if (sessionExpiryHandled) return;
   // [BARU] Tanpa token = tidak ada sesi yang bisa "berakhir" (user sudah
   // logout / sedang di halaman login). Tanpa guard ini, timer idle atau
@@ -58,7 +58,7 @@ function triggerSessionExpired(message) {
   // (bukan import langsung ke App.jsx) supaya api.js tetap murni sebagai
   // lapisan network, tidak perlu tahu apa-apa soal state UI/React.
   window.dispatchEvent(
-    new CustomEvent('sims:session-expired', { detail: { message } })
+    new CustomEvent('sims:session-expired', { detail: { message, reasonKey } })
   );
 }
 
@@ -66,7 +66,8 @@ function triggerSessionExpired(message) {
 // pengguna yang tidak beraktivitas selama batas waktu tetap harus keluar.
 export function expireSessionForInactivity() {
   triggerSessionExpired(
-    'Sesi Anda berakhir karena tidak ada aktivitas selama 1 jam. Silakan login kembali.'
+    'Sesi Anda berakhir karena tidak ada aktivitas selama 1 jam. Silakan login kembali.',
+    'session.inactive' // [BARU] kunci i18n supaya modal bisa tampil dalam bahasa terpilih
   );
 }
 

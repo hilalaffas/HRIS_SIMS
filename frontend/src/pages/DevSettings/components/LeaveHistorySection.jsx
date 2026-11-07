@@ -46,6 +46,8 @@ const DAY_RULES = [
   { days: '0', rule: 'Cuti khusus yang TIDAK memotong jatah -- wajib komentar berisi tipe cuti. Nilai 1 untuk cuti khusus ditolak' },
   { days: 'lebih dari 1', rule: 'HANYA untuk cuti hangus/expired (komentar "hangus/expired"); selain itu ditolak. Cuti beberapa hari ditulis satu baris per hari' },
   { days: '0.5 / 1 / lebih (hangus)', rule: 'Cuti hangus/expired boleh bernilai 0.5, 1, atau lebih; nilainya mengikuti sel, dicatat di tanggal itu dan tidak memotong saldo' },
+  // [BARU] Batas berlakunya aturan hangus.
+  { days: 'hangus sebelum 2025-01-01', rule: 'Tanggal sebelum 1 Januari 2025 TIDAK dianggap hangus: jumlah harinya ditambahkan ke Sisa Cuti Lama dan tidak dibuat catatan Cuti hangus' },
 ];
 
 export default function LeaveHistorySection() {

@@ -3,6 +3,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import useI18n from '../i18n/useI18n'; // [BARU]
 import ThemeToggle from '../components/ThemeToggle'; // [BARU]
 import useTheme from '../hooks/useTheme'; // [BARU]
 import useFeatureFlag from '../hooks/useFeatureFlag'; // [BARU]
@@ -21,6 +22,7 @@ import './MainLayout.css';
 
 export default function MainLayout({ onLogout, user }) {
   // 1. Tambahkan state untuk kontrol sidebar di mobile
+  const { t } = useI18n();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [approvalCount, setApprovalCount] = useState(0);
   const location = useLocation();
@@ -132,7 +134,7 @@ export default function MainLayout({ onLogout, user }) {
         {/* [UBAH] Modifier --centered dipakai saat toggle dimatikan, supaya teks
             kembali terpusat di mobile seperti semula. */}
         <footer className={`footer-wrapper ${isThemeToggleOn ? '' : 'footer-wrapper--centered'}`}>
-          <p className="footer-copyright">© {new Date().getFullYear()} SYS Indonesia. All rights reserved.</p>
+          <p className="footer-copyright">{t('footer.copyright', { year: new Date().getFullYear() })}</p>
           {/* [UBAH] Toggle tema terang/gelap -- hanya dirender kalau fitur NYALA */}
           {isThemeToggleOn && (
             <div className="footer-actions">

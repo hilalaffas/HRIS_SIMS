@@ -37,6 +37,7 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.repository.LeaveRepository;
+import sys.hris.sims.leave.service.LeaveForfeitCalculator; // [BARU]
 import sys.hris.sims.leave.service.LeaveForfeitCalculator.Forfeit; // [BARU]
 import sys.hris.sims.leave.service.LeaveService;
 import sys.hris.sims.leave.service.LeaveSummaryService; // [BARU]
@@ -67,6 +68,9 @@ import sys.hris.sims.leavetype.repository.LeaveTypeRepository;
 //               riwayat (saldo tidak terpengaruh karena riwayat import tidak ikut hitung saldo). Tanpa komentar diabaikan
 //       > 1  -> HANYA cuti hangus/expired (komentar "hangus/expired"); 0.5 / 1 juga boleh untuk hangus.
 //               Dicatat sebagai jenis sistem "Cuti hangus" pada tanggal itu, tidak ikut hitung saldo.
+//               [UBAH] Hanya untuk tanggal >= 1 Januari 2025. Tanggal SEBELUM itu tidak dianggap hangus:
+//               jumlah harinya dialokasikan ke Sisa Cuti Lama (employees.manual_leave_balance) dan
+//               TIDAK dibuatkan catatan "Cuti hangus".
 //       Cuti beberapa hari ditulis satu baris per hari (tidak ada lagi rentang N hari).
 //     Teks komentar harus sama dengan nama tipe cuti di database (huruf besar/kecil & tanda kurung
 //     "(Khusus)" boleh dilewatkan). Tipe tidak dikenal -> baris dilewati, TIDAK ada tipe baru dibuat.
@@ -309,8 +313,10 @@ public class DevLeaveHistoryService {
     private record PlanResult(PlannedLeave plan, String problem) {
     }
 
+    // [UBAH] oldQuotaAllocated = total hari (baris "hangus" sebelum 2025-01-01) yang dialokasikan ke Sisa Cuti Lama.
     private record BlockOutcome(List<ImportRowResult> rows, int created, int skippedBeforeSave,
-                                int ignoredComments, Map<String, Integer> createdByType) {
+                                int ignoredComments, Map<String, Integer> createdByType,
+                                BigDecimal oldQuotaAllocated) {
     }
 
     private record MatchResult(Employee employee, String note, String problem) {
@@ -360,6 +366,8 @@ public class DevLeaveHistoryService {
         int zeroIgnored = 0;
         int commentsIgnored = 0;
         int remainingApplied = 0;
+        BigDecimal oldQuotaTotal = BigDecimal.ZERO; // [BARU]
+        int oldQuotaEmployees = 0; // [BARU]
         List<String> unmatchedNames = new ArrayList<>();
         List<String> matchedByName = new ArrayList<>();
         List<String> remainingProblems = new ArrayList<>();
@@ -401,6 +409,10 @@ public class DevLeaveHistoryService {
                 results.addAll(outcome.rows());
                 createdTotal += outcome.created();
                 commentsIgnored += outcome.ignoredComments();
+                if (outcome.oldQuotaAllocated().signum() > 0) { // [BARU]
+                    oldQuotaTotal = oldQuotaTotal.add(outcome.oldQuotaAllocated());
+                    oldQuotaEmployees++;
+                }
                 outcome.createdByType().forEach((name, count) -> createdByType.merge(name, count, Integer::sum));
                 if (outcome.created() > 0) {
                     employeesImported++;
@@ -436,6 +448,16 @@ public class DevLeaveHistoryService {
             notes.add("Per tipe cuti: " + createdByType.entrySet().stream()
                     .map(entry -> entry.getKey() + " " + entry.getValue())
                     .collect(Collectors.joining(", ")) + ".");
+        }
+        if (oldQuotaTotal.signum() > 0) { // [BARU]
+            notes.add(oldQuotaTotal.stripTrailingZeros().toPlainString() + " hari bertanggal sebelum "
+                    + LeaveForfeitCalculator.FORFEIT_START_DATE + " tidak dianggap hangus dan "
+                    + (dryRun ? "akan dialokasikan" : "dialokasikan") + " ke Sisa Cuti Lama untuk "
+                    + oldQuotaEmployees + " karyawan. Import ulang file yang sama akan menambah Sisa Cuti Lama lagi.");
+            if (applyRemaining) {
+                notes.add("Opsi \"terapkan sisa cuti\" aktif: Sisa Cuti Lama akan dihitung ulang dari angka sisa di file "
+                        + "sehingga alokasi di atas ikut tertimpa.");
+            }
         }
         if (zeroIgnored > 0) {
             notes.add(zeroIgnored + " baris bernilai 0 hari tanpa komentar diabaikan.");
@@ -517,6 +539,7 @@ public class DevLeaveHistoryService {
         Map<String, Integer> createdByType = new LinkedHashMap<>();
         List<LeaveRequest> toSave = new ArrayList<>();
         List<ImportRowResult> rows = new ArrayList<>();
+        BigDecimal oldQuotaToAdd = BigDecimal.ZERO; // [BARU] hari "hangus" sebelum 2025 -> Sisa Cuti Lama
         int skipped = 0;
         int ignoredComments = 0;
 
@@ -552,6 +575,17 @@ public class DevLeaveHistoryService {
                     rows.add(ImportRowResult.skipped(csvRow, displayName,
                             "Cuti hangus tanggal " + rangeText + " sudah ada (import sebelumnya atau baris lain di file ini)."));
                     skipped++;
+                    continue;
+                }
+                // [BARU] Tanggal sebelum 1 Januari 2025: BUKAN hangus. Tidak dibuatkan catatan "Cuti hangus";
+                // jumlah harinya ditambahkan ke Sisa Cuti Lama karyawan.
+                if (!LeaveForfeitCalculator.isForfeitEligible(plan.start())) {
+                    oldQuotaToAdd = oldQuotaToAdd.add(plan.days());
+                    String oldVerb = dryRun ? " hari akan dialokasikan ke Sisa Cuti Lama (" : " hari dialokasikan ke Sisa Cuti Lama (";
+                    rows.add(ImportRowResult.success(csvRow, displayName,
+                            plan.days().stripTrailingZeros().toPlainString() + oldVerb + rangeText
+                                    + "; sebelum " + LeaveForfeitCalculator.FORFEIT_START_DATE
+                                    + " tidak hangus, tidak dibuat catatan Cuti hangus)."));
                     continue;
                 }
             } else {
@@ -606,8 +640,16 @@ public class DevLeaveHistoryService {
 
         if (!dryRun) {
             leaveRepository.saveAll(toSave);
+            // [BARU] Tambahkan ke Sisa Cuti Lama (menambah, bukan menimpa saldo yang sudah ada).
+            if (oldQuotaToAdd.signum() > 0) {
+                Employee managed = employeeRepository.findById(employeeId).orElseThrow();
+                BigDecimal current = managed.getManualLeaveBalance() == null
+                        ? BigDecimal.ZERO : managed.getManualLeaveBalance();
+                managed.setManualLeaveBalance(current.add(oldQuotaToAdd).setScale(2, RoundingMode.HALF_UP));
+                employeeRepository.save(managed);
+            }
         }
-        return new BlockOutcome(rows, toSave.size(), skipped, ignoredComments, createdByType);
+        return new BlockOutcome(rows, toSave.size(), skipped, ignoredComments, createdByType, oldQuotaToAdd);
     }
 
     // ============================== TIPE CUTI DARI KOMENTAR ==============================

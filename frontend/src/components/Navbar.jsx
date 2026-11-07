@@ -10,13 +10,9 @@ import NotifPasswordResetModal from './NotifPasswordResetModal';
 import NotifLeaveApprovalModal from './NotifLeaveApprovalModal';
 import NotifBellToast from './NotifBellToast';
 import { getNotificationAction } from '../config/notificationRoutes'; // [BARU]
+import useI18n from '../i18n/useI18n'; // [BARU]
+import LanguageSwitcher from './LanguageSwitcher'; // [BARU]
 import './Navbar.css';
-
-const APPROVER_ROLE_LABELS = {
-  LEADER: 'Leader',
-  SPV: 'SPV',
-  MANAGER: 'Manager',
-};
 
 // [UBAH] CLICKABLE_TYPES DIHAPUS -- daftar tipe yang bisa diklik + tujuannya
 // sekarang ada di config/notificationRoutes.js (NOTIFICATION_ACTIONS).
@@ -28,6 +24,7 @@ const SICK_NOTIF_WINDOW_DAYS = 14;
 export default function Navbar({ toggleSidebar, user }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t, tRich, formatDate, locale } = useI18n();
   const [currentDate, setCurrentDate] = useState('');
 
   // [BARU] Akun dev tidak punya data cuti/notifikasi, jadi polling-nya dilewati.
@@ -145,14 +142,17 @@ export default function Navbar({ toggleSidebar, user }) {
 
         (rawData || []).forEach((item) => {
           const statusBerkas = item.status ? item.status.toLowerCase() : 'proses';
-          const jenisCutiNama = item.rawDetail?.jenisCuti || item.jenisCuti || 'Cuti tahunan';
-          const stringTanggal = item.stringTanggal || 'Tanggal tidak tersedia';
-          const pemohon = item.userName || 'Karyawan';
+          // [UBAH] Teks notifikasi disimpan sebagai kunci+parameter (textKey/textParams)
+          // dan baru dirender di bawah (resolveNotification), supaya ikut berganti
+          // saat bahasa diubah tanpa menunggu polling berikutnya.
+          const jenisCutiNama = item.rawDetail?.jenisCuti || item.jenisCuti || '';
+          const stringTanggal = item.stringTanggal || '';
+          const pemohon = item.userName || '';
 
           if (statusBerkas.includes('kembali') || statusBerkas.includes('return')) {
             mappedNotifications.push({
               id: `ret-${item.id}`,
-              text: <>Pengajuan <strong>{jenisCutiNama}</strong> Anda telah <strong>dikembalikan.</strong></>,
+              textKey: 'notif.text.returned', textParams: { leave: jenisCutiNama },
               date: stringTanggal,
               timestamp: item.statusChangedAt,
               type: 'returned',
@@ -161,7 +161,7 @@ export default function Navbar({ toggleSidebar, user }) {
           } else if (statusBerkas.includes('setuju') || statusBerkas.includes('acc')) {
             mappedNotifications.push({
               id: `app-${item.id}`,
-              text: <>Pengajuan <strong>{jenisCutiNama}</strong> Anda telah <strong>disetujui.</strong></>,
+              textKey: 'notif.text.approved', textParams: { leave: jenisCutiNama },
               date: stringTanggal,
               timestamp: item.statusChangedAt,
               type: 'approved', // [BARU] type ini sekarang clickable -> buka modal detail cuti
@@ -170,7 +170,7 @@ export default function Navbar({ toggleSidebar, user }) {
           } else if (statusBerkas.includes('tolak') || statusBerkas.includes('reject')) {
             mappedNotifications.push({
               id: `rej-${item.id}`,
-              text: <>Pengajuan <strong>{jenisCutiNama}</strong> Anda telah <strong>ditolak.</strong></>,
+              textKey: 'notif.text.rejected', textParams: { leave: jenisCutiNama },
               date: stringTanggal,
               timestamp: item.statusChangedAt,
               type: 'rejected',
@@ -185,7 +185,7 @@ export default function Navbar({ toggleSidebar, user }) {
           if (isAtasanLeader || isAtasanSPV || isAtasanManager) {
             mappedNotifications.push({
               id: `new-${item.id}`,
-              text: <>Ada pengajuan <strong>{jenisCutiNama}</strong> baru dari Karyawan ({pemohon}) menunggu persetujuan Anda.</>,
+              textKey: 'notif.text.new', textParams: { leave: jenisCutiNama, name: pemohon },
               date: stringTanggal,
               type: 'new',
               raw: item,
@@ -198,18 +198,11 @@ export default function Navbar({ toggleSidebar, user }) {
 
       if (stepUpdatesResult.status === 'fulfilled') {
         (stepUpdatesResult.value || []).forEach((update) => {
-          const roleLabel = APPROVER_ROLE_LABELS[update.approverRole] || update.approverRole;
           mappedNotifications.push({
             id: `step-${update.approvalId}`,
-            text: (
-              <>
-                Pengajuan <strong>{update.leaveType}</strong> Anda telah disetujui oleh{' '}
-                <strong>{roleLabel} {update.approverName}</strong>.
-              </>
-            ),
-            date: update.actedAt
-              ? new Date(update.actedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-              : '-',
+            textKey: 'notif.text.stepApproved',
+            textParams: { leave: update.leaveType, role: update.approverRole, approverName: update.approverName },
+            dateValue: update.actedAt || null,
             timestamp: update.actedAt,
             type: 'step-approved',
             raw: { id: update.leaveRequestId },
@@ -278,18 +271,12 @@ export default function Navbar({ toggleSidebar, user }) {
   // id-nya baru, jadi popup & badge muncul lagi untuk perubahan itu.
   const sickNotifications = sickDecisions.map((record) => {
     const isApproved = String(record.approvalStatus).toUpperCase() === 'APPROVED';
-    const days = Number(record.leaveDays) > 1 ? ` (${record.leaveDays} hari)` : '';
+    const daysCount = Number(record.leaveDays) > 1 ? Number(record.leaveDays) : 0;
     return {
       id: `sick-${isApproved ? 'approved' : 'rejected'}-${record.attendanceId}`,
-      text: (
-        <>
-          Pengajuan <strong>Izin Sakit{days}</strong> Anda telah{' '}
-          <strong>{isApproved ? 'disetujui.' : 'ditolak.'}</strong>
-        </>
-      ),
-      date: new Date(`${record.attendanceDate}T00:00:00`).toLocaleDateString('id-ID', {
-        day: 'numeric', month: 'long', year: 'numeric',
-      }),
+      textKey: isApproved ? 'notif.text.sickApproved' : 'notif.text.sickRejected',
+      textParams: { daysCount },
+      dateValue: `${record.attendanceDate}T00:00:00`,
       timestamp: record.recordedAt,
       type: isApproved ? 'sick-approved' : 'sick-rejected',
       raw: record,
@@ -326,17 +313,9 @@ export default function Navbar({ toggleSidebar, user }) {
 
   const resetNotifications = resetRequests.map((req) => ({
     id: `reset-${req.id}`,
-    text: (
-      <>
-        Karyawan <strong>{req.employeeName || req.username}</strong> meminta{' '}
-        <strong>reset sandi.</strong>
-      </>
-    ),
-    date: req.requestedAt
-      ? new Date(req.requestedAt).toLocaleDateString('id-ID', {
-          day: 'numeric', month: 'long', year: 'numeric',
-        })
-      : '-',
+    textKey: 'notif.text.passwordReset',
+    textParams: { name: req.employeeName || req.username },
+    dateValue: req.requestedAt || null,
     type: 'password-reset',
     timestamp: req.requestedAt,
     raw: req,
@@ -377,17 +356,9 @@ export default function Navbar({ toggleSidebar, user }) {
 
   const leaveApprovalNotifications = leaveApprovalTasks.map((task) => ({
     id: `leave-${task.id}`,
-    text: (
-      <>
-        <strong>{task.karyawan?.nama}</strong> mengajukan{' '}
-        <strong>{task.jenisCuti}</strong>, perlu diproses.
-      </>
-    ),
-    date: task.submittedAt
-      ? new Date(task.submittedAt).toLocaleDateString('id-ID', {
-          day: 'numeric', month: 'long', year: 'numeric',
-        })
-      : '-',
+    textKey: 'notif.text.leaveApproval',
+    textParams: { name: task.karyawan?.nama, leave: task.jenisCuti },
+    dateValue: task.submittedAt || null,
     type: 'leave-approval',
     timestamp: task.submittedAt,
     raw: task,
@@ -416,9 +387,30 @@ export default function Navbar({ toggleSidebar, user }) {
     ...sickNotifications,
     ...notifications,
   ];
+  // [BARU] Ubah kunci+parameter menjadi teks/tanggal akhir sesuai bahasa aktif.
+  const resolveNotification = (notification) => {
+    if (!notification.textKey) return notification;
+    const params = { ...notification.textParams };
+    if ('leave' in params && !params.leave) params.leave = t('notif.defaultLeaveType');
+    if (notification.textKey === 'notif.text.new' && !params.name) params.name = t('notif.defaultRequester');
+    if (notification.textKey === 'notif.text.stepApproved') {
+      const roleKey = `notif.approverRole.${params.role}`;
+      const roleLabel = t(roleKey) === roleKey ? params.role : t(roleKey);
+      params.approver = t('notif.approverFormat', { role: roleLabel, name: params.approverName });
+    }
+    if ('daysCount' in params) {
+      params.days = params.daysCount > 0 ? t('notif.days', { count: params.daysCount }) : '';
+    }
+    const date = 'dateValue' in notification
+      ? (notification.dateValue ? formatDate(notification.dateValue) : '-')
+      : (notification.date || t('notif.dateUnavailable'));
+    return { ...notification, text: tRich(notification.textKey, params), date };
+  };
+
   const allNotifications = allNotificationCandidates
     .filter((notification) => !readNotificationIds.includes(notification.id))
-    .sort((first, second) => getNotificationTime(second) - getNotificationTime(first));
+    .sort((first, second) => getNotificationTime(second) - getNotificationTime(first))
+    .map(resolveNotification);
 
   // === [BARU] DETEKSI NOTIFIKASI BARU -> LONCENG BERGOYANG + POPUP MINI ===
   useEffect(() => {
@@ -504,7 +496,7 @@ export default function Navbar({ toggleSidebar, user }) {
   useEffect(() => {
     const formatIndonesiaDate = () => {
       const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-      const today = new Date().toLocaleDateString('id-ID', options);
+      const today = new Date().toLocaleDateString(locale, options);
       setCurrentDate(today);
     };
 
@@ -520,22 +512,22 @@ export default function Navbar({ toggleSidebar, user }) {
       clearInterval(timer);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [locale]); // [UBAH] ikut bahasa terpilih
 
   const getSubHeaderTitle = () => {
-    if (isDevAccessPath(location.pathname)) return 'Pengaturan Fitur';
+    if (isDevAccessPath(location.pathname)) return t('navbar.subtitle.featureSettings');
 
     switch (location.pathname) {
       case '/':
-      case '/dashboard': return 'Dashboard Utama';
-      case '/ApplyCuti': return 'Formulir Pengajuan Cuti Baru';
-      case '/history-cuti': return 'Riwayat & Pelacakan Alur Cuti';
-      case '/absensi': return 'Pencatatan Absensi Karyawan';
-      case '/karyawan': return 'Manajemen Data Karyawan';
-      case '/approval-cuti': return 'Daftar Approval Cuti';
-      case '/reject-cuti': return 'Daftar Reject Cuti';
-      case '/return-cuti': return 'Daftar Return Cuti';
-      default: return 'Management System';
+      case '/dashboard': return t('navbar.subtitle.dashboard');
+      case '/ApplyCuti': return t('navbar.subtitle.applyLeave');
+      case '/history-cuti': return t('navbar.subtitle.leaveHistory');
+      case '/absensi': return t('navbar.subtitle.attendance');
+      case '/karyawan': return t('navbar.subtitle.employees');
+      case '/approval-cuti': return t('navbar.subtitle.approvalList');
+      case '/reject-cuti': return t('navbar.subtitle.rejectList');
+      case '/return-cuti': return t('navbar.subtitle.returnList');
+      default: return t('navbar.subtitle.default');
     }
   };
 
@@ -557,11 +549,14 @@ export default function Navbar({ toggleSidebar, user }) {
       <div className="navbar-actions">
         <span className="navbar-date">{currentDate}</span>
 
+        {/* [BARU] Pemilih bahasa Indonesia / 日本語 */}
+        <LanguageSwitcher />
+
         <div className="notification-container" ref={notificationRef}>
           <button
             ref={bellButtonRef}
             className="btn-notification"
-            title="Notifikasi"
+            title={t('notif.bell')}
             onClick={() => {
               setBellToast(null);
               if (!showDropdown) setNotifRefreshTick((tick) => tick + 1); // [BARU] refresh hanya saat dibuka
@@ -591,7 +586,7 @@ export default function Navbar({ toggleSidebar, user }) {
           {bellToast && !showDropdown && (
             <NotifBellToast
               key={bellToast.key}
-              notification={bellToast.notification}
+              notification={resolveNotification(bellToast.notification)}
               extraCount={bellToast.extraCount}
               anchorRef={bellButtonRef}
               onOpen={() => {
@@ -614,12 +609,12 @@ export default function Navbar({ toggleSidebar, user }) {
           {showDropdown && (
             <div className="notification-dropdown">
               <div className="notification-header">
-                <span className="notification-header-title">Notifikasi Terbaru</span>
-                <button className="btn-mark-read" onClick={handleMarkNotificationsRead}>Tandai dibaca</button>
+                <span className="notification-header-title">{t('notif.latest')}</span>
+                <button className="btn-mark-read" onClick={handleMarkNotificationsRead}>{t('notif.markRead')}</button>
               </div>
               <ul className="notification-list">
                 {allNotifications.length === 0 ? (
-                  <li className="notification-empty">Tidak ada notifikasi baru</li>
+                  <li className="notification-empty">{t('notif.empty')}</li>
                 ) : (
                   allNotifications.map((notif) => {
                     const action = getNotificationAction(notif); // [BARU]
@@ -691,7 +686,7 @@ export default function Navbar({ toggleSidebar, user }) {
                             baris berbasis config/notificationRoutes.js */}
                         {action && (
                           <span className={`notification-action-hint notification-action-hint--${action.tone}`}>
-                            {action.hint}
+                            {t(action.hintKey)}
                           </span>
                         )}
                       </div>
@@ -700,8 +695,8 @@ export default function Navbar({ toggleSidebar, user }) {
                       <button
                         type="button"
                         className="notification-dismiss-btn"
-                        aria-label="Hapus notifikasi"
-                        title="Hapus notifikasi"
+                        aria-label={t('notif.dismiss')}
+                        title={t('notif.dismiss')}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDismissOne(notif.id);

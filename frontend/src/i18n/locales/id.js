@@ -1,0 +1,120 @@
+// src/i18n/locales/id.js
+// Bahasa SUMBER (default & fallback). Kunci baru WAJIB ditambah di sini dulu,
+// lalu diterjemahkan di ja.js. <b>..</b> = teks tebal (dipakai tRich).
+const id = {
+  // ===== Umum =====
+  'common.cancel': 'Batal',
+  'common.confirm': 'Konfirmasi',
+  'common.loading': 'Loading...',
+
+  // ===== Pemilih bahasa =====
+  'lang.label': 'Bahasa',
+  'lang.switchTo': 'Ganti bahasa ke {language}',
+
+  // ===== Sidebar =====
+  'sidebar.group.main': 'MAIN MENU',
+  'sidebar.group.settings': 'PENGATURAN',
+  'sidebar.group.approval': 'MENU PERSETUJUAN',
+  'sidebar.group.hr': 'SISTEM HRD',
+  'sidebar.group.superAdmin': 'SUPER ADMIN',
+  'sidebar.featureSettings': 'Pengaturan Fitur',
+  'sidebar.home': 'Halaman Utama',
+  'sidebar.myAttendance': 'Absensi saya',
+  'sidebar.requests': 'Pengajuan',
+  'sidebar.approvals': 'Persetujuan',
+  'sidebar.manageEmployees': 'Kelola Karyawan (HR)',
+  'sidebar.manageDivisionShift': 'Kelola Divisi & Shift',
+  'sidebar.reports': 'Laporan',
+  'sidebar.accountSettings': 'Pengaturan Akun',
+  'sidebar.editProfile': 'EDIT PROFIL',
+  'sidebar.logout': 'Keluar',
+  'sidebar.unavailable': 'Belum tersedia untuk role Anda',
+
+  // ===== Navbar =====
+  'navbar.subtitle.default': 'Management System',
+  'navbar.subtitle.featureSettings': 'Pengaturan Fitur',
+  'navbar.subtitle.dashboard': 'Dashboard Utama',
+  'navbar.subtitle.applyLeave': 'Formulir Pengajuan Cuti Baru',
+  'navbar.subtitle.leaveHistory': 'Riwayat & Pelacakan Alur Cuti',
+  'navbar.subtitle.attendance': 'Pencatatan Absensi Karyawan',
+  'navbar.subtitle.employees': 'Manajemen Data Karyawan',
+  'navbar.subtitle.approvalList': 'Daftar Approval Cuti',
+  'navbar.subtitle.rejectList': 'Daftar Reject Cuti',
+  'navbar.subtitle.returnList': 'Daftar Return Cuti',
+
+  // ===== Notifikasi =====
+  'notif.bell': 'Notifikasi',
+  'notif.latest': 'Notifikasi Terbaru',
+  'notif.markRead': 'Tandai dibaca',
+  'notif.empty': 'Tidak ada notifikasi baru',
+  'notif.dismiss': 'Hapus notifikasi',
+  'notif.dateUnavailable': 'Tanggal tidak tersedia',
+  'notif.defaultLeaveType': 'Cuti tahunan',
+  'notif.defaultRequester': 'Karyawan',
+  'notif.text.returned': 'Pengajuan <b>{leave}</b> Anda telah <b>dikembalikan.</b>',
+  'notif.text.approved': 'Pengajuan <b>{leave}</b> Anda telah <b>disetujui.</b>',
+  'notif.text.rejected': 'Pengajuan <b>{leave}</b> Anda telah <b>ditolak.</b>',
+  'notif.text.new': 'Ada pengajuan <b>{leave}</b> baru dari Karyawan ({name}) menunggu persetujuan Anda.',
+  'notif.text.stepApproved': 'Pengajuan <b>{leave}</b> Anda telah disetujui oleh <b>{approver}</b>.',
+  'notif.text.sickApproved': 'Pengajuan <b>Izin Sakit{days}</b> Anda telah <b>disetujui.</b>',
+  'notif.text.sickRejected': 'Pengajuan <b>Izin Sakit{days}</b> Anda telah <b>ditolak.</b>',
+  'notif.text.passwordReset': 'Karyawan <b>{name}</b> meminta <b>reset sandi.</b>',
+  'notif.text.leaveApproval': '<b>{name}</b> mengajukan <b>{leave}</b>, perlu diproses.',
+  'notif.days': ' ({count} hari)',
+  'notif.approverRole.LEADER': 'Leader',
+  'notif.approverRole.SPV': 'SPV',
+  'notif.approverRole.MANAGER': 'Manager',
+  'notif.approverFormat': '{role} {name}',
+  'notif.hint.process': 'Klik untuk memproses →',
+  'notif.hint.detail': 'Klik untuk lihat detail →',
+  'notif.hint.progress': 'Klik untuk lihat progres →',
+  'notif.hint.note': 'Klik untuk lihat catatan →',
+  'notif.hint.reason': 'Klik untuk lihat alasan →',
+  'notif.hint.attendance': 'Klik untuk lihat di Absensi →',
+  'notif.toast.approved': 'Pengajuan disetujui',
+  'notif.toast.stepApproved': 'Persetujuan bertahap',
+  'notif.toast.returned': 'Pengajuan dikembalikan',
+  'notif.toast.rejected': 'Pengajuan ditolak',
+  'notif.toast.new': 'Pengajuan baru',
+  'notif.toast.passwordReset': 'Permintaan reset sandi',
+  'notif.toast.sickApproved': 'Izin sakit disetujui',
+  'notif.toast.sickRejected': 'Izin sakit ditolak',
+  'notif.toast.justNow': 'Baru saja',
+  'notif.toast.more': '+{count} notifikasi lainnya',
+  'notif.toast.close': 'Tutup notifikasi',
+  'notif.toast.default': 'Notifikasi baru',
+
+  // ===== Modal Logout & Sesi =====
+  'logout.title': 'Log Out',
+  'logout.text': 'Keluar dari sistem SIMS?',
+  'session.title': 'Sesi Berakhir',
+  'session.message': 'Sesi Anda telah berakhir demi keamanan. Silakan login kembali.',
+  'session.inactive': 'Sesi Anda berakhir karena tidak ada aktivitas selama 1 jam. Silakan login kembali.',
+  'session.ok': 'OK, Login Kembali',
+
+  // ===== Toast global =====
+  'toast.welcomeBack': 'Selamat datang kembali, {name}',
+  'toast.loggedOut': 'Anda berhasil keluar dari sistem.',
+
+  // ===== Login =====
+  'login.subtitle': 'Sistem Informasi Manajemen Cuti Karyawan',
+  'login.username': 'USERNAME',
+  'login.usernamePlaceholder': 'username.anda',
+  'login.usernameLabel': 'Username',
+  'login.password': 'PASSWORD',
+  'login.passwordLabel': 'Password',
+  'login.forgot': 'Lupa Sandi?',
+  'login.submit': 'Login',
+  'login.fallbackError': 'Username atau password salah.',
+  'login.required': '{label} perlu diisi.',
+  'login.copyright': '© 2026 SYS Indonesia. Hak Cipta Dilindungi.',
+  'login.logoAlt': 'Logo Aplikasi',
+  'locked.title': 'Akun Telah dinonaktifkan',
+  'locked.text': 'Anda telah melakukan kesalahan memasukan password sebanyak 3 (tiga) kali. Silakan tunggu selama maksimal 3 (tiga) hari kerja. Hubungi HR secara langsung jika butuh akses segera.',
+  'locked.back': 'Kembali ke Halaman Login',
+
+  // ===== Footer =====
+  'footer.copyright': '© {year} SYS Indonesia. All rights reserved.',
+};
+
+export default id;

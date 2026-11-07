@@ -2,10 +2,12 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser } from '../services/authService';
 import { DEV_ACCESS_PATH, isDevAccessUser } from '../config/devAccessConfig';
+import useI18n from '../i18n/useI18n'; // [BARU]
 import './Sidebar.css';
 
 export default function Sidebar({ user, onLogout, notificationCounts, onNavigate }) {
   const location = useLocation();
+  const { t } = useI18n();
 
   // [BARU] Akun dev hanya melihat menu Pengaturan Fitur (+ tombol Keluar).
   // Username dibaca dari getCurrentUser() karena prop `user` tidak membawanya.
@@ -24,8 +26,8 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   // Menu Utama: Super Admin hanya punya Halaman Utama, role lain punya keduanya
   // [UBAH] Akun dev memakai satu menu saja: Pengaturan Fitur.
   const mainMenuItems = isDevAccount
-    ? [{ path: DEV_ACCESS_PATH, name: 'Pengaturan Fitur', icon: 'fa-solid fa-sliders' }]
-    : [{ path: '/dashboard', name: 'Halaman Utama', icon: 'fa-solid fa-border-all' }];
+    ? [{ path: DEV_ACCESS_PATH, name: t('sidebar.featureSettings'), icon: 'fa-solid fa-sliders' }]
+    : [{ path: '/dashboard', name: t('sidebar.home'), icon: 'fa-solid fa-border-all' }];
 
   // Tambahkan Manajemen Cuti Saya jika BUKAN Super Admin (dan bukan akun dev)
   if (!isSuperAdmin && !isDevAccount) {
@@ -35,13 +37,13 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
     // diakses lewat URL / notifikasi, hanya tidak lagi tampil di sidebar.
     mainMenuItems.push({ 
       path: '/absensi', 
-      name: 'Absensi saya', 
+      name: t('sidebar.myAttendance'), 
       icon: 'fa-regular fa-clock',
       hasDot: notificationCounts?.leaveRequest ?? false
     });
     mainMenuItems.push({
       path: '/pengajuan',
-      name: 'Pengajuan',
+      name: t('sidebar.requests'),
       icon: 'fa-solid fa-clipboard-list',
       hasDot: notificationCounts?.leaveRequest ?? false
     });
@@ -51,7 +53,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   const approvalMenuItems = [
     { 
       path: '/ApproveLeave', 
-      name: 'Persetujuan', 
+      name: t('sidebar.approvals'), 
       icon: 'fa-regular fa-circle-check', 
       badgeStyle: { backgroundColor: '#ff4d4d' }, 
       count: notificationCounts?.approval ?? 0
@@ -60,16 +62,16 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
 
   // Menu Khusus HRD (Gambar 3)
   const hrMenuItems = [
-    { path: '/karyawan', name: 'Kelola Karyawan (HR)', icon: 'fa-solid fa-users' },
-    { path: '/kelola-divisi-shift', name: 'Kelola Divisi & Shift', icon: 'fa-solid fa-layer-group' },
+    { path: '/karyawan', name: t('sidebar.manageEmployees'), icon: 'fa-solid fa-users' },
+    { path: '/kelola-divisi-shift', name: t('sidebar.manageDivisionShift'), icon: 'fa-solid fa-layer-group' },
     // [BARU] Menu Laporan hanya untuk role HRD_ADMIN (bukan role "admin" lain)
-    ...(userRole === 'hrd_admin' ? [{ path: '/laporan', name: 'Laporan', icon: 'fa-solid fa-file-lines' }] : []),
+    ...(userRole === 'hrd_admin' ? [{ path: '/laporan', name: t('sidebar.reports'), icon: 'fa-solid fa-file-lines' }] : []),
   ];
 
   // Menu Khusus Super Admin (Gambar 4)
   const superAdminMenuItems = [
-    { path: '/karyawan', name: 'Pengaturan Akun', icon: 'fa-solid fa-gear' },
-    { path: '/kelola-divisi-shift', name: 'Kelola Divisi & Shift', icon: 'fa-solid fa-layer-group' },
+    { path: '/karyawan', name: t('sidebar.accountSettings'), icon: 'fa-solid fa-gear' },
+    { path: '/kelola-divisi-shift', name: t('sidebar.manageDivisionShift'), icon: 'fa-solid fa-layer-group' },
   ];
 
   // LOGIKA HELPER INDIVIDU
@@ -87,7 +89,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
             key={item.path}
             className="menu-link inactive menu-link-disabled"
             aria-disabled="true"
-            title="Belum tersedia untuk role Anda"
+            title={t('sidebar.unavailable')}
           >
             <i className={item.icon}></i>
             <span style={{ flex: 1 }}>{item.name}</span>
@@ -158,15 +160,15 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
              <i className="fa-solid fa-gear"></i>
             </div>
 
-            <div className="avatar-overlay">EDIT PROFIL</div>
+            <div className="avatar-overlay">{t('sidebar.editProfile')}</div>
           </div>
 
           <h2 className="profile-name">
-            {user?.nama || user?.name || 'Loading...'}
+            {user?.nama || user?.name || t('common.loading')}
           </h2>
 
           <span className="profile-role">
-            {user?.jabatan || user?.role || 'Loading...'}
+            {user?.jabatan || user?.role || t('common.loading')}
           </span>
         </Link>
 
@@ -177,14 +179,14 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
           
           {/* 1. MAIN MENU (Tampil untuk semua role) */}
           <div className="menu-group">
-            <span className="menu-group-label">{isDevAccount ? 'PENGATURAN' : 'MAIN MENU'}</span>
+            <span className="menu-group-label">{isDevAccount ? t('sidebar.group.settings') : t('sidebar.group.main')}</span>
             {renderLinks(mainMenuItems)}
           </div>
 
           {/* 2. MENU PERSETUJUAN (Khusus Manager - Gambar 2) */}
           {isManager && !isDevAccount && (
             <div className="menu-group">
-              <span className="menu-group-label">MENU PERSETUJUAN</span>
+              <span className="menu-group-label">{t('sidebar.group.approval')}</span>
               {renderLinks(approvalMenuItems)}
             </div>
           )}
@@ -192,7 +194,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
           {/* 3. SISTEM HRD (Khusus HR Admin - Gambar 3) */}
           {isHRAdmin && !isDevAccount && (
             <div className="menu-group">
-              <span className="menu-group-label">SISTEM HRD</span>
+              <span className="menu-group-label">{t('sidebar.group.hr')}</span>
               {renderLinks(hrMenuItems)}
             </div>
           )}
@@ -200,7 +202,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
           {/* 4. SUPER ADMIN (Khusus Super Admin - Gambar 4) */}
           {isSuperAdmin && !isDevAccount && (
             <div className="menu-group">
-              <span className="menu-group-label">SUPER ADMIN</span>
+              <span className="menu-group-label">{t('sidebar.group.superAdmin')}</span>
               {renderLinks(superAdminMenuItems)}
             </div>
           )}
@@ -216,7 +218,7 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
         }} 
           className="btn-logout">
           <i className="fa-solid fa-right-from-bracket rotate-180"></i>
-          <span>Keluar</span>
+          <span>{t('sidebar.logout')}</span>
         </button>
       </div>
     </aside>

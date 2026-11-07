@@ -30,3 +30,9 @@ body {
   border-color: var(--color-danger) !important;
   box-shadow: 0 0 0 3px var(--color-danger-bg);
 }
+
+/* [BARU] Font CJK untuk mode bahasa Jepang (fallback bawaan OS, tanpa unduhan font). */
+:lang(ja) {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+    'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans JP', 'Segoe UI', sans-serif;
+}

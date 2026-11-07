@@ -1,6 +1,7 @@
 // src/components/LogoutModal.jsx
 import React from 'react';
 import './LogoutModal.css'; 
+import useI18n from '../i18n/useI18n'; // [BARU]
 import useModalExit from '../hooks/useModalExit'; // [BARU] animasi keluar modal
 import { APP_LEAVE_MS, beginAppLeave, endAppLeave } from '../utils/appTransition'; // [BARU] transisi keluar aplikasi
 
@@ -8,6 +9,7 @@ export default function LogoutModal({ onConfirm, onCancel }) {
   // [BARU] Callback parent (onCancel / onConfirm) TIDAK diubah -- hanya
   // dipanggil setelah animasi keluar selesai, jadi alur logout tetap sama.
   const { closing, close } = useModalExit();
+  const { t } = useI18n();
 
   const handleCancel = () => close(onCancel);
 
@@ -34,19 +36,19 @@ export default function LogoutModal({ onConfirm, onCancel }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16v-4m0-4h.01" />
               </svg>
             </div>
-            <h3 className="modal-title">Log Out</h3>
+            <h3 className="modal-title">{t('logout.title')}</h3>
           </div>
           
           <p className="modal-text">
-            Keluar dari sistem SIMS?
+            {t('logout.text')}
           </p>
           
           <div className="modal-actions">
             <button onClick={handleCancel} className="btn-cancel">
-              Batal
+              {t('common.cancel')}
             </button>
             <button onClick={handleConfirm} className="btn-confirm">
-              Konfirmasi
+              {t('common.confirm')}
             </button>
           </div>
 

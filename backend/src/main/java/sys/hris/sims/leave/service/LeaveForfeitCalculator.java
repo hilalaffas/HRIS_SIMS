@@ -19,9 +19,19 @@ import java.util.List;
 //     dibuatkan catatan hangus baru (anti dobel).
 //   - Tanpa bukti data pelacakan (trackingStart == null) tidak ada hangus baru yang dibuat, supaya
 //     karyawan lama yang riwayatnya belum pernah dimasukkan tidak dianggap hangus 12 hari per tahun.
+//   - [BARU] Aturan hangus HANYA berlaku untuk tanggal hangus mulai FORFEIT_START_DATE (1 Januari 2025)
+//     sampai sekarang. Sisa sebelum tanggal itu tidak hangus (masuk Sisa Cuti Lama saat import).
 public final class LeaveForfeitCalculator {
 
+    // [BARU] Satu-satunya sumber batas tanggal berlakunya aturan cuti hangus.
+    public static final LocalDate FORFEIT_START_DATE = LocalDate.of(2025, 1, 1);
+
     private LeaveForfeitCalculator() {
+    }
+
+    // [BARU] true bila tanggal ini sudah masuk masa berlaku aturan hangus (>= 1 Januari 2025).
+    public static boolean isForfeitEligible(LocalDate date) {
+        return date != null && !date.isBefore(FORFEIT_START_DATE);
     }
 
     // Satu pemakaian cuti yang memotong jatah. annualDays = porsi yang dibebankan ke cuti tahunan
@@ -88,11 +98,14 @@ public final class LeaveForfeitCalculator {
                 previousDeficit = endingBalance.min(BigDecimal.ZERO);
             }
 
+            // [UBAH] Hangus yang tanggalnya sebelum FORFEIT_START_DATE tidak dihitung sebagai hangus.
             if (!storedInPeriod.isEmpty()) {
                 for (StoredForfeit item : storedInPeriod) {
-                    result.add(new Forfeit(periodStart, periodEnd, item.date(), item.days(), true));
+                    if (isForfeitEligible(item.date())) {
+                        result.add(new Forfeit(periodStart, periodEnd, item.date(), item.days(), true));
+                    }
                 }
-            } else if (endingBalance != null && endingBalance.signum() > 0) {
+            } else if (endingBalance != null && endingBalance.signum() > 0 && isForfeitEligible(expiryDate)) {
                 result.add(new Forfeit(periodStart, periodEnd, expiryDate, endingBalance, false));
             }
             periodStart = periodEnd;
