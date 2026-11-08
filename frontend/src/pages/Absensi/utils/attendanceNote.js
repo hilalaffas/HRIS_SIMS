@@ -27,7 +27,7 @@ export const DOCUMENT_REVIEW = {
   REJECTED: 'REJECTED',
 };
 
-// Status pengajuan koreksi keterlambatan (dummy sampai backend ada).
+// Status pengajuan koreksi keterlambatan dari backend attendance_corrections.
 export const CORRECTION_STATUS = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',
@@ -72,13 +72,15 @@ function resolveDocumentNotice(document) {
 }
 
 function resolveLateCorrection(row, correctionStatus) {
-  if (correctionStatus === CORRECTION_STATUS.PENDING) {
-    return { notice: { tone: 'warning', icon: 'hourglass', label: 'Koreksi Menunggu HRD' }, action: null };
+  const status = typeof correctionStatus === 'string' ? correctionStatus : correctionStatus?.status;
+  const approverRole = typeof correctionStatus === 'object' ? correctionStatus?.currentApproverRole : '';
+  if (status === CORRECTION_STATUS.PENDING) {
+    return { notice: { tone: 'warning', icon: 'hourglass', label: approverRole ? `Menunggu Persetujuan ${approverRole}` : 'Koreksi Menunggu Persetujuan' }, action: null };
   }
-  if (correctionStatus === CORRECTION_STATUS.APPROVED) {
+  if (status === CORRECTION_STATUS.APPROVED) {
     return { notice: { tone: 'success', icon: 'check', label: 'Koreksi Disetujui' }, action: null };
   }
-  if (correctionStatus === CORRECTION_STATUS.REJECTED) {
+  if (status === CORRECTION_STATUS.REJECTED) {
     return { notice: { tone: 'danger', icon: 'alert', label: 'Koreksi Ditolak' }, action: null };
   }
   return {
@@ -94,6 +96,16 @@ export function resolveNoteMeta(row, { correctionStatus = '' } = {}) {
 
   // Terlambat: "TERLAMBAT (45 Mnt)" + link Ajukan Koreksi
   if (row.tone === 'telat') {
+    const correction = typeof correctionStatus === 'string' ? correctionStatus : correctionStatus?.status;
+    if (correction === CORRECTION_STATUS.APPROVED) {
+      return {
+        ...empty,
+        badge: { label: 'HADIR TEPAT WAKTU', tone: 'hadir' },
+        detail: [row.noteDetail, 'Koreksi keterlambatan disetujui'].filter(Boolean).join(' · '),
+        notice: { tone: 'success', icon: 'check', label: 'Koreksi Disetujui' },
+        action: null,
+      };
+    }
     const minutes = row.lateMinutes > 0 ? ` (${formatDuration(row.lateMinutes)})` : '';
     return {
       ...empty,
@@ -116,7 +128,15 @@ export function resolveNoteMeta(row, { correctionStatus = '' } = {}) {
 
   // Hadir tepat waktu: cukup badge hijau; catatan hanya bila ada hal khusus
   if (row.tone === 'hadir') {
-    return { ...empty, badge: { label: row.status, tone: 'hadir' }, detail: row.noteDetail || '' };
+    const correction = typeof correctionStatus === 'string' ? correctionStatus : correctionStatus?.status;
+    return {
+      ...empty,
+      badge: { label: row.status, tone: 'hadir' },
+      detail: row.noteDetail || '',
+      ...(correction === CORRECTION_STATUS.APPROVED
+        ? { notice: { tone: 'success', icon: 'check', label: 'Koreksi Disetujui' } }
+        : {}),
+    };
   }
 
   // Sisanya (Belum Absen, Menunggu Approval, Ditolak, Cuti, Alpha) -- apa adanya

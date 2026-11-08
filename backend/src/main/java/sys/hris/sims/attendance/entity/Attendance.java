@@ -88,6 +88,19 @@ public class Attendance {
     @Column(name = "location_name", length = 255)
     private String locationName;
 
+    // Jenis lokasi check-in: KANTOR atau WFH_DINAS. Nullable untuk data historis.
+    @Column(name = "location_type", length = 20)
+    private String locationType;
+
+    // Hasil validasi jarak GPS check-in terhadap titik kantor resmi (meter).
+    // Null untuk data lama, WFH/Dinas, atau koordinat kantor belum dikonfigurasi.
+    @Column(name = "office_distance_meters")
+    private Integer officeDistanceMeters;
+
+    // WITHIN_RADIUS / TOO_FAR / NOT_CONFIGURED / NOT_APPLICABLE.
+    @Column(name = "office_location_status", length = 24)
+    private String officeLocationStatus;
+
     // [UBAH] Lama izin sakit (HARI KERJA, tanpa Sabtu/Minggu) mulai dari attendanceDate. Default 1.
     @Column(name = "leave_days", nullable = false)
     private Integer leaveDays;

@@ -187,6 +187,7 @@ function blankRow(key) {
     photoUrl: '',
     mapsUrl: '',
     locationName: '', // [BARU]
+    locationType: '',
     proofLabel: '',
     document: null, // [BARU]
     lateMinutes: 0, // [BARU]
@@ -231,7 +232,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
       : { ...base, ...empty, status: 'TANPA KETERANGAN', tone: 'alpha', note: `Tanpa Keterangan (Alpha)${noticeSuffix}`, photoUrl: '', mapsUrl: '', proofLabel: '' };
   }
 
-  const proof = { photoUrl: checkIn?.photoUrl || '', mapsUrl: checkIn?.mapsUrl || '', locationName: checkIn?.locationName || '' }; // [UBAH] + locationName
+  const proof = { photoUrl: checkIn?.photoUrl || '', mapsUrl: checkIn?.mapsUrl || '', locationName: checkIn?.locationName || '', locationType: checkIn?.locationType || '', officeDistanceMeters: checkIn?.officeDistanceMeters ?? null, officeLocationStatus: checkIn?.officeLocationStatus || '' }; // geofence kantor
 
   // Sakit / Izin: tidak bekerja, jam & durasi tidak ditampilkan.
   if (checkIn?.reasonCode === 'SAKIT' || checkIn?.reasonCode === 'IZIN') {
@@ -270,7 +271,14 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
 
   // [BARU] Catatan TAMBAHAN untuk kolom Keterangan / Catatan (tanpa mengulang
   // kata "Bekerja Normal" / "Terlambat N Menit" yang sudah jadi badge).
+  const workLocationLabel = proof.locationType === 'WFH_DINAS' ? 'Absen WFH / Dinas' : proof.locationType === 'KANTOR' ? 'Absen di Kantor' : '';
+  const officeDistanceNotice = proof.officeLocationStatus === 'TOO_FAR'
+    ? `Titik absen dan titik kantor terlalu jauh (${Number(proof.officeDistanceMeters || 0).toLocaleString('id-ID')} m)`
+    : proof.officeLocationStatus === 'NOT_CONFIGURED' && proof.locationType === 'KANTOR'
+      ? 'Validasi titik kantor belum dikonfigurasi' : '';
   const noteDetail = [
+    workLocationLabel,
+    officeDistanceNotice,
     !checkOut ? (isToday ? 'Sedang bekerja' : 'Tidak absen pulang') : '',
     checkOut?.note || '',
     lateNotice ? `Izin terlambat: ${lateNotice.note}` : '',
@@ -295,6 +303,9 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     photoUrl: proof.photoUrl || checkOut?.photoUrl || '',
     mapsUrl: proof.mapsUrl || checkOut?.mapsUrl || '',
     locationName: proof.locationName || checkOut?.locationName || '', // [BARU]
+    locationType: proof.locationType || checkOut?.locationType || '',
+    officeDistanceMeters: proof.officeDistanceMeters,
+    officeLocationStatus: proof.officeLocationStatus,
     proofLabel: 'Selfie GPS',
   };
 }

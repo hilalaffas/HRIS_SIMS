@@ -12,6 +12,8 @@ import { I18nContext } from './I18nContext';
 import { DEFAULT_LANG, LANGUAGES, STORAGE_KEY, isSupportedLang } from './config';
 import { dictionaries } from './locales';
 import { renderRich } from './rich.jsx';
+import { startDomTranslator, stopDomTranslator } from './domTranslator';
+import { registerName } from './nameRegistry';
 
 const readStoredLang = () => {
   try {
@@ -33,6 +35,16 @@ export default function I18nProvider({ children }) {
   // Atribut lang di <html>: dipakai screen reader & browser (pemilihan font CJK).
   useEffect(() => {
     document.documentElement.setAttribute('lang', lang);
+  }, [lang]);
+
+  // [BARU] Mode Jepang: seluruh teks di layar (halaman, modal, tabel, tombol, placeholder,
+  // data dari server, tanggal, dan nama orang -> katakana) diterjemahkan oleh domTranslator.
+  // Mode Indonesia: teks asli dipulihkan persis seperti sebelumnya.
+  useEffect(() => {
+    if (lang !== 'ja') { stopDomTranslator(); return undefined; }
+    try { registerName(localStorage.getItem('user_name') || ''); } catch { /* abaikan */ }
+    startDomTranslator();
+    return () => stopDomTranslator();
   }, [lang]);
 
   const setLang = useCallback((next) => {

@@ -1,4 +1,5 @@
 // src/services/api.js
+import { collectNamesFromJson } from '../i18n/nameRegistry.js'; // [BARU] i18n: catat nama untuk katakana
 
 /**
  * Wrapper terpusat untuk semua panggilan ke backend Spring Boot.
@@ -137,6 +138,8 @@ async function request(path, options = {}) {
   if (rawText) {
     try {
       data = JSON.parse(rawText);
+      // [BARU] Catat nama orang untuk penulisan katakana di mode Jepang (tampilan saja).
+      collectNamesFromJson(data);
     } catch {
       data = rawText;
     }

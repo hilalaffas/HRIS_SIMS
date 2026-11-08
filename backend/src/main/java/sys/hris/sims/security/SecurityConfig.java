@@ -403,6 +403,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/absensi/*/approval")
                         .hasAnyRole("LEADER", "SPV", "MANAGER")
 
+                        // [BARU] Koreksi keterlambatan absensi. Pengajuan & riwayat milik sendiri
+                        // terbuka untuk semua user login; daftar & keputusan persetujuan hanya
+                        // untuk approver (kepemilikan tahap dicek lagi di AttendanceCorrectionService).
+                        // Path-nya 3 segmen, jadi TIDAK tertangkap rule "/api/absensi/*/approval" di atas.
+                        .requestMatchers(HttpMethod.POST, "/api/absensi/corrections/me")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/corrections/me")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/corrections/approvals")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN", "DEV")
+
+                        .requestMatchers(HttpMethod.PUT, "/api/absensi/corrections/*/approval")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER")
+
                         // ==========================
                         // PENGAJUAN LEMBUR (Overtime)
                         // ==========================

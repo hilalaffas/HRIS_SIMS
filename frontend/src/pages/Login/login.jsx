@@ -12,7 +12,7 @@ import useI18n from '../../i18n/useI18n'; // [BARU]
 import LanguageSwitcher from '../../components/LanguageSwitcher'; // [BARU]
 
 const Login = ({ onLoginSuccess }) => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -52,8 +52,8 @@ const Login = ({ onLoginSuccess }) => {
       if (message.toLowerCase().includes('dinonaktifkan')) {
         setShowLockedScreen(true);
       } else {
-        // Pesan dari server berbahasa Indonesia; di mode lain pakai pesan generik.
-        setError(err.message && lang !== 'id' ? t('login.fallbackError') : message);
+        // Pesan server (Indonesia) ikut diterjemahkan otomatis oleh i18n/engine di mode Jepang.
+        setError(message);
       }
     } finally {
       setIsLoading(false);

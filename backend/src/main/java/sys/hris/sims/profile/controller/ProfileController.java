@@ -89,6 +89,7 @@ public class ProfileController {
         Employee employee = employeeRepository.findFirstByUser_Username(user.getUsername()).orElse(null);
         String role = user.getRoleId() == null ? "" : user.getRoleId().getRoleName();
         return ProfileResponse.builder()
+                .employeeId(employee == null ? null : employee.getEmployeeId())
                 .namaLengkap(employee == null ? user.getUsername() : employee.getFullName())
                 .nikKaryawan(employee == null || employee.getNikKaryawan() == null ? "-" : employee.getNikKaryawan())
                 .jabatan(role)

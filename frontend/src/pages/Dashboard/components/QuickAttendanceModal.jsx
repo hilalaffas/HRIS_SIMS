@@ -31,39 +31,7 @@ import { ATTENDANCE_NOTE_MAX_LENGTH } from '../../Absensi/hooks/useAttendanceCap
 import useLiveClock from '../hooks/useLiveClock';
 import './QuickAttendanceModal.css';
 
-const MAP_HALF_SPAN = 0.004; // ~450 m di sekeliling titik pengguna
-const LOW_ACCURACY_METERS = 100;
-
-// [BARU] Key Google Maps Embed API (publik, terlihat di browser). WAJIB dibatasi di
-// Google Cloud Console: HTTP referrer = domain aplikasi, API restriction = Maps Embed API.
-// Kalau tidak diatur, peta otomatis memakai OpenStreetMap (tanpa key).
-const GOOGLE_MAPS_EMBED_KEY = import.meta.env.VITE_GOOGLE_MAPS_EMBED_KEY || '';
-
-// Pembatasan key lewat HTTP referrer butuh header Referer (origin saja), jadi untuk
-// Google tidak boleh 'no-referrer'. OpenStreetMap tidak perlu -> tidak ada yang bocor.
-const MAP_REFERRER_POLICY = GOOGLE_MAPS_EMBED_KEY ? 'strict-origin-when-cross-origin' : 'no-referrer';
-
-// Koordinat berupa angka dari GPS browser (bukan input teks), jadi aman
-// disusun ke dalam URL peta.
-function buildMapEmbedUrl({ lat, lng }) {
-  if (GOOGLE_MAPS_EMBED_KEY) {
-    const params = new URLSearchParams({
-      key: GOOGLE_MAPS_EMBED_KEY,
-      q: `${lat},${lng}`,
-      zoom: '17',
-      language: 'id',
-    });
-    return `https://www.google.com/maps/embed/v1/place?${params.toString()}`;
-  }
-
-  // Cadangan: OpenStreetMap
-  const params = new URLSearchParams({
-    bbox: [lng - MAP_HALF_SPAN, lat - MAP_HALF_SPAN, lng + MAP_HALF_SPAN, lat + MAP_HALF_SPAN].join(','),
-    layer: 'mapnik',
-    marker: `${lat},${lng}`,
-  });
-  return `https://www.openstreetmap.org/export/embed.html?${params.toString()}`;
-}
+const LOW_ACCURACY_METERS = 5000;
 
 function gpsBadgeText(locationStatus, coords) {
   if (locationStatus === 'ready') return `GPS: Aktif (±${coords.accuracy} m)`;
@@ -73,7 +41,7 @@ function gpsBadgeText(locationStatus, coords) {
 
 export default function QuickAttendanceModal({ capture, shiftHours, onUploadFallback }) { // [UBAH] + onUploadFallback (opsional)
   const {
-    action, note, captured, cameraError, submitError, coords,
+    action, note, captured, cameraError, submitError, coords, locationType, setLocationType,
     locationStatus, locationError, locationName, isLocationNameLoading, isSubmitting,
     attachVideo, close, takePhoto, retake, submit, refreshLocation, setNote,
   } = capture;
@@ -130,6 +98,21 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
           </button>
         </header>
 
+        {action === 'Masuk' && (
+          <div className="quickAtt__locationTabs" role="tablist" aria-label="Jenis lokasi absensi">
+            <button type="button" role="tab" aria-selected={locationType === 'KANTOR'}
+              className={locationType === 'KANTOR' ? 'is-active' : ''}
+              onClick={() => setLocationType('KANTOR')} disabled={Boolean(captured) || isSubmitting}>
+              Lokasi di Kantor
+            </button>
+            <button type="button" role="tab" aria-selected={locationType === 'WFH_DINAS'}
+              className={locationType === 'WFH_DINAS' ? 'is-active' : ''}
+              onClick={() => setLocationType('WFH_DINAS')} disabled={Boolean(captured) || isSubmitting}>
+              Lokasi WFH/Dinas
+            </button>
+          </div>
+        )}
+
         <div className="quickAtt__body">
           {/* ---------- Kamera ---------- */}
           <div className={`quickAtt__camera ${captured ? 'is-captured' : ''}`}>
@@ -162,70 +145,28 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
               </>
             )}
 
-            <div className="quickAtt__cameraBar">
+            <section className="quickAtt__locationInfo" aria-label="Informasi GPS dan waktu">
+            <div className="quickAtt__locationInfoTop">
               <span className={`quickAtt__gps quickAtt__gps--${locationStatus}`}>
-                <i aria-hidden="true" />
-                {gpsBadgeText(locationStatus, coords)}
+                <i aria-hidden="true" />{gpsBadgeText(locationStatus, coords)}
               </span>
               <time>{clock}</time>
+              <button type="button" className="quickAtt__refresh" onClick={refreshLocation}
+                disabled={locationStatus === 'loading' || isSubmitting}
+                aria-label="Perbarui lokasi" title="Perbarui lokasi">
+                <RefreshCw size={13} aria-hidden="true" className={locationStatus === 'loading' ? 'quickAtt__spin' : ''} />
+              </button>
             </div>
-          </div>
-
-          {/* ---------- Peta & titik lokasi ---------- */}
-          <div className="quickAtt__map">
-            {hasLocation ? (
-              <iframe
-                key={`${coords.lat}-${coords.lng}`}
-                className="quickAtt__mapFrame"
-                title="Peta titik lokasi Anda"
-                src={buildMapEmbedUrl(coords)}
-                loading="lazy"
-                referrerPolicy={MAP_REFERRER_POLICY}
-                sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-              />
-            ) : (
-              <div className="quickAtt__mapPlaceholder" aria-hidden="true">
-                {locationStatus === 'loading' && <Loader2 size={26} className="quickAtt__spin" />}
-              </div>
-            )}
-
-            <div className="quickAtt__locationCard">
-              <div className="quickAtt__locationHead">
-                <strong>
-                  <MapPinned size={14} aria-hidden="true" />
-                  Titik Lokasi Anda
-                </strong>
-                <button
-                  type="button"
-                  className="quickAtt__refresh"
-                  onClick={refreshLocation}
-                  disabled={locationStatus === 'loading' || isSubmitting}
-                  aria-label="Perbarui lokasi"
-                  title="Perbarui lokasi"
-                >
-                  <RefreshCw size={13} aria-hidden="true" className={locationStatus === 'loading' ? 'quickAtt__spin' : ''} />
-                </button>
-              </div>
-
-              {locationStatus === 'loading' && <p className="quickAtt__muted">Mengambil lokasi...</p>}
-              {locationStatus === 'error' && <p className="quickAtt__error">{locationError}</p>}
-              {hasLocation && (
-                <>
-                  {/* [BARU] Nama tempat dari backend (reverse geocoding). Kosong = hanya koordinat. */}
-                  {isLocationNameLoading && <p className="quickAtt__muted">Mencari nama lokasi...</p>}
-                  {locationName && <p className="quickAtt__place" title={locationName}>{locationName}</p>}
-                  <code className="quickAtt__coords">
-                    Lat: {coords.lat.toFixed(4)} | Lng: {coords.lng.toFixed(4)} | Akurasi: {coords.accuracy}m
-                  </code>
-                  {isLowAccuracy && (
-                    <p className="quickAtt__warn">
-                      <AlertTriangle size={12} aria-hidden="true" />
-                      Akurasi rendah. Pindah ke area terbuka lalu tekan perbarui.
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
+            <strong><MapPinned size={14} aria-hidden="true" /> Titik Lokasi Saat Ini</strong>
+            {locationStatus === 'loading' && <p className="quickAtt__muted">Mengambil lokasi...</p>}
+            {locationStatus === 'error' && <p className="quickAtt__error">{locationError}</p>}
+            {hasLocation && <>
+              {isLocationNameLoading && <p className="quickAtt__muted">Mencari nama lokasi...</p>}
+              {locationName && <p className="quickAtt__place">{locationName}</p>}
+              <code className="quickAtt__coords">Lat: {coords.lat.toFixed(6)} | Lng: {coords.lng.toFixed(6)}</code>
+              {isLowAccuracy && <p className="quickAtt__warn"><AlertTriangle size={12} /> Akurasi GPS lebih dari 5000 m. Perbarui lokasi.</p>}
+            </>}
+            </section>
           </div>
         </div>
 
@@ -284,7 +225,7 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
               type="button"
               className="quickAtt__btn quickAtt__btn--capture"
               onClick={takePhoto}
-              disabled={Boolean(cameraError)}
+              disabled={Boolean(cameraError) || !hasLocation || isSubmitting}
             >
               <Camera size={15} aria-hidden="true" />
               Ambil Foto

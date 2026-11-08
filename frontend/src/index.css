@@ -31,8 +31,10 @@ body {
   box-shadow: 0 0 0 3px var(--color-danger-bg);
 }
 
-/* [BARU] Font CJK untuk mode bahasa Jepang (fallback bawaan OS, tanpa unduhan font). */
-:lang(ja) {
+/* [BARU] Font CJK untuk mode bahasa Jepang (fallback bawaan OS, tanpa unduhan font).
+   Sengaja HANYA di <body>: selector :lang(ja) polos menimpa font-family ikon Font Awesome
+   (<i class="fa-solid">) sehingga ikon berubah jadi kotak. */
+:root:lang(ja) body {
   font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
     'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Noto Sans JP', 'Segoe UI', sans-serif;
 }
