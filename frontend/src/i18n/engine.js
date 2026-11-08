@@ -6,6 +6,11 @@ import { exact as baseExact, patterns as basePatterns, nameTemplates } from './l
 import { extraExact, extraPatterns } from './locales/jaExtra.js';
 import { backendExact, backendPatterns } from './locales/jaBackend.js';
 import { longText } from './locales/jaLongText.js';
+import { fragments, fragmentPatterns } from './locales/jaFragments.js';
+import { logPatterns, logActions } from './locales/jaLog.js';
+import { attendanceTexts } from './locales/jaAttendance.js';
+import { sweepExact, sweepPatterns } from './locales/jaSweep.js';
+import { holidayTerms, holidayPatterns, exactOnly } from './locales/jaHolidays.js';
 import { transliterateName, initialsToKana } from './katakana.js';
 import { getNames, getRevision } from './nameRegistry.js';
 
@@ -21,7 +26,8 @@ function trackMissing(original, output) {
 }
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const EXACT = new Map(Object.entries({ ...baseExact, ...extraExact, ...backendExact, ...longText }));
+const EXACT_ONLY = new Map(Object.entries(exactOnly));
+const EXACT = new Map(Object.entries({ ...baseExact, ...extraExact, ...backendExact, ...longText, ...fragments, ...logActions, ...attendanceTexts, ...sweepExact, ...holidayTerms }));
 
 // Pola "... {} ..." dari kamus -> RegExp. Urut dari yang paling spesifik (literal terpanjang).
 const PATTERNS = [
@@ -31,8 +37,15 @@ const PATTERNS = [
     return { literal, re: new RegExp(`^${parts.map(esc).join('(.+?)')}$`, 'i'), ja };
   }),
   ...extraPatterns.map(([re, ja]) => ({ literal: 0, re, ja })),
+  ...fragmentPatterns.map(([re, ja]) => ({ literal: 0, re, ja })),
+  ...logPatterns.map(([re, ja]) => ({ literal: 1, re, ja })),
+  ...sweepPatterns.map(([re, ja]) => ({ literal: 2, re, ja })),
+  ...holidayPatterns.map(([re, ja]) => ({ literal: 3, re, ja })),
   ...backendPatterns.map(([re, ja]) => ({ literal: -1, re, ja })), // paling umum -> dicoba paling akhir
 ].sort((a, b) => b.literal - a.literal);
+
+// Teks yang memuat istilah hari libur dilewatkan dari pola umum ("Cuti {}", dst.) agar glosarium bekerja utuh.
+const HOLIDAY_RE = new RegExp(`(?<![\\p{L}])(${Object.keys(holidayTerms).sort((a, b) => b.length - a.length).map(esc).join('|')})(?![\\p{L}])`, 'iu');
 
 // Template nama + teks ("Dicover Andi" -> "アンディが代行") -- dihitung saat dipakai.
 const NAME_TEMPLATES = new Map(nameTemplates.map(([key, name, tail]) => [key, { name, tail }]));
@@ -122,6 +135,7 @@ function translateCore(core, depth) {
 
   // 1) kamus eksak
   if (EXACT.has(key)) return EXACT.get(key);
+  if (EXACT_ONLY.has(key)) return EXACT_ONLY.get(key);
   const decoded = key.replace(/&(?:amp|quot|rarr);/g, (m) => ({ '&amp;': '&', '&quot;': '"', '&rarr;': '→' }[m]));
   if (decoded !== key && EXACT.has(decoded)) return EXACT.get(decoded);
   if (NAME_TEMPLATES.has(key)) {
@@ -132,13 +146,13 @@ function translateCore(core, depth) {
   rebuildNames();
   if (/^[A-Z]{2}$/.test(core) && initialsMap.has(core)) return initialsMap.get(core);
 
-  if (depth < 3) {
+  if (depth < 3 && !HOLIDAY_RE.test(core)) {
     // 2) pola dengan placeholder
     for (const { re, ja } of PATTERNS) {
       const match = core.replace(/\s+/g, ' ').match(re);
       if (!match) continue;
       const caps = match.slice(1).map((c) => translateString(c, depth + 1));
-      if (typeof ja !== 'string') return core;
+      if (typeof ja === 'function') return ja(...match);
       let index = 0;
       const filled = ja.includes('{}')
         ? ja.replace(/\{\}/g, () => caps[index++] ?? '')
@@ -150,6 +164,7 @@ function translateCore(core, depth) {
   // 3) tanggal -> 4) glosarium frasa -> 5) nama orang
   let out = translateDates(core);
   out = out.replace(getGlossary(), (m) => EXACT.get(norm(m)) ?? m);
+  out = out.replace(/\b(\d{3,4}) H\b/g, '$1H').replace(/\(hari (\d+)\)/gi, '（$1日目）');
   out = translateNames(out);
   return out;
 }

@@ -6,9 +6,10 @@
 import { translateString, getMissingStrings } from './engine.js';
 import { getRevision, onNamesChanged } from './nameRegistry.js';
 
-const ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
+const ATTRS = ['placeholder', 'title', 'aria-label', 'alt', 'data-placeholder'];
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE', 'IFRAME']);
-const SKIP_SELECTOR = '[contenteditable="true"],[data-no-translate],.notranslate';
+const SKIP_SELECTOR = '[contenteditable="true"],[data-no-translate],.notranslate'; // untuk ISI teks
+const ATTR_SKIP_SELECTOR = '[data-no-translate],.notranslate'; // atribut (placeholder editor/textarea tetap diterjemahkan)
 
 const textState = new WeakMap(); // Text -> { orig, out, rev }
 const attrState = new WeakMap(); // Element -> { [attr]: { orig, out, rev } }
@@ -52,7 +53,7 @@ function translateTextNode(node) {
 }
 
 function translateAttrs(el) {
-  if (skipped(el)) return;
+  if (!el || ['SCRIPT', 'STYLE'].includes(el.tagName?.toUpperCase()) || el.closest?.(ATTR_SKIP_SELECTOR)) return;
   const rev = getRevision();
   let states = attrState.get(el);
   const consider = [...ATTRS];
@@ -75,9 +76,10 @@ function translateAttrs(el) {
 
 function translateTree(root) {
   if (root.nodeType === Node.TEXT_NODE) { translateTextNode(root); return; }
-  if (root.nodeType !== Node.ELEMENT_NODE || skipped(root)) return;
+  if (root.nodeType !== Node.ELEMENT_NODE) return;
   translateAttrs(root);
-  root.querySelectorAll('[placeholder],[title],[aria-label],[alt],input[type="button"],input[type="submit"]')
+  if (skipped(root)) return;
+  root.querySelectorAll('[placeholder],[title],[aria-label],[alt],[data-placeholder],input[type="button"],input[type="submit"]')
     .forEach(translateAttrs);
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node = walker.nextNode();
@@ -145,7 +147,7 @@ export function stopDomTranslator() {
     if (state && node.nodeValue === state.out) node.nodeValue = state.orig;
     node = walker.nextNode();
   }
-  document.body.querySelectorAll('[placeholder],[title],[aria-label],[alt],input[type="button"],input[type="submit"]')
+  document.body.querySelectorAll('[placeholder],[title],[aria-label],[alt],[data-placeholder],input[type="button"],input[type="submit"]')
     .forEach((el) => {
       const states = attrState.get(el);
       if (!states) return;
