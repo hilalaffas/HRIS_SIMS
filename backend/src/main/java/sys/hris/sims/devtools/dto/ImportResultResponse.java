@@ -14,6 +14,11 @@ public record ImportResultResponse(int total, int success, int skipped, List<Imp
         int success = (int) rows.stream()
                 .filter(row -> ImportRowResult.STATUS_SUCCESS.equals(row.status()))
                 .count();
-        return new ImportResultResponse(rows.size(), success, rows.size() - success, rows, notes);
+        // [UBAH] Baris TIDAK_SESUAI (peringatan pencocokan data) bukan baris data: tidak ikut total/berhasil/dilewati.
+        int skipped = (int) rows.stream()
+                .filter(row -> !ImportRowResult.STATUS_SUCCESS.equals(row.status())
+                        && !ImportRowResult.STATUS_MISMATCH.equals(row.status()))
+                .count();
+        return new ImportResultResponse(success + skipped, success, skipped, rows, notes);
     }
 }

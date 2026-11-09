@@ -114,3 +114,19 @@ export const exportLeaveHistoryXlsx = async ({ from, to } = {}) => {
   }
   return response.blob();
 };
+
+// ====================== [BARU] Aturan tanggal berlaku cuti hangus ======================
+// GET  /api/dev/leave-rules/forfeit        -> { startDate, defaultStartDate, neverDate }
+// PUT  /api/dev/leave-rules/forfeit        -> { startDate: 'YYYY-MM-DD' } simpan tanggal baru
+// POST /api/dev/leave-rules/forfeit/reset  -> kembali ke bawaan (2025-01-01)
+// GET  /api/dev/leave-rules/forfeit/scan   -> { currentStartDate, bestStartDate, asOfDate, employeesChecked,
+//                                               employeesSkipped, candidates: [{ startDate, matched, mismatched, current, best }],
+//                                               mismatches: [{ employeeName, nik, totalGrantedQuota, usedLeave, forfeitedLeave,
+//                                                              actualRemaining, expectedRemaining, difference, ... }] }
+export const getForfeitRule = () => api.get('/api/dev/leave-rules/forfeit');
+
+export const updateForfeitRule = (startDate) => api.put('/api/dev/leave-rules/forfeit', { startDate });
+
+export const resetForfeitRule = () => api.post('/api/dev/leave-rules/forfeit/reset', {});
+
+export const scanForfeitRule = () => api.get('/api/dev/leave-rules/forfeit/scan');

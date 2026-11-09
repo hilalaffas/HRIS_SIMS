@@ -10,8 +10,9 @@ import './LeaveSummaryTable.css';
 // [BARU] Tab "Ringkasan Cuti" -- ringkasan cuti tiap karyawan sejak tanggal masuk sampai hari ini.
 // Angka dihitung backend (LeaveSummaryService); komponen ini hanya menampilkan.
 //
-//   Total keseluruhan = Terpakai + Hangus + Tersedia
+//   [UBAH] Total keseluruhan = kuota sejak masuk (kuota dasar x tahun kerja, mis. masuk 2013 -> 13 x 12 = 156)
 //   Tersedia          = Sisa lama (carry-forward) + Sisa berjalan
+//   [BARU] Selisih data = Tersedia - (Total - Terpakai - Hangus). 0 = cocok; selain itu ada data yang perlu dikoreksi.
 //
 // [BARU] Filter tanggal: chart menampilkan jumlah karyawan yang cuti pada rentang itu (kosong = bulan
 // ini) dan, bila rentang diisi, tabel hanya memuat karyawan yang cuti di rentang tersebut.
@@ -26,11 +27,17 @@ const COLUMNS = [
   { key: 'totalAvailableLeave', label: 'Total Tersedia' },
   { key: 'remainingPreviousLeave', label: 'Sisa Cuti Lama' },
   { key: 'remainingCurrentLeave', label: 'Sisa Cuti Berjalan' },
+  { key: 'reconcileDifference', label: 'Selisih Data' }, // [BARU]
 ];
 
 const formatDays = (value) => {
   const number = Number(value ?? 0);
   return Number.isInteger(number) ? String(number) : number.toFixed(1);
+};
+
+const formatSignedDays = (value) => {
+  const number = Number(Number(value ?? 0).toFixed(2));
+  return number > 0 ? `+${number}` : String(number);
 };
 
 const formatDate = (value) => {
@@ -138,7 +145,8 @@ function LeaveSummaryTable() {
         <div>
           <h3 className="leaveSummary__title">Ringkasan Cuti Karyawan</h3>
           <p className="leaveSummary__subtitle">
-            Dihitung sejak tanggal masuk sampai hari ini. Total = Terpakai + Hangus + Tersedia.
+            Dihitung sejak tanggal masuk sampai hari ini. Total = kuota sejak masuk (kuota dasar x tahun kerja).
+            Selisih Data = Tersedia - (Total - Terpakai - Hangus); harus 0.
           </p>
         </div>
         <div className="leaveSummary__filters">
@@ -210,14 +218,30 @@ function LeaveSummaryTable() {
                     <div className="leaveSummary__meta">{row.nik || '-'} - {row.divisionName || '-'}</div>
                   </td>
                   <td>{formatDate(row.joinDate)}</td>
-                  {COLUMNS.map((column) => (
-                    <td
-                      key={column.key}
-                      className={`leaveSummary__num${Number(row[column.key]) < 0 ? ' leaveSummary__num--negative' : ''}`}
-                    >
-                      {formatDays(row[column.key])}
-                    </td>
-                  ))}
+                  {COLUMNS.map((column) => {
+                    // [BARU] Selisih Data hanya bermakna bila statusnya OK / TIDAK_SESUAI.
+                    if (column.key === 'reconcileDifference') {
+                      const comparable = row.reconcileStatus === 'OK' || row.reconcileStatus === 'TIDAK_SESUAI';
+                      const mismatch = row.reconcileStatus === 'TIDAK_SESUAI';
+                      return (
+                        <td
+                          key={column.key}
+                          className={`leaveSummary__num${mismatch ? ' leaveSummary__num--negative' : ''}`}
+                          title={comparable ? undefined : 'Belum bisa dicocokkan (belum genap 1 tahun atau belum ada riwayat pemakaian).'}
+                        >
+                          {comparable ? formatSignedDays(row.reconcileDifference) : '-'}
+                        </td>
+                      );
+                    }
+                    return (
+                      <td
+                        key={column.key}
+                        className={`leaveSummary__num${Number(row[column.key]) < 0 ? ' leaveSummary__num--negative' : ''}`}
+                      >
+                        {formatDays(row[column.key])}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

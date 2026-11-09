@@ -20,6 +20,10 @@ import sys.hris.sims.devtools.service.DevLeaveHistoryService;
 import sys.hris.sims.devtools.util.LeaveLedgerCsv.ExportEmployee;
 import sys.hris.sims.devtools.util.LeaveLedgerXlsx;
 import sys.hris.sims.leave.dto.LeaveLedgerResponse;
+import sys.hris.sims.leave.dto.LeaveReconciliationRow;
+import sys.hris.sims.leave.service.LeaveSummaryService;
+import java.util.HashMap;
+import java.util.Map;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
@@ -41,6 +45,7 @@ public class LeaveLedgerController {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
     private final DevLeaveHistoryService leaveHistoryService;
+    private final LeaveSummaryService leaveSummaryService; // [BARU] pemeriksaan data sejak masuk
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
 
@@ -52,16 +57,30 @@ public class LeaveLedgerController {
         LocalDate[] period = resolvePeriod(from, to);
         List<ExportEmployee> rows = leaveHistoryService.exportRows(period[0], period[1]);
 
+        // [BARU] Pemeriksaan data sejak masuk per karyawan, dicocokkan lewat NIK (angka) + nama.
+        Map<String, LeaveReconciliationRow> reconciliation = new HashMap<>();
+        for (LeaveReconciliationRow item : leaveSummaryService.reconcileAll()) {
+            reconciliation.putIfAbsent(reconKey(
+                    sys.hris.sims.devtools.util.LeaveLedgerCsv.nikNumberOf(item.nik()), item.employeeName()), item);
+        }
+
         List<LeaveLedgerResponse.Employee> employees = rows.stream()
-                .map(row -> new LeaveLedgerResponse.Employee(
-                        row.nikNumber(),
-                        nikText(row),
-                        row.name(),
-                        row.remaining(),
-                        row.usages().stream()
-                                .map(usage -> new LeaveLedgerResponse.Usage(
-                                        usage.date(), usage.days(), usage.comment(), usage.forfeited()))
-                                .toList()))
+                .map(row -> {
+                    LeaveReconciliationRow recon = reconciliation.get(reconKey(row.nikNumber(), row.name()));
+                    LeaveLedgerResponse.Summary summary = recon == null ? null : new LeaveLedgerResponse.Summary(
+                            recon.fullYears(), recon.totalGrantedQuota(), recon.usedLeave(), recon.forfeitedLeave(),
+                            recon.expectedRemaining(), recon.difference(), recon.status());
+                    return new LeaveLedgerResponse.Employee(
+                            row.nikNumber(),
+                            nikText(row),
+                            row.name(),
+                            row.remaining(),
+                            row.usages().stream()
+                                    .map(usage -> new LeaveLedgerResponse.Usage(
+                                            usage.date(), usage.days(), usage.comment(), usage.forfeited()))
+                                    .toList(),
+                            summary);
+                })
                 .toList();
 
         log(authentication, httpRequest, "GET_HISTORI_CUTI", "Melihat histori cuti (format ledger)" + periodText(from, to));
@@ -92,6 +111,10 @@ public class LeaveLedgerController {
     }
 
     // ---------------------------------------------------------------------------------------
+
+    private static String reconKey(Integer nikNumber, String name) {
+        return nikNumber + "|" + (name == null ? "" : name.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT));
+    }
 
     private static String nikText(ExportEmployee row) {
         return row.nikNumber() == null ? "" : String.format("%04d", row.nikNumber());

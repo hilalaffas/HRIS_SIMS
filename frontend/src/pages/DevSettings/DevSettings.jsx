@@ -26,6 +26,7 @@ import EmployeeDataSection from './components/EmployeeDataSection'; // [BARU] im
 import LeaveAdjustmentSection from './components/LeaveAdjustmentSection'; // [BARU] penyesuaian cuti
 import NikEditorSection from './components/NikEditorSection'; // [BARU] edit NIK manual
 import LeaveHistorySection from './components/LeaveHistorySection'; // [BARU] import/export riwayat cuti (ledger)
+import ForfeitRuleSection from './components/ForfeitRuleSection'; // [BARU] aturan tahun berlaku cuti hangus
 import { DevTabBar } from './components/DevTabBar'; // [BARU]
 import './DevSettings.css';
 
@@ -35,6 +36,7 @@ const TAB_EMPLOYEES = 'employees';
 // [UBAH] Tab "Cuti & NIK" (dulu menumpuk 3 bagian sekaligus) dipecah menjadi 3 tab sendiri.
 const TAB_LEAVE_BALANCE = 'leaveBalance';
 const TAB_LEAVE_HISTORY = 'leaveHistory';
+const TAB_FORFEIT_RULE = 'forfeitRule'; // [BARU]
 const TAB_NIK = 'nik';
 
 const TABS = [
@@ -42,6 +44,7 @@ const TABS = [
   { id: TAB_EMPLOYEES, label: 'Data Karyawan' },
   { id: TAB_LEAVE_BALANCE, label: 'Saldo Cuti' },
   { id: TAB_LEAVE_HISTORY, label: 'Riwayat Cuti' },
+  { id: TAB_FORFEIT_RULE, label: 'Aturan Hangus' }, // [BARU]
   { id: TAB_NIK, label: 'NIK' },
 ];
 
@@ -126,6 +129,7 @@ export default function DevSettings() {
         {/* [UBAH] Tiap fungsi punya tab sendiri */}
         {activeTab === TAB_LEAVE_BALANCE && <LeaveAdjustmentSection />}
         {activeTab === TAB_LEAVE_HISTORY && <LeaveHistorySection />}
+        {activeTab === TAB_FORFEIT_RULE && <ForfeitRuleSection />}
         {activeTab === TAB_NIK && <NikEditorSection />}
       </div>
     </div>

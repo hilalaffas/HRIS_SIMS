@@ -12,7 +12,16 @@ import java.util.List;
 //   comment  : tipe cuti (null untuk cuti tahunan & setengah hari); "hangus/expired" untuk hangus
 public record LeaveLedgerResponse(LocalDate from, LocalDate to, List<Employee> employees) {
 
-    public record Employee(Integer nikNumber, String nik, String name, BigDecimal remaining, List<Usage> usages) {
+    // [UBAH] + summary: pemeriksaan data sejak masuk (null bila karyawan tidak ditemukan di ringkasan).
+    public record Employee(Integer nikNumber, String nik, String name, BigDecimal remaining, List<Usage> usages,
+                           Summary summary) {
+    }
+
+    // [BARU] totalGranted = kuota sejak masuk (kuota dasar x tahun kerja); used / forfeited = sejak masuk
+    // (tidak terpengaruh filter periode tabel); expectedRemaining = totalGranted - used - forfeited;
+    // difference = sisa di sistem - expectedRemaining; status: OK | TIDAK_SESUAI | BELUM_ADA_RIWAYAT | BELUM_BERHAK
+    public record Summary(int fullYears, BigDecimal totalGranted, BigDecimal used, BigDecimal forfeited,
+                          BigDecimal expectedRemaining, BigDecimal difference, String status) {
     }
 
     public record Usage(LocalDate date, BigDecimal days, String comment, boolean forfeited) {

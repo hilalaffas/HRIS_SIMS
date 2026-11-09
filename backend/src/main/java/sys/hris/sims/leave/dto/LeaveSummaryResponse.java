@@ -11,8 +11,13 @@ import lombok.NoArgsConstructor;
 // [BARU] Ringkasan cuti global per karyawan, sejak tanggal masuk sampai hari ini
 // (tabel "Ringkasan Cuti" di halaman Karyawan).
 //
-// Hubungan angka:  totalOverallLeave = usedLeave + forfeitedLeave + totalAvailableLeave
-//                  totalAvailableLeave = remainingPreviousLeave + remainingCurrentLeave
+// [UBAH] totalOverallLeave = TOTAL KUOTA SEJAK MASUK = kuota dasar x jumlah ulang tahun kerja yang sudah lewat
+//        (mis. masuk 2013 -> 13 x 12 = 156). Dulu dihitung dari used + forfeited + available sehingga
+//        karyawan tanpa riwayat selalu tampil 12 dan selisih data tidak pernah terlihat.
+//
+// Pemeriksaan data:  sisa seharusnya = totalOverallLeave - (cuti terpakai) - (cuti hangus)
+//                    reconcileDifference = totalAvailableLeave - sisa seharusnya  (0 = cocok)
+//                    totalAvailableLeave = remainingPreviousLeave + remainingCurrentLeave
 @Data
 @Builder
 @NoArgsConstructor
@@ -37,4 +42,7 @@ public class LeaveSummaryResponse {
     private BigDecimal remainingPreviousLeave;
     // Sisa cuti berjalan (cuti tahunan periode anniversary berjalan)
     private BigDecimal remainingCurrentLeave;
+    // [BARU] Selisih pemeriksaan data (lihat atas) dan statusnya: OK | TIDAK_SESUAI | BELUM_ADA_RIWAYAT | BELUM_BERHAK
+    private BigDecimal reconcileDifference;
+    private String reconcileStatus;
 }

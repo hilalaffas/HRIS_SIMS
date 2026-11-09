@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import useI18n from '../../../i18n/useI18n';
 import { ArrowDown, ArrowUp, Download } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
 import { exportLeaveLedgerXlsx, getLeaveLedger } from '../../../services/leaveLedgerService';
@@ -15,9 +16,47 @@ import './LeaveLedgerTable.css';
 //   latar kuning   = cuti hangus/expired
 //   segitiga oranye = cuti memotong jatah dengan tipe khusus (mis. Cuti Urgent)
 //
+// [BARU] Di bawah baris 合計 ada ringkasan pemeriksaan data SEJAK MASUK (tidak terpengaruh filter periode):
+//   総付与日数 = total kuota sejak masuk (kuota dasar x tahun kerja, mis. masuk 2013 -> 13 x 12 = 156)
+//   使用日数   = total cuti terpakai sejak masuk       失効日数 = total cuti hangus
+//   整合性     = total kuota - terpakai - hangus harus sama dengan sisa (残日数). Selisih -> "不一致" + angka selisih.
+//
 // Filter: cari nama/NIK, periode Dari-Sampai (diproses server), jenis cuti, urutan, jumlah karyawan per halaman.
 
 const LEDGER_FILE_BASE = 'インドネシア有給管理台帳';
+
+// [BARU] Label judul/baris tabel mengikuti pilihan bahasa: Indonesia (default) atau Jepang (format asli
+// buku besar 有給管理台帳). Dulu ditulis Jepang saja sehingga tidak berubah saat bahasa Indonesia dipilih.
+const LABELS = {
+  id: {
+    no: 'No.',
+    nameRemaining: 'Nama / Sisa Hari',
+    usedDateReason: 'Tanggal Pakai / Alasan',
+    total: 'Total',
+    granted: 'Total Kuota',
+    used: 'Terpakai',
+    forfeited: 'Hangus',
+    consistency: 'Kecocokan Data',
+    ok: 'Cocok',
+    mismatch: 'Selisih',
+    noHistory: 'Belum ada riwayat',
+    notEligible: 'Belum berhak',
+  },
+  ja: {
+    no: '項番',
+    nameRemaining: '氏名/残日数',
+    usedDateReason: '使用日/事由',
+    total: '合計',
+    granted: '総付与日数',
+    used: '使用日数',
+    forfeited: '失効日数',
+    consistency: '整合性',
+    ok: '整合 OK',
+    mismatch: '不一致',
+    noHistory: '履歴なし',
+    notEligible: '付与前',
+  },
+};
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const TYPE_OPTIONS = [
@@ -41,10 +80,33 @@ const usageType = (usage) => {
 
 const formatDays = (value) => String(Number(value ?? 0));
 
+const formatDiff = (value) => {
+  const number = Number(Number(value ?? 0).toFixed(2));
+  return number > 0 ? `+${number}` : String(number);
+};
+
+// Teks & kelas lencana pemeriksaan data. status dari backend: OK | TIDAK_SESUAI | BELUM_ADA_RIWAYAT | BELUM_BERHAK.
+const reconcileBadge = (summary, labels) => {
+  if (!summary) return { text: '-', className: '', title: 'Data pemeriksaan tidak tersedia.' };
+  if (summary.status === 'OK') return { text: labels.ok, className: 'is-ok', title: 'Total kuota - terpakai - hangus = sisa. Data cocok.' };
+  if (summary.status === 'TIDAK_SESUAI') {
+    return {
+      text: `${labels.mismatch} ${formatDiff(summary.difference)}`,
+      className: 'is-mismatch',
+      title: `Sisa seharusnya ${formatDays(summary.expectedRemaining)}, sisa di sistem ${formatDays(Number(summary.expectedRemaining) + Number(summary.difference))} `
+        + `(selisih ${formatDiff(summary.difference)}). Cek tanggal pemakaian, angka sisa, tanggal masuk, atau Aturan Hangus di panel dev.`,
+    };
+  }
+  if (summary.status === 'BELUM_ADA_RIWAYAT') return { text: labels.noHistory, className: 'is-skip', title: 'Belum ada riwayat pemakaian, belum bisa dicocokkan.' };
+  return { text: labels.notEligible, className: 'is-skip', title: 'Belum genap 1 tahun, belum berhak cuti tahunan.' };
+};
+
 const totalUsed = (usages) =>
   usages.filter((usage) => !usage.forfeited).reduce((sum, usage) => sum + Number(usage.days), 0);
 
 function LeaveLedgerTable() {
+  const { lang } = useI18n();
+  const labels = LABELS[lang] || LABELS.id;
   const [keyword, setKeyword] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -191,13 +253,13 @@ function LeaveLedgerTable() {
             <table className="ledger__table">
               <tbody>
                 <tr className="ledger__headRow">
-                  <th className="ledger__label" scope="row">項番</th>
+                  <th className="ledger__label" scope="row">{labels.no}</th>
                   {pageEmployees.map((employee) => (
                     <th key={employee.nikNumber ?? employee.name} colSpan={2} className="ledger__nik">{employee.nikNumber ?? '-'}</th>
                   ))}
                 </tr>
                 <tr className="ledger__headRow">
-                  <th className="ledger__label" scope="row">氏名/残日数</th>
+                  <th className="ledger__label" scope="row">{labels.nameRemaining}</th>
                   {pageEmployees.map((employee) => (
                     <th key={employee.nikNumber ?? employee.name} colSpan={2} className="ledger__person">
                       <span className="ledger__name" title={employee.name}>{employee.name}</span>
@@ -208,7 +270,7 @@ function LeaveLedgerTable() {
                 {Array.from({ length: rowCount }, (_, rowIndex) => (
                   <tr key={rowIndex}>
                     {rowIndex === 0 && (
-                      <th className="ledger__label ledger__label--rows" scope="row" rowSpan={rowCount}>使用日/事由</th>
+                      <th className="ledger__label ledger__label--rows" scope="row" rowSpan={rowCount}>{labels.usedDateReason}</th>
                     )}
                     {pageEmployees.map((employee) => {
                       const usage = employee.usages[rowIndex];
@@ -229,12 +291,49 @@ function LeaveLedgerTable() {
                   </tr>
                 ))}
                 <tr className="ledger__totalRow">
-                  <th className="ledger__label" scope="row">合計</th>
+                  <th className="ledger__label" scope="row">{labels.total}</th>
                   {pageEmployees.map((employee) => (
                     <th key={employee.nikNumber ?? employee.name} colSpan={2} className="ledger__total">
                       {formatDays(totalUsed(employee.usages))} hari
                     </th>
                   ))}
+                </tr>
+                {/* [BARU] Pemeriksaan data sejak masuk */}
+                <tr className="ledger__reconRow">
+                  <th className="ledger__label" scope="row" title="Total kuota sejak masuk = kuota dasar x tahun kerja">{labels.granted}</th>
+                  {pageEmployees.map((employee) => (
+                    <td key={employee.nikNumber ?? employee.name} colSpan={2} className="ledger__recon"
+                      title={employee.summary ? `${employee.summary.fullYears} tahun kerja` : undefined}>
+                      {employee.summary ? `${formatDays(employee.summary.totalGranted)} hari` : '-'}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="ledger__reconRow">
+                  <th className="ledger__label" scope="row" title="Cuti terpakai sejak masuk">{labels.used}</th>
+                  {pageEmployees.map((employee) => (
+                    <td key={employee.nikNumber ?? employee.name} colSpan={2} className="ledger__recon">
+                      {employee.summary ? `${formatDays(employee.summary.used)} hari` : '-'}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="ledger__reconRow">
+                  <th className="ledger__label" scope="row" title="Cuti hangus sejak masuk">{labels.forfeited}</th>
+                  {pageEmployees.map((employee) => (
+                    <td key={employee.nikNumber ?? employee.name} colSpan={2} className="ledger__recon">
+                      {employee.summary ? `${formatDays(employee.summary.forfeited)} hari` : '-'}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="ledger__reconRow">
+                  <th className="ledger__label" scope="row" title="Total kuota - terpakai - hangus harus sama dengan sisa">{labels.consistency}</th>
+                  {pageEmployees.map((employee) => {
+                    const badge = reconcileBadge(employee.summary, labels);
+                    return (
+                      <td key={employee.nikNumber ?? employee.name} colSpan={2} className="ledger__recon">
+                        <span className={`ledger__badge ${badge.className}`} title={badge.title}>{badge.text}</span>
+                      </td>
+                    );
+                  })}
                 </tr>
               </tbody>
             </table>
@@ -244,6 +343,7 @@ function LeaveLedgerTable() {
             <span><i className="ledger__swatch ledger__swatch--special" /> Cuti khusus (0), tipe di tooltip</span>
             <span><i className="ledger__swatch ledger__swatch--forfeit" /> Cuti hangus/expired</span>
             <span><i className="ledger__swatch ledger__swatch--comment" /> Tipe cuti khusus lain, tipe di tooltip</span>
+            <span>Ringkasan {labels.granted} s/d {labels.consistency} dihitung sejak masuk dan tidak terpengaruh filter periode.</span>
           </div>
 
           <div className="ledger__pagination">

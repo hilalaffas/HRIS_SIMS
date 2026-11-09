@@ -31,7 +31,13 @@ public final class LeaveForfeitCalculator {
 
     // [BARU] true bila tanggal ini sudah masuk masa berlaku aturan hangus (>= 1 Januari 2025).
     public static boolean isForfeitEligible(LocalDate date) {
-        return date != null && !date.isBefore(FORFEIT_START_DATE);
+        return isForfeitEligible(date, FORFEIT_START_DATE);
+    }
+
+    // [BARU] Versi dengan tanggal berlaku yang bisa diatur (tabel leave_rules, lihat LeaveRuleService).
+    public static boolean isForfeitEligible(LocalDate date, LocalDate forfeitStart) {
+        LocalDate start = forfeitStart == null ? FORFEIT_START_DATE : forfeitStart;
+        return date != null && !date.isBefore(start);
     }
 
     // Satu pemakaian cuti yang memotong jatah. annualDays = porsi yang dibebankan ke cuti tahunan
@@ -49,6 +55,7 @@ public final class LeaveForfeitCalculator {
                           BigDecimal days, boolean stored) {
     }
 
+    // Versi lama: memakai tanggal berlaku bawaan (FORFEIT_START_DATE).
     public static List<Forfeit> calculate(LocalDate joinDate,
                                           BigDecimal baseQuota,
                                           LocalDate today,
@@ -57,6 +64,21 @@ public final class LeaveForfeitCalculator {
                                           List<StoredForfeit> storedForfeits,
                                           BigDecimal outsideSystemUsed,
                                           LocalDate outsideSystemPeriodStart) {
+        return calculate(joinDate, baseQuota, today, trackingStart, usages, storedForfeits,
+                outsideSystemUsed, outsideSystemPeriodStart, FORFEIT_START_DATE);
+    }
+
+    // [BARU] forfeitStart = tanggal mulai berlakunya hangus (dari LeaveRuleService). Hangus yang tanggalnya
+    // sebelum ini tidak dihitung (sisanya masuk Sisa Cuti Lama).
+    public static List<Forfeit> calculate(LocalDate joinDate,
+                                          BigDecimal baseQuota,
+                                          LocalDate today,
+                                          LocalDate trackingStart,
+                                          List<Usage> usages,
+                                          List<StoredForfeit> storedForfeits,
+                                          BigDecimal outsideSystemUsed,
+                                          LocalDate outsideSystemPeriodStart,
+                                          LocalDate forfeitStart) {
         List<Forfeit> result = new ArrayList<>();
         if (joinDate == null || baseQuota == null) {
             return result;
@@ -101,11 +123,11 @@ public final class LeaveForfeitCalculator {
             // [UBAH] Hangus yang tanggalnya sebelum FORFEIT_START_DATE tidak dihitung sebagai hangus.
             if (!storedInPeriod.isEmpty()) {
                 for (StoredForfeit item : storedInPeriod) {
-                    if (isForfeitEligible(item.date())) {
+                    if (isForfeitEligible(item.date(), forfeitStart)) {
                         result.add(new Forfeit(periodStart, periodEnd, item.date(), item.days(), true));
                     }
                 }
-            } else if (endingBalance != null && endingBalance.signum() > 0 && isForfeitEligible(expiryDate)) {
+            } else if (endingBalance != null && endingBalance.signum() > 0 && isForfeitEligible(expiryDate, forfeitStart)) {
                 result.add(new Forfeit(periodStart, periodEnd, expiryDate, endingBalance, false));
             }
             periodStart = periodEnd;

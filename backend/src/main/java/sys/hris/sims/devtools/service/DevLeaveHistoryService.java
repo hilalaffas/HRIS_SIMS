@@ -35,10 +35,14 @@ import sys.hris.sims.devtools.util.LeaveLedgerXlsx; // [BARU]
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
+import sys.hris.sims.leave.dto.LeaveReconciliationRow; // [BARU]
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.repository.LeaveRepository;
 import sys.hris.sims.leave.service.LeaveForfeitCalculator; // [BARU]
 import sys.hris.sims.leave.service.LeaveForfeitCalculator.Forfeit; // [BARU]
+import sys.hris.sims.leave.service.LeaveForfeitCalculator.StoredForfeit; // [BARU]
+import sys.hris.sims.leave.service.LeaveForfeitCalculator.Usage; // [BARU]
+import sys.hris.sims.leave.service.LeaveRuleService; // [BARU]
 import sys.hris.sims.leave.service.LeaveService;
 import sys.hris.sims.leave.service.LeaveSummaryService; // [BARU]
 import sys.hris.sims.leavestatus.entity.LeaveStatus;
@@ -98,6 +102,7 @@ public class DevLeaveHistoryService {
     private final LeaveTypeRepository leaveTypeRepository;
     private final LeaveService leaveService;
     private final LeaveSummaryService leaveSummaryService; // [BARU] hitung cuti hangus untuk export
+    private final LeaveRuleService leaveRuleService; // [BARU] tanggal berlaku hangus yang bisa diatur
     private final DevLeaveDataService devLeaveDataService;
     private final ReportScopeService reportScopeService;
     private final TransactionTemplate transactionTemplate;
@@ -108,6 +113,7 @@ public class DevLeaveHistoryService {
                                   LeaveTypeRepository leaveTypeRepository,
                                   LeaveService leaveService,
                                   LeaveSummaryService leaveSummaryService,
+                                  LeaveRuleService leaveRuleService,
                                   DevLeaveDataService devLeaveDataService,
                                   ReportScopeService reportScopeService,
                                   PlatformTransactionManager transactionManager) {
@@ -117,6 +123,7 @@ public class DevLeaveHistoryService {
         this.leaveTypeRepository = leaveTypeRepository;
         this.leaveService = leaveService;
         this.leaveSummaryService = leaveSummaryService;
+        this.leaveRuleService = leaveRuleService;
         this.devLeaveDataService = devLeaveDataService;
         this.reportScopeService = reportScopeService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -297,6 +304,7 @@ public class DevLeaveHistoryService {
 
     private record ImportContext(LeaveStatus approvedStatus, LeaveType annualType, LeaveType halfDayType,
                                  LeaveType forfeitType, // [BARU] null bila V59 belum dijalankan
+                                 LocalDate forfeitStart, // [BARU] tanggal berlaku hangus (tabel leave_rules)
                                  Map<String, LeaveType> typesByExactKey,
                                  Map<String, List<LeaveType>> typesByBaseKey) {
     }
@@ -398,7 +406,7 @@ public class DevLeaveHistoryService {
             BlockOutcome outcome;
             try {
                 outcome = transactionTemplate.execute(
-                        status -> importBlock(employeeId, displayName, resolved, context, dryRun));
+                        status -> importBlock(employeeId, displayName, resolved, context, dryRun, block.remainingText()));
             } catch (RuntimeException ex) {
                 log.error("Import riwayat cuti {} gagal", displayName, ex);
                 outcome = null;
@@ -451,7 +459,7 @@ public class DevLeaveHistoryService {
         }
         if (oldQuotaTotal.signum() > 0) { // [BARU]
             notes.add(oldQuotaTotal.stripTrailingZeros().toPlainString() + " hari bertanggal sebelum "
-                    + LeaveForfeitCalculator.FORFEIT_START_DATE + " tidak dianggap hangus dan "
+                    + context.forfeitStart() + " tidak dianggap hangus dan "
                     + (dryRun ? "akan dialokasikan" : "dialokasikan") + " ke Sisa Cuti Lama untuk "
                     + oldQuotaEmployees + " karyawan. Import ulang file yang sama akan menambah Sisa Cuti Lama lagi.");
             if (applyRemaining) {
@@ -480,6 +488,13 @@ public class DevLeaveHistoryService {
                 notes.add("Sisa cuti dilewati: " + limitedNames(remainingProblems) + ".");
             }
         }
+        long mismatchCount = results.stream()
+                .filter(row -> ImportRowResult.STATUS_MISMATCH.equals(row.status()))
+                .count();
+        if (mismatchCount > 0) {
+            notes.add(mismatchCount + " karyawan DATA TIDAK SESUAI (total kuota - terpakai - hangus tidak sama dengan sisa di file). "
+                    + "Periksa daftar \"Mismatch Scan\" di bawah; import tetap bisa dilanjutkan.");
+        }
         return ImportResultResponse.of(results, notes);
     }
 
@@ -504,12 +519,14 @@ public class DevLeaveHistoryService {
             byExactKey.putIfAbsent(typeKey(type.getName()), type);
             byBaseKey.computeIfAbsent(baseTypeKey(type.getName()), key -> new ArrayList<>()).add(type);
         }
-        return new ImportContext(approved, annual, halfDay, forfeit, byExactKey, byBaseKey);
+        return new ImportContext(approved, annual, halfDay, forfeit, leaveRuleService.getForfeitStartDate(),
+                byExactKey, byBaseKey);
     }
 
     // Satu transaksi per karyawan. Hanya membaca/menulis catatan hasil import milik karyawan ini.
     private BlockOutcome importBlock(Long employeeId, String displayName,
-                                     List<ResolvedEntry> resolved, ImportContext context, boolean dryRun) {
+                                     List<ResolvedEntry> resolved, ImportContext context, boolean dryRun,
+                                     String remainingText) {
         List<LeaveRequest> existing = leaveRepository.findByEmployee_EmployeeId(employeeId);
 
         // Rentang yang sudah terisi dari import SEBELUMNYA (snapshot sebelum import ini mulai).
@@ -579,12 +596,12 @@ public class DevLeaveHistoryService {
                 }
                 // [BARU] Tanggal sebelum 1 Januari 2025: BUKAN hangus. Tidak dibuatkan catatan "Cuti hangus";
                 // jumlah harinya ditambahkan ke Sisa Cuti Lama karyawan.
-                if (!LeaveForfeitCalculator.isForfeitEligible(plan.start())) {
+                if (!LeaveForfeitCalculator.isForfeitEligible(plan.start(), context.forfeitStart())) {
                     oldQuotaToAdd = oldQuotaToAdd.add(plan.days());
                     String oldVerb = dryRun ? " hari akan dialokasikan ke Sisa Cuti Lama (" : " hari dialokasikan ke Sisa Cuti Lama (";
                     rows.add(ImportRowResult.success(csvRow, displayName,
                             plan.days().stripTrailingZeros().toPlainString() + oldVerb + rangeText
-                                    + "; sebelum " + LeaveForfeitCalculator.FORFEIT_START_DATE
+                                    + "; sebelum " + context.forfeitStart()
                                     + " tidak hangus, tidak dibuat catatan Cuti hangus)."));
                     continue;
                 }
@@ -638,6 +655,13 @@ public class DevLeaveHistoryService {
                             + (plan.forfeit() ? "; cuti hangus, tidak memotong saldo" : "") + ")."));
         }
 
+        // [BARU] Pencocokan data: total kuota sejak masuk - terpakai - hangus harus sama dengan sisa (残日数) di file.
+        // Bersifat PERINGATAN: laporan menandainya "TIDAK_SESUAI", tetapi import tidak diblokir.
+        ImportRowResult mismatch = checkReconciliation(employee, displayName, remainingText, toSave, context);
+        if (mismatch != null) {
+            rows.add(mismatch);
+        }
+
         if (!dryRun) {
             leaveRepository.saveAll(toSave);
             // [BARU] Tambahkan ke Sisa Cuti Lama (menambah, bukan menimpa saldo yang sudah ada).
@@ -650,6 +674,71 @@ public class DevLeaveHistoryService {
             }
         }
         return new BlockOutcome(rows, toSave.size(), skipped, ignoredComments, createdByType, oldQuotaToAdd);
+    }
+
+    // ============================== [BARU] PENCOCOKAN DATA ==============================
+
+    // Mengembalikan baris peringatan, atau null bila data cocok / tidak bisa diperiksa (sisa kosong, belum ada riwayat).
+    private ImportRowResult checkReconciliation(Employee employee, String displayName, String remainingText,
+                                                List<LeaveRequest> toSave, ImportContext context) {
+        BigDecimal remainingInFile;
+        try {
+            remainingInFile = LeaveLedgerCsv.parseRemaining(remainingText);
+        } catch (IllegalArgumentException ex) {
+            return ImportRowResult.mismatch(2, displayName,
+                    "Angka sisa cuti di file tidak terbaca (" + ex.getMessage() + "), pencocokan data tidak bisa dilakukan.");
+        }
+        if (remainingInFile == null) {
+            return null; // sisa tidak diisi -> tidak ada yang dicocokkan
+        }
+
+        List<Usage> extraUsages = new ArrayList<>();
+        List<StoredForfeit> extraForfeits = new ArrayList<>();
+        List<String> suspicious = new ArrayList<>();
+        LocalDate joinDate = employee.getJoinDate();
+        for (LeaveRequest leave : toSave) {
+            if (isForfeitType(leave.getLeaveType())) {
+                extraForfeits.add(new StoredForfeit(leave.getStartDate(), leave.getTotalDays()));
+                continue;
+            }
+            if (!deductsQuota(leave.getLeaveType())) {
+                continue;
+            }
+            extraUsages.add(new Usage(leave.getStartDate(), leave.getTotalDays(), leave.getTotalDays(), true));
+            if (joinDate != null && leave.getStartDate().isBefore(joinDate)) {
+                suspicious.add(leave.getStartDate() + " (sebelum tanggal masuk " + joinDate + ")");
+            }
+        }
+
+        LeaveReconciliationRow check = leaveSummaryService.reconcileWithImport(
+                employee, remainingInFile, extraUsages, extraForfeits, context.forfeitStart());
+        boolean mismatch = LeaveReconciliationRow.MISMATCH.equals(check.status());
+        if (!mismatch && suspicious.isEmpty()) {
+            return null;
+        }
+
+        StringBuilder message = new StringBuilder("DATA TIDAK SESUAI. ");
+        if (mismatch) {
+            message.append("Total kuota ").append(plain(check.totalGrantedQuota())).append(" (").append(check.fullYears())
+                    .append(" tahun kerja) - terpakai ").append(plain(check.usedLeave()))
+                    .append(" - hangus ").append(plain(check.forfeitedLeave()))
+                    .append(" = sisa seharusnya ").append(plain(check.expectedRemaining()))
+                    .append(", tetapi sisa di file ").append(plain(check.actualRemaining()))
+                    .append(" (selisih ").append(check.difference().signum() > 0 ? "+" : "").append(plain(check.difference())).append("). ");
+            message.append(check.difference().signum() > 0
+                    ? "Sisa di file LEBIH BANYAK: kemungkinan ada tanggal pemakaian yang belum ada di file, cuti hangus belum terhitung "
+                            + "(cek tanggal berlaku hangus, saat ini " + context.forfeitStart() + "), atau tanggal masuk karyawan terlalu lambat."
+                    : "Sisa di file LEBIH SEDIKIT: kemungkinan ada tanggal pemakaian ganda/berlebih, angka sisa salah ketik, "
+                            + "atau tanggal masuk karyawan di sistem terlalu awal.");
+        }
+        if (!suspicious.isEmpty()) {
+            message.append(mismatch ? " " : "").append("Tanggal mencurigakan: ").append(String.join(", ", suspicious)).append('.');
+        }
+        return ImportRowResult.mismatch(2, displayName, message.toString());
+    }
+
+    private static String plain(BigDecimal value) {
+        return value.stripTrailingZeros().toPlainString();
     }
 
     // ============================== TIPE CUTI DARI KOMENTAR ==============================

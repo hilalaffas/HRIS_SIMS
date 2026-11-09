@@ -17,6 +17,7 @@
 //   <ImportValidationReport summary={validation} phase="validation" keyLabel="Username" />
 import React from 'react';
 import {
+  ROW_STATUS_MISMATCH,
   IMPORT_PHASE,
   IMPORT_TERMS,
   ROW_STATUS_SKIPPED,
@@ -51,6 +52,7 @@ export default function ImportValidationReport({
   const rows = summary.rows ?? [];
   const skippedRows = rows.filter((row) => row.status === ROW_STATUS_SKIPPED);
   const validRows = rows.filter((row) => row.status === ROW_STATUS_SUCCESS);
+  const mismatchRows = rows.filter((row) => row.status === ROW_STATUS_MISMATCH); // [BARU]
 
   // Hasil import sungguhan bisa berbeda dari validasi bila data berubah di antaranya.
   const hasDrifted = !isValidationPhase && expectedSkipped !== null && summary.skipped > expectedSkipped;
@@ -149,6 +151,46 @@ export default function ImportValidationReport({
             onClick={() => downloadTextFile(`${logFilePrefix}-${getTodayStamp()}.csv`, buildImportReportCsv(skippedRows))}
           >
             Unduh Skipped Records Log (CSV)
+          </button>
+        </div>
+      )}
+
+      {/* [BARU] Mismatch Scan: karyawan yang total kuota - terpakai - hangus != sisa di file */}
+      {mismatchRows.length > 0 && (
+        <div className="importreport__block">
+          <h5 className="importreport__heading">
+            Mismatch Scan <span className="importreport__count">{mismatchRows.length}</span>
+          </h5>
+          <p className="devsettings-hint">
+            Karyawan berikut <strong>datanya tidak sesuai</strong>: <strong>total kuota sejak masuk − terpakai − hangus</strong> harus sama dengan
+            sisa cuti di file. Koreksi di file (tanggal pemakaian, angka sisa) atau cek tab Aturan Hangus. Import tetap bisa dilanjutkan.
+          </p>
+          <div className="devdata-table-wrap">
+            <table className="devdata-table importreport__table">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>{keyLabel}</th>
+                  <th>Rincian</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mismatchRows.slice(0, MAX_VISIBLE_ROWS).map((row, index) => (
+                  <tr key={`${row.key}-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{row.key || '-'}</td>
+                    <td>{row.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button
+            type="button"
+            className="devdata-btn"
+            onClick={() => downloadTextFile(`${logFilePrefix.replace('skipped-log', 'mismatch-log')}-${getTodayStamp()}.csv`, buildImportReportCsv(mismatchRows))}
+          >
+            Unduh Mismatch Log (CSV)
           </button>
         </div>
       )}
