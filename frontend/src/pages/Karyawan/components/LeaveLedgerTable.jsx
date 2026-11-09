@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import useI18n from '../../../i18n/useI18n';
-import { ArrowDown, ArrowUp, Download } from 'lucide-react';
+import { ArrowDown, ArrowUp } from 'lucide-react'; // [UBAH] ikon Download dihapus (tombol pindah ke header halaman)
 import Dropdown from '../../../components/Dropdown';
-import { exportLeaveLedgerXlsx, getLeaveLedger } from '../../../services/leaveLedgerService';
-import { downloadBlobFile, getTodayStamp } from '../../../utils/csvFile';
+import { getLeaveLedger } from '../../../services/leaveLedgerService'; // [UBAH] export Excel dipindah ke config/karyawanExportConfig.js
 import { SORT_DIRECTION, sortRows } from '../../../utils/tableSort';
 import './LeaveLedgerTable.css';
 
@@ -22,8 +21,6 @@ import './LeaveLedgerTable.css';
 //   整合性     = total kuota - terpakai - hangus harus sama dengan sisa (残日数). Selisih -> "不一致" + angka selisih.
 //
 // Filter: cari nama/NIK, periode Dari-Sampai (diproses server), jenis cuti, urutan, jumlah karyawan per halaman.
-
-const LEDGER_FILE_BASE = 'インドネシア有給管理台帳';
 
 // [BARU] Label judul/baris tabel mengikuti pilihan bahasa: Indonesia (default) atau Jepang (format asli
 // buku besar 有給管理台帳). Dulu ditulis Jepang saja sehingga tidak berubah saat bahasa Indonesia dipilih.
@@ -104,7 +101,7 @@ const reconcileBadge = (summary, labels) => {
 const totalUsed = (usages) =>
   usages.filter((usage) => !usage.forfeited).reduce((sum, usage) => sum + Number(usage.days), 0);
 
-function LeaveLedgerTable() {
+function LeaveLedgerTable({ onExportParamsChange }) { // [UBAH] + onExportParamsChange
   const { lang } = useI18n();
   const labels = LABELS[lang] || LABELS.id;
   const [keyword, setKeyword] = useState('');
@@ -116,8 +113,6 @@ function LeaveLedgerTable() {
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const [currentPage, setCurrentPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
 
   // Data dimuat ulang tiap periode berubah. isLoading diturunkan dari kunci permintaan (bukan setState di effect).
   const requestKey = `${dateFrom}|${dateTo}|${reloadKey}`;
@@ -179,19 +174,11 @@ function LeaveLedgerTable() {
   const rangeStart = visibleEmployees.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const rangeEnd = Math.min(safePage * pageSize, visibleEmployees.length);
 
-  const handleExport = async () => {
-    setIsExporting(true);
-    setExportError('');
-    try {
-      const blob = await exportLeaveLedgerXlsx({ from: dateFrom, to: dateTo, q: keyword.trim() });
-      const period = dateFrom || dateTo ? `${dateFrom || 'awal'}_${dateTo || 'akhir'}` : getTodayStamp();
-      downloadBlobFile(`${LEDGER_FILE_BASE}_${period}.xlsx`, blob);
-    } catch (error) {
-      setExportError(error?.message || 'Export gagal.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  // [BARU] Laporkan periode & kata kunci yang sedang aktif ke halaman Karyawan -- dipakai tombol
+  // "Ekspor Data" di header halaman, supaya file Excel berisi persis yang sedang ditampilkan.
+  useEffect(() => {
+    onExportParamsChange?.({ from: dateFrom, to: dateTo, q: keyword.trim() });
+  }, [dateFrom, dateTo, keyword, onExportParamsChange]);
 
   return (
     <section className="ledger">
@@ -200,10 +187,6 @@ function LeaveLedgerTable() {
           <h3 className="ledger__title">Histori Cuti</h3>
           <p className="ledger__subtitle">Riwayat pemakaian cuti per tanggal, format ledger Excel (sama dengan file export).</p>
         </div>
-        <button type="button" className="ledger__exportBtn" onClick={handleExport} disabled={isExporting || isLoading}>
-          <Download aria-hidden="true" />
-          {isExporting ? 'Mengekspor...' : 'Export Excel'}
-        </button>
       </div>
 
       <div className="ledger__filters">
@@ -233,7 +216,6 @@ function LeaveLedgerTable() {
         {hasActiveFilter && <button type="button" className="ledger__reset" onClick={handleReset}>Reset</button>}
       </div>
 
-      {exportError && <div className="ledger__state ledger__state--error" role="alert">{exportError}</div>}
       {isLoading && <div className="ledger__state">Memuat histori cuti...</div>}
       {!isLoading && result.error && (
         <div className="ledger__state ledger__state--error">

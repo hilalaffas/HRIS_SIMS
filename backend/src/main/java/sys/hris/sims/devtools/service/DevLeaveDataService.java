@@ -259,6 +259,24 @@ public class DevLeaveDataService {
                 + " (sisa lama 0)";
     }
 
+    // ============================== [BARU] SALDO HASIL HITUNG IMPORT ==============================
+
+    // Menerapkan Sisa Cuti Lama + sisa tahun berjalan hasil hitung otomatis import riwayat (menimpa, bukan
+    // menambah, sehingga import ulang menghasilkan angka yang sama). Harus dipanggil di dalam transaksi.
+    // Nilai divalidasi lebih dulu: bila melempar IllegalArgumentException, belum ada yang diubah.
+    public void applyImportBalances(Employee employee, BigDecimal oldBalance, BigDecimal currentYearRemaining) {
+        assertNotDevAccount(employee);
+        validateRange(oldBalance, "Sisa cuti lama");
+        validateRange(currentYearRemaining, "Sisa cuti tahun berjalan");
+        if (currentYearRemaining != null) {
+            adjustCurrentYear(employee, currentYearRemaining); // memvalidasi dulu, baru mengubah
+        }
+        if (oldBalance != null) {
+            employee.setManualLeaveBalance(oldBalance.setScale(2, RoundingMode.HALF_UP));
+        }
+        employeeRepository.saveAndFlush(employee);
+    }
+
     // ============================== INTI PENYESUAIAN ==============================
 
     // Harus dipanggil di dalam transaksi. Melempar IllegalArgumentException bila nilai tidak masuk akal.

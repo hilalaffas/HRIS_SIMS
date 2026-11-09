@@ -160,7 +160,12 @@ public final class LeaveLedgerXlsx {
                     throw new IllegalArgumentException("Sheet terlalu lebar (maksimal " + MAX_COLUMNS + " kolom).");
                 }
                 for (int columnIndex = 0; columnIndex < cellCount; columnIndex++) {
-                    line.add(cellText(row.getCell(columnIndex)));
+                    // [UBAH] Baris 2 (index 1): sel genap (C, E, G, ...) adalah SISA CUTI -> selalu angka,
+                    // abaikan format tanggal bawaan kolom. Baris lain tetap lewat cellText (kolom berisi tanggal).
+                    boolean isRemainingCell = rowIndex == 1 && columnIndex > 0 && columnIndex % 2 == 0;
+                    line.add(isRemainingCell
+                            ? cellNumberText(row.getCell(columnIndex))
+                            : cellText(row.getCell(columnIndex)));
                 }
             }
             grid.add(line);
@@ -193,6 +198,25 @@ public final class LeaveLedgerXlsx {
             default:
                 return ""; // BLANK, ERROR
         }
+    }
+
+    // [BARU] Untuk sel yang PASTI angka (sisa cuti di baris 2): abaikan format tanggal bawaan kolom,
+    // baca nilai angkanya saja. Sel teks/kosong tetap lewat cellText.
+    static String cellNumberText(Cell cell) {
+        if (cell == null) {
+            return "";
+        }
+        CellType type = cell.getCellType() == CellType.FORMULA
+                ? cell.getCachedFormulaResultType()
+                : cell.getCellType();
+        if (type != CellType.NUMERIC) {
+            return cellText(cell);
+        }
+        double number = cell.getNumericCellValue();
+        if (Double.isNaN(number) || Double.isInfinite(number)) {
+            return "";
+        }
+        return BigDecimal.valueOf(number).stripTrailingZeros().toPlainString();
     }
 
     private static Map<Long, String> readComments(Sheet sheet) {

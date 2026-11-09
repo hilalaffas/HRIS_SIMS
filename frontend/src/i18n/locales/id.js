@@ -37,7 +37,7 @@ const id = {
   'navbar.subtitle.applyLeave': 'Formulir Pengajuan Cuti Baru',
   'navbar.subtitle.leaveHistory': 'Riwayat & Pelacakan Alur Cuti',
   'navbar.subtitle.attendance': 'Pencatatan Absensi Karyawan',
-  'navbar.subtitle.employees': 'Manajemen Data Karyawan',
+  'navbar.subtitle.employees': 'Manajemen Data Karyawan, Kelola data direktori karyawan, input cuti backdate, dan pantau log aktivitas.',
   'navbar.subtitle.approvalList': 'Daftar Approval Cuti',
   'navbar.subtitle.rejectList': 'Daftar Reject Cuti',
   'navbar.subtitle.returnList': 'Daftar Return Cuti',

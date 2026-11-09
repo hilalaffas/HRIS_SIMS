@@ -72,9 +72,12 @@ import sys.hris.sims.leavetype.repository.LeaveTypeRepository;
 //               riwayat (saldo tidak terpengaruh karena riwayat import tidak ikut hitung saldo). Tanpa komentar diabaikan
 //       > 1  -> HANYA cuti hangus/expired (komentar "hangus/expired"); 0.5 / 1 juga boleh untuk hangus.
 //               Dicatat sebagai jenis sistem "Cuti hangus" pada tanggal itu, tidak ikut hitung saldo.
-//               [UBAH] Hanya untuk tanggal >= 1 Januari 2025. Tanggal SEBELUM itu tidak dianggap hangus:
-//               jumlah harinya dialokasikan ke Sisa Cuti Lama (employees.manual_leave_balance) dan
-//               TIDAK dibuatkan catatan "Cuti hangus".
+//               [UBAH] Hanya untuk tanggal >= tanggal berlaku hangus (default 1 Januari 2025). Tanggal SEBELUM itu
+//               tidak dianggap hangus dan TIDAK dibuatkan catatan "Cuti hangus".
+//     [UBAH] Sisa Cuti Lama & sisa tahun berjalan DIHITUNG OTOMATIS dari seluruh riwayat (kuota - pemakaian -
+//     hangus sejak tanggal berlaku). Sisa periode yang berakhir sebelum tanggal berlaku hangus otomatis menjadi
+//     Sisa Cuti Lama; pemakaian periode berjalan memotong sisa tahun berjalan. Hasilnya MENIMPA saldo (import
+//     ulang = angka sama). Angka sisa di file (残日数) hanya PEMBANDING (peringatan "TIDAK_SESUAI").
 //       Cuti beberapa hari ditulis satu baris per hari (tidak ada lagi rentang N hari).
 //     Teks komentar harus sama dengan nama tipe cuti di database (huruf besar/kecil & tanda kurung
 //     "(Khusus)" boleh dilewatkan). Tipe tidak dikenal -> baris dilewati, TIDAK ada tipe baru dibuat.
@@ -321,10 +324,10 @@ public class DevLeaveHistoryService {
     private record PlanResult(PlannedLeave plan, String problem) {
     }
 
-    // [UBAH] oldQuotaAllocated = total hari (baris "hangus" sebelum 2025-01-01) yang dialokasikan ke Sisa Cuti Lama.
+    // [UBAH] balanceSummary = ringkasan Sisa Cuti Lama + sisa tahun berjalan hasil hitung otomatis (null bila tidak dihitung).
     private record BlockOutcome(List<ImportRowResult> rows, int created, int skippedBeforeSave,
                                 int ignoredComments, Map<String, Integer> createdByType,
-                                BigDecimal oldQuotaAllocated) {
+                                String balanceSummary) {
     }
 
     private record MatchResult(Employee employee, String note, String problem) {
@@ -374,8 +377,7 @@ public class DevLeaveHistoryService {
         int zeroIgnored = 0;
         int commentsIgnored = 0;
         int remainingApplied = 0;
-        BigDecimal oldQuotaTotal = BigDecimal.ZERO; // [BARU]
-        int oldQuotaEmployees = 0; // [BARU]
+        List<String> balanceSummaries = new ArrayList<>(); // [BARU] hasil hitung otomatis per karyawan
         List<String> unmatchedNames = new ArrayList<>();
         List<String> matchedByName = new ArrayList<>();
         List<String> remainingProblems = new ArrayList<>();
@@ -417,9 +419,8 @@ public class DevLeaveHistoryService {
                 results.addAll(outcome.rows());
                 createdTotal += outcome.created();
                 commentsIgnored += outcome.ignoredComments();
-                if (outcome.oldQuotaAllocated().signum() > 0) { // [BARU]
-                    oldQuotaTotal = oldQuotaTotal.add(outcome.oldQuotaAllocated());
-                    oldQuotaEmployees++;
+                if (outcome.balanceSummary() != null) { // [BARU]
+                    balanceSummaries.add(outcome.balanceSummary());
                 }
                 outcome.createdByType().forEach((name, count) -> createdByType.merge(name, count, Integer::sum));
                 if (outcome.created() > 0) {
@@ -457,14 +458,13 @@ public class DevLeaveHistoryService {
                     .map(entry -> entry.getKey() + " " + entry.getValue())
                     .collect(Collectors.joining(", ")) + ".");
         }
-        if (oldQuotaTotal.signum() > 0) { // [BARU]
-            notes.add(oldQuotaTotal.stripTrailingZeros().toPlainString() + " hari bertanggal sebelum "
-                    + context.forfeitStart() + " tidak dianggap hangus dan "
-                    + (dryRun ? "akan dialokasikan" : "dialokasikan") + " ke Sisa Cuti Lama untuk "
-                    + oldQuotaEmployees + " karyawan. Import ulang file yang sama akan menambah Sisa Cuti Lama lagi.");
+        if (!balanceSummaries.isEmpty()) { // [UBAH] hitung otomatis, menimpa (bukan menambah)
+            notes.add("Sisa Cuti Lama & sisa tahun berjalan " + (dryRun ? "akan dihitung otomatis" : "dihitung otomatis")
+                    + " dari riwayat (sisa periode sebelum " + context.forfeitStart() + " masuk Sisa Cuti Lama) untuk "
+                    + balanceSummaries.size() + " karyawan: " + limitedNames(balanceSummaries) + ".");
             if (applyRemaining) {
-                notes.add("Opsi \"terapkan sisa cuti\" aktif: Sisa Cuti Lama akan dihitung ulang dari angka sisa di file "
-                        + "sehingga alokasi di atas ikut tertimpa.");
+                notes.add("Opsi \"terapkan sisa cuti\" aktif: Sisa Cuti Lama ditimpa lagi dengan angka sisa di file "
+                        + "(hasil hitung otomatis di atas tidak dipakai). Matikan opsi ini agar angka file hanya jadi pembanding.");
             }
         }
         if (zeroIgnored > 0) {
@@ -556,7 +556,6 @@ public class DevLeaveHistoryService {
         Map<String, Integer> createdByType = new LinkedHashMap<>();
         List<LeaveRequest> toSave = new ArrayList<>();
         List<ImportRowResult> rows = new ArrayList<>();
-        BigDecimal oldQuotaToAdd = BigDecimal.ZERO; // [BARU] hari "hangus" sebelum 2025 -> Sisa Cuti Lama
         int skipped = 0;
         int ignoredComments = 0;
 
@@ -594,15 +593,14 @@ public class DevLeaveHistoryService {
                     skipped++;
                     continue;
                 }
-                // [BARU] Tanggal sebelum 1 Januari 2025: BUKAN hangus. Tidak dibuatkan catatan "Cuti hangus";
-                // jumlah harinya ditambahkan ke Sisa Cuti Lama karyawan.
+                // [UBAH] Tanggal sebelum tanggal berlaku hangus: BUKAN hangus. Tidak dibuatkan catatan "Cuti hangus"
+                // dan tidak lagi ditambahkan manual ke Sisa Cuti Lama: Sisa Cuti Lama dihitung otomatis dari
+                // seluruh riwayat (lihat computeImportBalance di bawah).
                 if (!LeaveForfeitCalculator.isForfeitEligible(plan.start(), context.forfeitStart())) {
-                    oldQuotaToAdd = oldQuotaToAdd.add(plan.days());
-                    String oldVerb = dryRun ? " hari akan dialokasikan ke Sisa Cuti Lama (" : " hari dialokasikan ke Sisa Cuti Lama (";
                     rows.add(ImportRowResult.success(csvRow, displayName,
-                            plan.days().stripTrailingZeros().toPlainString() + oldVerb + rangeText
-                                    + "; sebelum " + context.forfeitStart()
-                                    + " tidak hangus, tidak dibuat catatan Cuti hangus)."));
+                            plan.days().stripTrailingZeros().toPlainString() + " hari bertanggal " + rangeText
+                                    + " sebelum " + context.forfeitStart()
+                                    + " tidak dianggap hangus (tidak dibuat catatan Cuti hangus); Sisa Cuti Lama dihitung otomatis dari riwayat)."));
                     continue;
                 }
             } else {
@@ -662,18 +660,47 @@ public class DevLeaveHistoryService {
             rows.add(mismatch);
         }
 
+        // [BARU] Hitung otomatis Sisa Cuti Lama & sisa tahun berjalan dari seluruh riwayat (database + baris file
+        // ini). Hanya bila karyawan ini memang punya riwayat import (baris baru atau import sebelumnya), supaya
+        // karyawan yang riwayatnya tidak diimport tidak tertimpa. Angka sisa di file hanya pembanding (di atas).
+        boolean hasImportedHistory = !toSave.isEmpty()
+                || existing.stream().anyMatch(leave -> Boolean.TRUE.equals(leave.getImportedHistory()));
+        LeaveSummaryService.ImportBalance balance = hasImportedHistory
+                ? computeImportBalance(employee, toSave, context) : null;
+        String balanceSummary = balance == null ? null
+                : displayName + " (sisa lama " + plain(balance.oldBalance())
+                + " + sisa tahun berjalan " + plain(balance.currentYearRemaining()) + ")";
+
         if (!dryRun) {
             leaveRepository.saveAll(toSave);
-            // [BARU] Tambahkan ke Sisa Cuti Lama (menambah, bukan menimpa saldo yang sudah ada).
-            if (oldQuotaToAdd.signum() > 0) {
+            if (balance != null) {
                 Employee managed = employeeRepository.findById(employeeId).orElseThrow();
-                BigDecimal current = managed.getManualLeaveBalance() == null
-                        ? BigDecimal.ZERO : managed.getManualLeaveBalance();
-                managed.setManualLeaveBalance(current.add(oldQuotaToAdd).setScale(2, RoundingMode.HALF_UP));
-                employeeRepository.save(managed);
+                try {
+                    // Menimpa (bukan menambah): import ulang file yang sama menghasilkan angka yang sama.
+                    devLeaveDataService.applyImportBalances(managed, balance.oldBalance(), balance.currentYearRemaining());
+                } catch (IllegalArgumentException ex) {
+                    balanceSummary = null;
+                    rows.add(ImportRowResult.mismatch(2, displayName,
+                            "Sisa Cuti Lama / sisa tahun berjalan tidak bisa diterapkan otomatis: " + ex.getMessage()));
+                }
             }
         }
-        return new BlockOutcome(rows, toSave.size(), skipped, ignoredComments, createdByType, oldQuotaToAdd);
+        return new BlockOutcome(rows, toSave.size(), skipped, ignoredComments, createdByType, balanceSummary);
+    }
+
+    // [BARU] Bungkus baris yang akan disimpan menjadi masukan LeaveSummaryService.computeImportBalance.
+    private LeaveSummaryService.ImportBalance computeImportBalance(Employee employee, List<LeaveRequest> toSave,
+                                                                   ImportContext context) {
+        List<Usage> extraUsages = new ArrayList<>();
+        List<StoredForfeit> extraForfeits = new ArrayList<>();
+        for (LeaveRequest leave : toSave) {
+            if (isForfeitType(leave.getLeaveType())) {
+                extraForfeits.add(new StoredForfeit(leave.getStartDate(), leave.getTotalDays()));
+            } else if (deductsQuota(leave.getLeaveType())) {
+                extraUsages.add(new Usage(leave.getStartDate(), leave.getTotalDays(), leave.getTotalDays(), true));
+            }
+        }
+        return leaveSummaryService.computeImportBalance(employee, extraUsages, extraForfeits, context.forfeitStart());
     }
 
     // ============================== [BARU] PENCOCOKAN DATA ==============================

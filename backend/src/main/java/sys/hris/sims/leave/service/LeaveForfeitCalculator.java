@@ -86,6 +86,10 @@ public final class LeaveForfeitCalculator {
 
         BigDecimal previousDeficit = BigDecimal.ZERO;
         LocalDate periodStart = joinDate.plusYears(1);
+        // [UBAH] Karyawan yang punya riwayat import: angka "terpakai di luar sistem" adalah penyeimbang saldo hasil
+        // import (lihat DevLeaveDataService.applyImportBalances), BUKAN pemakaian. Semua pemakaian sudah ada di baris
+        // riwayat, jadi angka itu tidak boleh dihitung lagi (dulu dihitung bila periodenya tanpa baris import -> selisih).
+        final boolean hasImportedUsage = usages.stream().anyMatch(Usage::imported);
 
         // Hanya periode yang SUDAH berakhir (akhir <= hari ini).
         while (!periodStart.plusYears(1).isAfter(today)) {
@@ -109,10 +113,8 @@ public final class LeaveForfeitCalculator {
                         .toList();
                 BigDecimal used = inPeriod.stream().map(Usage::annualDays).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                // Angka "terpakai di luar sistem" dihitung hanya bila periode itu belum punya riwayat
-                // tanggal hasil import -- kalau sudah ada, hari-harinya sudah tercatat (hindari ganda).
-                boolean hasImportedInPeriod = inPeriod.stream().anyMatch(Usage::imported);
-                if (!hasImportedInPeriod && outsideSystemUsed != null && outsideSystemUsed.signum() > 0
+                // [UBAH] Angka "terpakai di luar sistem" hanya dihitung bila karyawan BELUM punya riwayat import.
+                if (!hasImportedUsage && outsideSystemUsed != null && outsideSystemUsed.signum() > 0
                         && periodStart.equals(outsideSystemPeriodStart)) {
                     used = used.add(outsideSystemUsed);
                 }

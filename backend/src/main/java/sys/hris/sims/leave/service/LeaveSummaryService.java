@@ -128,7 +128,7 @@ public class LeaveSummaryService {
     }
 
     // Cuti yang memotong jatah sejak tanggal masuk sampai hari ini. Angka "terpakai di luar sistem"
-    // ikut dihitung hanya bila periodenya belum punya riwayat tanggal hasil import (anti ganda).
+    // ikut dihitung hanya bila karyawan BELUM punya riwayat hasil import (anti ganda).
     private BigDecimal usedSinceJoin(Employee employee, EmployeeLeaveData data, LocalDate today) {
         LocalDate joinDate = employee.getJoinDate();
         BigDecimal used = data.usages().stream()
@@ -139,10 +139,9 @@ public class LeaveSummaryService {
         BigDecimal outside = nonNull(employee.getAnnualUsedOutsideSystem());
         LocalDate outsideStart = employee.getAnnualUsedOutsidePeriodStart();
         if (outside.signum() > 0 && outsideStart != null) {
-            LocalDate outsideEnd = outsideStart.plusYears(1);
-            boolean hasImportedInPeriod = data.usages().stream().anyMatch(item -> item.imported()
-                    && !item.date().isBefore(outsideStart) && item.date().isBefore(outsideEnd));
-            if (!hasImportedInPeriod) {
+            // [UBAH] Dengan riwayat import (di periode mana pun) angka ini hanya penyeimbang saldo, bukan pemakaian.
+            boolean hasImportedUsage = data.usages().stream().anyMatch(Usage::imported);
+            if (!hasImportedUsage) {
                 used = used.add(outside);
             }
         }
@@ -222,6 +221,87 @@ public class LeaveSummaryService {
         }
         return reconcile(employee, new EmployeeLeaveData(usages, stored, tracking), remainingFromFile,
                 today(), forfeitStart);
+    }
+
+    // [BARU] Hasil hitung otomatis saat import riwayat: pembagian sisa cuti menjadi Sisa Cuti Lama dan sisa
+    // tahun berjalan, murni dari data sistem + baris file (angka sisa di file TIDAK dipakai, hanya pembanding).
+    public record ImportBalance(BigDecimal expectedTotal, BigDecimal currentYearRemaining,
+                                BigDecimal oldBalance, LocalDate periodStart) {
+    }
+
+    // [BARU] Sisa tahun berjalan = kuota periode berjalan (+ defisit periode lalu) - pemakaian periode berjalan,
+    // dengan SEMUA riwayat (database + baris import baru) dihitung. Sisa Cuti Lama = sisa total seharusnya
+    // (total kuota - terpakai - hangus yang tanggalnya >= tanggal berlaku hangus) - sisa tahun berjalan; jadi
+    // sisa periode yang berakhir SEBELUM tanggal berlaku hangus otomatis masuk Sisa Cuti Lama.
+    // Mengembalikan null bila belum bisa dihitung (tanggal masuk kosong, belum berhak cuti tahunan, atau
+    // belum ada riwayat sama sekali).
+    @Transactional(readOnly = true)
+    public ImportBalance computeImportBalance(Employee employee, List<Usage> extraUsages,
+                                              List<StoredForfeit> extraForfeits, LocalDate forfeitStart) {
+        LocalDate joinDate = employee.getJoinDate();
+        LocalDate today = today();
+        if (joinDate == null) {
+            return null;
+        }
+        int fullYears = (int) Math.max(0, ChronoUnit.YEARS.between(joinDate, today));
+        if (fullYears < 1) {
+            return null; // belum berhak cuti tahunan
+        }
+
+        EmployeeLeaveData base = loadData(employee);
+        List<Usage> usages = new ArrayList<>(base.usages());
+        usages.addAll(extraUsages);
+        List<StoredForfeit> stored = new ArrayList<>(base.storedForfeits());
+        stored.addAll(extraForfeits);
+        LocalDate tracking = base.trackingStart();
+        for (Usage usage : extraUsages) {
+            if (tracking == null || usage.date().isBefore(tracking)) {
+                tracking = usage.date();
+            }
+        }
+        for (StoredForfeit item : extraForfeits) {
+            if (tracking == null || item.date().isBefore(tracking)) {
+                tracking = item.date();
+            }
+        }
+        if (tracking == null) {
+            return null; // belum ada riwayat
+        }
+        EmployeeLeaveData merged = new EmployeeLeaveData(usages, stored, tracking);
+
+        BigDecimal quota = leaveService.getBaseAnnualQuotaOf(employee);
+        BigDecimal outside = nonNull(employee.getAnnualUsedOutsideSystem());
+        LocalDate outsideStart = employee.getAnnualUsedOutsidePeriodStart();
+
+        BigDecimal deficit = BigDecimal.ZERO;
+        BigDecimal currentRemaining = BigDecimal.ZERO;
+        // [UBAH] Setelah import, angka "di luar sistem" = penyeimbang hasil import sebelumnya. Dibaca lagi sebagai
+        // pemakaian akan menggeser saldo setiap import ulang. Jadi diabaikan bila ada riwayat import (file ini / DB).
+        boolean hasImportedUsage = usages.stream().anyMatch(Usage::imported);
+        LocalDate currentStart = joinDate.plusYears(fullYears);
+        for (int year = 1; year <= fullYears; year++) {
+            LocalDate periodStart = joinDate.plusYears(year);
+            LocalDate periodEnd = joinDate.plusYears(year + 1L);
+            List<Usage> inPeriod = usages.stream()
+                    .filter(item -> !item.date().isBefore(periodStart) && item.date().isBefore(periodEnd))
+                    .toList();
+            BigDecimal used = inPeriod.stream().map(Usage::annualDays).reduce(BigDecimal.ZERO, BigDecimal::add);
+            if (!hasImportedUsage && outside.signum() > 0 && periodStart.equals(outsideStart)) {
+                used = used.add(outside);
+            }
+            BigDecimal ending = quota.add(deficit).subtract(used);
+            if (year == fullYears) {
+                currentRemaining = ending;
+            } else {
+                deficit = ending.min(BigDecimal.ZERO); // hanya defisit yang dibawa ke periode berikutnya
+            }
+        }
+
+        BigDecimal expected = reconcile(employee, merged, BigDecimal.ZERO, today, forfeitStart).expectedRemaining();
+        BigDecimal oldBalance = expected.subtract(currentRemaining);
+        return new ImportBalance(expected.setScale(2, java.math.RoundingMode.HALF_UP),
+                currentRemaining.setScale(2, java.math.RoundingMode.HALF_UP),
+                oldBalance.setScale(2, java.math.RoundingMode.HALF_UP), currentStart);
     }
 
     // Memindai tanggal berlaku hangus yang paling cocok dengan data saat ini. Kandidat = 1 Januari tiap tahun

@@ -65,7 +65,7 @@ function SortHeader({ label, sortKey, sortConfig, onSort, align }) {
   );
 }
 
-function LeaveSummaryTable() {
+function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsChange
   const [rows, setRows] = useState([]);
   const [leaves, setLeaves] = useState(null); // null = belum ada / gagal dimuat (chart menampilkan pesan)
   const [isLoading, setIsLoading] = useState(true);
@@ -136,6 +136,12 @@ function LeaveSummaryTable() {
         : (row) => Number(row[sortConfig.key]);
     return sortRows(byNik, getValue, sortConfig.direction);
   }, [rows, keyword, hasDateFilter, headcount, sortConfig]);
+
+  // [BARU] Laporkan baris yang sedang tampil ke halaman Karyawan -- dipakai tombol "Ekspor Data"
+  // di header halaman (tombol export tidak lagi ada di dalam tab ini).
+  useEffect(() => {
+    onExportRowsChange?.(visibleRows);
+  }, [visibleRows, onExportRowsChange]);
 
   const animateKey = `${dateFrom}|${dateTo}|${reloadKey}`;
 
