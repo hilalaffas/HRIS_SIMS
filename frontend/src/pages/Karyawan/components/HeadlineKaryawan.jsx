@@ -53,8 +53,10 @@ const HeadlineKaryawan = ({
 
   return (
     <div className="headline-container">
-      //<div className="headline-text">
-      //</div>
+      <div className="headline-text">
+        <h2>Manajemen Sistem & Karyawan</h2>
+        <p>Kelola data direktori karyawan, input cuti backdate, dan pantau log aktivitas.</p>
+      </div>
 
       <div className="export-wrapper" ref={menuRef}>
         <button

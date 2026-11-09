@@ -299,6 +299,19 @@ public class LeaveSummaryService {
 
         BigDecimal expected = reconcile(employee, merged, BigDecimal.ZERO, today, forfeitStart).expectedRemaining();
         BigDecimal oldBalance = expected.subtract(currentRemaining);
+        // [BARU] Defisit periode berjalan dibayar dari Sisa Cuti Lama lebih dulu (sama seperti pengajuan cuti biasa),
+        // jadi Sisa Cuti Berjalan tidak minus selama Sisa Cuti Lama masih cukup. Total sisa tidak berubah.
+        // Batas atas: nilai terbesar yang bisa diterapkan sistem (kuota periode - cuti asli), supaya penerapan saldo
+        // di DevLeaveDataService.adjustCurrentYear tidak ditolak.
+        if (currentRemaining.signum() < 0 && oldBalance.signum() > 0) {
+            LeaveBalanceResponse live = leaveService.getLeaveBalanceOf(employee);
+            BigDecimal maxTarget = nonNull(live.getRemainingAnnualLeave()).add(nonNull(live.getAnnualUsedOutsideSystem()));
+            BigDecimal shift = currentRemaining.negate()
+                    .min(oldBalance)
+                    .min(maxTarget.subtract(currentRemaining).max(BigDecimal.ZERO));
+            currentRemaining = currentRemaining.add(shift);
+            oldBalance = oldBalance.subtract(shift);
+        }
         return new ImportBalance(expected.setScale(2, java.math.RoundingMode.HALF_UP),
                 currentRemaining.setScale(2, java.math.RoundingMode.HALF_UP),
                 oldBalance.setScale(2, java.math.RoundingMode.HALF_UP), currentStart);
