@@ -40,9 +40,11 @@ public class User {
     @Column(name = "email")
     private String email;
 
+    @Builder.Default // [BARU]
     @Column(name = "failed_attempts", nullable = false)
     private Integer failedAttempts = 0;
 
+    @Builder.Default // [BARU]
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 }
