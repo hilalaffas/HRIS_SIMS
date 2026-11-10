@@ -230,3 +230,5 @@
 
   .earlyOut__btn { transition: none; }
 }
+
+.earlyOut__select { width: 100%; padding: 10px; margin-bottom: 16px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); background: var(--color-bg, white); }

@@ -12,9 +12,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
 import { EARLY_REASON_MAX_LENGTH, MIN_WORK_HOURS } from '../utils/earlyCheckout';
+import EarlyCheckoutRequest from './EarlyCheckoutRequest';
 import './EarlyCheckoutModal.css';
 
 export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
+  const [category, setCategory] = useState('');
+  const [requestOpen, setRequestOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [showError, setShowError] = useState(false);
   const textareaRef = useRef(null);
@@ -23,7 +26,7 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
   // Escape = batal, scroll halaman dikunci, kursor langsung di kolom alasan.
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onCancel();
+      if (event.key === 'Escape' && !requestOpen) onCancel();
     };
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -34,9 +37,11 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [onCancel]);
+  }, [onCancel, requestOpen]);
 
   const handleConfirm = () => {
+    if (!category) { setShowError(true); return; }
+    if (category !== 'OTHER') { setRequestOpen(true); return; }
     const trimmedReason = reason.trim();
     if (trimmedReason) {
       onConfirm(trimmedReason);
@@ -57,6 +62,8 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
     setReason(event.target.value);
     if (showError) setShowError(false);
   };
+
+  if (requestOpen) return <EarlyCheckoutRequest category={category} onCancel={() => setRequestOpen(false)} onSubmitted={onConfirm} />;
 
   return createPortal(
     <div className="earlyOut__backdrop" role="presentation" onClick={onCancel}>
@@ -81,6 +88,15 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
             Apakah Anda yakin ingin melakukan Check-Out sekarang? Mohon isi alasan kepulangan lebih awal.
           </p>
 
+          <label className="earlyOut__label" htmlFor="earlyOutCategory">Jenis Pulang Cepat</label>
+          <select id="earlyOutCategory" className="earlyOut__select" value={category} onChange={(event) => { setCategory(event.target.value); setShowError(false); }}>
+            <option value="">Pilih alasan pulang cepat</option>
+            <option value="URGENT">Pulang Cepat – Cuti Urgent</option>
+            <option value="SAKIT">Pulang Cepat – Izin Sakit</option>
+            <option value="OTHER">Lainnya</option>
+          </select>
+          {category && category !== 'OTHER' && <p>Isi dan kirim pengajuan terlebih dahulu. Setelah berhasil, Anda dapat melanjutkan absen keluar.</p>}
+          {category === 'OTHER' && <>
           <label className="earlyOut__label" htmlFor="earlyOutReason">Alasan Pulang Cepat</label>
           <div ref={fieldRef} className="earlyOut__field">
             <textarea
@@ -95,9 +111,10 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
               aria-describedby={showError ? 'earlyOutError' : undefined}
             />
           </div>
+          </>}
           {showError && (
             <p id="earlyOutError" className="earlyOut__error" role="alert">
-              Alasan pulang cepat wajib diisi.
+              {category ? 'Alasan pulang cepat wajib diisi.' : 'Pilih jenis pulang cepat terlebih dahulu.'}
             </p>
           )}
         </div>
@@ -107,7 +124,7 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
             Batal
           </button>
           <button type="button" className="earlyOut__btn earlyOut__btn--warning" onClick={handleConfirm}>
-            Ya, Check-Out Pulang
+            {category && category !== 'OTHER' ? 'Isi Form Pengajuan' : 'Ya, Check-Out Pulang'}
           </button>
         </footer>
       </div>

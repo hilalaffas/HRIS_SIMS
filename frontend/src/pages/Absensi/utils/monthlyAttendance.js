@@ -12,6 +12,7 @@
 // bulan sebelumnya s/d tanggal 20 bulan periode. Contoh: periode
 // "September 2026" = 21 Agustus 2026 - 20 September 2026. Periode
 // diidentifikasi lewat bulan AKHIR-nya ({ year, month }, month = 0-11).
+import { normalWorkMinutes } from './normalWorkDuration';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { formatDateLabel, parseLocalDate } from '../../../services/attendanceService'; // [UBAH] + parseLocalDate
 import { formatOvertimeDuration, getOvertimeStatus } from '../../../services/overtimeService'; // [UBAH] + formatOvertimeDuration
@@ -273,7 +274,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   // kata "Bekerja Normal" / "Terlambat N Menit" yang sudah jadi badge).
   const workLocationLabel = proof.locationType === 'WFH_DINAS' ? 'Absen WFH / Dinas' : proof.locationType === 'KANTOR' ? 'Absen di Kantor' : '';
   const officeDistanceNotice = proof.officeLocationStatus === 'TOO_FAR'
-    ? `Titik absen dan titik kantor terlalu jauh (${Number(proof.officeDistanceMeters || 0).toLocaleString('id-ID')} m)`
+    ? `Lokasi di luar jangkauan kantor (+${Math.max(0, Number(proof.officeDistanceMeters || 0) - 50).toLocaleString('id-ID')} m). Pastikan user berada di area kantor`
     : proof.officeLocationStatus === 'NOT_CONFIGURED' && proof.locationType === 'KANTOR'
       ? 'Validasi titik kantor belum dikonfigurasi' : '';
   const noteDetail = [
@@ -285,9 +286,9 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     rejectedSick ? 'Izin sakit ditolak' : '',
   ].filter(Boolean).join(' · ');
 
-  const minutesWorked = checkIn?.recordedAt && checkOut?.recordedAt
-    ? (checkOut.recordedAt.getTime() - checkIn.recordedAt.getTime()) / 60000
-    : null;
+  const minutesWorked = normalWorkMinutes(
+    checkIn?.recordedAt, checkOut?.recordedAt, key, schedulesByDate[key],
+  );
 
   return {
     ...base,

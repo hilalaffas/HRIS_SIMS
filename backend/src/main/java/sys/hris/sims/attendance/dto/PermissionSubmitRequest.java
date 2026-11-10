@@ -18,7 +18,9 @@ public class PermissionSubmitRequest {
 
     // Lama izin sakit dalam HARI KERJA (1-30, Sabtu & Minggu tidak dihitung).
     // Diabaikan (jadi 1) untuk TERLAMBAT dan bila surat dokter belum dilampirkan.
-    private Integer days;
+    private Double days;
+
+    private boolean earlyCheckout;
 
     // Surat dokter -- opsional (boleh menyusul). Hanya dipakai untuk SAKIT.
     private MultipartFile document;
