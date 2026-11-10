@@ -1,5 +1,6 @@
 package sys.hris.sims.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,6 +24,16 @@ public class GlobalExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage())
         );
         return ResponseEntity.badRequest().body(errors);
+    }
+
+    // [BARU] Pelanggaran constraint database (NOT NULL, UNIQUE, FK): detail SQL hanya masuk log server,
+    // pengguna hanya menerima pesan umum agar nama tabel/kolom dan isi baris tidak bocor ke popup.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.error("Data integrity violation", e);
+        return ResponseEntity
+                .badRequest()
+                .body("Data tidak dapat disimpan karena ada isian yang tidak lengkap atau sudah terdaftar. Silakan periksa kembali data Anda.");
     }
 
     @ExceptionHandler(Exception.class)
