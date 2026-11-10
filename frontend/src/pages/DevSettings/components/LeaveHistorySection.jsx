@@ -47,11 +47,14 @@ const DAY_RULES = [
   { days: 'lebih dari 1', rule: 'HANYA untuk cuti hangus/expired (komentar "hangus/expired"); selain itu ditolak. Cuti beberapa hari ditulis satu baris per hari' },
   { days: '0.5 / 1 / lebih (hangus)', rule: 'Cuti hangus/expired boleh bernilai 0.5, 1, atau lebih; nilainya mengikuti sel, dicatat di tanggal itu dan tidak memotong saldo' },
   // [BARU] Batas berlakunya aturan hangus.
-  { days: 'hangus sebelum 2025-01-01', rule: 'Tanggal sebelum 1 Januari 2025 TIDAK dianggap hangus: jumlah harinya ditambahkan ke Sisa Cuti Lama dan tidak dibuat catatan Cuti hangus' },
+  { days: 'hangus sebelum 2025-01-01', rule: 'Tanggal sebelum 1 Januari 2025 tidak dibuatkan catatan Cuti hangus di riwayat, tetapi jumlah harinya tetap dihitung sebagai hangus di Ringkasan Cuti (angka mengikuti Excel)' },
 ];
 
+// [UBAH] Angka sisa di baris 2 Excel SELALU diterapkan (ringkasan cuti murni mengikuti Excel), jadi opsi
+// "terapkan sisa cuti" dihapus. Parameter API tetap dikirim agar kontrak endpoint tidak berubah.
+const APPLY_REMAINING = true;
+
 export default function LeaveHistorySection() {
-  const [applyRemaining, setApplyRemaining] = useState(false);
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
   const [activeSubTab, setActiveSubTab] = useState('historyImport'); // [BARU]
@@ -72,22 +75,8 @@ export default function LeaveHistorySection() {
   // [BARU] Import dan Pre-flight Validation memakai jalur yang sama; hanya flag dryRun yang berbeda.
   const runImport = (csvText, file, dryRun) =>
     /\.xlsx$/i.test(file?.name ?? '')
-      ? importLeaveHistoryXlsx(file, applyRemaining, dryRun)
-      : importLeaveHistoryCsv(csvText, applyRemaining, dryRun);
-
-  const applyRemainingField = (
-    <label className="devdata-check">
-      <input
-        type="checkbox"
-        checked={applyRemaining}
-        onChange={(event) => setApplyRemaining(event.target.checked)}
-      />
-      <span>
-        Terapkan juga sisa cuti dari file (baris 2). Angka di file dianggap total sisa: sisa tahun
-        berjalan dipertahankan, selisihnya masuk Sisa Cuti Lama. Sisa negatif (defisit) ikut diterapkan.
-      </span>
-    </label>
-  );
+      ? importLeaveHistoryXlsx(file, APPLY_REMAINING, dryRun)
+      : importLeaveHistoryCsv(csvText, APPLY_REMAINING, dryRun);
 
   return (
     <section className="devdata-section">
@@ -177,7 +166,7 @@ export default function LeaveHistorySection() {
 
         <CsvImportPanel
           title="Import riwayat cuti"
-          description="Tanggal yang sudah ada dari import sebelumnya, yang bentrok dengan pengajuan cuti, atau tidak valid dilewati dan dilaporkan. Pastikan NIK karyawan sudah sesuai nomor di baris 1."
+          description="Ringkasan cuti karyawan murni mengikuti Excel: sisa = baris 2, terpakai = jumlah baris cuti yang memotong jatah, hangus = baris hangus/expired, total = sisa + terpakai + hangus. Cuti baru yang disetujui setelah import dihitung sistem seperti biasa. Tanggal yang sudah ada dari import sebelumnya, yang bentrok dengan pengajuan cuti, atau tidak valid dilewati dan dilaporkan. Pastikan NIK karyawan sudah sesuai nomor di baris 1."
           templateHref="/templates/template-import-riwayat-cuti.csv"
           exampleHref="/templates/contoh-import-riwayat-cuti.csv"
           extraLinks={[
@@ -187,9 +176,7 @@ export default function LeaveHistorySection() {
           acceptXlsx
           dropzoneHint="Excel (.xlsx) atau CSV, maksimal 2 MB"
           keyLabel="Karyawan"
-          extraFields={applyRemainingField}
           loadingMessage="Mengimpor riwayat cuti..."
-          validationKey={String(applyRemaining)} // [BARU] opsi ini memengaruhi hasil -> validasi harus diulang bila berubah
           onValidate={(csvText, file) => runImport(csvText, file, true)} // [UBAH] dulu onPreview
           onImport={(csvText, file) => runImport(csvText, file, false)}
         />

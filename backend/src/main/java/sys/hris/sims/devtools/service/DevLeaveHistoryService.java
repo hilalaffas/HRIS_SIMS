@@ -3,6 +3,7 @@ package sys.hris.sims.devtools.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime; // [BARU]
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -74,17 +75,17 @@ import sys.hris.sims.leavetype.repository.LeaveTypeRepository;
 //               Dicatat sebagai jenis sistem "Cuti hangus" pada tanggal itu, tidak ikut hitung saldo.
 //               [UBAH] Hanya untuk tanggal >= tanggal berlaku hangus (default 1 Januari 2025). Tanggal SEBELUM itu
 //               tidak dianggap hangus dan TIDAK dibuatkan catatan "Cuti hangus".
-//     [UBAH] Sisa Cuti Lama & sisa tahun berjalan DIHITUNG OTOMATIS dari seluruh riwayat (kuota - pemakaian -
-//     hangus sejak tanggal berlaku). Sisa periode yang berakhir sebelum tanggal berlaku hangus otomatis menjadi
-//     Sisa Cuti Lama; pemakaian periode berjalan memotong sisa tahun berjalan. Hasilnya MENIMPA saldo (import
-//     ulang = angka sama). Angka sisa di file (残日数) hanya PEMBANDING (peringatan "TIDAK_SESUAI").
+//     [UBAH] Ringkasan cuti MURNI mengikuti Excel: sisa = baris 2, terpakai = jumlah baris yang memotong jatah,
+//     hangus = jumlah baris "hangus/expired" (semua tanggal), total = sisa + terpakai + hangus. Disimpan di
+//     employees (V64); saldo sistem disamakan dengan sisa Excel (menimpa; import ulang = angka sama). Hanya
+//     cuti BARU (pengajuan asli disetujui setelah import) yang dihitung logika sistem di atas angka itu.
 //       Cuti beberapa hari ditulis satu baris per hari (tidak ada lagi rentang N hari).
 //     Teks komentar harus sama dengan nama tipe cuti di database (huruf besar/kecil & tanda kurung
 //     "(Khusus)" boleh dilewatkan). Tipe tidak dikenal -> baris dilewati, TIDAK ada tipe baru dibuat.
 //   - [BARU] Export Excel otomatis menambah baris "hangus/expired" untuk sisa cuti tahunan yang
 //     kedaluwarsa di periode yang sudah berakhir (lihat LeaveForfeitCalculator).
 //   - Baris bermasalah dilewati beserta alasannya; per karyawan satu transaksi.
-//   - Opsional (applyRemaining): angka sisa cuti di baris 2 diterapkan ke saldo karyawan.
+//   - [UBAH] applyRemaining tidak lagi berpengaruh: angka sisa baris 2 SELALU diterapkan (lihat applyExcelBaseline).
 @Service
 public class DevLeaveHistoryService {
 
@@ -376,11 +377,9 @@ public class DevLeaveHistoryService {
         int employeesImported = 0;
         int zeroIgnored = 0;
         int commentsIgnored = 0;
-        int remainingApplied = 0;
-        List<String> balanceSummaries = new ArrayList<>(); // [BARU] hasil hitung otomatis per karyawan
+        List<String> balanceSummaries = new ArrayList<>(); // [UBAH] angka Excel per karyawan (sisa/terpakai/hangus/total)
         List<String> unmatchedNames = new ArrayList<>();
         List<String> matchedByName = new ArrayList<>();
-        List<String> remainingProblems = new ArrayList<>();
 
         for (Block block : ledger.blocks()) {
             List<ResolvedEntry> resolved = LeaveLedgerCsv.resolveEntries(block, today);
@@ -428,24 +427,6 @@ public class DevLeaveHistoryService {
                 }
             }
 
-            if (applyRemaining && !dryRun && !block.remainingText().isEmpty()) {
-                try {
-                    BigDecimal total = LeaveLedgerCsv.parseRemaining(block.remainingText());
-                    // [UBAH] Sisa negatif (defisit) sekarang ikut diterapkan, tidak lagi ditolak.
-                    if (total != null) {
-                        transactionTemplate.executeWithoutResult(status -> {
-                            Employee fresh = employeeRepository.findById(employeeId).orElseThrow();
-                            devLeaveDataService.applyTotalRemaining(fresh, total);
-                        });
-                        remainingApplied++;
-                    }
-                } catch (IllegalArgumentException ex) {
-                    remainingProblems.add(displayName + ": " + ex.getMessage());
-                } catch (RuntimeException ex) {
-                    log.error("Penerapan sisa cuti {} gagal", displayName, ex);
-                    remainingProblems.add(displayName + ": gagal diterapkan");
-                }
-            }
         }
 
         if (dryRun) {
@@ -458,14 +439,10 @@ public class DevLeaveHistoryService {
                     .map(entry -> entry.getKey() + " " + entry.getValue())
                     .collect(Collectors.joining(", ")) + ".");
         }
-        if (!balanceSummaries.isEmpty()) { // [UBAH] hitung otomatis, menimpa (bukan menambah)
-            notes.add("Sisa Cuti Lama & sisa tahun berjalan " + (dryRun ? "akan dihitung otomatis" : "dihitung otomatis")
-                    + " dari riwayat (sisa periode sebelum " + context.forfeitStart() + " masuk Sisa Cuti Lama) untuk "
-                    + balanceSummaries.size() + " karyawan: " + limitedNames(balanceSummaries) + ".");
-            if (applyRemaining) {
-                notes.add("Opsi \"terapkan sisa cuti\" aktif: Sisa Cuti Lama ditimpa lagi dengan angka sisa di file "
-                        + "(hasil hitung otomatis di atas tidak dipakai). Matikan opsi ini agar angka file hanya jadi pembanding.");
-            }
+        if (!balanceSummaries.isEmpty()) { // [UBAH] murni angka Excel, menimpa (bukan menambah)
+            notes.add("Ringkasan & saldo cuti " + (dryRun ? "akan mengikuti" : "mengikuti") + " Excel apa adanya untuk "
+                    + balanceSummaries.size() + " karyawan (total = sisa + terpakai + hangus): "
+                    + limitedNames(balanceSummaries) + ". Cuti baru yang disetujui setelah import dihitung logika sistem.");
         }
         if (zeroIgnored > 0) {
             notes.add(zeroIgnored + " baris bernilai 0 hari tanpa komentar diabaikan.");
@@ -480,20 +457,13 @@ public class DevLeaveHistoryService {
         if (!matchedByName.isEmpty()) {
             notes.add("Dicocokkan lewat nama (nomor NIK tidak cocok): " + limitedNames(matchedByName) + ".");
         }
-        if (applyRemaining && dryRun) {
-            notes.add("Sisa cuti tidak diterapkan di pratinjau.");
-        } else if (applyRemaining) {
-            notes.add("Sisa cuti diterapkan untuk " + remainingApplied + " karyawan.");
-            if (!remainingProblems.isEmpty()) {
-                notes.add("Sisa cuti dilewati: " + limitedNames(remainingProblems) + ".");
-            }
-        }
         long mismatchCount = results.stream()
                 .filter(row -> ImportRowResult.STATUS_MISMATCH.equals(row.status()))
                 .count();
         if (mismatchCount > 0) {
-            notes.add(mismatchCount + " karyawan DATA TIDAK SESUAI (total kuota - terpakai - hangus tidak sama dengan sisa di file). "
-                    + "Periksa daftar \"Mismatch Scan\" di bawah; import tetap bisa dilanjutkan.");
+            // [UBAH] Hanya peringatan data file: sisa kosong/tidak terbaca atau baris yang tidak ikut dihitung.
+            notes.add(mismatchCount + " peringatan data file (sisa kosong/tidak terbaca, atau baris tidak ikut dihitung). "
+                    + "Periksa daftar di bawah; import tetap bisa dilanjutkan.");
         }
         return ImportResultResponse.of(results, notes);
     }
@@ -595,7 +565,7 @@ public class DevLeaveHistoryService {
                 }
                 // [UBAH] Tanggal sebelum tanggal berlaku hangus: BUKAN hangus. Tidak dibuatkan catatan "Cuti hangus"
                 // dan tidak lagi ditambahkan manual ke Sisa Cuti Lama: Sisa Cuti Lama dihitung otomatis dari
-                // seluruh riwayat (lihat computeImportBalance di bawah).
+                // seluruh riwayat (lihat FileTotals di bawah).
                 if (!LeaveForfeitCalculator.isForfeitEligible(plan.start(), context.forfeitStart())) {
                     rows.add(ImportRowResult.success(csvRow, displayName,
                             plan.days().stripTrailingZeros().toPlainString() + " hari bertanggal " + rangeText
@@ -653,54 +623,105 @@ public class DevLeaveHistoryService {
                             + (plan.forfeit() ? "; cuti hangus, tidak memotong saldo" : "") + ")."));
         }
 
-        // [BARU] Pencocokan data: total kuota sejak masuk - terpakai - hangus harus sama dengan sisa (残日数) di file.
-        // Bersifat PERINGATAN: laporan menandainya "TIDAK_SESUAI", tetapi import tidak diblokir.
-        ImportRowResult mismatch = checkReconciliation(employee, displayName, remainingText, toSave, context);
-        if (mismatch != null) {
-            rows.add(mismatch);
-        }
+        // [UBAH] Cek lama "total kuota x tahun kerja - terpakai - hangus = sisa file" DIHAPUS dari alur import:
+        // angka karyawan murni mengikuti Excel, jadi tidak ada lagi pembanding terhadap kuota sistem.
 
-        // [BARU] Hitung otomatis Sisa Cuti Lama & sisa tahun berjalan dari seluruh riwayat (database + baris file
-        // ini). Hanya bila karyawan ini memang punya riwayat import (baris baru atau import sebelumnya), supaya
-        // karyawan yang riwayatnya tidak diimport tidak tertimpa. Angka sisa di file hanya pembanding (di atas).
-        boolean hasImportedHistory = !toSave.isEmpty()
-                || existing.stream().anyMatch(leave -> Boolean.TRUE.equals(leave.getImportedHistory()));
-        LeaveSummaryService.ImportBalance balance = hasImportedHistory
-                ? computeImportBalance(employee, toSave, context) : null;
-        String balanceSummary = balance == null ? null
-                : displayName + " (sisa lama " + plain(balance.oldBalance())
-                + " + sisa tahun berjalan " + plain(balance.currentYearRemaining()) + ")";
+        // [UBAH] Angka cuti karyawan ini MURNI mengikuti Excel (bukan hitung otomatis dari kuota):
+        //   sisa      = angka baris 2 di file
+        //   terpakai  = jumlah baris yang memotong jatah di file
+        //   hangus    = jumlah baris "hangus/expired" di file (semua tanggal)
+        //   total     = sisa + terpakai + hangus
+        // Disimpan ke employees (V64) dan saldo sistem disamakan dengan sisa Excel. Import ulang file yang sama
+        // menghasilkan angka yang sama (dihitung dari isi file, bukan dari baris yang baru tersimpan).
+        // Cuti BARU (pengajuan asli yang disetujui setelah import) tetap dihitung logika sistem di atas angka ini.
+        BigDecimal remainingInFile = null;
+        boolean remainingReadable = true;
+        try {
+            remainingInFile = LeaveLedgerCsv.parseRemaining(remainingText);
+        } catch (IllegalArgumentException ex) {
+            remainingReadable = false;
+            rows.add(ImportRowResult.mismatch(2, displayName,
+                    "Angka sisa cuti di file tidak terbaca (" + ex.getMessage() + "): ringkasan & saldo tidak mengikuti Excel."));
+        }
+        FileTotals totals = remainingInFile == null ? null : computeFileTotals(resolved, context);
+        if (remainingInFile == null && remainingReadable) {
+            rows.add(ImportRowResult.mismatch(2, displayName,
+                    "Sisa cuti di file kosong: ringkasan & saldo karyawan ini TIDAK mengikuti Excel (tetap dihitung sistem)."));
+        }
+        if (totals != null && totals.problemRows() > 0) {
+            rows.add(ImportRowResult.mismatch(2, displayName, "Terpakai/hangus dari Excel belum lengkap: "
+                    + totals.problemRows() + " baris bermasalah tidak ikut dihitung (lihat baris yang dilewati)."));
+        }
+        String balanceSummary = totals == null ? null
+                : displayName + " (sisa " + plain(remainingInFile) + ", terpakai " + plain(totals.used())
+                + ", hangus " + plain(totals.forfeited()) + ", total "
+                + plain(remainingInFile.add(totals.used()).add(totals.forfeited())) + ")";
 
         if (!dryRun) {
             leaveRepository.saveAll(toSave);
-            if (balance != null) {
+            if (totals != null) {
                 Employee managed = employeeRepository.findById(employeeId).orElseThrow();
                 try {
                     // Menimpa (bukan menambah): import ulang file yang sama menghasilkan angka yang sama.
-                    devLeaveDataService.applyImportBalances(managed, balance.oldBalance(), balance.currentYearRemaining());
+                    // LocalDateTime.now() = jam yang sama dengan LeaveRequest.approvedAt.
+                    devLeaveDataService.applyExcelBaseline(managed, totals.used(), totals.forfeited(),
+                            remainingInFile, LocalDateTime.now());
                 } catch (IllegalArgumentException ex) {
                     balanceSummary = null;
                     rows.add(ImportRowResult.mismatch(2, displayName,
-                            "Sisa Cuti Lama / sisa tahun berjalan tidak bisa diterapkan otomatis: " + ex.getMessage()));
+                            "Angka Excel tidak bisa diterapkan ke ringkasan/saldo: " + ex.getMessage()));
                 }
             }
         }
         return new BlockOutcome(rows, toSave.size(), skipped, ignoredComments, createdByType, balanceSummary);
     }
 
-    // [BARU] Bungkus baris yang akan disimpan menjadi masukan LeaveSummaryService.computeImportBalance.
-    private LeaveSummaryService.ImportBalance computeImportBalance(Employee employee, List<LeaveRequest> toSave,
-                                                                   ImportContext context) {
-        List<Usage> extraUsages = new ArrayList<>();
-        List<StoredForfeit> extraForfeits = new ArrayList<>();
-        for (LeaveRequest leave : toSave) {
-            if (isForfeitType(leave.getLeaveType())) {
-                extraForfeits.add(new StoredForfeit(leave.getStartDate(), leave.getTotalDays()));
-            } else if (deductsQuota(leave.getLeaveType())) {
-                extraUsages.add(new Usage(leave.getStartDate(), leave.getTotalDays(), leave.getTotalDays(), true));
+    // [BARU] Terpakai & hangus dari ISI FILE satu karyawan (bukan dari baris yang baru tersimpan), memakai aturan
+    // tipe cuti yang sama dengan import. Baris bermasalah / dobel tanggal tidak dihitung dan dilaporkan jumlahnya.
+    private record FileTotals(BigDecimal used, BigDecimal forfeited, int problemRows) {
+    }
+
+    private FileTotals computeFileTotals(List<ResolvedEntry> resolved, ImportContext context) {
+        BigDecimal used = BigDecimal.ZERO;
+        BigDecimal forfeited = BigDecimal.ZERO;
+        int problems = 0;
+        Map<LocalDate, BigDecimal> perDate = new HashMap<>();
+        java.util.Set<LocalDate> forfeitDates = new java.util.HashSet<>();
+        for (ResolvedEntry entry : resolved) {
+            if (entry.status() == EntryStatus.ZERO) {
+                continue;
+            }
+            if (entry.status() == EntryStatus.INVALID) {
+                problems++;
+                continue;
+            }
+            PlanResult result = planLeave(entry, context);
+            if (result.problem() != null) {
+                problems++;
+                continue;
+            }
+            PlannedLeave plan = result.plan();
+            if (plan.forfeit()) {
+                // Semua tanggal hangus di file dihitung (termasuk sebelum tanggal berlaku hangus): ini angka Excel.
+                if (forfeitDates.add(plan.start())) {
+                    forfeited = forfeited.add(plan.days());
+                } else {
+                    problems++;
+                }
+                continue;
+            }
+            BigDecimal stored = plan.storedDays();
+            BigDecimal already = perDate.getOrDefault(plan.start(), BigDecimal.ZERO);
+            if (already.add(stored).compareTo(BigDecimal.ONE) > 0) {
+                problems++; // maksimal 1 hari per tanggal (sama dengan aturan di importBlock)
+                continue;
+            }
+            perDate.merge(plan.start(), stored, BigDecimal::add);
+            if (deductsQuota(plan.type())) {
+                used = used.add(plan.days()); // cuti khusus (0 hari) tidak masuk terpakai
             }
         }
-        return leaveSummaryService.computeImportBalance(employee, extraUsages, extraForfeits, context.forfeitStart());
+        return new FileTotals(used, forfeited, problems);
     }
 
     // ============================== [BARU] PENCOCOKAN DATA ==============================

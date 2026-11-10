@@ -69,6 +69,10 @@ public class LeaveSummaryService {
     }
 
     private LeaveSummaryResponse summarize(Employee employee, LocalDate today, LocalDate forfeitStart) {
+        // [BARU] Karyawan yang sudah diimport dari Excel: angka murni mengikuti Excel.
+        if (employee.hasLeaveImportBaseline()) {
+            return summarizeFromImport(employee, today);
+        }
         LeaveBalanceResponse balance = leaveService.getLeaveBalanceOf(employee);
         EmployeeLeaveData data = loadData(employee);
         List<Forfeit> forfeits = computeForfeits(employee, data, today, forfeitStart);
@@ -104,6 +108,79 @@ public class LeaveSummaryService {
                 .build();
     }
 
+    // [BARU] Ringkasan untuk karyawan yang punya angka import Excel (V64).
+    //   total, hangus  = angka Excel apa adanya
+    //   terpakai       = terpakai Excel + cuti BARU (pengajuan asli yang disetujui setelah import)
+    //   sisa           = saldo sistem (sudah disamakan dengan sisa Excel saat import, lalu dipotong cuti baru
+    //                    lewat logika sistem yang biasa)
+    private LeaveSummaryResponse summarizeFromImport(Employee employee, LocalDate today) {
+        LeaveBalanceResponse balance = leaveService.getLeaveBalanceOf(employee);
+        BigDecimal used = nonNull(employee.getImportUsedLeave()).add(usedSinceImport(employee));
+        BigDecimal forfeited = nonNull(employee.getImportForfeitedLeave());
+        BigDecimal remainingPrevious = nonNull(balance.getRemainingManualLeave());
+        BigDecimal remainingCurrent = nonNull(balance.getRemainingAnnualLeave());
+        BigDecimal available = remainingPrevious.add(remainingCurrent);
+
+        LeaveReconciliationRow check = reconcileFromImport(employee, available, used, forfeited, today);
+
+        return LeaveSummaryResponse.builder()
+                .employeeId(employee.getEmployeeId())
+                .employeeName(employee.getFullName())
+                .nik(employee.getNikKaryawan())
+                .divisionName(employee.getDivisi() == null ? null : employee.getDivisi().getNamaDivisi())
+                .joinDate(employee.getJoinDate())
+                .asOfDate(today)
+                .totalOverallLeave(nonNull(employee.getImportTotalLeave()))
+                .usedLeave(used)
+                .forfeitedLeave(forfeited)
+                .totalAvailableLeave(available)
+                .remainingPreviousLeave(remainingPrevious)
+                .remainingCurrentLeave(remainingCurrent)
+                .reconcileDifference(check.difference())
+                .reconcileStatus(check.status())
+                .build();
+    }
+
+    // [BARU] Cuti BARU = pengajuan asli (bukan riwayat import) yang memotong jatah dan disetujui SETELAH
+    // waktu import. Pengajuan asli sebelum import sudah termasuk di angka Excel.
+    private BigDecimal usedSinceImport(Employee employee) {
+        java.time.LocalDateTime baseline = employee.getLeaveImportBaselineAt();
+        if (baseline == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal used = BigDecimal.ZERO;
+        for (LeaveRequest leave : leaveRepository.findByEmployee_EmployeeId(employee.getEmployeeId())) {
+            if (leave.getStatus() == null || !STATUS_APPROVED.equalsIgnoreCase(leave.getStatus().getStatusName())
+                    || leave.getLeaveType() == null || Boolean.TRUE.equals(leave.getImportedHistory())
+                    || Boolean.TRUE.equals(leave.getLeaveType().getForfeiture())
+                    || !Boolean.TRUE.equals(leave.getLeaveType().getDeductsAnnualQuota())) {
+                continue;
+            }
+            java.time.LocalDateTime approvedAt = leave.getApprovedAt() != null
+                    ? leave.getApprovedAt() : leave.getSubmittedAt();
+            if (approvedAt != null && !approvedAt.isBefore(baseline)) {
+                used = used.add(nonNull(leave.getTotalDays()));
+            }
+        }
+        return used;
+    }
+
+    // [BARU] Pemeriksaan untuk karyawan import: sisa seharusnya = total Excel - terpakai - hangus.
+    // Saat import selisihnya selalu 0 (total diturunkan dari angka Excel yang sama); selisih baru muncul bila
+    // sisa sistem bergeser di luar cuti baru (mis. pergantian periode tahunan).
+    private LeaveReconciliationRow reconcileFromImport(Employee employee, BigDecimal actualRemaining,
+                                                       BigDecimal used, BigDecimal forfeited, LocalDate today) {
+        LocalDate joinDate = employee.getJoinDate();
+        int fullYears = joinDate == null ? 0 : (int) Math.max(0, ChronoUnit.YEARS.between(joinDate, today));
+        BigDecimal total = nonNull(employee.getImportTotalLeave());
+        BigDecimal expected = total.subtract(used).subtract(forfeited);
+        BigDecimal difference = actualRemaining.subtract(expected);
+        String status = difference.abs().compareTo(TOLERANCE) < 0
+                ? LeaveReconciliationRow.OK : LeaveReconciliationRow.MISMATCH;
+        return new LeaveReconciliationRow(employee.getEmployeeId(), employee.getFullName(), employee.getNikKaryawan(),
+                joinDate, fullYears, total, used, forfeited, actualRemaining, expected, difference, status);
+    }
+
     // Cuti hangus satu karyawan (tersimpan + dihitung) untuk periode yang sudah berakhir.
     @Transactional(readOnly = true)
     public List<Forfeit> computeForfeits(Employee employee, LocalDate today) {
@@ -112,7 +189,8 @@ public class LeaveSummaryService {
 
     private List<Forfeit> computeForfeits(Employee employee, EmployeeLeaveData data, LocalDate today,
                                           LocalDate forfeitStart) {
-        if (employee.getJoinDate() == null) {
+        // [BARU] Karyawan import: hangus = angka Excel, tidak dihitung ulang (export juga tidak menambah baris hangus).
+        if (employee.getJoinDate() == null || employee.hasLeaveImportBaseline()) {
             return List.of();
         }
         return LeaveForfeitCalculator.calculate(
@@ -158,8 +236,21 @@ public class LeaveSummaryService {
     // atau tanggal berlaku hangus yang dipakai tidak tepat).
     private static final BigDecimal TOLERANCE = new BigDecimal("0.01");
 
+    // [UBAH] Karyawan import (V64) dicek terhadap angka Excel; lainnya terhadap kuota x tahun kerja.
     private LeaveReconciliationRow reconcile(Employee employee, EmployeeLeaveData data, BigDecimal actualRemaining,
                                              LocalDate today, LocalDate forfeitStart) {
+        if (employee.hasLeaveImportBaseline()) {
+            return reconcileFromImport(employee, actualRemaining,
+                    nonNull(employee.getImportUsedLeave()).add(usedSinceImport(employee)),
+                    nonNull(employee.getImportForfeitedLeave()), today);
+        }
+        return reconcileByQuota(employee, data, actualRemaining, today, forfeitStart);
+    }
+
+    // Perhitungan lama (kuota dasar x tahun kerja). Dipakai juga saat IMPORT: angka Excel yang SEDANG diimport
+    // dibandingkan dengan kuota, walaupun karyawan sudah punya angka import dari file sebelumnya.
+    private LeaveReconciliationRow reconcileByQuota(Employee employee, EmployeeLeaveData data, BigDecimal actualRemaining,
+                                                    LocalDate today, LocalDate forfeitStart) {
         LocalDate joinDate = employee.getJoinDate();
         int fullYears = joinDate == null ? 0 : (int) Math.max(0, ChronoUnit.YEARS.between(joinDate, today));
         BigDecimal total = leaveService.getBaseAnnualQuotaOf(employee).multiply(BigDecimal.valueOf(fullYears));
@@ -219,8 +310,8 @@ public class LeaveSummaryService {
                 tracking = item.date();
             }
         }
-        return reconcile(employee, new EmployeeLeaveData(usages, stored, tracking), remainingFromFile,
-                today(), forfeitStart);
+        return reconcileByQuota(employee, new EmployeeLeaveData(usages, stored, tracking), remainingFromFile,
+                today(), forfeitStart); // [UBAH] bypass cabang import
     }
 
     // [BARU] Hasil hitung otomatis saat import riwayat: pembagian sisa cuti menjadi Sisa Cuti Lama dan sisa
@@ -297,7 +388,7 @@ public class LeaveSummaryService {
             }
         }
 
-        BigDecimal expected = reconcile(employee, merged, BigDecimal.ZERO, today, forfeitStart).expectedRemaining();
+        BigDecimal expected = reconcileByQuota(employee, merged, BigDecimal.ZERO, today, forfeitStart).expectedRemaining(); // [UBAH]
         BigDecimal oldBalance = expected.subtract(currentRemaining);
         // [BARU] Defisit periode berjalan dibayar dari Sisa Cuti Lama lebih dulu (sama seperti pengajuan cuti biasa),
         // jadi Sisa Cuti Berjalan tidak minus selama Sisa Cuti Lama masih cukup. Total sisa tidak berubah.
@@ -342,6 +433,10 @@ public class LeaveSummaryService {
         int skipped = 0;
 
         for (Employee employee : employees) {
+            if (employee.hasLeaveImportBaseline()) { // [BARU] angka mengikuti Excel, tidak bergantung tanggal hangus
+                skipped++;
+                continue;
+            }
             EmployeeLeaveData data = loadData(employee);
             BigDecimal actual = nonNull(leaveService.getLeaveBalanceOf(employee).getTotalRemainingLeave());
             boolean counted = true;

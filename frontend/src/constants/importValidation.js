@@ -60,8 +60,8 @@ const VALIDATION_TEXT = {
         title: 'Data Mismatch Detected',
         badge: 'Needs Review',
         description:
-          `${mismatch} karyawan memiliki data tidak sesuai (total kuota - terpakai - hangus tidak sama dengan sisa di file). `
-          + 'Periksa Mismatch Scan di bawah; import tetap bisa dilanjutkan.',
+          `${mismatch} peringatan data pada file (mis. sisa cuti kosong/tidak terbaca atau baris tidak ikut dihitung). `
+          + 'Periksa daftar peringatan di bawah; import tetap bisa dilanjutkan.',
       };
     }
     return {
@@ -70,7 +70,7 @@ const VALIDATION_TEXT = {
       description:
         `${skipped} dari ${total} baris tidak lolos validasi dan akan dilewati (Row Skipped). `
         + `${success} baris lainnya aman diimpor.`
-        + (mismatch > 0 ? ` Selain itu ${mismatch} karyawan datanya tidak sesuai (Mismatch Scan).` : ''),
+        + (mismatch > 0 ? ` Selain itu ada ${mismatch} peringatan data (lihat daftar peringatan).` : ''),
     };
   },
   [VALIDATION_VERDICT.failed]: ({ total }) => ({
@@ -95,14 +95,14 @@ const RESULT_TEXT = {
       return {
         title: 'Import Completed with Data Mismatch',
         badge: 'Completed, Needs Review',
-        description: `${success} baris berhasil diimpor. ${mismatch} karyawan datanya tidak sesuai (lihat Mismatch Scan).`,
+        description: `${success} baris berhasil diimpor. ${mismatch} peringatan data (lihat daftar peringatan).`,
       };
     }
     return {
       title: 'Import Completed with Skipped Rows',
       badge: 'Completed with Skipped Rows',
       description: `${success} baris berhasil diimpor. ${skipped} baris dilewati (Row Skipped).`
-        + (mismatch > 0 ? ` ${mismatch} karyawan datanya tidak sesuai (Mismatch Scan).` : ''),
+        + (mismatch > 0 ? ` ${mismatch} peringatan data (lihat daftar peringatan).` : ''),
     };
   },
   [VALIDATION_VERDICT.failed]: () => ({

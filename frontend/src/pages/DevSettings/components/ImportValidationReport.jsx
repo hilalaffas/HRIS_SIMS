@@ -155,15 +155,15 @@ export default function ImportValidationReport({
         </div>
       )}
 
-      {/* [BARU] Mismatch Scan: karyawan yang total kuota - terpakai - hangus != sisa di file */}
+      {/* [UBAH] Peringatan data file (sisa kosong/tidak terbaca, baris tidak ikut dihitung) */}
       {mismatchRows.length > 0 && (
         <div className="importreport__block">
           <h5 className="importreport__heading">
-            Mismatch Scan <span className="importreport__count">{mismatchRows.length}</span>
+            Peringatan Data <span className="importreport__count">{mismatchRows.length}</span>
           </h5>
           <p className="devsettings-hint">
-            Karyawan berikut <strong>datanya tidak sesuai</strong>: <strong>total kuota sejak masuk − terpakai − hangus</strong> harus sama dengan
-            sisa cuti di file. Koreksi di file (tanggal pemakaian, angka sisa) atau cek tab Aturan Hangus. Import tetap bisa dilanjutkan.
+            Karyawan berikut punya <strong>peringatan data</strong> pada file (sisa cuti kosong/tidak terbaca, atau ada baris yang tidak
+            ikut dihitung). Angka ringkasan mengikuti Excel apa adanya. Import tetap bisa dilanjutkan.
           </p>
           <div className="devdata-table-wrap">
             <table className="devdata-table importreport__table">

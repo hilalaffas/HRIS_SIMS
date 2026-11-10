@@ -3,6 +3,7 @@ package sys.hris.sims.devtools.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime; // [BARU]
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet; // [BARU]
@@ -275,6 +276,32 @@ public class DevLeaveDataService {
             employee.setManualLeaveBalance(oldBalance.setScale(2, RoundingMode.HALF_UP));
         }
         employeeRepository.saveAndFlush(employee);
+    }
+
+    // ============================== [BARU] ANGKA EXCEL APA ADANYA ==============================
+
+    // Menyimpan angka cuti dari Excel APA ADANYA (terpakai, hangus, sisa; total = sisa + terpakai + hangus)
+    // dan menyamakan saldo sistem dengan sisa di Excel. Harus dipanggil di dalam transaksi.
+    // Validasi dulu: bila melempar IllegalArgumentException, belum ada yang diubah.
+    // Cuti baru yang disetujui setelah baselineAt dihitung logika sistem di atas angka ini
+    // (lihat LeaveSummaryService.summarize).
+    public String applyExcelBaseline(Employee employee, BigDecimal used, BigDecimal forfeited,
+                                     BigDecimal remaining, LocalDateTime baselineAt) {
+        assertNotDevAccount(employee);
+        BigDecimal total = remaining.add(used).add(forfeited);
+        validateRange(used, "Cuti terpakai");
+        validateRange(forfeited, "Cuti hangus");
+        validateRange(total, "Total cuti");
+
+        String balanceText = applyTotalRemaining(employee, remaining); // memvalidasi sisa & menimpa saldo
+
+        employee.setImportTotalLeave(total.setScale(2, RoundingMode.HALF_UP));
+        employee.setImportUsedLeave(used.setScale(2, RoundingMode.HALF_UP));
+        employee.setImportForfeitedLeave(forfeited.setScale(2, RoundingMode.HALF_UP));
+        employee.setImportRemainingLeave(remaining.setScale(2, RoundingMode.HALF_UP));
+        employee.setLeaveImportBaselineAt(baselineAt);
+        employeeRepository.saveAndFlush(employee);
+        return balanceText;
     }
 
     // ============================== INTI PENYESUAIAN ==============================

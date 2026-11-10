@@ -7,6 +7,7 @@ import sys.hris.sims.user.entity.User;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime; // [BARU]
 
 @Data
 @Builder
@@ -95,4 +96,27 @@ public class Employee {
 
     @Column(name = "annual_used_outside_period_start")
     private LocalDate annualUsedOutsidePeriodStart;
+
+    // [BARU V64] Angka cuti hasil import Excel (ledger), disimpan apa adanya. Semua null = belum pernah
+    // diimport -> Ringkasan Cuti dihitung sistem seperti biasa. precision/scale WAJIB sama dengan V64.
+    @Column(name = "import_total_leave", precision = 6, scale = 2)
+    private BigDecimal importTotalLeave;
+
+    @Column(name = "import_used_leave", precision = 6, scale = 2)
+    private BigDecimal importUsedLeave;
+
+    @Column(name = "import_forfeited_leave", precision = 6, scale = 2)
+    private BigDecimal importForfeitedLeave;
+
+    @Column(name = "import_remaining_leave", precision = 6, scale = 2)
+    private BigDecimal importRemainingLeave;
+
+    // Waktu import. Cuti baru yang disetujui SETELAH waktu ini memakai logika sistem di atas angka Excel.
+    @Column(name = "leave_import_baseline_at")
+    private LocalDateTime leaveImportBaselineAt;
+
+    // [BARU] true bila karyawan ini punya angka cuti dari import Excel.
+    public boolean hasLeaveImportBaseline() {
+        return importTotalLeave != null && importRemainingLeave != null && leaveImportBaselineAt != null;
+    }
 }
