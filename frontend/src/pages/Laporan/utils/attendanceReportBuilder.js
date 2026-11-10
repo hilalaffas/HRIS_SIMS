@@ -159,6 +159,15 @@ export function buildEmployeeReport(
   { range, holidaysByDate = LOCAL_HOLIDAYS_2026, now = new Date() },
 ) {
   const records = (employee.attendances || []).map(toDisplayRecord);
+  // Keep attendance evidence on its server-assigned work date (including overnight shifts).
+  const evidenceByDate = new Map();
+  records.forEach((record) => {
+    if (record.reasonCode !== 'ABSEN' || !['MASUK', 'KELUAR'].includes(record.actionCode)) return;
+    const evidence = evidenceByDate.get(record.attendanceDate) || {};
+    const key = record.actionCode === 'MASUK' ? 'checkInEvidence' : 'checkOutEvidence';
+    if (!evidence[key] || record.recordedAt < evidence[key].recordedAt) evidence[key] = record;
+    evidenceByDate.set(record.attendanceDate, evidence);
+  });
   const overtimes = (employee.overtimes || []).map(toDisplayOvertime);
   const leaveDayMap = buildLeaveDayMap(employee.leaves);
 
@@ -171,7 +180,7 @@ export function buildEmployeeReport(
   ));
   const rows = baseRows
     .filter((row) => row.date >= range.from && row.date <= range.to)
-    .map((row) => normalizeRow(row, { joinDate: employee.joinDate, leaveDayMap }))
+    .map((row) => ({ ...normalizeRow(row, { joinDate: employee.joinDate, leaveDayMap }), ...evidenceByDate.get(row.date) }))
     .sort((a, b) => (a.date < b.date ? -1 : 1)); // terlama dulu
 
   return {

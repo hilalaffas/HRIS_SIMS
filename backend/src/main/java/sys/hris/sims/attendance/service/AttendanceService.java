@@ -129,6 +129,22 @@ public class AttendanceService {
             throw new IllegalArgumentException("Koordinat lokasi tidak valid.");
         }
 
+        // Geofence wajib untuk absensi masuk yang memilih lokasi kantor.
+        // WFH/Dinas tidak dibatasi oleh titik kantor.
+        if (action.equals("MASUK") && locationType.equals("KANTOR")) {
+            if (!isOfficeCoordinateConfigured()) {
+                throw new IllegalStateException("Validasi titik kantor belum dikonfigurasi. Hubungi administrator.");
+            }
+            Integer officeDistance = officeDistanceMeters(
+                    request.getLatitude(), request.getLongitude(), locationType);
+            if (officeDistance != null && officeDistance > Math.max(0, officeRadiusMeters)) {
+                int outsideMeters = officeDistance - Math.max(0, officeRadiusMeters);
+                throw new IllegalArgumentException(
+                        "Lokasi di luar jangkauan kantor (+" + outsideMeters
+                                + " m). Pastikan Anda berada di area kantor untuk melakukan absensi.");
+            }
+        }
+
         if (request.getPhoto() == null || request.getPhoto().isEmpty()) {
             throw new IllegalArgumentException("Foto bukti kehadiran wajib diunggah.");
         }
@@ -275,7 +291,7 @@ public class AttendanceService {
     // hanya bawahan di divisi approver (lihat ApprovalScopeService).
     public List<AttendanceResponse> getSickApprovals(Authentication authentication) {
         ApprovalScope scope = approvalScopeService.resolve(authentication);
-        return attendanceRepository.findByReasonAndActionOrderByRecordedAtDesc("SAKIT", "MASUK")
+        return attendanceRepository.findByReasonOrderByRecordedAtDesc("SAKIT")
                 .stream()
                 .filter(attendance -> scope.canHandle(attendance.getEmployee()))
                 .map(this::toResponse)
@@ -319,17 +335,27 @@ public class AttendanceService {
         // juga ditegakkan di sini -- bukan cuma di popup -- supaya request langsung ke API
         // tidak bisa mengajukan banyak hari tanpa bukti.
         boolean hasDocument = request.getDocument() != null && !request.getDocument().isEmpty();
-        int days = isSick && hasDocument && request.getDays() != null ? request.getDays() : 1;
-        if (days < 1 || days > MAX_SICK_DAYS) {
+        boolean earlyCheckout = request.isEarlyCheckout();
+        if (earlyCheckout && (!isSick || !attendanceRepository.existsActiveByActionAndReasonIn(
+                employeeId, permissionDate, "MASUK", List.of("ABSEN"))
+                || attendanceRepository.existsActiveByAction(employeeId, permissionDate, "KELUAR"))) {
+            throw new IllegalStateException("Izin sakit pulang cepat memerlukan check-in aktif dan belum check-out hari ini.");
+        }
+        double days = isSick && (hasDocument || earlyCheckout) && request.getDays() != null ? request.getDays() : 1;
+        if (earlyCheckout && days != 0.5 && days != 1) {
+            throw new IllegalArgumentException("Lama izin sakit pulang cepat harus 0,5 atau 1 hari.");
+        }
+        if (!earlyCheckout && (days < 1 || days > MAX_SICK_DAYS || days != Math.floor(days))) {
             throw new IllegalArgumentException("Lama izin sakit harus 1 sampai " + MAX_SICK_DAYS + " hari kerja.");
         }
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = permissionDate;
         // [UBAH] Pengajuan sakit yang DITOLAK tidak menghalangi pengajuan / absen baru.
-        if (attendanceRepository.existsActiveByAction(employeeId, today, "MASUK")) {
+        if (!earlyCheckout && attendanceRepository.existsActiveByAction(employeeId, today, "MASUK")) {
             throw new IllegalStateException("Anda sudah tercatat check-in / sakit hari ini, pengajuan izin tidak bisa dibuat.");
         }
-        if (isSick && hasActiveSick(employeeId, today)) {
+        if (isSick && (hasActiveSick(employeeId, today)
+                || attendanceRepository.existsActiveByActionAndReasonIn(employeeId, today, "SAKIT", List.of("SAKIT")))) {
             throw new IllegalStateException("Anda masih tercatat sakit hari ini dari pengajuan sebelumnya.");
         }
         if (!isSick && attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employeeId, today, "IZIN")) {
@@ -345,7 +371,7 @@ public class AttendanceService {
 
         Attendance attendance = Attendance.builder()
                 .employee(employee)
-                .action(isSick ? "MASUK" : "IZIN")
+                .action(isSick ? (earlyCheckout ? "SAKIT" : "MASUK") : "IZIN")
                 .reason(isSick ? "SAKIT" : "IZIN")
                 .status(isSick ? "SICK" : "IZIN")
                 .note(note)
@@ -405,7 +431,7 @@ public class AttendanceService {
                 .anyMatch(sick -> {
                     LocalDate start = sick.getAttendanceDate();
                     if (date.equals(start)) return true;
-                    int days = sick.getLeaveDays() == null ? 1 : sick.getLeaveDays();
+                    int days = sick.getLeaveDays() == null ? 1 : (int) Math.ceil(sick.getLeaveDays());
                     return date.isAfter(start) && !isWeekend(date) && !date.isAfter(getSickEndDate(start, days));
                 });
     }

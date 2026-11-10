@@ -103,7 +103,7 @@ public class Attendance {
 
     // [UBAH] Lama izin sakit (HARI KERJA, tanpa Sabtu/Minggu) mulai dari attendanceDate. Default 1.
     @Column(name = "leave_days", nullable = false)
-    private Integer leaveDays;
+    private Double leaveDays;
 
     // [BARU] URL surat dokter; null = belum diunggah (surat boleh menyusul).
     @Column(name = "document_url", length = 500)
@@ -136,7 +136,7 @@ public class Attendance {
             this.approvalStatus = "NOT_REQUIRED";
         }
         if (this.leaveDays == null) {
-            this.leaveDays = 1; // [BARU]
+            this.leaveDays = 1.0; // [BARU]
         }
         if (this.documentRequired == null) {
             this.documentRequired = false; // [BARU]

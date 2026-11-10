@@ -152,8 +152,8 @@ const countWorkingDays = (startDate, endDate, holidayDates, jenisCuti, isFemale 
   return total;
 };
 
-export default function useLeaveApplication(user, { notify = (message) => window.alert(message), onSubmitted = null, formTopRef = null } = {}) {
-  const todayStr = isoToday();
+export default function useLeaveApplication(user, { notify = (message) => window.alert(message), onSubmitted = null, formTopRef = null, earlyCheckout = false } = {}) {
+  const todayStr = earlyCheckout ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()) : isoToday();
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU] baca query param dari notifikasi cuti disetujui
   const userRole = user?.role || user?.jabatan || 'Karyawan';
   const atasan = isSupervisor(userRole);
@@ -182,7 +182,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
   // `error` (pesan teks yang sudah tampil lewat NotifModal). Konsisten
   // dengan pola form ini yang menampilkan SATU error pada satu waktu.
   const [invalidField, setInvalidField] = useState('');
-  const [jenisCuti, setJenisCuti] = useState('');
+  const [jenisCuti, setJenisCuti] = useState(earlyCheckout ? 'Cuti Urgent' : '');
   // [UBAH] Cuti Meninggal ikut dibebaskan dari jeda H-5 (bisa diajukan
   // kapan saja), dicek pakai isBereavementLeave() supaya tetap berlaku
   // walau nama tepatnya berbeda suffix.
@@ -340,6 +340,10 @@ export default function useLeaveApplication(user, { notify = (message) => window
   const handleSubmit = async (event) => {
     event.preventDefault();
     setInvalidField('');
+    if (earlyCheckout && (jenisCuti !== 'Cuti Urgent' || startDate !== todayStr || endDate !== todayStr)) {
+      setError('Pulang cepat harus menggunakan Cuti Urgent untuk hari ini.');
+      return false;
+    }
 
     // [BARU] Sebelumnya ALASAN, PEKERJAAN TERTUNDA, dan DICOVER OLEH cuma
     // mengandalkan atribut HTML `required` di ReasonCoverageSection.jsx --
@@ -705,14 +709,14 @@ export default function useLeaveApplication(user, { notify = (message) => window
   // [BARU] Props siap-spread untuk <LeaveForm> (formulir utama) dan versi edit
   // di dalam popup detail -- sebelumnya daftar prop ini ditulis dua kali di JSX.
   const formProps = {
-    jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, urgentDurasi, setUrgentDurasi,
-    startDate, setStartDate, endDate, setEndDate, reason, setReason,
+    jenisCuti, setJenisCuti: earlyCheckout ? () => {} : setJenisCuti, durasiSesi, setDurasiSesi, urgentDurasi, setUrgentDurasi,
+    startDate, setStartDate: earlyCheckout ? () => {} : setStartDate, endDate, setEndDate: earlyCheckout ? () => {} : setEndDate, reason, setReason,
     leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId,
     managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
     pendingWork, setPendingWork, coveredBy, setCoveredBy, coverOptions,
     handleSubmit, isSubmitting, todayStr, jumlahHariCuti,
     isEditing: Boolean(editingId), onCancelEdit: cancelEdit, invalidField,
-    leaveTypes: types, approvers, isSupervisor: atasan, isFemale,
+    leaveTypes: earlyCheckout ? types.filter(type => type.name === 'Cuti Urgent') : types, approvers, isSupervisor: atasan, isFemale,
     holidayDates, bookedDates, coverageReminders, canApplyCuti: true,
   };
   const editFormProps = {
