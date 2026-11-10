@@ -24,6 +24,7 @@ const ITEMS_PER_PAGE = 3;
 export default function AnnouncementSection({ onEdit, onDelete, mode }) {
   const [announcements, setAnnouncements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [previewImage, setPreviewImage] = useState(null);
   const isAdminMode = mode === 'admin';
   // [BARU] State halaman aktif untuk paging daftar berita.
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,6 +71,15 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
     const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
     return announcements.slice(start, start + ITEMS_PER_PAGE);
   }, [announcements, safeCurrentPage]);
+
+  useEffect(() => {
+    if (!previewImage) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setPreviewImage(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [previewImage]);
 
   if (isLoading) {
     // [UBAH] Skeleton 2 kartu mengikuti bentuk kartu pengumuman asli
@@ -165,7 +175,13 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
                   lewat openLinksInNewTab() -- berlaku juga untuk berita LAMA
                   yang tersimpan tanpa target, jadi tidak perlu migrasi data. */}
               <div
-                className="text-sm text-gray-500 leading-relaxed  [&_img]:h-48  [&_img]:rounded-lg [&_img]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline [&_a]:text-[var(--color-primary)]"
+                className="text-sm text-gray-500 leading-relaxed [&_img]:h-48 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2 [&_img]:cursor-zoom-in [&_img]:transition-opacity [&_img:hover]:opacity-90 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:underline [&_a]:text-[var(--color-primary)]"
+                onClick={(event) => {
+                  const image = event.target.closest('img');
+                  if (!image || !event.currentTarget.contains(image)) return;
+                  event.preventDefault();
+                  setPreviewImage({ src: image.currentSrc || image.src, alt: image.alt || 'Gambar berita' });
+                }}
                 dangerouslySetInnerHTML={{ __html: openLinksInNewTab(item.isi) }}
               />
               {isAdminMode && (item.publishAt || item.expiresAt) && (
@@ -202,6 +218,36 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
           >
             Berikutnya <i className="fa-solid fa-chevron-right ml-1"></i>
           </button>
+        </div>
+      )}
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4"
+          role="presentation"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative flex max-h-full max-w-full items-center justify-center"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Pratinjau gambar berita"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-xl font-bold text-gray-800 shadow-lg hover:bg-gray-100"
+              aria-label="Tutup pratinjau gambar"
+              onClick={() => setPreviewImage(null)}
+            >
+              ×
+            </button>
+            <img
+              src={previewImage.src}
+              alt={previewImage.alt}
+              className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain shadow-2xl"
+            />
+          </div>
         </div>
       )}
     </div>
