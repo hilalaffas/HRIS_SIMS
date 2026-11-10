@@ -19,6 +19,9 @@ public class AttendanceSubmitRequest {
 
     private String note;
 
+    // KANTOR atau WFH_DINAS (khusus check-in; null untuk data lama/check-out).
+    private String locationType;
+
     // Wajib diisi -- lihat AttendanceService.submit(): tanpa koordinat GPS,
     // pengajuan ditolak dengan pesan yang jelas ke frontend.
     private Double latitude;

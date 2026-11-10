@@ -22,6 +22,11 @@ public class LeaveBalanceResponse {
     private BigDecimal remainingAnnualLeave;
     // [BARU] "Dapat digunakan hingga ..." di Dashboard -- null kalau belum berhak
     private LocalDate annualPeriodEnd;
+    // [BARU] Awal periode anniversary berjalan -- null kalau belum berhak
+    private LocalDate annualPeriodStart;
+    // [BARU] Bagian "terpakai" yang berasal dari data manual di luar sistem (sudah termasuk
+    // di usedAnnualLeave) -- dipakai halaman /devAccess untuk menghitung penyesuaian
+    private BigDecimal annualUsedOutsideSystem;
     // [BARU] "Cuti tahunan mulai berlaku ..." -- null kalau sudah berhak
     private LocalDate annualEligibleFrom;
 

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Layers3, RotateCcw, Save, Send } from 'lucide-react';
+import { CalendarDays, Download, Layers3, RotateCcw, Save, Send, Upload } from 'lucide-react';
+import { unzipSync, strFromU8 } from 'fflate';
 import DataDivisi from './components/DataDivisi';
 import { getAllDivisi, createDivisi, updateDivisi } from '../../services/divisiService';
 import { getKaryawanList } from '../../services/karyawanService';
 import { getAllShift } from '../../services/shiftService';
 import { getJadwalByMonth, publishJadwal, resetJadwal } from '../../services/jadwalService';
-import { getHolidaysByMonth } from '../../services/holidayService';
 import './KelolaDivisiShift.css';
 import './components/DataDivisi.css';
 
@@ -42,7 +42,49 @@ const timeHours = (shift) => {
   const [eh, em] = shift.endTime.split(':').map(Number);
   return ((eh * 60 + em - sh * 60 - sm + 1440) % 1440) / 60 || 0;
 };
-const shiftCodesByCount = { 2: ['S', 'M'], 3: ['P', 'S', 'M'], 4: ['P', 'S', 'SO', 'M'] };
+const standardShiftCodes = { 2: ['P', 'S'], 3: ['P', 'S', 'M'], 4: ['P', 'S', 'SO', 'M'] };
+const codeForIndex = (index) => ['P', 'S', 'SO', 'M', 'X', 'Y'][index] || `SHIFT${index + 1}`;
+const codeFromShiftName = (name, index, count) => {
+  const normalized = String(name || '').toLowerCase();
+  if (normalized.includes('pagi')) return 'P';
+  if (normalized.includes('siang')) return 'S';
+  if (normalized.includes('sore')) return 'SO';
+  if (normalized.includes('malam')) return 'M';
+  return count <= 4 ? (standardShiftCodes[count]?.[index] || codeForIndex(index)) : codeForIndex(index);
+};
+const parseScheduleXlsx = async (file) => {
+  const zip = unzipSync(new Uint8Array(await file.arrayBuffer()));
+  const xml = (name) => zip[name] ? strFromU8(zip[name]) : '';
+  const workbook = new DOMParser().parseFromString(xml('xl/workbook.xml'), 'application/xml');
+  const rels = new DOMParser().parseFromString(xml('xl/_rels/workbook.xml.rels'), 'application/xml');
+  const target = [...workbook.getElementsByTagName('sheet')].find((sheet) => sheet.getAttribute('name') === 'Jadwal');
+  if (!target) throw new Error('File harus memiliki sheet bernama Jadwal.');
+  const relation = target.getAttribute('r:id');
+  const relationTarget = [...rels.getElementsByTagName('Relationship')].find((item) => item.getAttribute('Id') === relation)?.getAttribute('Target');
+  if (!relationTarget) throw new Error('Sheet Jadwal tidak dapat dibaca.');
+  const pathParts = ['xl'];
+  (relationTarget.startsWith('/') ? relationTarget.slice(1) : relationTarget).split('/').forEach((part) => {
+    if (part === '..') pathParts.pop(); else if (part && part !== '.') pathParts.push(part);
+  });
+  const path = pathParts.join('/');
+  const sharedDoc = new DOMParser().parseFromString(xml('xl/sharedStrings.xml'), 'application/xml');
+  const shared = [...sharedDoc.getElementsByTagName('si')].map((item) => [...item.getElementsByTagName('t')].map((node) => node.textContent || '').join(''));
+  const sheetDoc = new DOMParser().parseFromString(xml(path), 'application/xml');
+  return [...sheetDoc.getElementsByTagName('row')].map((row) => {
+    const cells = [];
+    [...row.getElementsByTagName('c')].forEach((cell) => {
+      const ref = cell.getAttribute('r') || '';
+      const colName = ref.match(/^[A-Z]+/)?.[0] || 'A';
+      const col = [...colName].reduce((sum, char) => sum * 26 + char.charCodeAt(0) - 64, 0) - 1;
+      const valueNode = cell.getElementsByTagName('v')[0];
+      let value = valueNode?.textContent || '';
+      if (cell.getAttribute('t') === 's') value = shared[Number(value)] || '';
+      if (cell.getAttribute('t') === 'inlineStr') value = [...cell.getElementsByTagName('t')].map((node) => node.textContent || '').join('');
+      cells[col] = value;
+    });
+    return cells;
+  });
+};
 
 export default function KelolaDivisiShift({ standalone = false, karyawanList: initialEmployees }) {
   const [tab, setTab] = useState('divisi');
@@ -61,6 +103,13 @@ export default function KelolaDivisiShift({ standalone = false, karyawanList: in
   const formCardRef = useRef(null);
   const nameInputRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  const importInputRef = useRef(null);
+  const cellRefs = useRef(new Map());
+  const [cellDrafts, setCellDrafts] = useState({});
+  const scheduleDirtyRef = useRef(false);
+  const copiedRangeRef = useRef('');
+  const selectionStartRef = useRef(null);
+  const [cellSelection, setCellSelection] = useState(null);
   const [error, setError] = useState('');
   const notify = (message, type = 'success') => setToast({ message, type });
   useEffect(() => {
@@ -93,7 +142,8 @@ export default function KelolaDivisiShift({ standalone = false, karyawanList: in
   useEffect(() => { if (initialEmployees) setEmployees(initialEmployees); }, [initialEmployees]);
   useEffect(() => {
     const [y, m] = month.split('-').map(Number);
-    getJadwalByMonth(y, m).then((data) => setEntries(data || [])).catch((err) => setError(err.message || 'Jadwal gagal dimuat.'));
+    scheduleDirtyRef.current = false;
+    getJadwalByMonth(y, m).then((data) => { if (!scheduleDirtyRef.current) setEntries(data || []); }).catch((err) => setError(err.message || 'Jadwal gagal dimuat.'));
   }, [month]);
 
   const resetForm = () => { setName(''); setType('REGULAR'); setShifts(defaultShifts()); setShiftMode('TEMPLATE'); setEditingId(null); };
@@ -156,21 +206,201 @@ export default function KelolaDivisiShift({ standalone = false, karyawanList: in
   const shiftColorFor = (employee, shift) => {
     const configuredShifts = employeeShifts(employee);
     const index = configuredShifts.findIndex((item) => Number(item.shiftId) === Number(shift.shiftId));
-    return shiftCodesByCount[configuredShifts.length]?.[index] || SHIFT_CODES[index] || 'P';
+    return codeFromShiftName(shift.name, index, configuredShifts.length);
   };
   const shiftLegend = [...new Map(visibleEmployees.flatMap((employee) => employeeShifts(employee).map((shift) => {
     const code = shiftColorFor(employee, shift);
-    const labels = { P: 'P: PAGI', S: 'S: SIANG', SO: 'SO: SORE', M: 'M: MALAM', X: 'X: SHIFT 5', Y: 'Y: SHIFT 6' };
-    return [code, { code, label: labels[code] || `${code}: ${shift.name.toUpperCase()}` }];
-  }))).values()].sort((a, b) => SHIFT_CODES.indexOf(a.code) - SHIFT_CODES.indexOf(b.code));
+    return [code, { code, label: `${code}: ${shift.name.toUpperCase()}`, shift }];
+  }))).values()].sort((a, b) => {
+    const employee = visibleEmployees.find((item) => employeeShifts(item).some((shift) => shiftColorFor(item, shift) === a.code));
+    const other = visibleEmployees.find((item) => employeeShifts(item).some((shift) => shiftColorFor(item, shift) === b.code));
+    return employeeShifts(employee || {}).findIndex((shift) => shiftColorFor(employee || {}, shift) === a.code)
+      - employeeShifts(other || {}).findIndex((shift) => shiftColorFor(other || {}, shift) === b.code);
+  });
   const entryKey = (employeeId, date) => `${employeeId}|${date}`;
   const setCell = (employeeId, date, shiftId) => setEntries((prev) => {
+    scheduleDirtyRef.current = true;
     const map = new Map(prev.map((x) => [entryKey(x.employeeId, x.date), x]));
     const key = entryKey(employeeId, date);
     if (shiftId === undefined) map.delete(key);
     else map.set(key, { employeeId, date, shiftId });
     return [...map.values()];
   });
+  const applyCellCode = (employee, day, rawCode) => {
+    const code = String(rawCode ?? '').trim().toUpperCase();
+    const date = `${month}-${String(day).padStart(2, '0')}`;
+    if (!code) { setCell(employee.employeeId, date, undefined); return true; }
+    if (code === 'O') { setCell(employee.employeeId, date, null); return true; }
+    const shift = employeeShifts(employee).find((item) => shiftColorFor(employee, item) === code);
+    if (!shift) return false;
+    setCell(employee.employeeId, date, Number(shift.shiftId));
+    return true;
+  };
+  const setCellDraft = (employeeId, day, value) => setCellDrafts((current) => ({ ...current, [`${employeeId}|${day}`]: value }));
+  const commitCellDraft = (employee, day) => {
+    const key = `${employee.employeeId}|${day}`;
+    if (!Object.prototype.hasOwnProperty.call(cellDrafts, key)) return true;
+    const value = cellDrafts[key];
+    if (applyCellCode(employee, day, value)) {
+      setCellDrafts((current) => { const next = { ...current }; delete next[key]; return next; });
+      return true;
+    }
+    notify(`Kode ${value} tidak valid untuk ${employee.fullName}.`, 'error');
+    setCellDrafts((current) => { const next = { ...current }; delete next[key]; return next; });
+    return false;
+  };
+  const pasteCellRange = (startEmployeeIndex, startDay, pasted) => {
+    const values = pasted.replace(/\r/g, '').replace(/\n+$/, '').split('\n').map((line) => line.split('\t'));
+    let invalid = 0;
+    values.forEach((row, rowIndex) => row.forEach((value, colIndex) => {
+      const employee = visibleEmployees[startEmployeeIndex + rowIndex];
+      const day = startDay + colIndex;
+      if (employee && days.includes(day)) {
+        const key = `${employee.employeeId}|${day}`;
+        if (!applyCellCode(employee, day, value)) invalid += 1;
+        else setCellDrafts((current) => { const next = { ...current }; delete next[key]; return next; });
+      }
+    }));
+    scheduleDirtyRef.current = true;
+    notify(invalid ? `${invalid} sel berisi kode shift yang tidak valid; sel valid tetap ditempel.` : 'Jadwal berhasil ditempel ke tabel.');
+  };
+  const copyText = async (text, message) => {
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const helper = document.createElement('textarea'); helper.value = text; helper.style.position = 'fixed'; helper.style.opacity = '0';
+        document.body.appendChild(helper); helper.select();
+        if (!document.execCommand('copy')) throw new Error('Clipboard tidak tersedia.');
+        helper.remove();
+      }
+      copiedRangeRef.current = text;
+      notify(message);
+    } catch { notify('Clipboard tidak dapat diakses. Pilih dan salin isi sel secara manual.', 'error'); }
+  };
+  const copyScheduleCell = (employee, day) => {
+    const draftKey = `${employee.employeeId}|${day}`;
+    const value = cellDrafts[draftKey] ?? (() => {
+      const id = getCell(employee.employeeId, day);
+      const shift = id && id !== 'OFF' ? shiftFor(id) : null;
+      return id === 'OFF' ? 'O' : shift ? shiftColorFor(employee, shift) : '';
+    })();
+    copyText(value, `Kode ${value || '(kosong)'} disalin.`);
+  };
+  const copyScheduleRow = (employee) => copyText(days.map((day) => {
+    const draft = cellDrafts[`${employee.employeeId}|${day}`];
+    if (draft !== undefined) return draft;
+    const id = getCell(employee.employeeId, day);
+    const shift = id && id !== 'OFF' ? shiftFor(id) : null;
+    return id === 'OFF' ? 'O' : shift ? shiftColorFor(employee, shift) : '';
+  }).join('\t'), `Jadwal ${employee.fullName} disalin.`);
+  const copyScheduleColumn = (day) => copyText(visibleEmployees.map((employee) => {
+    const draft = cellDrafts[`${employee.employeeId}|${day}`];
+    if (draft !== undefined) return draft;
+    const id = getCell(employee.employeeId, day);
+    const shift = id && id !== 'OFF' ? shiftFor(id) : null;
+    return id === 'OFF' ? 'O' : shift ? shiftColorFor(employee, shift) : '';
+  }).join('\n'), `Jadwal tanggal ${day} disalin.`);
+  const scheduleCodeAt = (employee, day) => {
+    const draft = cellDrafts[`${employee.employeeId}|${day}`];
+    if (draft !== undefined) return draft;
+    const id = getCell(employee.employeeId, day);
+    const shift = id && id !== 'OFF' ? shiftFor(id) : null;
+    return id === 'OFF' ? 'O' : shift ? shiftColorFor(employee, shift) : '';
+  };
+  const handleCellCopy = (event, employeeIndex, day) => {
+    if (cellSelection && (cellSelection.startEmployee !== cellSelection.endEmployee || cellSelection.startDay !== cellSelection.endDay)) {
+      const minRow = Math.min(cellSelection.startEmployee, cellSelection.endEmployee);
+      const maxRow = Math.max(cellSelection.startEmployee, cellSelection.endEmployee);
+      const minDay = Math.min(cellSelection.startDay, cellSelection.endDay);
+      const maxDay = Math.max(cellSelection.startDay, cellSelection.endDay);
+      const text = visibleEmployees.slice(minRow, maxRow + 1).map((employee) => days.filter((d) => d >= minDay && d <= maxDay).map((d) => scheduleCodeAt(employee, d)).join('\t')).join('\n');
+      event.clipboardData.setData('text/plain', text);
+      copiedRangeRef.current = text;
+      event.preventDefault();
+      notify('Rentang jadwal disalin.');
+      return;
+    }
+    const value = scheduleCodeAt(visibleEmployees[employeeIndex], day);
+    event.clipboardData.setData('text/plain', value);
+    copiedRangeRef.current = value;
+    event.preventDefault();
+    notify(`Kode ${value || '(kosong)'} disalin.`);
+  };
+  const exportSchedule = async () => {
+    try {
+      const { default: writeXlsxFile } = await import('write-excel-file/browser');
+      const scheduleRows = [
+      [{ value: `Jadwal Shift ${month}`, type: String, fontWeight: 'bold', columnSpan: 33 }, ...Array(32).fill(null)],
+      [{ value: 'Kode shift: ' + [...shiftLegend.map((item) => `${item.code} = ${item.shift.name} (${item.shift.startTime}–${item.shift.endTime})`), 'O = OFF'].join(' | '), type: String, columnSpan: 33 }, ...Array(32).fill(null)],
+      ['ID Karyawan', 'Nama Karyawan', ...Array.from({ length: 31 }, (_, index) => String(index + 1))].map((value) => ({ value, type: String, fontWeight: 'bold', backgroundColor: '#e2e8f0' })),
+        ...visibleEmployees.map((employee) => [
+          { value: String(employee.employeeId), type: String },
+          { value: employee.fullName, type: String },
+          ...Array.from({ length: 31 }, (_, index) => {
+            const day = index + 1;
+            const id = getCell(employee.employeeId, day);
+            const shift = id && id !== 'OFF' ? shiftFor(id) : null;
+            const value = id === 'OFF' ? 'O' : shift ? shiftColorFor(employee, shift) : '';
+            return { value, type: String, backgroundColor: value === 'O' ? '#eff6ff' : '#ffffff' };
+          }),
+        ]),
+      ];
+      const legendRows = [['Kode', 'Keterangan shift', 'Jam masuk', 'Jam pulang'], ...[...new Map(visibleEmployees.flatMap((employee) => employeeShifts(employee).map((shift) => [shiftColorFor(employee, shift), { code: shiftColorFor(employee, shift), shift }]))).values()].map(({ code, shift }) => [code, shift.name, shift.startTime, shift.endTime]), ['O', 'OFF / Libur', '-', '-']];
+      const blob = await writeXlsxFile([
+        { sheet: 'Jadwal', data: scheduleRows },
+        { sheet: 'Keterangan Shift', data: legendRows.map((row) => row.map((value) => ({ value, type: String }))) },
+      ]).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = `jadwal_shift_${month}.xlsx`; link.click(); URL.revokeObjectURL(url);
+    } catch (err) { notify(err.message || 'File XLSX gagal dibuat.', 'error'); }
+  };
+  const importSchedule = async (file) => {
+    if (!file) return;
+    try {
+      const rows = await parseScheduleXlsx(file);
+      const header = rows.findIndex((row) => String(row[0] || '').trim().toLowerCase() === 'id karyawan');
+      if (header < 0) throw new Error('Sheet Jadwal tidak memiliki header ID Karyawan yang valid.');
+      const headerRow = rows[header].slice(2).map((value) => String(value ?? '').trim());
+      const dayIndexes = new Map(days.map((day) => [String(day), day]));
+      const badCells = [];
+      const imported = [];
+      const employeeById = new Map(visibleEmployees.map((employee) => [String(employee.employeeId), employee]));
+      let malformedCell = false;
+      const seenEmployees = new Set();
+      rows.slice(header + 1).forEach((row) => {
+        const employee = employeeById.get(String(row[0] ?? '').trim());
+        if (!employee) return;
+        if (seenEmployees.has(String(employee.employeeId))) {
+          badCells.push(`${employee.fullName}: baris karyawan duplikat`);
+          return;
+        }
+        seenEmployees.add(String(employee.employeeId));
+        headerRow.forEach((dayLabel, col) => {
+          const day = dayIndexes.get(dayLabel);
+          const code = String(row[col + 2] ?? '').trim().toUpperCase();
+          if (!day) { if (code) malformedCell = true; return; }
+          if (!code) return;
+          if (code === 'O') imported.push({ employeeId: employee.employeeId, date: `${month}-${String(day).padStart(2, '0')}`, shiftId: null });
+          else {
+            const shift = employeeShifts(employee).find((item) => shiftColorFor(employee, item) === code);
+            if (shift) imported.push({ employeeId: employee.employeeId, date: `${month}-${String(day).padStart(2, '0')}`, shiftId: Number(shift.shiftId) });
+            else badCells.push(`${employee.fullName}, tanggal ${day}: ${code}`);
+          }
+        });
+      });
+      visibleEmployees.forEach((employee) => days.forEach((day) => {
+        if (!imported.some((entry) => Number(entry.employeeId) === Number(employee.employeeId) && Number(entry.date.slice(-2)) === day)) badCells.push(`${employee.fullName}, tanggal ${day}: kosong`);
+      }));
+      visibleEmployees.forEach((employee) => { if (!seenEmployees.has(String(employee.employeeId))) badCells.push(`${employee.fullName}: baris karyawan tidak ditemukan`); });
+      if (malformedCell) badCells.unshift('Terdapat kode pada kolom tanggal yang tidak valid.');
+      if (badCells.length) throw new Error(`Jadwal harus lengkap dan hanya memakai kode shift divisi atau O: ${badCells.slice(0, 8).join('; ')}${badCells.length > 8 ? `; dan ${badCells.length - 8} lainnya` : ''}`);
+      const ids = new Set(visibleEmployees.map((employee) => Number(employee.employeeId)));
+      scheduleDirtyRef.current = true;
+      setEntries((previous) => [...previous.filter((entry) => entry.date.slice(0, 7) !== month || !ids.has(Number(entry.employeeId))), ...imported]);
+      notify(`Impor selesai: ${imported.length} sel jadwal dimuat. Periksa lalu publikasikan.`);
+    } catch (err) { notify(err.message || 'File jadwal gagal dibaca.', 'error'); }
+    finally { if (importInputRef.current) importInputRef.current.value = ''; }
+  };
   const getCell = (employeeId, day) => {
     const row = entries.find((x) => Number(x.employeeId) === Number(employeeId) && Number(x.date.slice(-2)) === day && x.date.slice(0, 7) === month);
     return !row ? '' : row.shiftId == null ? 'OFF' : String(row.shiftId);
@@ -238,79 +468,6 @@ export default function KelolaDivisiShift({ standalone = false, karyawanList: in
       ? `Jadwal ${previousKey} disalin. Data bulan sebelumnya tidak ditemukan untuk: ${missingEmployees.join(', ')}.`
       : `Jadwal bulan ${previousKey} berhasil disalin ke ${month}. Periksa jadwal lalu publikasikan.`, missingEmployees.length ? 'error' : 'success');
   };
-  const generateEntries = async () => {
-    const [y, m] = month.split('-').map(Number);
-    if (!visibleEmployees.length) { notify('Tidak ada karyawan aktif pada divisi Non Regular (Shift) yang dipilih.', 'error'); return null; }
-    const missingShiftEmployees = visibleEmployees.filter((employee) => employeeShifts(employee).length === 0);
-    if (missingShiftEmployees.length) {
-      const names = [...new Set(missingShiftEmployees.map((employee) => divisionFor(employee)?.namaDivisi || 'Divisi tanpa nama'))];
-      notify(`Shift untuk ${names.join(', ')} belum terhubung ke jadwal. Buka Kelola Divisi, edit divisi, lalu klik Simpan Perubahan.`, 'error');
-      return null;
-    }
-    let holidayKeys;
-    try {
-      const result = await getHolidaysByMonth(y, m, { silent: true });
-      holidayKeys = new Set((result?.data || result || []).map((holiday) => holiday.date));
-    } catch (err) {
-      notify(err.message || 'Hari libur nasional gagal dimuat; jadwal tidak dibuat.', 'error');
-      return null;
-    }
-    const next = [];
-    visibleEmployees.forEach((emp, row) => {
-      let monthlyHours = 0;
-      let assignedWorkdays = 0;
-      const assignedShifts = employeeShifts(emp);
-      const weeks = new Map();
-      days.forEach((day) => {
-        const date = new Date(y, m - 1, day);
-        const monday = new Date(y, m - 1, day - ((date.getDay() + 6) % 7));
-        const weekKey = `${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
-        if (!weeks.has(weekKey)) weeks.set(weekKey, []);
-        weeks.get(weekKey).push(day);
-      });
-      [...weeks.values()].forEach((weekDays, weekIndex) => {
-        const availableDays = weekDays.filter((day) => !holidayKeys.has(`${month}-${String(day).padStart(2, '0')}`));
-        const offset = availableDays.length ? (row + weekIndex) % availableDays.length : 0;
-        const rotatedDays = availableDays.map((_, index) => availableDays[(index + offset) % availableDays.length]);
-        const assignments = new Map();
-        let weeklyHours = 0;
-        let weeklyWorkdays = 0;
-        rotatedDays.forEach((day) => {
-          if (weeklyWorkdays >= Math.max(0, weekDays.length - 1)) return;
-          const shift = assignedShifts[(row + Math.floor(assignedWorkdays / 2)) % assignedShifts.length];
-          const hours = timeHours(shift);
-          if (weeklyHours + hours > 40 || monthlyHours + hours > 160) return;
-          assignments.set(day, shift);
-          weeklyHours += hours;
-          monthlyHours += hours;
-          weeklyWorkdays += 1;
-          assignedWorkdays += 1;
-        });
-        weekDays.forEach((day) => {
-          const dateKey = `${month}-${String(day).padStart(2, '0')}`;
-          const shift = assignments.get(day);
-          next.push({ employeeId: emp.employeeId, date: dateKey, shiftId: shift ? shift.shiftId : null });
-        });
-      });
-    });
-    return next;
-  };
-  const generate = async () => {
-    const next = await generateEntries();
-    if (!next) return;
-    const replaceIds = new Set(visibleEmployees.map((employee) => Number(employee.employeeId)));
-    setEntries((prev) => [...prev.filter((x) => x.date.slice(0, 7) !== month || !replaceIds.has(Number(x.employeeId))), ...next]);
-    notify('Jadwal dibuat dengan batas 40 jam per minggu, maksimal 160 jam per bulan, libur mingguan, dan rotasi shift.', 'success');
-  };
-  const hasFairShiftRotation = (schedule) => visibleEmployees.every((employee) => {
-    const shiftsForEmployee = employeeShifts(employee);
-    if (shiftsForEmployee.length < 2) return false;
-    const counts = shiftsForEmployee.map((shift) => schedule.filter((entry) =>
-      Number(entry.employeeId) === Number(employee.employeeId)
-      && Number(entry.shiftId) === Number(shift.shiftId)
-    ).length);
-    return Math.max(...counts) - Math.min(...counts) <= 2;
-  });
   const publish = async () => {
     if (!visibleEmployees.length) return notify('Tidak ada karyawan aktif pada divisi Non Regular (Shift) yang dipilih.', 'error');
     const selectedIds = new Set(visibleEmployees.map((employee) => Number(employee.employeeId)));
@@ -322,15 +479,8 @@ export default function KelolaDivisiShift({ standalone = false, karyawanList: in
       return employeeEntries.length === days.length
         && employeeEntries.every((entry) => entry.shiftId == null || validShiftIds.has(Number(entry.shiftId)));
     });
-    if (!currentScheduleMatchesDivision) {
-      const generated = await generateEntries();
-      if (!generated) return;
-      current = generated;
-      setEntries((prev) => [...prev.filter((entry) => entry.date.slice(0, 7) !== month || !selectedIds.has(Number(entry.employeeId))), ...generated]);
-      notify('Jadwal dibuat otomatis. Sedang memublikasikan jadwal shift…', 'success');
-    }
+    if (!currentScheduleMatchesDivision) return notify('Jadwal belum lengkap atau berisi shift yang tidak sesuai. Lengkapi semua tanggal secara manual atau impor file XLS sebelum publikasi.', 'error');
     if (!current.length) return notify('Belum ada jadwal untuk dipublikasikan.', 'error');
-    if (!hasFairShiftRotation(current)) return notify('Rotasi shift belum merata. Atur kembali agar selisih jumlah shift setiap karyawan maksimal 2 hari.', 'error');
     setBusy(true); try { const result = await publishJadwal(current); notify(`Jadwal dipublikasikan (${result.created || 0} baru, ${result.updated || 0} diperbarui).`, 'success'); await loadMonthEntries(); }
     catch (err) { notify(err.message || 'Jadwal gagal dipublikasikan.', 'error'); } finally { setBusy(false); }
   };
@@ -371,6 +521,6 @@ export default function KelolaDivisiShift({ standalone = false, karyawanList: in
       <aside className="kds-preview"><small>PRATINJAU</small><h3>{name || 'Nama divisi'} <span>{type === 'REGULAR' ? 'Regular' : 'Non Regular (Shifting)'}</span></h3>{type === 'REGULAR' ? <p>🔵 Shift Normal (Office) <b>08:00–17:00</b></p> : shifts.map((s, i) => <p key={i}>🟢 {s.name} <b>{s.startTime}–{s.endTime}</b></p>)}<hr/><small>DIVISI TERDAFTAR</small><strong className="kds-count">{divisions.length} <small>divisi</small></strong><p>{divisions.filter((d) => d.tipeDivisi !== 'SHIFTING').length} Regular · {divisions.filter((d) => d.tipeDivisi === 'SHIFTING').length} Shift</p>
         <hr/><small>ATUR SHIFT DIVISI</small>{divisions.filter((d) => d.tipeDivisi === 'SHIFTING').map((d) => <div className="kds-division-config" key={d.id}><span>{d.namaDivisi}<small>{d.shifts?.length || 0} shift</small></span><button type="button" onClick={() => editDivision(d)}>Atur</button></div>)}
       </aside><div className="kds-existing-divisions"><DataDivisi key={divisions.map((d) => `${d.id}:${d.tipeDivisi}:${(d.shifts || []).map((s) => `${s.name}-${s.startTime}-${s.endTime}`).join(",")}`).join("|")} karyawanList={employees} showScheduleBuilder={false} onEditDivisi={editDivision} /></div>
-    </section> : <section className="kds-schedule"><header className="kds-schedule-head"><div><h2><CalendarDays size={18}/> Kelola Jadwal &amp; Shift Karyawan</h2><p>Pengaturan jadwal ini khusus untuk karyawan divisi Non Regular (Shift).</p></div><div><button onClick={duplicatePrevious}><Layers3 size={15}/> Duplicate Schedule</button><button onClick={resetSchedule} disabled={busy}><RotateCcw size={15}/> Reset Jadwal</button><button className="primary" onClick={generate}>Terapkan Jadwal Massal</button></div></header><div className="kds-filter"><select value={divisionFilter} onChange={(e) => setDivisionFilter(e.target.value)}><option value="all">Semua Divisi Shift</option>{shiftingDivisions.map((d) => <option value={d.id} key={d.id}>{d.namaDivisi}</option>)}</select><input type="month" value={month} onChange={(e) => setMonth(e.target.value)}/><div className="kds-legend">{shiftLegend.map(({ code, label }) => <span key={code} className={`legend-${code.toLowerCase()}`}>{label}</span>)}<span className="legend-o">O: OFF</span></div></div><div className="kds-table-wrap"><table className="kds-table"><thead><tr><th className="sticky">PEGAWAI</th>{days.map((d) => <th key={d}>{d}</th>)}<th>TOTAL JAM</th><th>TOTAL LIBUR</th></tr></thead><tbody>{visibleEmployees.map((e) => { let hours = 0; let off = 0; return <tr key={e.employeeId}><th className="sticky">{e.fullName}<small>{e.divisi?.namaDivisi || '—'}</small></th>{days.map((d) => { const id = getCell(e.employeeId, d); const shift = shiftFor(id); const code = id === '' ? '' : id === 'OFF' ? 'O' : shift ? shiftColorFor(e, shift) : ''; if (code === 'O') off += 1; else if (shift) hours += timeHours(shift); return <td key={d}><select aria-label={`${e.fullName} tanggal ${d}`} className={`kds-cell ${code ? `tone-${code.toLowerCase()}` : ''}`} value={id} onChange={(ev) => setCell(e.employeeId, `${month}-${String(d).padStart(2, '0')}`, ev.target.value ? Number(ev.target.value) : null)}><option value="">·</option><option value="OFF">O</option>{employeeShifts(e).map((s) => <option key={s.shiftId} value={s.shiftId}>{shiftColorFor(e, s)}</option>)}</select></td>})}<td className={hours > 160 ? 'over' : ''}>{hours}j</td><td>{off}</td></tr>})}</tbody></table></div><footer><p>Rotasi bergilir: maksimal 40 jam per minggu dan 160 jam per bulan, minimal 1 hari libur. Istirahat minimal 30 menit setelah 4 jam kerja. Shift malam 23:00–07:00 memerlukan konsumsi bergizi ≥1.400 kkal dan transportasi antar-jemput khusus pekerja perempuan.</p><button className="publish" disabled={busy} onClick={publish}><Send size={15}/>{busy ? 'Mempublikasikan…' : 'Publish Schedule'}</button></footer></section>}
+    </section> : <section className="kds-schedule"><header className="kds-schedule-head"><div><h2><CalendarDays size={18}/> Kelola Jadwal &amp; Shift Karyawan</h2><p>Atur jadwal langsung seperti spreadsheet: blok sel dengan drag, lalu Ctrl+C / Ctrl+V.</p></div><div><button onClick={exportSchedule}><Download size={15}/> Export XLS</button><button onClick={() => importInputRef.current?.click()}><Upload size={15}/> Import XLS</button><input ref={importInputRef} type="file" accept=".xlsx,.xls" hidden onChange={(event) => importSchedule(event.target.files?.[0])}/><button onClick={duplicatePrevious}><Layers3 size={15}/> Duplicate Schedule</button><button onClick={resetSchedule} disabled={busy}><RotateCcw size={15}/> Reset Jadwal</button></div></header><div className="kds-filter"><select value={divisionFilter} onChange={(e) => setDivisionFilter(e.target.value)}><option value="all">Semua Divisi Shift</option>{shiftingDivisions.map((d) => <option value={d.id} key={d.id}>{d.namaDivisi}</option>)}</select><input type="month" value={month} onChange={(e) => setMonth(e.target.value)}/><div className="kds-legend">{shiftLegend.map(({ code, label }) => <span key={code} className={`legend-${code.toLowerCase()}`}>{label}</span>)}<span className="legend-o">O: OFF</span></div></div><div className="kds-table-wrap" onMouseUp={() => { selectionStartRef.current = null; }}><table className="kds-table"><thead><tr><th className="sticky">PEGAWAI</th>{days.map((d) => <th key={d}>{d}</th>)}<th>TOTAL JAM</th><th>TOTAL LIBUR</th></tr></thead><tbody>{visibleEmployees.map((e, employeeIndex) => { let hours = 0; let off = 0; return <tr key={e.employeeId}><th className="sticky">{e.fullName}<small>{e.divisi?.namaDivisi || '—'}</small></th>{days.map((d) => { const id = getCell(e.employeeId, d); const shift = shiftFor(id); const code = id === '' ? '' : id === 'OFF' ? 'O' : shift ? shiftColorFor(e, shift) : ''; const draftKey = `${e.employeeId}|${d}`; const value = cellDrafts[draftKey] ?? code; const selected = Boolean(cellSelection && employeeIndex >= Math.min(cellSelection.startEmployee, cellSelection.endEmployee) && employeeIndex <= Math.max(cellSelection.startEmployee, cellSelection.endEmployee) && d >= Math.min(cellSelection.startDay, cellSelection.endDay) && d <= Math.max(cellSelection.startDay, cellSelection.endDay)); if (code === 'O') off += 1; else if (shift) hours += timeHours(shift); return <td key={d} className={selected ? 'kds-selected-cell' : ''}><input ref={(node) => { const refKey = `${employeeIndex}|${d}`; if (node) cellRefs.current.set(refKey, node); else cellRefs.current.delete(refKey); }} aria-label={`${e.fullName} tanggal ${d}`} className={`kds-cell ${value ? `tone-${value.toLowerCase()}` : ''}`} value={value} maxLength={8} placeholder="·" list={`shift-codes-${e.employeeId}`} onMouseDown={(ev) => { if (ev.button === 0) { selectionStartRef.current = { employeeIndex, day: d }; setCellSelection({ startEmployee: employeeIndex, endEmployee: employeeIndex, startDay: d, endDay: d }); } }} onMouseEnter={() => { if (selectionStartRef.current) setCellSelection({ startEmployee: selectionStartRef.current.employeeIndex, endEmployee: employeeIndex, startDay: selectionStartRef.current.day, endDay: d }); }} onChange={(ev) => setCellDraft(e.employeeId, d, ev.target.value.toUpperCase())} onBlur={() => commitCellDraft(e, d)} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === 'Tab') { ev.preventDefault(); commitCellDraft(e, d); const nextDay = d < days.length ? d + 1 : 1; const nextEmployee = d < days.length ? employeeIndex : Math.min(employeeIndex + 1, visibleEmployees.length - 1); cellRefs.current.get(`${nextEmployee}|${nextDay}`)?.focus(); } }} onCopy={(ev) => handleCellCopy(ev, employeeIndex, d)} onPaste={(ev) => { const pasted = ev.clipboardData.getData('text/plain') || copiedRangeRef.current; if (pasted.includes('\t') || pasted.includes('\n')) { ev.preventDefault(); pasteCellRange(employeeIndex, d, pasted); } else { ev.preventDefault(); const draft = pasted.trim().toUpperCase(); if (applyCellCode(e, d, draft)) notify(`Kode ${draft || '(kosong)'} ditempel.`); else notify(`Kode ${draft} tidak valid untuk ${e.fullName}.`, 'error'); } }} /><datalist id={`shift-codes-${e.employeeId}`}><option value="O"/>{employeeShifts(e).map((s) => <option key={s.shiftId} value={shiftColorFor(e, s)}/>)}</datalist></td>})}<td className={hours > 160 ? 'over' : ''}>{hours}j</td><td>{off}</td></tr>})}</tbody></table></div><footer><p>Pilih sel, lalu tarik untuk memilih blok. Gunakan Ctrl+C untuk menyalin dan Ctrl+V untuk menempel; kode shift tujuan divalidasi otomatis.</p><button className="publish" disabled={busy} onClick={publish}><Send size={15}/>{busy ? 'Mempublikasikan…' : 'Publish Schedule'}</button></footer></section>}
   </main>;
 }

@@ -139,6 +139,7 @@
 .text-center { text-align: center; }
 .font-bold { font-weight: 700; }
 .text-green { color: var(--dk-text-green, #2f855a); }
+.text-red { color: var(--dk-text-red, #be123c); } /* [BARU] sisa cuti negatif (defisit) */
 
 .btn-edit {
   background: none;

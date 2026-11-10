@@ -11,6 +11,8 @@ import OvertimeApprovalSection from '../../Persetujuan/components/OvertimeApprov
 import useOvertimeApprovals from '../../../hooks/useOvertimeApprovals'; // [BARU]
 import PersetujuanIzin from '../../PersetujuanIzin/PersetujuanIzin'; // [BARU] tab Surat Sakit & Izin
 import usePermissionApprovals from '../../../hooks/usePermissionApprovals'; // [BARU]
+import AttendanceCorrectionApprovalSection from '../../Persetujuan/components/AttendanceCorrectionApprovalSection';
+import useAttendanceCorrectionApprovals from '../../../hooks/useAttendanceCorrectionApprovals';
 import ActionReasonModal from './components/ActionReasonModal';
 import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
 import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
@@ -167,6 +169,7 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   const overtime = useOvertimeApprovals(canApproveOvertime);
   // [BARU] Sama untuk Surat Sakit & Izin (enabled=false -> tidak memanggil API sama sekali)
   const permission = usePermissionApprovals(canApprovePermission);
+  const attendanceCorrections = useAttendanceCorrectionApprovals(canApprovePermission);
 
   const tabs = useMemo(
     () => [
@@ -176,8 +179,9 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
       ...(canApprovePermission ? [{ key: "izin", label: "Surat Sakit & Izin", badge: permission.stats.pending }] : []),
       // [BARU] Tab Persetujuan Lembur (pindahan dari menu sidebar)
       ...(canApproveOvertime ? [{ key: "lembur", label: "Persetujuan Lembur", badge: overtime.pendingCount }] : []),
+      ...(canApprovePermission ? [{ key: "koreksi-absen", label: "Koreksi Absensi", badge: attendanceCorrections.pendingCount }] : []),
     ],
-    [pendingCount, canApproveOvertime, overtime.pendingCount, canApprovePermission, permission.stats.pending]
+    [pendingCount, canApproveOvertime, overtime.pendingCount, canApprovePermission, permission.stats.pending, attendanceCorrections.pendingCount]
   );
 
   return (
@@ -204,6 +208,13 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
           <PersetujuanIzin approvals={permission} embedded />
         )}
         
+        {activeTab === "koreksi-absen" && canApprovePermission && (
+          <AttendanceCorrectionApprovalSection
+            padded rows={attendanceCorrections.rows} loading={attendanceCorrections.loading}
+            processingKey={attendanceCorrections.processingKey} toast={attendanceCorrections.toast}
+            pendingCount={attendanceCorrections.pendingCount} onDecision={attendanceCorrections.handleDecision}
+          />
+        )}
         {/* [BARU] Tab Persetujuan Lembur */}
         {activeTab === "lembur" && canApproveOvertime && (
           <OvertimeApprovalSection

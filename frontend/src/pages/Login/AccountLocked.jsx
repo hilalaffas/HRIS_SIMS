@@ -1,9 +1,13 @@
 // src/pages/Login/AccountLocked.jsx
 import React from 'react';
+import useI18n from '../../i18n/useI18n'; // [BARU]
+import LanguageSwitcher from '../../components/LanguageSwitcher'; // [BARU]
 
 const AccountLocked = ({ onBack }) => {
+  const { t } = useI18n();
   return (
     <div className="min-h-screen bg-[var(--color-primary)] flex items-center justify-center p-4 font-sans">
+      <LanguageSwitcher variant="floating" />
       <div className="bg-white rounded-[24px] w-full max-w-[400px] p-8 shadow-2xl border-4 border-[var(--color-primary)] text-center">
         <div className="w-20 h-20 bg-red-50 rounded-full mx-auto flex items-center justify-center mb-6">
           <svg
@@ -20,13 +24,11 @@ const AccountLocked = ({ onBack }) => {
         </div>
 
         <h1 className="text-[20px] font-bold text-gray-900 mb-3">
-          Akun Telah dinonaktifkan
+          {t('locked.title')}
         </h1>
 
         <p className="text-[13px] text-gray-500 leading-relaxed mb-7">
-          Anda telah melakukan kesalahan memasukan password sebanyak 3 (tiga)
-          kali. Silakan tunggu selama maksimal 3 (tiga) hari kerja. Hubungi HR
-          secara langsung jika butuh akses segera.
+          {t('locked.text')}
         </p>
 
         <button
@@ -34,7 +36,7 @@ const AccountLocked = ({ onBack }) => {
           onClick={onBack}
           className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-[14px] py-3 rounded-xl transition-colors"
         >
-          Kembali ke Halaman Login
+          {t('locked.back')}
         </button>
       </div>
     </div>

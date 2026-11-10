@@ -111,7 +111,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
 
           {/* Wadah Halaman Manajemen Karyawan */}
           <Route path="/karyawan" element={<Karyawan user={user} />} />
-          <Route path="/kelola-divisi-shift" element={isHrAdmin(user) ? <KelolaDivisiShift standalone /> : <Navigate to="/dashboard" replace />} />
+          <Route path="/kelola-divisi-shift" element={(isHrAdmin(user) || isSuperAdmin(user)) ? <KelolaDivisiShift standalone /> : <Navigate to="/dashboard" replace />} />
 
           {/* [BARU] Laporan -- hanya HRD_ADMIN (backend juga membatasi: 403 untuk role lain) */}
           <Route path="/laporan" element={isHrAdmin(user) ? <Laporan /> : <Navigate to="/dashboard" replace />} />

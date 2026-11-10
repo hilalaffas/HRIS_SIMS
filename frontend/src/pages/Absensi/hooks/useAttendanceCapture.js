@@ -48,6 +48,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const [reason, setReason] = useState('Absen');
   const [note, setNote] = useState('');
   const [captured, setCaptured] = useState('');
+  const [locationType, setLocationType] = useState('KANTOR');
   const [cameraError, setCameraError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [coords, setCoords] = useState(null); // { lat, lng, accuracy }
@@ -137,6 +138,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     setReason(presetReason);
     setNote(presetNote); // [UBAH] sebelumnya selalu ''
     setCaptured('');
+    setLocationType('KANTOR');
     setCameraError('');
     setSubmitError('');
     setIsOpen(true);
@@ -173,13 +175,59 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    setCaptured(canvas.toDataURL('image/jpeg', 0.82));
+    const sourceWidth = video.videoWidth || 640;
+    const sourceHeight = video.videoHeight || 480;
+    canvas.width = sourceWidth;
+    canvas.height = sourceHeight;
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.drawImage(video, 0, 0, sourceWidth, sourceHeight);
+
+    // Metadata ditampilkan sebagai overlay DI ATAS foto dan ikut tertanam
+    // permanen ke file JPEG yang dikirim/disimpan.
+    const timestamp = new Date().toLocaleString('id-ID', {
+      day: '2-digit', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false, timeZone: 'Asia/Jakarta',
+    });
+    const locationText = coords
+      ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`
+      : 'Lokasi GPS tidak tersedia';
+    const placeText = locationName || (locationType === 'WFH_DINAS' ? 'WFH / Dinas' : 'Lokasi Kantor');
+
+    // Pita metadata dibuat sangat ringkas di tepi bawah agar tidak menutupi wajah.
+    // Tinggi mengikuti kebutuhan tiga baris teks, bukan persentase besar dari foto.
+    const fontSize = Math.max(10, Math.min(15, Math.round(sourceWidth * 0.018)));
+    const lineGap = Math.max(2, Math.round(fontSize * 0.16));
+    const lineHeight = fontSize + lineGap;
+    const paddingY = Math.max(5, Math.round(fontSize * 0.45));
+    const overlayHeight = lineHeight * 3 + paddingY * 2;
+    const overlayTop = sourceHeight - overlayHeight;
+    const gradient = context.createLinearGradient(0, overlayTop, 0, sourceHeight);
+    gradient.addColorStop(0, 'rgba(7, 16, 26, 0.58)');
+    gradient.addColorStop(1, 'rgba(7, 16, 26, 0.82)');
+    context.fillStyle = gradient;
+    context.fillRect(0, overlayTop, sourceWidth, overlayHeight);
+
+    const paddingX = Math.max(9, Math.round(sourceWidth * 0.016));
+    const firstLineY = overlayTop + paddingY + lineHeight / 2;
+
+    context.textBaseline = 'middle';
+    context.fillStyle = '#ffffff';
+    context.font = `600 ${fontSize}px Arial, sans-serif`;
+    context.fillText(`Waktu: ${timestamp} WIB`, paddingX, firstLineY, sourceWidth - paddingX * 2);
+    context.fillText(`Lokasi: ${placeText}`, paddingX, firstLineY + lineHeight, sourceWidth - paddingX * 2);
+
+    context.fillStyle = '#b8f3d7';
+    context.font = `500 ${Math.max(9, fontSize - 1)}px Arial, sans-serif`;
+    context.fillText(`GPS: ${locationText}`, paddingX, firstLineY + lineHeight * 2, sourceWidth - paddingX * 2);
+
+    setCaptured(canvas.toDataURL('image/jpeg', 0.9));
     setSubmitError('');
-  }, []);
+  }, [coords, locationName, locationType]);
 
   const retake = useCallback(() => {
     setCaptured('');
@@ -209,6 +257,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
         note: trimmedNote,
         latitude: coords.lat,
         longitude: coords.lng,
+        locationType: action === 'Masuk' ? locationType : null,
         photoBlob,
       });
       teardown();
@@ -222,7 +271,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
       submitLockRef.current = false;
       setIsSubmitting(false);
     }
-  }, [action, captured, coords, note, onSubmitted, reason, teardown]);
+  }, [action, captured, coords, locationType, note, onSubmitted, reason, teardown]);
 
   return {
     // state
@@ -231,6 +280,8 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     reason,
     note,
     captured,
+    locationType,
+    setLocationType,
     cameraError,
     submitError,
     coords,

@@ -116,6 +116,13 @@
 			<artifactId>spring-boot-flyway</artifactId>
 		</dependency>
 
+		<!-- [BARU] Baca file Excel (.xlsx) beserta KOMENTAR SEL untuk import riwayat cuti
+		     (lihat devtools/util/LeaveLedgerXlsx.java). -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.4.1</version>
+		</dependency>
 		<dependency>
 		    <groupId>com.cloudinary</groupId>
 		    <artifactId>cloudinary-http5</artifactId>

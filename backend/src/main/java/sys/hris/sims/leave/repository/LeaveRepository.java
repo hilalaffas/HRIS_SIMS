@@ -34,6 +34,7 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
             join fetch l.leaveType t
             where l.employee.employeeId in :employeeIds
               and upper(s.statusName) = 'APPROVED'
+              and t.forfeiture = false
               and l.startDate <= :endDate
               and l.endDate >= :startDate
             order by l.startDate asc
@@ -51,6 +52,7 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
             join fetch l.leaveType t
             where l.employee.employeeId = :employeeId
               and upper(s.statusName) = 'APPROVED'
+              and t.forfeiture = false
               and l.startDate <= :date
               and l.endDate >= :date
             order by l.startDate asc

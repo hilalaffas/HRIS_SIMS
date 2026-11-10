@@ -67,13 +67,14 @@ export async function decideSickApproval(attendanceId, status, note) {
 
 // POST catat absensi. `photoBlob` WAJIB, `latitude`/`longitude` WAJIB --
 // backend menolak tanpa GPS/foto (lihat AttendanceService.submit()).
-export async function submitAttendance({ action, reason, note, latitude, longitude, photoBlob }) {
+export async function submitAttendance({ action, reason, note, latitude, longitude, locationType, photoBlob }) {
   const formData = new FormData();
   formData.append('action', action);
   formData.append('reason', reason);
   if (note) formData.append('note', note);
   formData.append('latitude', latitude);
   formData.append('longitude', longitude);
+  if (locationType) formData.append('locationType', locationType);
   formData.append('photo', photoBlob, 'absensi.jpg');
   return api.postForm('/api/absensi/me', formData);
 }
@@ -174,6 +175,9 @@ export function toDisplayRecord(item) {
     longitude: item.longitude,
     mapsUrl: item.mapsUrl || null,
     locationName: item.locationName || '', // [BARU] hasil reverse geocoding backend
+    locationType: item.locationType || 'KANTOR',
+    officeDistanceMeters: item.officeDistanceMeters ?? null,
+    officeLocationStatus: String(item.officeLocationStatus || '').toUpperCase(),
     attendanceDate: item.attendanceDate,
     approvalStatus: String(item.approvalStatus || '').toUpperCase(), // [BARU]
     leaveDays: item.leaveDays || 1, // [BARU] lama izin sakit (hari)

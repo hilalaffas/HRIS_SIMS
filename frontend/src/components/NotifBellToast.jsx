@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import useI18n from '../i18n/useI18n'; // [BARU]
 import './NotifBellToast.css';
 
 // Popup mini yang "keluar" dari ikon lonceng saat ada notifikasi baru.
@@ -11,17 +12,17 @@ const MAX_WIDTH = 320;
 const ARROW_PAD = 20;     // panah tidak boleh terlalu dekat sudut popup
 
 const TYPE_META = {
-  approved: { tone: 'success', title: 'Pengajuan disetujui' },
-  'step-approved': { tone: 'success', title: 'Persetujuan bertahap' },
-  returned: { tone: 'warning', title: 'Pengajuan dikembalikan' },
-  rejected: { tone: 'danger', title: 'Pengajuan ditolak' },
-  new: { tone: 'brand', title: 'Pengajuan baru' },
-  'leave-approval': { tone: 'brand', title: 'Pengajuan baru' },
-  'password-reset': { tone: 'info', title: 'Permintaan reset sandi' },
-  'sick-approved': { tone: 'success', title: 'Izin sakit disetujui' },
-  'sick-rejected': { tone: 'danger', title: 'Izin sakit ditolak' },
+  approved: { tone: 'success', titleKey: 'notif.toast.approved' },
+  'step-approved': { tone: 'success', titleKey: 'notif.toast.approved' },
+  returned: { tone: 'warning', titleKey: 'notif.toast.returned' },
+  rejected: { tone: 'danger', titleKey: 'notif.toast.rejected' },
+  new: { tone: 'brand', titleKey: 'notif.toast.new' },
+  'leave-approval': { tone: 'brand', titleKey: 'notif.toast.new' },
+  'password-reset': { tone: 'info', titleKey: 'notif.toast.passwordReset' },
+  'sick-approved': { tone: 'success', titleKey: 'notif.toast.approved' },
+  'sick-rejected': { tone: 'danger', titleKey: 'notif.toast.rejected' },
 };
-const DEFAULT_META = { tone: 'brand', title: 'Notifikasi baru' };
+const DEFAULT_META = { tone: 'brand', titleKey: 'notif.toast.default' };
 
 const ICON_PATHS = {
   success: <path d="M20 6 9 17l-5-5" />,
@@ -58,6 +59,7 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, 
  * Pasang dengan `key` unik per popup supaya state & animasi mulai dari awal.
  */
 export default function NotifBellToast({ notification, extraCount = 0, anchorRef, onOpen, onClose }) {
+  const { t } = useI18n();
   const [pos, setPos] = useState(null);
   const [paused, setPaused] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -157,14 +159,14 @@ export default function NotifBellToast({ notification, extraCount = 0, anchorRef
           </svg>
         </span>
         <span className="bell-toast__body">
-          <strong className="bell-toast__title">{meta.title}</strong>
+          <strong className="bell-toast__title">{t(meta.titleKey)}</strong>
           <span className="bell-toast__text">{notification.text}</span>
           <span className="bell-toast__meta">
-            Baru saja{extraCount > 0 ? ` · +${extraCount} notifikasi lainnya` : ''}
+            {t('notif.toast.justNow')}{extraCount > 0 ? ` · ${t('notif.toast.more', { count: extraCount })}` : ''}
           </span>
         </span>
       </button>
-      <button type="button" className="bell-toast__close" aria-label="Tutup notifikasi" onClick={startLeaving}>
+      <button type="button" className="bell-toast__close" aria-label={t('notif.toast.close')} onClick={startLeaving}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>

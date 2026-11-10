@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -60,6 +61,17 @@ public class AttendanceService {
     private final HolidayRepository holidayRepository;
     private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] aturan cuti <-> absen
 
+    // Titik kantor dan toleransi radius menggunakan konfigurasi application.properties;
+    // environment variable deployment dapat menimpa nilai default.
+    @Value("${attendance.office.latitude:}")
+    private String officeLatitudeConfig;
+
+    @Value("${attendance.office.longitude:}")
+    private String officeLongitudeConfig;
+
+    @Value("${attendance.office.radius-meters:50}")
+    private int officeRadiusMeters;
+
     public List<AttendanceResponse> getMyHistory(String username) {
         Employee employee = resolveEmployee(username);
         return attendanceRepository.findByEmployee_EmployeeIdOrderByRecordedAtDesc(employee.getEmployeeId())
@@ -87,6 +99,11 @@ public class AttendanceService {
         String reason = request.getReason() == null || request.getReason().isBlank()
                 ? "ABSEN"
                 : normalize(request.getReason());
+        String locationType = request.getLocationType() == null || request.getLocationType().isBlank()
+                ? "KANTOR" : normalize(request.getLocationType());
+        if (action.equals("MASUK") && !List.of("KANTOR", "WFH_DINAS").contains(locationType)) {
+            throw new IllegalArgumentException("Jenis lokasi absensi tidak valid.");
+        }
         if (!List.of("ABSEN", "SAKIT", "IZIN").contains(reason)) {
             throw new IllegalArgumentException("Jenis keterangan tidak valid. Gunakan Absen, Sakit, atau Izin.");
         }
@@ -242,6 +259,11 @@ public class AttendanceService {
                 .latitude(BigDecimal.valueOf(request.getLatitude()))
                 .longitude(BigDecimal.valueOf(request.getLongitude()))
                 .locationName(locationName)
+                .locationType(action.equals("MASUK") ? locationType : null)
+                .officeDistanceMeters(action.equals("MASUK") && reason.equals("ABSEN")
+                        ? officeDistanceMeters(request.getLatitude(), request.getLongitude(), locationType) : null)
+                .officeLocationStatus(action.equals("MASUK") && reason.equals("ABSEN")
+                        ? resolveOfficeLocationStatus(request.getLatitude(), request.getLongitude(), locationType) : null)
                 .attendanceDate(workDate)
                 .build();
 
@@ -565,6 +587,9 @@ public class AttendanceService {
                 .attendanceDate(attendance.getAttendanceDate())
                 .approvalStatus(attendance.getApprovalStatus())
                 .locationName(attendance.getLocationName())
+                .locationType(attendance.getLocationType())
+                .officeDistanceMeters(attendance.getOfficeDistanceMeters())
+                .officeLocationStatus(attendance.getOfficeLocationStatus())
                 .leaveDays(attendance.getLeaveDays())
                 .documentUrl(attendance.getDocumentUrl())
                 .documentRequired(attendance.getDocumentRequired())
@@ -573,6 +598,44 @@ public class AttendanceService {
                 .reviewNote(attendance.getReviewNote())
                 .reviewedAt(attendance.getReviewedAt())
                 .build();
+    }
+
+    private Integer officeDistanceMeters(Double latitude, Double longitude, String locationType) {
+        if (!"KANTOR".equals(locationType) || latitude == null || longitude == null
+                || !isOfficeCoordinateConfigured()) return null;
+        double officeLat = Double.parseDouble(officeLatitudeConfig.trim());
+        double officeLng = Double.parseDouble(officeLongitudeConfig.trim());
+        return (int) Math.round(haversineMeters(latitude, longitude, officeLat, officeLng));
+    }
+
+    private String resolveOfficeLocationStatus(Double latitude, Double longitude, String locationType) {
+        if (!"KANTOR".equals(locationType)) return "NOT_APPLICABLE";
+        if (latitude == null || longitude == null || !isOfficeCoordinateConfigured()) return "NOT_CONFIGURED";
+        Integer distance = officeDistanceMeters(latitude, longitude, locationType);
+        return distance != null && distance > Math.max(0, officeRadiusMeters) ? "TOO_FAR" : "WITHIN_RADIUS";
+    }
+
+    private boolean isOfficeCoordinateConfigured() {
+        if (officeLatitudeConfig == null || officeLongitudeConfig == null
+                || officeLatitudeConfig.isBlank() || officeLongitudeConfig.isBlank()) return false;
+        try {
+            double lat = Double.parseDouble(officeLatitudeConfig.trim());
+            double lng = Double.parseDouble(officeLongitudeConfig.trim());
+            return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+
+    private double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+        final double earthRadiusMeters = 6_371_000d;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        a = Math.max(0d, Math.min(1d, a));
+        return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private String buildMapsUrl(BigDecimal latitude, BigDecimal longitude) {

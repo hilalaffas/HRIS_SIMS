@@ -45,6 +45,11 @@ public class AttendanceResponse {
 
     // [BARU] Nama lokasi dari reverse geocoding backend; null bila tidak tersedia.
     private String locationName;
+    private String locationType;
+
+    // Validasi geofence kantor; jarak disimpan dalam meter.
+    private Integer officeDistanceMeters;
+    private String officeLocationStatus;
 
     // [UBAH] Lama izin sakit (hari kerja, tanpa Sabtu/Minggu), default 1.
     private Integer leaveDays;

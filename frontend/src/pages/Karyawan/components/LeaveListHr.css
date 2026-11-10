@@ -1,6 +1,6 @@
 /* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 .leaveList_leaveListHr { background: var(--dk-bg-card, #fff); border-radius: 12px; border: 1px solid var(--dk-border, #e5e7eb); padding: 20px; margin-top: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.leaveList__toolbar_leaveListHr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.leaveList__toolbar_leaveListHr { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .leaveList__total_leaveListHr { font-size: 14px; color: var(--dk-text-2, #4b5563); }
 .leaveList__empty_leaveListHr { text-align: center; padding: 40px; color: var(--dk-text-3, #6b7280); background: var(--dk-bg-subtle, #f9fafb); border-radius: 8px; font-size: 14px; }
 .leaveList__table_leaveListHr { display: flex; flex-direction: column; width: 100%; border: 1px solid var(--dk-border, #e5e7eb); border-radius: 8px; overflow: hidden; }
@@ -97,3 +97,22 @@
 .btn-batal_leaveListHr:hover { background: var(--dk-bg-subtle, #f3f4f6); }
 .btn-pulihkan_leaveListHr { padding: 8px 16px; background: var(--dk-btn-success, #10b981); border: none; border-radius: 6px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: 0.2s; }
 .btn-pulihkan_leaveListHr:hover { background: var(--dk-btn-success-hover, #059669); }
+
+/* [BARU] Pencarian, filter tanggal, dan pagination */
+.leaveList__filters_leaveListHr { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.leaveList__input_leaveListHr { box-sizing: border-box; min-height: 36px; padding: 6px 12px; font-size: 14px; border: 1px solid var(--dk-border-strong, #cbd5e0); border-radius: 6px; background: var(--dk-bg-card, #fff); color: var(--dk-text, #111827); }
+.leaveList__input_leaveListHr:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.leaveList__search_leaveListHr { width: 220px; }
+.leaveList__dateField_leaveListHr { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dk-text-3, #6b7280); }
+.leaveList__resetBtn_leaveListHr { min-height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 600; border: none; background: none; color: #2563eb; cursor: pointer; text-decoration: underline; }
+.leaveList__pagination_leaveListHr { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 4px 0; }
+.leaveList__pageInfo_leaveListHr { font-size: 13px; color: var(--dk-text-3, #64748b); }
+.leaveList__pageControls_leaveListHr { display: flex; align-items: center; gap: 12px; }
+.leaveList__pageLabel_leaveListHr { font-size: 13px; font-weight: 600; color: var(--dk-text, #334155); white-space: nowrap; }
+.leaveList__pageBtn_leaveListHr { padding: 7px 16px; font-size: 13px; font-weight: 600; border: 1px solid var(--dk-border-strong, #cbd5e0); border-radius: 6px; background: var(--dk-bg-card, #fff); color: var(--dk-text, #334155); cursor: pointer; }
+.leaveList__pageBtn_leaveListHr:hover:not(:disabled) { background: var(--dk-bg-subtle, #f1f5f9); }
+.leaveList__pageBtn_leaveListHr:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 768px) {
+  .leaveList__search_leaveListHr { width: 100%; }
+  .leaveList__pagination_leaveListHr { flex-direction: column; align-items: flex-start; }
+}

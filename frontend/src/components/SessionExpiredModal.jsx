@@ -6,6 +6,7 @@
 // sebelum sistem redirect ke /login, sesuai pola UX yang diminta.
 import React from 'react';
 import './SessionExpiredModal.css';
+import useI18n from '../i18n/useI18n'; // [BARU]
 import useModalExit from '../hooks/useModalExit'; // [BARU] animasi keluar modal
 import { APP_LEAVE_MS, beginAppLeave, endAppLeave } from '../utils/appTransition'; // [BARU] transisi keluar aplikasi
 
@@ -13,6 +14,7 @@ export default function SessionExpiredModal({ message, onConfirm }) {
   // [BARU] onConfirm milik parent tidak berubah; hanya dipanggil setelah
   // animasi keluar selesai.
   const { closing, close } = useModalExit();
+  const { t } = useI18n();
 
   const handleConfirm = () => {
     beginAppLeave();
@@ -35,16 +37,16 @@ export default function SessionExpiredModal({ message, onConfirm }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 7v5l3 3" />
               </svg>
             </div>
-            <h3 className="session-modal-title">Sesi Berakhir</h3>
+            <h3 className="session-modal-title">{t('session.title')}</h3>
           </div>
 
           <p className="session-modal-text">
-            {message || 'Sesi Anda telah berakhir demi keamanan. Silakan login kembali.'}
+            {message || t('session.message')}
           </p>
 
           <div className="session-modal-actions">
             <button type="button" onClick={handleConfirm} className="session-modal-btn-ok" autoFocus>
-              OK, Login Kembali
+              {t('session.ok')}
             </button>
           </div>
 

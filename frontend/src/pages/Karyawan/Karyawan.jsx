@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'; // [UBAH] + useRef, useCallback
 import { useSearchParams } from 'react-router-dom'; // [BARU] baca query param dari notifikasi reset sandi
 import './Karyawan.css';
 import HeadlineKaryawan from './components/HeadlineKaryawan';
@@ -13,6 +13,8 @@ import DataDivisi from './components/DataDivisi';
 import LogSistem from './components/LogSistem';
 import LeaveFormHr from './components/LeaveFormHr';
 import LeaveListHr from './components/LeaveListHr';
+import LeaveSummaryTable from './components/LeaveSummaryTable'; // [BARU] tab Ringkasan Cuti
+import LeaveLedgerTable from './components/LeaveLedgerTable'; // [BARU] tab Histori Cuti (format ledger)
 // [BARU] Toast sukses/gagal untuk aksi HR di halaman ini (mis. Cuti Susulan),
 // pola sama seperti FormKaryawan.jsx.
 import Toast from '../../components/Toast';
@@ -30,6 +32,7 @@ import { getSystemLogs } from '../../services/logService';
 import KelolaDivisiShift from './KelolaDivisiShift';
 // [BARU] Ekspor CSV per tab menu
 import { downloadCsv } from '../../utils/csvExport';
+import { downloadBlobFile } from '../../utils/csvFile'; // [BARU] unduh file Excel (Blob)
 import { KARYAWAN_EXPORT_CONFIG, getExportFormats } from '../../config/karyawanExportConfig';
 
 
@@ -81,6 +84,17 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   // [BARU] Mencegah klik ganda tombol Ekspor CSV selama data diproses
   const [isExporting, setIsExporting] = useState(false);
+
+  // [BARU] Data ekspor tab Ringkasan Cuti & Histori Cuti dimuat oleh komponen tabnya sendiri.
+  // Komponen itu melaporkan baris/filter yang sedang tampil ke sini (ref, bukan state, supaya
+  // tidak memicu render ulang) dan dibaca handleExport saat tombol "Ekspor Data" diklik.
+  const exportSnapshotRef = useRef({ summaryRows: [], ledgerParams: {} });
+  const handleSummaryRowsChange = useCallback((rows) => {
+    exportSnapshotRef.current.summaryRows = rows;
+  }, []);
+  const handleLedgerParamsChange = useCallback((params) => {
+    exportSnapshotRef.current.ledgerParams = params;
+  }, []);
 
   // [UBAH] Memisahkan state Form Tambah dan Modal Edit agar sesuai dengan UI design
   const [showAddForm, setShowAddForm] = useState(false); 
@@ -419,7 +433,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     setIsExporting(true);
     try {
       // [UBAH] Ekspor (CSV & PDF) hanya memuat karyawan asli: akun SUPER_ADMIN
-      // / supersecret disaring dari daftar karyawan, dan cuti milik mereka
+      // / sys_dev disaring dari daftar karyawan, dan cuti milik mereka
       // dibuang berdasarkan employeeId.
       const excludedEmployeeIds = new Set(
         karyawanList.filter((k) => !isReportEmployee(k)).map((k) => k.employeeId ?? k.id)
@@ -429,7 +443,17 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
         riwayatCuti: riwayatCuti.filter((item) => !excludedEmployeeIds.has(item.employeeId)),
         balanceAfterByLeaveId,
         logList,
+        summaryRows: exportSnapshotRef.current.summaryRows, // [BARU] tab Ringkasan Cuti
+        ledgerParams: exportSnapshotRef.current.ledgerParams, // [BARU] tab Histori Cuti
       };
+
+      // [BARU] Format Excel (.xlsx): file dibuat backend, frontend hanya mengunduh Blob-nya.
+      if (format === 'xlsx' && exportConfig.xlsx) {
+        const { xlsx } = exportConfig;
+        const blob = await xlsx.buildBlob(exportContext);
+        downloadBlobFile(xlsx.buildFileName(exportContext), blob);
+        return;
+      }
 
       if (format === 'pdf' && exportConfig.pdf) {
         const { pdf } = exportConfig;
@@ -549,6 +573,10 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
             />
           </div>
         )}
+        {/* [BARU] TAB RINGKASAN CUTI: total/terpakai/tersedia sejak tanggal masuk. Mengambil datanya sendiri. */}
+        {activeTab === 'Ringkasan Cuti' && <LeaveSummaryTable onExportRowsChange={handleSummaryRowsChange} />}
+        {/* [BARU] TAB HISTORI CUTI: tabel format ledger Excel + export. Mengambil datanya sendiri. */}
+        {activeTab === 'Histori Cuti' && <LeaveLedgerTable onExportParamsChange={handleLedgerParamsChange} />}
         {activeTab === 'Data Divisi' && isSuperAdmin(user) && <DataDivisi karyawanList={karyawanList} />}
         {activeTab === 'Data Divisi' && isHrAdmin(user) && <KelolaDivisiShift karyawanList={karyawanList} />}
         {activeTab === 'Log Sistem' && (

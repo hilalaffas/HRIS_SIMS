@@ -82,6 +82,7 @@
 }
 
 .abs-permission-field textarea,
+.abs-permission-field select,
 .abs-permission-days input {
   box-sizing: border-box;
   width: 100%;
@@ -96,8 +97,10 @@
 }
 
 .abs-permission-field textarea { resize: vertical; min-height: 76px; }
+.abs-permission-field select { min-height: 38px; padding: 8px 10px; font: inherit; font-size: 13px; }
 
 .abs-permission-field textarea:focus,
+.abs-permission-field select:focus,
 .abs-permission-days input:focus {
   outline: none;
   border-color: var(--color-info);

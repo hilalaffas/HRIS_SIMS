@@ -6,6 +6,7 @@ import lombok.Value;
 @Value
 @Builder
 public class ProfileResponse {
+    Long employeeId;
     String namaLengkap;
     String nikKaryawan;
     String jabatan;

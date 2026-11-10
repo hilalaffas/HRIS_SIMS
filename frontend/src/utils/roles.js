@@ -36,7 +36,7 @@ export function isHrAdmin(user) {
 
 /**
  * [BARU] Karyawan yang boleh muncul di laporan/ekspor: akun SUPER_ADMIN
- * (termasuk akun dev supersecret) disembunyikan, hanya karyawan asli.
+ * (termasuk akun dev sys_dev) disembunyikan, hanya karyawan asli.
  * [UBAH] Role DEV ikut disembunyikan.
  * Dipakai ekspor di halaman Manajemen Karyawan.
  */

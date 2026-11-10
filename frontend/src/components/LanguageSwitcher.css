@@ -1,0 +1,70 @@
+/* src/components/LanguageSwitcher.css */
+/* Segmented control dua pilihan bahasa. Warna memakai token dari styles/tokens.css
+   (ikut tema gelap otomatis lewat [data-theme='dark']); fallback hex untuk halaman
+   Login yang tidak berada di dalam area bertema. */
+
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface, #ffffff);
+  flex-shrink: 0;
+}
+
+.lang-switch__option {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #6b7280);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.lang-switch__option:hover:not(.is-active) {
+  color: var(--color-primary, #124231);
+  background: var(--color-primary-tint, #eef7f4);
+}
+
+.lang-switch__option.is-active {
+  background: var(--color-primary, #124231);
+  color: #ffffff;
+}
+
+.lang-switch__option:focus-visible {
+  outline: 2px solid var(--color-primary-soft, #217a5b);
+  outline-offset: 2px;
+}
+
+/* Halaman Login: melayang di pojok kanan atas, di atas latar hijau brand. */
+.lang-switch--floating {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Navbar di HP: lebih ringkas supaya tidak mendorong lonceng keluar layar. */
+@media (max-width: 480px) {
+  .lang-switch__option {
+    padding: 0.35rem 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-switch__option {
+    transition: none;
+  }
+}

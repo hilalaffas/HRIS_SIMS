@@ -163,6 +163,7 @@ public class LeaveService {
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end = LocalDate.of(year, 12, 31);
         return cutiRepository.findAll().stream()
+                .filter(cuti -> !isForfeiture(cuti)) // [BARU] catatan hangus tidak tampil di kalender
                 .filter(cuti -> !cuti.getEndDate().isBefore(start) && !cuti.getStartDate().isAfter(end))
                 .filter(cuti -> ACTION_PENDING.equalsIgnoreCase(cuti.getStatus().getStatusName())
                         || ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
@@ -202,8 +203,7 @@ public class LeaveService {
         if (cuti.getLeaveType() == null || cuti.getLeaveType().getLeaveTypeId() == null) {
             throw new RuntimeException("Jenis cuti wajib dipilih");
         }
-        cuti.setLeaveType(leaveTypeRepository.findById(cuti.getLeaveType().getLeaveTypeId())
-                .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
+        cuti.setLeaveType(findSelectableLeaveType(cuti.getLeaveType().getLeaveTypeId())); // [UBAH] tolak jenis sistem "Cuti hangus"
 
         validateCutiMelahirkanLimit(cuti, requester);
         validateCutiNikahLimit(cuti);
@@ -256,8 +256,7 @@ public class LeaveService {
         if (cuti.getLeaveType() == null || cuti.getLeaveType().getLeaveTypeId() == null) {
             throw new RuntimeException("Jenis cuti wajib dipilih");
         }
-        cuti.setLeaveType(leaveTypeRepository.findById(cuti.getLeaveType().getLeaveTypeId())
-                .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
+        cuti.setLeaveType(findSelectableLeaveType(cuti.getLeaveType().getLeaveTypeId())); // [UBAH] tolak jenis sistem "Cuti hangus"
         // [BARU] Sebelumnya alur Cuti Susulan/Darurat (HR input) TIDAK
         // divalidasi batas Cuti Meninggal/Melahirkan/Nikah sama sekali -- HR
         // bisa input cuti meninggal 10 hari tanpa ditolak. Sekarang
@@ -298,13 +297,30 @@ public class LeaveService {
         return savedCuti;
     }
 
+    // [BARU] Jenis cuti yang boleh diajukan. "Cuti hangus" (V59) adalah jenis sistem untuk riwayat
+    // sisa cuti kedaluwarsa -- tidak boleh diajukan lewat API walau id-nya dikirim manual.
+    private LeaveType findSelectableLeaveType(Long leaveTypeId) {
+        LeaveType type = leaveTypeRepository.findById(leaveTypeId)
+                .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan"));
+        if (Boolean.TRUE.equals(type.getForfeiture())) {
+            throw new RuntimeException("Jenis cuti ini tidak dapat diajukan");
+        }
+        return type;
+    }
+
+    private static boolean isForfeiture(LeaveRequest cuti) {
+        return cuti.getLeaveType() != null && Boolean.TRUE.equals(cuti.getLeaveType().getForfeiture());
+    }
+
     private void ensureNoOverlap(Employee employee, LeaveRequest cuti) {
         List<LeaveRequest> existingCuti = cutiRepository.findByEmployee_EmployeeIdAndStatus_StatusNameIn(
                 employee.getEmployeeId(),
                 List.of(ACTION_PENDING, ACTION_APPROVED)
         );
 
-        boolean isOverlap = existingCuti.stream().anyMatch(existing ->
+        boolean isOverlap = existingCuti.stream()
+                .filter(existing -> !isForfeiture(existing)) // [BARU] catatan hangus bukan hari cuti
+                .anyMatch(existing ->
                 !cuti.getStartDate().isAfter(existing.getEndDate()) &&
                 !cuti.getEndDate().isBefore(existing.getStartDate())
         );
@@ -391,6 +407,12 @@ public class LeaveService {
         return toApprovalResponse(getCutiById(leaveRequestId), approver.getEmployeeId());
     }
 
+    // [BARU] Dipakai alat dev (/devAccess) yang sudah memegang entity Employee,
+    // supaya tidak perlu query ulang. Tetap lewat getLeaveBalance(Employee) yang sama.
+    public LeaveBalanceResponse getLeaveBalanceOf(Employee employee) {
+        return getLeaveBalance(employee);
+    }
+
     public LeaveBalanceResponse getMyLeaveBalance(String username) {
         return getLeaveBalance(getEmployeeByUsername(username));
     }
@@ -446,6 +468,8 @@ public class LeaveService {
         List<LeaveRequest> relevantApprovedLeaves = getCutiByKaryawan(employee.getEmployeeId()).stream()
                 .filter(cuti -> ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
                 .filter(cuti -> Boolean.TRUE.equals(cuti.getLeaveType().getDeductsAnnualQuota()))
+                // [BARU] Riwayat hasil import ledger tidak ikut menghitung saldo (lihat V56).
+                .filter(cuti -> !Boolean.TRUE.equals(cuti.getImportedHistory()))
                 .sorted(Comparator.comparing(LeaveRequest::getStartDate)
                         .thenComparing(
                                 LeaveRequest::getSubmittedAt,
@@ -477,6 +501,8 @@ public class LeaveService {
                     .usedAnnualLeave(BigDecimal.ZERO)
                     .remainingAnnualLeave(BigDecimal.ZERO)
                     .annualPeriodEnd(null)
+                    .annualPeriodStart(null) // [BARU]
+                    .annualUsedOutsideSystem(BigDecimal.ZERO) // [BARU]
                     .annualEligibleFrom(joinDate == null ? null : joinDate.plusYears(1))
                     .manualLeaveAllocated(manualRemaining)
                     .remainingManualLeave(manualRemaining)
@@ -497,15 +523,21 @@ public class LeaveService {
                 joinDate,
                 periodeMulai,
                 relevantApprovedLeaves,
-                annualPortionByRequestId
+                annualPortionByRequestId,
+                employee // [BARU] supaya penyesuaian manual ikut dihitung di carry-over
         );
 
+        // [BARU] Cuti tahunan yang sudah terpakai di luar sistem (data manual) untuk periode ini
+        BigDecimal usedOutsideSystem = getAnnualUsedOutsideSystem(employee, periodeMulai);
+
+        // [UBAH] + usedOutsideSystem di akhir
         BigDecimal usedAnnualLeave = relevantApprovedLeaves.stream()
                 .filter(cuti -> !cuti.getStartDate().isBefore(periodeMulai)
                         && cuti.getStartDate().isBefore(periodeSelesai))
                 .map(cuti -> annualPortionByRequestId.getOrDefault(
                         cuti.getLeaveRequestId(), BigDecimal.ZERO))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .add(usedOutsideSystem);
 
         // JANGAN di-clamp ke 0. Nilai negatif adalah defisit periode berjalan
         // dan akan mengurangi kuota pada anniversary berikutnya.
@@ -518,6 +550,8 @@ public class LeaveService {
                 .usedAnnualLeave(usedAnnualLeave)
                 .remainingAnnualLeave(remainingAnnualLeave)
                 .annualPeriodEnd(periodeSelesai)
+                .annualPeriodStart(periodeMulai) // [BARU]
+                .annualUsedOutsideSystem(usedOutsideSystem) // [BARU]
                 .annualEligibleFrom(null)
                 .manualLeaveAllocated(manualRemaining)
                 .remainingManualLeave(manualRemaining)
@@ -540,7 +574,8 @@ public class LeaveService {
             LocalDate joinDate,
             LocalDate currentPeriodStart,
             List<LeaveRequest> approvedLeaves,
-            Map<Long, BigDecimal> annualPortionByRequestId) {
+            Map<Long, BigDecimal> annualPortionByRequestId,
+            Employee employee) { // [BARU] parameter employee
 
         BigDecimal previousDeficit = BigDecimal.ZERO;
         LocalDate periodStart = joinDate.plusYears(1);
@@ -556,7 +591,8 @@ public class LeaveService {
                             && cuti.getStartDate().isBefore(periodEnd))
                     .map(cuti -> annualPortionByRequestId.getOrDefault(
                             cuti.getLeaveRequestId(), BigDecimal.ZERO))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .add(getAnnualUsedOutsideSystem(employee, periodStartFinal)); // [BARU]
 
             BigDecimal endingBalance = openingQuota.subtract(usedInPeriod);
             previousDeficit = endingBalance.min(BigDecimal.ZERO);
@@ -564,6 +600,21 @@ public class LeaveService {
         }
 
         return baseQuota.add(previousDeficit);
+    }
+
+    /**
+     * [BARU] Cuti tahunan yang sudah terpakai di luar sistem (data manual, diisi dari
+     * /devAccess). Hanya berlaku bila periode yang dihitung PERSIS periode yang dicatat
+     * saat pengisian; periode lain (atau tanggal masuk yang berubah) mengembalikan 0.
+     */
+    private BigDecimal getAnnualUsedOutsideSystem(Employee employee, LocalDate periodStart) {
+        BigDecimal value = employee.getAnnualUsedOutsideSystem();
+        if (value == null || value.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        return periodStart.equals(employee.getAnnualUsedOutsidePeriodStart())
+                ? value
+                : BigDecimal.ZERO;
     }
 
     /**
@@ -650,8 +701,7 @@ public class LeaveService {
             throw new RuntimeException("Rentang tanggal cuti tidak valid");
         }
 
-        existingCuti.setLeaveType(leaveTypeRepository.findById(updatedCuti.getLeaveType().getLeaveTypeId())
-                .orElseThrow(() -> new RuntimeException("Jenis cuti tidak ditemukan")));
+        existingCuti.setLeaveType(findSelectableLeaveType(updatedCuti.getLeaveType().getLeaveTypeId())); // [UBAH] tolak jenis sistem "Cuti hangus"
         existingCuti.setStartDate(updatedCuti.getStartDate());
         existingCuti.setEndDate(updatedCuti.getEndDate());
         validateCutiMelahirkanLimit(existingCuti, requester);
@@ -934,6 +984,13 @@ public class LeaveService {
                 .orElseThrow(() -> new RuntimeException("Status cuti " + statusName + " tidak ditemukan"));
     }
 
+    // [BARU] Kuota dasar cuti tahunan satu periode (tanpa carry-over defisit) -- dipakai
+    // LeaveSummaryService supaya angkanya sama dengan getLeaveBalance().
+    public BigDecimal getBaseAnnualQuotaOf(Employee employee) {
+        LeaveType annualLeave = leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan").orElse(null);
+        return BigDecimal.valueOf(getAnnualQuota(employee, annualLeave));
+    }
+
     private Integer getAnnualQuota(Employee employee, LeaveType annualLeave) {
         if (annualLeave == null) {
             return 12;
@@ -1165,20 +1222,30 @@ public class LeaveService {
         }
     }
 
+    // [UBAH] Sekarang memakai listWorkingDays() di bawah supaya aturan hari kerja hanya ada satu.
     private int calculateWorkingDays(LocalDate startDate, LocalDate endDate) {
-        Set<LocalDate> holidays = holidayRepository.findByDateBetweenOrderByDateAsc(startDate, endDate).stream()
+        return listWorkingDays(startDate, endDate, getHolidayDates(startDate, endDate)).size();
+    }
+
+    // [BARU] Tanggal libur nasional dalam rentang (dipakai export riwayat cuti per tanggal).
+    public Set<LocalDate> getHolidayDates(LocalDate startDate, LocalDate endDate) {
+        return holidayRepository.findByDateBetweenOrderByDateAsc(startDate, endDate).stream()
                 .map(holiday -> holiday.getDate())
                 .collect(Collectors.toSet());
+    }
 
-        int total = 0;
+    // [BARU] Daftar hari kerja (bukan Sabtu/Minggu/libur) dalam rentang -- aturan yang sama dengan
+    // penghitungan total hari saat cuti diajukan.
+    public List<LocalDate> listWorkingDays(LocalDate startDate, LocalDate endDate, Set<LocalDate> holidays) {
+        List<LocalDate> workingDays = new ArrayList<>();
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             DayOfWeek day = date.getDayOfWeek();
             boolean weekend = day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
             if (!weekend && !holidays.contains(date)) {
-                total++;
+                workingDays.add(date);
             }
         }
-        return total;
+        return workingDays;
     }
 
     // [UBAH] Overload 6-parameter (khusus baris auto-ACC Cuti Susulan) dihapus

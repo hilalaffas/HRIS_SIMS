@@ -15,7 +15,7 @@ public class EmployeeService {
     private final UserRepository userRepository;
     private final ReportScopeService reportScopeService; // [BARU] sembunyikan akun dev dari daftar karyawan
 
-    // [UBAH] Akun dev (role DEV / supersecret) tidak ikut daftar karyawan.
+    // [UBAH] Akun dev (role DEV / sys_dev) tidak ikut daftar karyawan.
     public List<Employee> getAllKaryawan() {
         return reportScopeService.withoutDevEmployees(karyawanRepository.findAll());
     }

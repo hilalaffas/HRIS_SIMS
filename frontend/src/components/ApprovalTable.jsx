@@ -13,7 +13,7 @@ const badgeClass = (status) => {
   return 'apv-status--blue';
 };
 
-export default function ApprovalTable({ rows, loading, processingKey, emptyMessage, onDecision, showProof = false }) {
+export default function ApprovalTable({ rows, loading, processingKey, emptyMessage, onDecision, showProof = false, detailTitle = 'Detail Pengajuan Lembur' }) {
   const [detailRow, setDetailRow] = useState(null);
   const columnCount = showProof ? 6 : 5;
   return (
@@ -50,7 +50,7 @@ export default function ApprovalTable({ rows, loading, processingKey, emptyMessa
       </div>
       {detailRow && <div className="apv-detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailRow(null); }}>
         <section className="apv-detail-modal" role="dialog" aria-modal="true" aria-labelledby="apv-detail-title">
-          <header><h2 id="apv-detail-title">Detail Pengajuan Lembur</h2><button type="button" onClick={() => setDetailRow(null)} aria-label="Tutup">×</button></header>
+          <header><h2 id="apv-detail-title">{detailTitle}</h2><button type="button" onClick={() => setDetailRow(null)} aria-label="Tutup">×</button></header>
           <dl><div><dt>Nama Karyawan</dt><dd>{detailRow.employeeName}</dd></div><div><dt>Tanggal</dt><dd>{formatDateLabel(detailRow.date)}</dd></div><div><dt>Jam</dt><dd>{detailRow.subDetail || '-'}</dd></div><div><dt>Alasan</dt><dd>{detailRow.detail || '-'}</dd></div><div><dt>Status</dt><dd><span className={`apv-status ${badgeClass(detailRow.approvalProgressStatus)}`}>{detailRow.approvalProgressStatus}</span></dd></div></dl>
           <h3>Riwayat Approval</h3>
           {detailRow.approvals?.length ? <ol className="apv-timeline">{detailRow.approvals.map((step, index) => <li key={`${step.role}-${step.employeeId}-${index}`}><strong>{step.role}</strong><span>{step.employeeName || '-'}</span><em className={`apv-step-${String(step.action || 'PENDING').toLowerCase()}`}>{step.action === 'APPROVED' ? 'Disetujui' : step.action === 'REJECTED' ? 'Ditolak' : 'Menunggu'}</em>{step.actedAt && <small>{new Date(step.actedAt).toLocaleString('id-ID')}</small>}{step.note && <small>Catatan: {step.note}</small>}</li>)}</ol> : <p className="apv-muted">Nama approval belum dilengkapi.</p>}

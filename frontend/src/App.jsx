@@ -5,11 +5,11 @@ import AppRoutes from './routes/AppRoutes';
 import Toast from './components/Toast';
 import LogoutModal from './components/LogoutModal';
 import SessionExpiredModal from './components/SessionExpiredModal'; // [BARU]
-import LoadingScreen from './components/LoadingScreen'; // [BARU] splash loading global saat fetch data halaman apapun
 import { logoutUser } from './services/authService';
 import { getMyProfile } from './services/profileService'; // [BARU] untuk hydrate foto profil di awal sesi
 import { expireSessionForInactivity, getAndClearRedirectPath, getTokenExpiryMs, refreshSession } from './services/api'; // [BARU] redirect terakhir & sliding session
 
+import useI18n from './i18n/useI18n'; // [BARU] i18n
 import { DEV_ACCESS_PATH, isDevAccessUser } from './config/devAccessConfig';
 import './App.css'; 
 
@@ -17,6 +17,7 @@ import './App.css';
 // Agar kita bisa menggunakan hook useNavigate dari react-router-dom
 const AppContent = () => {
   const navigate = useNavigate();
+  const { t, lang } = useI18n(); // [BARU]
   
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   // [BARU] null = modal sesi habis tersembunyi; string = tampil dengan pesan ini
@@ -103,10 +104,12 @@ const AppContent = () => {
   // ter-coupling ke React.
   useEffect(() => {
     const handleSessionExpired = (event) => {
-      setSessionExpiredMessage(
-        event.detail?.message ||
-        'Sesi Anda telah berakhir demi keamanan. Silakan login kembali.'
-      );
+      // [UBAH] Simpan pesan mentah + kunci i18n; teks akhir dipilih saat render
+      // supaya ikut bahasa terpilih (pesan dari server hanya berbahasa Indonesia).
+      setSessionExpiredMessage({
+        message: event.detail?.message || '',
+        reasonKey: event.detail?.reasonKey || '',
+      });
     };
     window.addEventListener('sims:session-expired', handleSessionExpired);
     return () => window.removeEventListener('sims:session-expired', handleSessionExpired);
@@ -253,7 +256,7 @@ const AppContent = () => {
         console.error('Gagal memuat foto profil setelah login:', error);
       });
 
-    showToast(`Selamat datang kembali, ${userData.name}`, 'success');
+    showToast(t('toast.welcomeBack', { name: userData.name }), 'success');
 
     // [UBAH] Sebelumnya redirect ke /dashboard diserahkan begitu saja ke
     // PublicRoute (yang path tujuannya selalu hardcode /dashboard). Sekarang
@@ -295,7 +298,7 @@ const AppContent = () => {
     clearSessionData();
     setIsLogoutModalOpen(false);
 
-    showToast('Anda berhasil keluar dari sistem.', 'success');
+    showToast(t('toast.loggedOut'), 'success');
 
     // TIDAK perlu navigate manual di sini.
     // Begitu localStorage.clear() dipanggil dan state currentUser berubah,
@@ -317,13 +320,6 @@ const AppContent = () => {
 
   return (
     <div className="app-container">
-      {/* [BARU] Global Loading Screen -- tampil otomatis setiap kali ada
-          request GET (data halaman) sedang berjalan di mana pun, dipicu
-          event 'sims:loading-start' / 'sims:loading-end' dari services/api.js.
-          Komponen ini mengatur tampil/sembunyinya sendiri, jadi cukup
-          dirender sekali di sini, tidak perlu prop apa pun. */}
-      <LoadingScreen />
-
       {/* Global Toast Notification -- selalu di-render (lihat Toast.jsx),
           visibilitas & animasi masuk/keluar dikendalikan lewat prop `show`. */}
       <Toast key={toast.id} show={toast.show} message={toast.message} type={toast.type} />
@@ -348,7 +344,11 @@ const AppContent = () => {
           WAJIB klik OK untuk lanjut, sesuai alur yang diminta. */}
       {sessionExpiredMessage && (
         <SessionExpiredModal
-          message={sessionExpiredMessage}
+          message={
+            sessionExpiredMessage.reasonKey
+              ? t(sessionExpiredMessage.reasonKey)
+              : (lang === 'id' && sessionExpiredMessage.message) || t('session.message')
+          }
           onConfirm={handleSessionExpiredConfirm}
         />
       )}

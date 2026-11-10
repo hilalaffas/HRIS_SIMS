@@ -30,4 +30,9 @@ public class LeaveType {
 
     @Column(name = "legal_note")
     private String legalNote;
+
+    // [BARU] Jenis cuti sistem "Cuti hangus" (V59): sisa cuti yang kedaluwarsa. Bukan hari cuti
+    // sungguhan -- disembunyikan dari form pengajuan, absensi, laporan, dan kalender.
+    @Column(name = "is_forfeiture", nullable = false)
+    private Boolean forfeiture = false;
 }

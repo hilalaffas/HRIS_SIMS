@@ -29,8 +29,9 @@
   
   /* Padding sedikit dibesarkan agar icon 24px tidak terlihat sesak */
   padding: 6px 8px; 
-  background-color: var(--dk-border-strong, #a7a9ac);
-  color: var(--dk-text, #ffffff);
+  /* [UBAH] Warna awal: abu-abu (#a7a9ac) -> hijau cerah. Tema gelap memakai token tombol hijau solid. */
+  background-color: var(--dk-btn-success, #10b981);
+  color: #ffffff; /* [UBAH] selalu putih supaya kontras di atas hijau (sebelumnya var(--dk-text)) */
   border: none;
   border-radius: 6px;
   font-weight: 500;
@@ -39,8 +40,8 @@
 }
 
 /* Efek saat kursor diarahkan ke tombol */
-.btn-export:hover {
-  background-color: var(--color-primary);
+.btn-export:hover:not(:disabled) {
+  background-color: var(--dk-btn-success-hover, #059669); /* [UBAH] hijau sedikit lebih tua, bukan hijau brand gelap */
 }
 
 /* Memastikan wrapper SVG tidak memiliki margin ekstra */

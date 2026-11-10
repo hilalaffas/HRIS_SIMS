@@ -242,7 +242,14 @@ public class EmployeeController {
         if (isNotBlank(request.getPosition())) employee.setPosition(request.getPosition());
 
         // [BARU] Sisa Cuti (manual, diisi HR)
-        if (request.getManualLeaveBalance() != null) employee.setManualLeaveBalance(request.getManualLeaveBalance());
+        // [UBAH] Boleh negatif (defisit). Hanya dibatasi kapasitas kolom NUMERIC(6,2) agar tidak error database.
+        if (request.getManualLeaveBalance() != null) {
+            java.math.BigDecimal manualBalance = request.getManualLeaveBalance();
+            if (manualBalance.abs().compareTo(new java.math.BigDecimal("9999.99")) > 0) {
+                throw new IllegalArgumentException("Sisa Cuti (lama) harus antara -9999.99 dan 9999.99.");
+            }
+            employee.setManualLeaveBalance(manualBalance.setScale(2, java.math.RoundingMode.HALF_UP));
+        }
 
         // [BARU] Status akun
         if (request.getIsActive() != null) employee.setIsActive(request.getIsActive());

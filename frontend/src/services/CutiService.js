@@ -78,6 +78,10 @@ export const getLeaveBalanceByEmployeeId = (employeeId) => api.get(`/api/cuti/ba
 // dipakai TableKaryawan.jsx lewat Karyawan.jsx (fetchKaryawan).
 export const getAllLeaveBalances = (config = {}) => api.get('/api/cuti/balance/all', config);
 
+// [BARU] Ringkasan cuti global SEMUA karyawan sejak tanggal masuk sampai hari ini (khusus admin),
+// dipakai tab "Ringkasan Cuti" di halaman Karyawan (components/LeaveSummaryTable.jsx).
+export const getAllLeaveSummaries = () => api.get('/api/cuti/summary/all');
+
 // [UBAH] Tambah employeeId opsional -- dipakai form Cuti Susulan (HR pilih
 // approver ATAS NAMA karyawan lain, bukan dirinya sendiri). Pemanggilan lama
 // tanpa employeeId (mis. Ajukan Cuti normal) tetap jalan persis seperti sebelumnya,
@@ -354,6 +358,7 @@ export function mapApproval(item, employeeLookup = {}) {
     // [UBAH] Sesi Pagi/Siang disisipkan di sini supaya otomatis tampil di
     // popup Detail Cuti (Form.jsx -> "Durasi Kerja") & ListSection.jsx.
     durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari${sessionSuffix(item)})`,
+    startDate: item.startDate || null, // [BARU] untuk urutan tanggal cuti di Riwayat Cuti
     totalDays,
     session: item.session ?? null,
     keterangan: item.reason || '-',
@@ -421,6 +426,8 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     endDate: item.endDate || null,
     totalDays,
     deductsQuota: item.leaveType?.deductsAnnualQuota !== false,
+    // [BARU] Riwayat hasil import ledger: tidak ikut perhitungan saldo (lihat leaveBalanceTimeline.js)
+    importedHistory: item.importedHistory === true,
     karyawan: { nama: item.employee?.fullName, kode: item.employee?.nikKaryawan || '-' },
     jenisCuti: item.leaveType?.name || 'Cuti',
     // [UBAH] Sesi Pagi/Siang disisipkan di sini juga, supaya konsisten

@@ -9,4 +9,7 @@ public interface UserRepository
 
     User findByUsername(String username);
 
+    // [BARU] Cek username tanpa membedakan huruf besar/kecil -- dipakai import karyawan (dev)
+    boolean existsByUsernameIgnoreCase(String username);
+
 }

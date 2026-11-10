@@ -241,7 +241,7 @@ const FormKaryawan = ({ onSubmit, canManageRole }) => {
             <label>TANGGAL MASUK</label>
             <input type="date" name="joinDate" onChange={handleInputChange} />
             <small className="hint-text_formkaryawan">
-              NIK karyawan akan dibuat otomatis (format SYS-tahun masuk-nomor urut) setelah data disimpan.
+              NIK karyawan akan dibuat otomatis (nomor urut 4 digit, contoh 0021) setelah data disimpan.
             </small>
           </div>
           <div className="grid-2-col_formkaryawan">
