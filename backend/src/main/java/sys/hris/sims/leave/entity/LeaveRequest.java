@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
@@ -112,5 +113,20 @@ public class LeaveRequest {
     @PrePersist
     public void prePersist() {
         this.submittedAt = LocalDateTime.now();
+        applyDefaults(); // [BARU]
+    }
+
+    // [BARU] Penjaga terakhir sebelum UPDATE: field NOT NULL tidak boleh jadi null lewat setter/JSON.
+    @PreUpdate
+    public void preUpdate() {
+        applyDefaults();
+    }
+
+    // [BARU] Field NOT NULL yang nilai awalnya bisa hilang (constructor/JSON/builder) diisi default di sini,
+    // sehingga INSERT/UPDATE tidak pernah melanggar constraint is_imported_history (V56).
+    private void applyDefaults() {
+        if (this.importedHistory == null) {
+            this.importedHistory = false;
+        }
     }
 }
