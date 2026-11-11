@@ -16,6 +16,28 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
     List<LeaveRequest> findByStatus_StatusId(Long statusId);
     List<LeaveRequest> findByLeaveType_LeaveTypeId(Long leaveTypeId);
 
+    // [BARU] Performa: semua cuti APPROVED beserta status & jenis cuti dalam SATU query.
+    // Dipakai getAllLeaveBalances() supaya saldo semua karyawan tidak lagi memicu
+    // satu query riwayat cuti per karyawan (N+1).
+    @Query("""
+            select l from LeaveRequest l
+            join fetch l.status s
+            join fetch l.leaveType t
+            where upper(s.statusName) = 'APPROVED'
+            """)
+    List<LeaveRequest> findAllApprovedWithDetails();
+
+    // [BARU] Performa: SEMUA pengajuan cuti beserta pemohon, status, jenis cuti & penyetuju dalam SATU
+    // query. Dipakai getAllCuti() (tab "Cuti Karyawan") supaya tidak memicu query per baris.
+    @Query("""
+            select l from LeaveRequest l
+            join fetch l.employee e
+            join fetch l.status s
+            join fetch l.leaveType t
+            left join fetch l.reviewedBy rb
+            """)
+    List<LeaveRequest> findAllWithDetails();
+
     //Overlap Cuti
     List<LeaveRequest> findByEmployee_EmployeeIdAndStatus_StatusNameIn(Long employeeId, List<String> statusNames);
 

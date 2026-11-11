@@ -17,7 +17,7 @@ public class EmployeeService {
 
     // [UBAH] Akun dev (role DEV / sys_dev) tidak ikut daftar karyawan.
     public List<Employee> getAllKaryawan() {
-        return reportScopeService.withoutDevEmployees(karyawanRepository.findAll());
+        return reportScopeService.withoutDevEmployees(karyawanRepository.findAllWithRelations()); // [UBAH] 1 query, bukan N+1
     }
 
     public List<Employee> getApproversByRole(String role) {

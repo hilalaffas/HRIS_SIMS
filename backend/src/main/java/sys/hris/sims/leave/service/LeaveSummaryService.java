@@ -7,7 +7,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ import sys.hris.sims.leave.repository.LeaveRepository;
 import sys.hris.sims.leave.service.LeaveForfeitCalculator.Forfeit;
 import sys.hris.sims.leave.service.LeaveForfeitCalculator.StoredForfeit;
 import sys.hris.sims.leave.service.LeaveForfeitCalculator.Usage;
+import sys.hris.sims.leavetype.entity.LeaveType;
 
 // [BARU] Ringkasan cuti global (sejak tanggal masuk sampai hari ini) + daftar cuti hangus.
 //
@@ -53,14 +56,45 @@ public class LeaveSummaryService {
 
     @Transactional(readOnly = true)
     public List<LeaveSummaryResponse> getAllSummaries() {
-        LocalDate today = today();
-        LocalDate forfeitStart = leaveRuleService.getForfeitStartDate(); // [BARU] dibaca sekali
-        return reportScopeService.onlyReportableEmployees(employeeRepository.findAll()).stream()
+        // [UBAH] Performa: karyawan dimuat SATU query (findAll() memicu N+1), lalu seluruh riwayat cuti
+        // APPROVED + jenis cuti tahunan + tanggal berlaku hangus dimuat SEKALI (BulkContext) dan dikelompokkan
+        // per karyawan di memori. Sebelumnya ~8 query per karyawan. Rumus tetap sama.
+        List<Employee> employees = reportScopeService.onlyReportableEmployees(employeeRepository.findAllWithRelations());
+        BulkContext context = loadBulkContext();
+        return employees.stream()
                 // [UBAH] Urut NIK (angka), bukan nama. NIK kosong di akhir.
                 .sorted(Comparator.comparing(Employee::getNikKaryawan,
                         Comparator.nullsLast(Comparator.comparingLong(LeaveSummaryService::nikAsNumber))))
-                .map(employee -> summarize(employee, today, forfeitStart))
+                .map(employee -> summarize(employee, context.today(), context.forfeitStart(), context))
                 .toList();
+    }
+
+    // [BARU] Data bersama untuk perhitungan MASSAL (semua karyawan sekaligus): dimuat sekali, dipakai
+    // untuk semua karyawan. Panggil SETELAH daftar karyawan dimuat (persistence context yang sama).
+    public record BulkContext(Map<Long, List<LeaveRequest>> approvedByEmployee, LeaveType annualLeave,
+                              LocalDate today, LocalDate forfeitStart) {
+        public List<LeaveRequest> approvedOf(Employee employee) {
+            return approvedByEmployee.getOrDefault(employee.getEmployeeId(), List.of());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public BulkContext loadBulkContext() {
+        Map<Long, List<LeaveRequest>> approvedByEmployee = leaveRepository.findAllApprovedWithDetails().stream()
+                .collect(Collectors.groupingBy(leave -> leave.getEmployee().getEmployeeId()));
+        return new BulkContext(approvedByEmployee, leaveService.getAnnualLeaveType(), today(),
+                leaveRuleService.getForfeitStartDate());
+    }
+
+    // [BARU] Cuti hangus satu karyawan memakai data massal (tanpa query per karyawan).
+    public List<Forfeit> computeForfeits(Employee employee, BulkContext context) {
+        return computeForfeits(employee, loadData(employee, context), context.today(), context.forfeitStart());
+    }
+
+    private LeaveBalanceResponse balanceOf(Employee employee, BulkContext context) {
+        return context == null
+                ? leaveService.getLeaveBalanceOf(employee)
+                : leaveService.getLeaveBalanceOf(employee, context.approvedOf(employee), context.annualLeave());
     }
 
     @Transactional(readOnly = true)
@@ -69,12 +103,18 @@ public class LeaveSummaryService {
     }
 
     private LeaveSummaryResponse summarize(Employee employee, LocalDate today, LocalDate forfeitStart) {
+        return summarize(employee, today, forfeitStart, null);
+    }
+
+    // [UBAH] + context (boleh null): bila ada, data diambil dari memori, bukan query per karyawan.
+    private LeaveSummaryResponse summarize(Employee employee, LocalDate today, LocalDate forfeitStart,
+                                           BulkContext context) {
         // [BARU] Karyawan yang sudah diimport dari Excel: angka murni mengikuti Excel.
         if (employee.hasLeaveImportBaseline()) {
-            return summarizeFromImport(employee, today);
+            return summarizeFromImport(employee, today, context);
         }
-        LeaveBalanceResponse balance = leaveService.getLeaveBalanceOf(employee);
-        EmployeeLeaveData data = loadData(employee);
+        LeaveBalanceResponse balance = balanceOf(employee, context); // [UBAH]
+        EmployeeLeaveData data = context == null ? loadData(employee) : loadData(employee, context); // [UBAH]
         List<Forfeit> forfeits = computeForfeits(employee, data, today, forfeitStart);
 
         BigDecimal forfeited = forfeits.stream()
@@ -113,9 +153,10 @@ public class LeaveSummaryService {
     //   terpakai       = terpakai Excel + cuti BARU (pengajuan asli yang disetujui setelah import)
     //   sisa           = saldo sistem (sudah disamakan dengan sisa Excel saat import, lalu dipotong cuti baru
     //                    lewat logika sistem yang biasa)
-    private LeaveSummaryResponse summarizeFromImport(Employee employee, LocalDate today) {
-        LeaveBalanceResponse balance = leaveService.getLeaveBalanceOf(employee);
-        BigDecimal used = nonNull(employee.getImportUsedLeave()).add(usedSinceImport(employee));
+    private LeaveSummaryResponse summarizeFromImport(Employee employee, LocalDate today, BulkContext context) {
+        LeaveBalanceResponse balance = balanceOf(employee, context); // [UBAH]
+        BigDecimal used = nonNull(employee.getImportUsedLeave()).add(
+                usedSinceImport(employee, context == null ? null : context.approvedOf(employee))); // [UBAH]
         BigDecimal forfeited = nonNull(employee.getImportForfeitedLeave());
         BigDecimal remainingPrevious = nonNull(balance.getRemainingManualLeave());
         BigDecimal remainingCurrent = nonNull(balance.getRemainingAnnualLeave());
@@ -144,12 +185,20 @@ public class LeaveSummaryService {
     // [BARU] Cuti BARU = pengajuan asli (bukan riwayat import) yang memotong jatah dan disetujui SETELAH
     // waktu import. Pengajuan asli sebelum import sudah termasuk di angka Excel.
     private BigDecimal usedSinceImport(Employee employee) {
+        return usedSinceImport(employee, null);
+    }
+
+    // [UBAH] preloadedLeaves (boleh null): riwayat cuti yang sudah dimuat; null = query per karyawan.
+    private BigDecimal usedSinceImport(Employee employee, List<LeaveRequest> preloadedLeaves) {
         java.time.LocalDateTime baseline = employee.getLeaveImportBaselineAt();
         if (baseline == null) {
             return BigDecimal.ZERO;
         }
         BigDecimal used = BigDecimal.ZERO;
-        for (LeaveRequest leave : leaveRepository.findByEmployee_EmployeeId(employee.getEmployeeId())) {
+        List<LeaveRequest> leaves = preloadedLeaves != null
+                ? preloadedLeaves
+                : leaveRepository.findByEmployee_EmployeeId(employee.getEmployeeId());
+        for (LeaveRequest leave : leaves) {
             if (leave.getStatus() == null || !STATUS_APPROVED.equalsIgnoreCase(leave.getStatus().getStatusName())
                     || leave.getLeaveType() == null || Boolean.TRUE.equals(leave.getImportedHistory())
                     || Boolean.TRUE.equals(leave.getLeaveType().getForfeiture())
@@ -195,7 +244,7 @@ public class LeaveSummaryService {
         }
         return LeaveForfeitCalculator.calculate(
                 employee.getJoinDate(),
-                leaveService.getBaseAnnualQuotaOf(employee),
+                baseQuotaOf(employee, data), // [UBAH] tanpa query bila data massal
                 today,
                 data.trackingStart(),
                 data.usages(),
@@ -241,7 +290,7 @@ public class LeaveSummaryService {
                                              LocalDate today, LocalDate forfeitStart) {
         if (employee.hasLeaveImportBaseline()) {
             return reconcileFromImport(employee, actualRemaining,
-                    nonNull(employee.getImportUsedLeave()).add(usedSinceImport(employee)),
+                    nonNull(employee.getImportUsedLeave()).add(usedSinceImport(employee, data.leaves())), // [UBAH]
                     nonNull(employee.getImportForfeitedLeave()), today);
         }
         return reconcileByQuota(employee, data, actualRemaining, today, forfeitStart);
@@ -253,7 +302,7 @@ public class LeaveSummaryService {
                                                     LocalDate today, LocalDate forfeitStart) {
         LocalDate joinDate = employee.getJoinDate();
         int fullYears = joinDate == null ? 0 : (int) Math.max(0, ChronoUnit.YEARS.between(joinDate, today));
-        BigDecimal total = leaveService.getBaseAnnualQuotaOf(employee).multiply(BigDecimal.valueOf(fullYears));
+        BigDecimal total = baseQuotaOf(employee, data).multiply(BigDecimal.valueOf(fullYears)); // [UBAH]
         BigDecimal used = usedSinceJoin(employee, data, null);
         BigDecimal forfeited = computeForfeits(employee, data, today, forfeitStart).stream()
                 .filter(item -> !item.expiryDate().isAfter(today))
@@ -277,12 +326,13 @@ public class LeaveSummaryService {
     // Pemeriksaan data semua karyawan (untuk tabel Histori Cuti / ledger) pada aturan hangus yang aktif.
     @Transactional(readOnly = true)
     public List<LeaveReconciliationRow> reconcileAll() {
-        LocalDate today = today();
-        LocalDate forfeitStart = leaveRuleService.getForfeitStartDate();
+        // [UBAH] Performa: data dimuat massal (lihat getAllSummaries), bukan query per karyawan.
+        List<Employee> employees = reportScopeService.onlyReportableEmployees(employeeRepository.findAllWithRelations());
+        BulkContext context = loadBulkContext();
         List<LeaveReconciliationRow> rows = new ArrayList<>();
-        for (Employee employee : reportScopeService.onlyReportableEmployees(employeeRepository.findAll())) {
-            BigDecimal actual = nonNull(leaveService.getLeaveBalanceOf(employee).getTotalRemainingLeave());
-            rows.add(reconcile(employee, loadData(employee), actual, today, forfeitStart));
+        for (Employee employee : employees) {
+            BigDecimal actual = nonNull(balanceOf(employee, context).getTotalRemainingLeave());
+            rows.add(reconcile(employee, loadData(employee, context), actual, context.today(), context.forfeitStart()));
         }
         return rows;
     }
@@ -482,15 +532,36 @@ public class LeaveSummaryService {
 
     // ---------------------------------------------------------------------------------------
 
-    private record EmployeeLeaveData(List<Usage> usages, List<StoredForfeit> storedForfeits, LocalDate trackingStart) {
+    // [UBAH] + leaves & baseAnnualQuota: terisi hanya pada jalur MASSAL (BulkContext); null = belum dimuat,
+    // pemakai akan query sendiri seperti sebelumnya.
+    private record EmployeeLeaveData(List<Usage> usages, List<StoredForfeit> storedForfeits, LocalDate trackingStart,
+                                     List<LeaveRequest> leaves, BigDecimal baseAnnualQuota) {
+        EmployeeLeaveData(List<Usage> usages, List<StoredForfeit> storedForfeits, LocalDate trackingStart) {
+            this(usages, storedForfeits, trackingStart, null, null);
+        }
+    }
+
+    private BigDecimal baseQuotaOf(Employee employee, EmployeeLeaveData data) {
+        return data.baseAnnualQuota() != null ? data.baseAnnualQuota() : leaveService.getBaseAnnualQuotaOf(employee);
     }
 
     private EmployeeLeaveData loadData(Employee employee) {
+        return buildData(employee, leaveRepository.findByEmployee_EmployeeId(employee.getEmployeeId()), null, null);
+    }
+
+    // [BARU] Jalur massal: tanpa query -- riwayat & kuota dasar berasal dari BulkContext.
+    private EmployeeLeaveData loadData(Employee employee, BulkContext context) {
+        List<LeaveRequest> leaves = context.approvedOf(employee);
+        return buildData(employee, leaves, leaves, leaveService.getBaseAnnualQuotaOf(employee, context.annualLeave()));
+    }
+
+    private EmployeeLeaveData buildData(Employee employee, List<LeaveRequest> source,
+                                        List<LeaveRequest> preloaded, BigDecimal baseAnnualQuota) {
         List<Usage> usages = new ArrayList<>();
         List<StoredForfeit> stored = new ArrayList<>();
         LocalDate earliest = employee.getAnnualUsedOutsidePeriodStart();
 
-        for (LeaveRequest leave : leaveRepository.findByEmployee_EmployeeId(employee.getEmployeeId())) {
+        for (LeaveRequest leave : source) {
             if (leave.getStatus() == null || !STATUS_APPROVED.equalsIgnoreCase(leave.getStatus().getStatusName())
                     || leave.getLeaveType() == null || leave.getStartDate() == null) {
                 continue;
@@ -509,7 +580,7 @@ public class LeaveSummaryService {
                 usages.add(new Usage(leave.getStartDate(), total, annualDays, imported));
             }
         }
-        return new EmployeeLeaveData(usages, stored, earliest);
+        return new EmployeeLeaveData(usages, stored, earliest, preloaded, baseAnnualQuota);
     }
 
     private static long nikAsNumber(String nik) {

@@ -25,7 +25,8 @@ import { getAllLeaveRequestsForHr, getAllLeaveBalances } from '../../services/Cu
 // [BARU] Interval polling live-sync tabel Direktori Karyawan (lihat
 // useEffect fetchKaryawan di bawah) -- interval sama dengan RiwayatCuti.jsx
 // / LeaveHistory.jsx.
-const KARYAWAN_POLL_INTERVAL_MS = 15000;
+// [UBAH] 15000 -> 60000: data karyawan/saldo cuti jarang berubah; polling 15 dtk membebani server.
+const KARYAWAN_POLL_INTERVAL_MS = 60000;
 import FormCuti from '../Cuti/approve/components/Form';
 import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService';
 import { getSystemLogs } from '../../services/logService'; 
@@ -151,31 +152,30 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     setPendingResetRequestId(null);
   };
 
+  const fetchInFlightRef = useRef(false); // [BARU]
   const fetchKaryawan = async ({ silent = false } = {}) => {
     // [BARU] Skeleton cuma perlu tampil saat BENAR-BENAR belum ada data
     // (initial load) -- polling silent di background TIDAK boleh menimpa
     // tabel yang sudah terisi dengan skeleton lagi.
+    // [BARU] Lewati polling silent kalau request sebelumnya belum selesai
+    // (server lambat) supaya request tidak menumpuk.
+    if (silent && fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
     if (!silent) setIsLoadingKaryawan(true);
     try {
-      // [UBAH] Teruskan { silent } ke service -- supaya polling background
-      // (silent=true, lihat interval di bawah) tidak ikut memicu
-      // LoadingScreen global. Lihat services/api.js.
-      const response = await getKaryawanList({ silent });
-      // Asumsi backend mengembalikan array of object di response.data atau response langsung
+      // [UBAH] Daftar karyawan & saldo cuti sekarang diambil PARALEL (Promise.all),
+      // sebelumnya berurutan sehingga waktu tunggu = penjumlahan keduanya.
+      // Kalau saldo gagal, tabel tetap tampil (fallback manualLeaveBalance).
+      const [response, balanceResponse] = await Promise.all([
+        getKaryawanList({ silent }),
+        getAllLeaveBalances({ silent }).catch((balanceError) => {
+          console.error("Gagal menarik data sisa cuti:", balanceError);
+          return [];
+        }),
+      ]);
       const list = response.data || response || [];
-
-      // [BARU] Gabungkan Total sisa cuti (Tahunan + Lama) ke tiap karyawan,
-      // dipakai kolom SISA CUTI di TableKaryawan.jsx. Kalau gagal ambil
-      // balance, tabel tetap tampil pakai fallback manualLeaveBalance
-      // (lihat TableKaryawan.jsx) supaya tidak blank total.
-      let balanceByEmployeeId = new Map();
-      try {
-        const balanceResponse = await getAllLeaveBalances({ silent });
-        const balances = balanceResponse.data || balanceResponse || [];
-        balanceByEmployeeId = new Map(balances.map((b) => [b.employeeId, b]));
-      } catch (balanceError) {
-        console.error("Gagal menarik data sisa cuti:", balanceError);
-      }
+      const balances = balanceResponse.data || balanceResponse || [];
+      const balanceByEmployeeId = new Map(balances.map((b) => [b.employeeId, b]));
 
       const merged = list.map((emp) => ({
         ...emp,
@@ -193,6 +193,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     } finally {
       // [BARU] Selalu dimatikan di sini (bukan cuma di jalur sukses) supaya
       // skeleton tidak nyangkut kalau request gagal.
+      fetchInFlightRef.current = false;
       if (!silent) setIsLoadingKaryawan(false);
     }
   };
@@ -244,7 +245,10 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     // sinkron begitu tab browser aktif kembali. Silent -- tidak ada
     // spinner/log error yang mengganggu user saat sedang bekerja di tabel
     // atau modal edit yang sedang terbuka.
-    const intervalId = window.setInterval(() => fetchKaryawan({ silent: true }), KARYAWAN_POLL_INTERVAL_MS);
+    // [UBAH] Polling hanya jalan saat tab terlihat.
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') fetchKaryawan({ silent: true });
+    }, KARYAWAN_POLL_INTERVAL_MS);
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') fetchKaryawan({ silent: true });
     };
