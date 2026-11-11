@@ -180,6 +180,8 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
                       <img 
                         src={photoUrl} 
                         alt="Profil" 
+                        loading="lazy"
+                        decoding="async"
                         className="avatar-img" 
                         onClick={() => setSelectedPhoto(photoUrl)}
                         style={{ cursor: 'pointer' }}

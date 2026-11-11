@@ -432,9 +432,22 @@ public class LeaveService {
     // Direktori Karyawan. Reuse getLeaveBalance(Employee) yang sama persis
     // dipakai /balance/me & /balance/{employeeId}, supaya 3-3nya selalu
     // konsisten satu sama lain.
+    // [UBAH] Performa: dulu memanggil getLeaveBalance() per karyawan, dan tiap panggilan
+    // menjalankan query riwayat cuti + query jenis cuti sendiri (N+1). Sekarang semua
+    // data dimuat SEKALI (karyawan, cuti APPROVED, jenis "Cuti tahunan"), dikelompokkan
+    // per karyawan di memori, lalu dihitung dengan rumus yang SAMA (buildLeaveBalance).
+    @Transactional(readOnly = true)
     public List<LeaveBalanceResponse> getAllLeaveBalances() {
-        return reportScopeService.withoutDevEmployees(karyawanRepository.findAll()).stream() // [UBAH] tanpa akun dev
-                .map(this::getLeaveBalance)
+        List<Employee> employees = reportScopeService.withoutDevEmployees( // tanpa akun dev
+                karyawanRepository.findAllWithRelations());
+        LeaveType annualLeave = leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan").orElse(null);
+        Map<Long, List<LeaveRequest>> approvedByEmployee = cutiRepository.findAllApprovedWithDetails().stream()
+                .collect(Collectors.groupingBy(cuti -> cuti.getEmployee().getEmployeeId()));
+        return employees.stream()
+                .map(employee -> buildLeaveBalance(
+                        employee,
+                        approvedByEmployee.getOrDefault(employee.getEmployeeId(), List.of()),
+                        annualLeave))
                 .toList();
     }
 
@@ -453,6 +466,16 @@ public class LeaveService {
      *    terjadi tidak perlu ditebak ulang dari saldo manual saat ini.
      */
     private LeaveBalanceResponse getLeaveBalance(Employee employee) {
+        // [UBAH] Pemuatan data dipisah dari perhitungan supaya getAllLeaveBalances()
+        // bisa memakai ulang rumus yang sama tanpa query per karyawan.
+        return buildLeaveBalance(
+                employee,
+                getCutiByKaryawan(employee.getEmployeeId()),
+                leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan").orElse(null));
+    }
+
+    private LeaveBalanceResponse buildLeaveBalance(
+            Employee employee, List<LeaveRequest> employeeLeaves, LeaveType annualLeave) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Jakarta"));
         LocalDate joinDate = employee.getJoinDate();
 
@@ -465,7 +488,7 @@ public class LeaveService {
 
         // Hanya histori APPROVED yang memang memotong kuota tahunan yang
         // dipakai untuk menghitung pemakaian tahunan dan defisit.
-        List<LeaveRequest> relevantApprovedLeaves = getCutiByKaryawan(employee.getEmployeeId()).stream()
+        List<LeaveRequest> relevantApprovedLeaves = employeeLeaves.stream()
                 .filter(cuti -> ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
                 .filter(cuti -> Boolean.TRUE.equals(cuti.getLeaveType().getDeductsAnnualQuota()))
                 // [BARU] Riwayat hasil import ledger tidak ikut menghitung saldo (lihat V56).
@@ -510,8 +533,6 @@ public class LeaveService {
                     .build();
         }
 
-        LeaveType annualLeave = leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan")
-                .orElse(null);
         BigDecimal baseAnnualQuota = BigDecimal.valueOf(getAnnualQuota(employee, annualLeave));
 
         long tahunKerjaPenuh = ChronoUnit.YEARS.between(joinDate, today);
