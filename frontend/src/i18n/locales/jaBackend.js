@@ -138,9 +138,8 @@ export const backendExact = {
   'jadwal regular libur setiap sabtu dan minggu.': 'レギュラーのスケジュールは、毎週土曜日・日曜日が休日です。',
   'jam masuk setiap shift harus berbeda.': '各シフトの出勤時刻は異なる必要があります。',
   'jam shift tidak boleh saling bertabrakan atau tumpang tindih.': 'シフト時間は互いに衝突・重複してはいけません。',
-  'durasi shift tidak valid. periksa pengaturan shift divisi.': 'シフト時間が正しくありません。部署のシフト設定をご確認ください。',
-  'durasi setiap shift custom harus lebih dari 0 dan maksimal 12 jam.': 'カスタムシフトの各時間は、0より大きく最大12時間である必要があります。',
-  'setiap karyawan wajib memiliki minimal 1 hari libur pada setiap minggu jadwal.': 'すべての従業員は、スケジュールの各週に最低1日の休日が必要です。',
+  'durasi shift harus lebih dari 0 jam. periksa pengaturan shift divisi.': 'シフト時間は0より大きい必要があります。部署のシフト設定をご確認ください。', // [UBAH] batas 12 jam dihapus
+  'durasi setiap shift custom harus lebih dari 0 jam.': 'カスタムシフトの各時間は、0より大きい必要があります。', // [UBAH] batas 12 jam dihapus
   'shift yang dipilih tidak sesuai dengan divisi karyawan.': '選択したシフトが従業員の部署と一致しません。',
   'reset jadwal hanya tersedia untuk karyawan divisi non regular (shift).': 'スケジュールのリセットは、非レギュラー（シフト制）部署の従業員のみ可能です。',
   'pilih karyawan non regular yang jadwalnya akan direset.': 'スケジュールをリセットする非レギュラー従業員を選択してください。',

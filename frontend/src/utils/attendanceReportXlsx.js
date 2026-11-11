@@ -87,7 +87,17 @@ function buildSheetData(sheet) {
 
   if (sheet.footer) {
     rows.push([]);
-    rows.push([{ value: sheet.footer, type: String, fontWeight: 'bold', textColor: COLORS.title, columnSpan: columnCount }, ...filler]);
+    const footerRows = Array.isArray(sheet.footer) ? sheet.footer : [[sheet.footer, '']];
+    footerRows.forEach(([label, value], index) => {
+      const footerRow = Array(columnCount).fill(null);
+      footerRow[0] = { value: String(label ?? ''), type: String, fontWeight: index === 0 ? 'bold' : 'normal', textColor: COLORS.title };
+      if (columnCount > 1) {
+        footerRow[1] = typeof value === 'number'
+          ? { value, type: Number, align: 'right', textColor: COLORS.title }
+          : { value: String(value ?? ''), type: String, format: '@', textColor: COLORS.title };
+      }
+      rows.push(footerRow);
+    });
   }
   return rows;
 }

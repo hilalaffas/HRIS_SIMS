@@ -546,7 +546,7 @@ export const exact = {
 "jadwal kerja sebulan, absensi selfie real-time, izin sakit/terlambat, dan rekap otomatis.": "月間勤務スケジュール、リアルタイム自撮り勤怠、病気・遅刻届、自動集計。",
 "jadwal kerja tujuh hari ke depan": "今後7日間の勤務スケジュール",
 "jadwal shift": "シフトスケジュール",
-"jadwal shift tidak boleh saling bertabrakan; durasi tiap shift maksimal 12 jam.": "シフト同士が重複してはいけません。各シフトの長さは最大12時間です。",
+"jadwal shift tidak boleh saling bertabrakan dan durasi shift harus lebih dari 0 jam.": "シフト同士が重複してはいけません。また、各シフトの長さは0より大きい必要があります。",
 "jadwal yang ditukar": "交換対象のスケジュール",
 "jadwalkan hari libur": "休日を設定",
 "jalankan pre-flight validation": "事前検証を実行",

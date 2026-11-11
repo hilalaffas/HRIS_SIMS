@@ -7,12 +7,11 @@
 // Contoh pemakaian:
 // <EmployeeReportModal report={report} periodLabel="..." exportingKind={null}
 //   onExport={(kind) => ...} onClose={() => setSelectedId(null)} />
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FileDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import useModalExit from '../../../hooks/useModalExit';
-import { formatOvertimeDuration } from '../../../services/overtimeService';
 import { EXPORT_FORMATS, STATUS_TONE_CLASS } from '../config/laporanConfig';
-import { buildDailyRows, DAILY_HEADERS } from '../utils/attendanceReportSheets';
+import { buildDailyRows, DAILY_HEADERS, formatAccHours } from '../utils/attendanceReportSheets';
 import './EmployeeReportModal.css';
 
 function safePhotoUrl(value) {
@@ -70,6 +69,9 @@ const formatLeave = (value) => String(Number(value.toFixed(1))).replace('.', ','
 export default function EmployeeReportModal({ report, periodLabel, exportingKind, onExport, onClose }) {
   const { closing, close } = useModalExit();
   const [preview, setPreview] = useState(null);
+  // [UBAH] Baris harian dihitung SEKALI per laporan, bukan di setiap render
+  // (render ulang terjadi saat foto dibuka/ditutup & saat animasi keluar).
+  const dailyRows = useMemo(() => (report ? buildDailyRows(report) : []), [report]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -82,7 +84,6 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
   if (!report) return null;
 
   const { summary } = report;
-  const dailyRows = buildDailyRows(report);
   const statusColumn = DAILY_HEADERS.indexOf('Status');
   const stats = [
     { label: 'Hadir', value: summary.present, tone: 'hadir' },
@@ -91,7 +92,7 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
     { label: 'Izin', value: summary.izin, tone: 'izin' },
     { label: 'Cuti', value: formatLeave(summary.leave), tone: 'izin' },
     { label: 'Alpha', value: summary.absent, tone: 'alpha' },
-    { label: 'Lembur ACC', value: formatOvertimeDuration(summary.overtimeMinutes), tone: 'telat' },
+    { label: 'Lembur ACC', value: formatAccHours(summary.overtimeAccMinutes), tone: 'telat' }, // [UBAH]
   ];
 
   return (

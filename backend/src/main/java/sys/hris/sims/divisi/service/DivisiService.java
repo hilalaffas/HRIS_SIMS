@@ -114,8 +114,8 @@ public class DivisiService {
             int minutes = (LocalTime.parse(shift.getEndTime()).toSecondOfDay()
                     - LocalTime.parse(shift.getStartTime()).toSecondOfDay()
                     + 24 * 60 * 60) % (24 * 60 * 60) / 60;
-            if (minutes <= 0 || minutes > 12 * 60) {
-                throw new IllegalArgumentException("Durasi setiap shift Custom harus lebih dari 0 dan maksimal 12 jam.");
+            if (minutes <= 0) {
+                throw new IllegalArgumentException("Durasi setiap shift Custom harus lebih dari 0 jam.");
             }
             LocalTime start = LocalTime.parse(shift.getStartTime());
             LocalTime end = LocalTime.parse(shift.getEndTime());
