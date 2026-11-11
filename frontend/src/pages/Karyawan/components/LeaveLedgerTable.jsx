@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import useI18n from '../../../i18n/useI18n';
 import { ArrowDown, ArrowUp } from 'lucide-react'; // [UBAH] ikon Download dihapus (tombol pindah ke header halaman)
 import Dropdown from '../../../components/Dropdown';
+import Skeleton from '../../../components/Skeleton'; // [BARU] loading skeleton
+import SkeletonGroup from '../../../components/SkeletonGroup'; // [BARU]
 import { getLeaveLedger } from '../../../services/leaveLedgerService'; // [UBAH] export Excel dipindah ke config/karyawanExportConfig.js
 import { SORT_DIRECTION, sortRows } from '../../../utils/tableSort';
 import './LeaveLedgerTable.css';
@@ -100,6 +102,77 @@ const reconcileBadge = (summary, labels) => {
 
 const totalUsed = (usages) =>
   usages.filter((usage) => !usage.forfeited).reduce((sum, usage) => sum + Number(usage.days), 0);
+
+// [BARU] Skeleton tabel ledger: struktur sama dengan tabel asli (kolom label tetap + kolom karyawan
+// berpasangan hari/tanggal + baris total & pemeriksaan), jadi tidak ada layout shift saat data tiba.
+const SKELETON_COLUMN_COUNT = 6;
+const SKELETON_USAGE_ROWS = 8;
+const SKELETON_RECON_ROWS = ['granted', 'used', 'forfeited', 'consistency'];
+function LeaveLedgerSkeleton({ labels }) {
+  const columns = Array.from({ length: SKELETON_COLUMN_COUNT }, (_, index) => index);
+  return (
+    <SkeletonGroup label="Memuat histori cuti..." radius={8}>
+      <div className="ledger__scroll">
+        <table className="ledger__table">
+          <tbody>
+            <tr className="ledger__headRow">
+              <th className="ledger__label" scope="row">{labels.no}</th>
+              {columns.map((column) => (
+                <th key={column} colSpan={2} className="ledger__nik">
+                  <Skeleton width={44} height={12} style={{ display: 'block', margin: '0 auto' }} />
+                </th>
+              ))}
+            </tr>
+            <tr className="ledger__headRow">
+              <th className="ledger__label" scope="row">{labels.nameRemaining}</th>
+              {columns.map((column) => (
+                <th key={column} colSpan={2} className="ledger__person">
+                  <Skeleton width="62%" height={12} />
+                </th>
+              ))}
+            </tr>
+            {Array.from({ length: SKELETON_USAGE_ROWS }, (_, rowIndex) => (
+              <tr key={rowIndex}>
+                {rowIndex === 0 && (
+                  <th className="ledger__label ledger__label--rows" scope="row" rowSpan={SKELETON_USAGE_ROWS}>{labels.usedDateReason}</th>
+                )}
+                {columns.map((column) => {
+                  // Variasi isi deterministik (bukan acak) supaya tampak seperti data asli yang panjangnya berbeda-beda.
+                  const hasEntry = (rowIndex + column) % 4 !== 3;
+                  return (
+                    <React.Fragment key={column}>
+                      <td className="ledger__days">{hasEntry && <Skeleton width={22} height={12} style={{ display: 'block', marginLeft: 'auto' }} />}</td>
+                      <td className="ledger__date">{hasEntry && <Skeleton width={72} height={12} style={{ display: 'block', margin: '0 auto' }} />}</td>
+                    </React.Fragment>
+                  );
+                })}
+              </tr>
+            ))}
+            <tr className="ledger__totalRow">
+              <th className="ledger__label" scope="row">{labels.total}</th>
+              {columns.map((column) => (
+                <th key={column} colSpan={2} className="ledger__total">
+                  <Skeleton width={56} height={12} style={{ display: 'block', marginLeft: 'auto' }} />
+                </th>
+              ))}
+            </tr>
+            {SKELETON_RECON_ROWS.map((labelKey) => (
+              <tr key={labelKey} className="ledger__reconRow">
+                <th className="ledger__label" scope="row">{labels[labelKey]}</th>
+                {columns.map((column) => (
+                  <td key={column} colSpan={2} className="ledger__recon">
+                    <Skeleton width={labelKey === 'consistency' ? 40 : 56} height={labelKey === 'consistency' ? 18 : 12}
+                      variant={labelKey === 'consistency' ? 'pill' : 'line'} style={{ display: 'block', marginLeft: 'auto' }} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </SkeletonGroup>
+  );
+}
 
 function LeaveLedgerTable({ onExportParamsChange }) { // [UBAH] + onExportParamsChange
   const { lang } = useI18n();
@@ -216,7 +289,7 @@ function LeaveLedgerTable({ onExportParamsChange }) { // [UBAH] + onExportParams
         {hasActiveFilter && <button type="button" className="ledger__reset" onClick={handleReset}>Reset</button>}
       </div>
 
-      {isLoading && <div className="ledger__state">Memuat histori cuti...</div>}
+      {isLoading && <LeaveLedgerSkeleton labels={labels} />} {/* [UBAH] sebelumnya teks "Memuat histori cuti..." */}
       {!isLoading && result.error && (
         <div className="ledger__state ledger__state--error">
           {result.error}{' '}
@@ -231,7 +304,7 @@ function LeaveLedgerTable({ onExportParamsChange }) { // [UBAH] + onExportParams
 
       {!isLoading && !result.error && visibleEmployees.length > 0 && (
         <>
-          <div className="ledger__scroll">
+          <div className="ledger__scroll content-reveal">
             <table className="ledger__table">
               <tbody>
                 <tr className="ledger__headRow">

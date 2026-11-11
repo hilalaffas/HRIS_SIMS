@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './LeaveHeadcountChart.css';
+import Skeleton from '../../../components/Skeleton'; // [BARU] loading skeleton
+import SkeletonGroup from '../../../components/SkeletonGroup'; // [BARU]
 
 // [BARU] Chart ringkas "Karyawan Cuti" untuk tab Ringkasan Cuti: satu batang per hari/minggu/bulan
 // (lihat utils/leaveHeadcount.js). Batang tumbuh dari bawah dengan jeda bertahap; angka total
@@ -29,11 +31,40 @@ function useCountUp(target, duration = 650) {
   return value;
 }
 
+// [BARU] Skeleton grafik: kotak, ukuran & tinggi area batang sama dengan grafik asli (tanpa layout shift).
+const SKELETON_BAR_HEIGHTS = [38, 62, 48, 82, 56, 72, 42, 90, 52, 66, 34, 76];
+function LeaveChartSkeleton() {
+  return (
+    <SkeletonGroup label="Memuat data cuti..." radius={10}>
+      <div className="leaveChart">
+        <div className="leaveChart__summary">
+          <Skeleton width={56} height={30} style={{ marginBottom: 8 }} />
+          <Skeleton width={92} height={13} style={{ marginBottom: 8 }} />
+          <Skeleton width="80%" height={11} />
+        </div>
+        <div className="leaveChart__plot">
+          <div className="leaveChart__caption">
+            <Skeleton width={150} height={11} />
+            <Skeleton width={60} height={11} />
+          </div>
+          <div className="leaveChart__bars" style={{ height: BAR_AREA_HEIGHT }}>
+            {SKELETON_BAR_HEIGHTS.map((height, index) => (
+              <div className="leaveChart__col" key={index}>
+                <Skeleton variant="block" style={{ height: `${height}%`, maxWidth: 28, borderRadius: '3px 3px 0 0' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </SkeletonGroup>
+  );
+}
+
 function LeaveHeadcountChart({ headcount, rangeLabel, totalEmployees, isLoading, animateKey }) {
   const total = useCountUp(headcount?.total ?? 0);
 
   if (isLoading) {
-    return <div className="leaveChart leaveChart--empty">Memuat data cuti...</div>;
+    return <LeaveChartSkeleton />; // [UBAH] sebelumnya teks "Memuat data cuti..."
   }
   if (!headcount) {
     return <div className="leaveChart leaveChart--empty">Data cuti tidak tersedia.</div>;

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, getStoredToken } from './api'; // [UBAH] + getStoredToken (dipakai berbagi hasil polling approval)
 
 const statusLabel = (value) => ({ 
   PENDING: 'Dalam Proses', APPROVED: 'Disetujui (ACC)', RETURNED: 'Dikembalikan', REJECTED: 'Ditolak' 
@@ -460,9 +460,34 @@ export async function getAllLeaveRequestsForHr(config = {}) {
   return Array.isArray(res) ? res.map(mapKaryawanLeave) : [];
 }
 
-export const getPendingApprovals = async (config = {}) => {
+// [UBAH] Performa: Navbar (lonceng) dan MainLayout (badge sidebar) sama-sama memanggil endpoint ini.
+// Panggilan SILENT (polling latar belakang) yang datang dalam 3 detik berbagi satu request/hasil yang sama.
+// Panggilan non-silent (halaman Approve Cuti) SELALU mengambil data baru, tidak ikut dibagi.
+const PENDING_APPROVALS_SHARE_MS = 3000;
+let sharedPendingApprovals = { promise: null, at: 0, token: null };
+
+const fetchPendingApprovals = async (config) => {
   const res = await api.get('/api/cuti/approvals/my-task', config);
   return Array.isArray(res) ? res.map(item => mapApproval(item)) : [];
+};
+
+export const getPendingApprovals = async (config = {}) => {
+  if (!config.silent) return fetchPendingApprovals(config);
+
+  const token = getStoredToken(); // user berbeda (login ulang) tidak boleh berbagi hasil
+  const now = Date.now();
+  if (sharedPendingApprovals.promise && sharedPendingApprovals.token === token
+      && now - sharedPendingApprovals.at < PENDING_APPROVALS_SHARE_MS) {
+    return sharedPendingApprovals.promise;
+  }
+  const promise = fetchPendingApprovals(config);
+  sharedPendingApprovals = { promise, at: now, token };
+  promise.catch(() => {
+    if (sharedPendingApprovals.promise === promise) {
+      sharedPendingApprovals = { promise: null, at: 0, token: null }; // gagal -> jangan dibagi
+    }
+  });
+  return promise;
 };
 
 export const getApprovalHistory = async (config = {}) => {

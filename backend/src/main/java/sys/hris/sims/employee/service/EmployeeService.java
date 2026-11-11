@@ -21,7 +21,8 @@ public class EmployeeService {
     }
 
     public List<Employee> getApproversByRole(String role) {
-        return karyawanRepository.findAll().stream()
+        // [UBAH] findAll() -> findAllWithRelations(): user, role & divisi dalam 1 query (bukan query per karyawan)
+        return karyawanRepository.findAllWithRelations().stream()
                 .filter(employee -> Boolean.TRUE.equals(employee.getIsActive()))
                 .filter(employee -> employee.getUser() != null)
                 .filter(employee -> employee.getUser().getRoleId() != null)

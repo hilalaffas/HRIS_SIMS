@@ -11,6 +11,7 @@ import useServerFeatureFlags from '../hooks/useServerFeatureFlags'; // [BARU]
 import { isThemeToggleEnabled } from '../utils/featureFlags'; // [BARU]
 import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
+import { startPolling } from '../utils/polling'; // [BARU]
 import { getSickApprovals } from '../services/attendanceService'; // [BARU] badge Persetujuan Sakit & Izin (HRD)
 import usePresence from '../hooks/usePresence'; // [BARU] animasi keluar overlay sidebar mobile
 import RouteFallback from '../components/RouteFallback'; // [BARU] indikator saat chunk halaman diunduh
@@ -18,7 +19,11 @@ import RouteErrorBoundary from '../components/RouteErrorBoundary'; // [BARU] pen
 import { preloadLazyPages } from '../routes/lazyPages'; // [BARU] unduh halaman lain saat idle
 
 // Pastikan Anda sudah menginstal fontawesome: npm install @fortawesome/fontawesome-free
-import '@fortawesome/fontawesome-free/css/all.min.css';
+// [UBAH] Performa: all.min.css (termasuk gaya Brands + kompatibilitas FA v4 yang tidak dipakai) diganti
+// tiga file inti. Proyek hanya memakai kelas fa-solid dan fa-regular, jadi tampilan ikon sama persis.
+import '@fortawesome/fontawesome-free/css/fontawesome.min.css';
+import '@fortawesome/fontawesome-free/css/solid.min.css';
+import '@fortawesome/fontawesome-free/css/regular.min.css';
 import './MainLayout.css'; 
 
 export default function MainLayout({ onLogout, user }) {
@@ -81,8 +86,9 @@ export default function MainLayout({ onLogout, user }) {
     };
 
     refreshApprovalCount();
-    const intervalId = window.setInterval(refreshApprovalCount, 15000);
-    return () => window.clearInterval(intervalId);
+    // [UBAH] setInterval 15 dtk -> startPolling 30 dtk (badge angka; hasil dibagi dengan Navbar lewat getPendingApprovals)
+    const stopPolling = startPolling(refreshApprovalCount, 30000);
+    return () => stopPolling();
   }, [canApproveLeave]);
 
   // [BARU] Badge "Persetujuan Sakit & Izin" di sidebar HRD_ADMIN: jumlah pengajuan sakit berstatus PENDING.
@@ -100,8 +106,9 @@ export default function MainLayout({ onLogout, user }) {
     };
 
     refreshPermissionCount();
-    const intervalId = window.setInterval(refreshPermissionCount, 15000);
-    return () => window.clearInterval(intervalId);
+    // [UBAH] setInterval 15 dtk -> startPolling 30 dtk (badge angka)
+    const stopPolling = startPolling(refreshPermissionCount, 30000);
+    return () => stopPolling();
   }, [canApprovePermission]);
 
   // [UBAH] data-theme dipasang di root layout: token warna gelap di

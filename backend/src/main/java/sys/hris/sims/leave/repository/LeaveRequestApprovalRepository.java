@@ -4,6 +4,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import sys.hris.sims.leave.entity.LeaveRequestApproval;
 
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +22,15 @@ public interface LeaveRequestApprovalRepository extends JpaRepository<LeaveReque
     Optional<LeaveRequestApproval> findByLeaveRequest_LeaveRequestIdAndApproverRole(Long leaveRequestId, String approverRole);
 
     List<LeaveRequestApproval> findByApproverEmployee_EmployeeId(Long employeeId);
+
+    // [BARU] Tahap approval banyak pengajuan sekaligus (+ data approver), urut sesuai urutan dibuat.
+    @Query("""
+            select a from LeaveRequestApproval a
+            left join fetch a.approverEmployee
+            where a.leaveRequest.leaveRequestId in :ids
+            order by a.approvalId asc
+            """)
+    List<LeaveRequestApproval> findAllByLeaveRequestIds(@Param("ids") Collection<Long> ids);
 
     List<LeaveRequestApproval> findByApproverEmployee_EmployeeIdAndAction(Long employeeId, String action);
 

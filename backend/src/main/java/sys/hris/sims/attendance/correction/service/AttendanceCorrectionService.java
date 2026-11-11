@@ -110,9 +110,19 @@ public class AttendanceCorrectionService {
         boolean admin = authentication.getAuthorities().stream().anyMatch(a ->
             "ROLE_SUPER_ADMIN".equals(a.getAuthority()) || "ROLE_DEV".equals(a.getAuthority()));
         Long actorId = admin ? null : employee(authentication.getName()).getEmployeeId();
-        return correctionRepository.findAll().stream()
+        // [UBAH] Performa: koreksi + tahap approval dimuat massal (sebelumnya 2 query per koreksi).
+        List<AttendanceCorrection> corrections = correctionRepository.findAllWithDetails();
+        Map<Long, List<AttendanceCorrectionApproval>> stepsByCorrection = corrections.isEmpty()
+            ? Map.of()
+            : approvalRepository.findAllByCorrectionIds(
+                    corrections.stream().map(AttendanceCorrection::getCorrectionId).toList())
+                .stream().collect(java.util.stream.Collectors.groupingBy(a -> a.getCorrection().getCorrectionId()));
+        return corrections.stream()
             .sorted(Comparator.comparing(AttendanceCorrection::getCreatedAt).reversed())
-            .map(item -> toResponse(item, actorId != null && Objects.equals(actorId, currentApprover(item))))
+            .map(item -> {
+                List<AttendanceCorrectionApproval> steps = stepsByCorrection.getOrDefault(item.getCorrectionId(), List.of());
+                return toResponse(item, actorId != null && Objects.equals(actorId, currentApprover(steps)), steps);
+            })
             .filter(item -> admin || item.getApprovals().stream().anyMatch(a -> Objects.equals(actorId, a.getEmployeeId())))
             .toList();
     }
@@ -155,13 +165,22 @@ public class AttendanceCorrectionService {
     }
 
     private Long currentApprover(AttendanceCorrection correction) {
-        return approvalRepository.findByCorrection_CorrectionIdOrderByApprovalIdAsc(correction.getCorrectionId()).stream()
+        return currentApprover(approvalRepository.findByCorrection_CorrectionIdOrderByApprovalIdAsc(correction.getCorrectionId()));
+    }
+
+    // [BARU] Versi dengan tahap approval yang sudah dimuat (tanpa query).
+    private Long currentApprover(List<AttendanceCorrectionApproval> steps) {
+        return steps.stream()
             .filter(a -> "PENDING".equals(a.getAction())).map(a -> a.getApproverEmployee().getEmployeeId()).findFirst().orElse(null);
     }
 
     private AttendanceCorrectionResponse toResponse(AttendanceCorrection item, boolean canAct) {
-        List<AttendanceCorrectionApproval> steps = approvalRepository
-            .findByCorrection_CorrectionIdOrderByApprovalIdAsc(item.getCorrectionId());
+        return toResponse(item, canAct, approvalRepository.findByCorrection_CorrectionIdOrderByApprovalIdAsc(item.getCorrectionId()));
+    }
+
+    // [UBAH] Isi method lama dipindah ke sini; steps diberikan pemanggil (bisa hasil pemuatan massal).
+    private AttendanceCorrectionResponse toResponse(AttendanceCorrection item, boolean canAct,
+                                                    List<AttendanceCorrectionApproval> steps) {
         return AttendanceCorrectionResponse.builder()
             .correctionId(item.getCorrectionId()).attendanceId(item.getAttendance().getAttendanceId())
             .employeeId(item.getEmployee().getEmployeeId()).employeeName(item.getEmployee().getFullName())

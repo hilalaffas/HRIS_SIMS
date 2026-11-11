@@ -1,5 +1,6 @@
 // src/pages/Dashboard/components/CalendarCard.jsx
 import React, { useState, useEffect } from 'react';
+import { startPolling } from '../../../utils/polling'; // [BARU]
 import { getHolidaysByMonth } from '../../../services/holidayService';
 import { getTeamLeaveByYear } from '../../../services/CutiService';
 
@@ -58,8 +59,9 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
       }
     };
     loadCalendarData();
-    const refreshTimer = window.setInterval(loadCalendarData, 30000);
-    return () => window.clearInterval(refreshTimer);
+    // [UBAH] setInterval 30 dtk -> startPolling 60 dtk (widget sekunder; berhenti saat tab tersembunyi)
+    const stopPolling = startPolling(loadCalendarData, 60000);
+    return () => stopPolling();
   }, [currentYear, currentMonth, refreshTrigger]);
 
   // [UBAH] Functional update (pakai nilai viewDate sebelumnya dari React,

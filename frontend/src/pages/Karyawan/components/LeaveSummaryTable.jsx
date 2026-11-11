@@ -5,6 +5,8 @@ import { compareByNik } from '../../../utils/sortByNik';
 import { buildLeaveHeadcount, resolveRange } from '../../../utils/leaveHeadcount';
 import { SORT_DIRECTION, sortRows } from '../../../utils/tableSort';
 import LeaveHeadcountChart from './LeaveHeadcountChart';
+import Skeleton from '../../../components/Skeleton'; // [BARU] loading skeleton
+import SkeletonGroup from '../../../components/SkeletonGroup'; // [BARU]
 import './LeaveSummaryTable.css';
 
 // [BARU] Tab "Ringkasan Cuti" -- ringkasan cuti tiap karyawan sejak tanggal masuk sampai hari ini.
@@ -62,6 +64,42 @@ function SortHeader({ label, sortKey, sortConfig, onSort, align }) {
         <Icon aria-hidden="true" />
       </button>
     </th>
+  );
+}
+
+// [BARU] Skeleton tabel ringkasan: header & lebar kolom sama dengan tabel asli (tanpa layout shift).
+const SKELETON_ROW_COUNT = 8;
+function LeaveSummarySkeleton() {
+  return (
+    <SkeletonGroup label="Memuat ringkasan cuti..." radius={8}>
+      <div className="leaveSummary__scroll">
+        <table className="leaveSummary__table">
+          <thead>
+            <tr>
+              <th>Karyawan</th>
+              <th>Tgl Masuk</th>
+              {COLUMNS.map((column) => <th key={column.key} className="leaveSummary__num">{column.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
+              <tr key={index}>
+                <td>
+                  <Skeleton width="58%" height={14} style={{ marginBottom: 6 }} />
+                  <Skeleton width="36%" height={11} />
+                </td>
+                <td><Skeleton width={76} height={13} /></td>
+                {COLUMNS.map((column) => (
+                  <td key={column.key} className="leaveSummary__num">
+                    <Skeleton width={34} height={13} style={{ display: 'block', marginLeft: 'auto' }} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </SkeletonGroup>
   );
 }
 
@@ -188,7 +226,7 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
         animateKey={animateKey}
       />
 
-      {isLoading && <div className="leaveSummary__state">Memuat ringkasan cuti...</div>}
+      {isLoading && <LeaveSummarySkeleton />} {/* [UBAH] sebelumnya teks "Memuat ringkasan cuti..." */}
 
       {!isLoading && errorMessage && (
         <div className="leaveSummary__state leaveSummary__state--error">
@@ -204,7 +242,7 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
       )}
 
       {!isLoading && !errorMessage && visibleRows.length > 0 && (
-        <div className="leaveSummary__scroll">
+        <div className="leaveSummary__scroll content-reveal">
           <table className="leaveSummary__table">
             <thead>
               <tr>
