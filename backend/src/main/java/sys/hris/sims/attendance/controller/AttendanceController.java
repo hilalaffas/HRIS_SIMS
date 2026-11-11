@@ -159,8 +159,8 @@ public class AttendanceController {
     // ADMIN_ROLES di SecurityConfig. Disiapkan untuk pengembangan lanjutan
     // (dihubungkan ke Direktori Karyawan / rekap bersama data Cuti), belum
     // dipakai halaman frontend mana pun saat ini.
-    // [UBAH] GET daftar pengajuan Sakit untuk tab "Izin Sakit" di Persetujuan Cuti --
-    // Leader, SPV, Manager (dibatasi di SecurityConfig; cakupan datanya di AttendanceService).
+    // [UBAH] GET daftar pengajuan Sakit untuk halaman "Persetujuan Sakit & Izin" --
+    // HANYA HRD_ADMIN (dibatasi di SecurityConfig, dicek ulang di AttendanceService).
     @GetMapping("/approvals/sakit")
     public ResponseEntity<List<AttendanceResponse>> getSickApprovals(Authentication authentication) {
         return ResponseEntity.ok(attendanceService.getSickApprovals(authentication));

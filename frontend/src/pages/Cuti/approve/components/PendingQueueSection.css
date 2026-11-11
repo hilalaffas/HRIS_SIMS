@@ -1,0 +1,46 @@
+/* src/pages/Cuti/approve/components/PendingQueueSection.css
+   Pilihan jenis antrean (Cuti / Lembur / Koreksi Absensi) di tab "Perlu Diproses".
+   Variabel --alv-* berasal dari wrapper .approve-leaving-page. */
+
+.pendingQueue__filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 18px 24px 0;
+}
+
+.pendingQueue__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--alv-text-secondary);
+  background: var(--alv-bg-card);
+  border: 1px solid var(--alv-border);
+  border-radius: var(--alv-radius-full);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.pendingQueue__pill:hover { background: var(--alv-bg-table-head); }
+
+.pendingQueue__pill.is-active {
+  color: #fff;
+  background: var(--alv-primary);
+  border-color: var(--alv-primary);
+}
+
+.pendingQueue__count {
+  min-width: 18px;
+  padding: 1px 6px;
+  font-size: 10px;
+  text-align: center;
+  color: #fff;
+  background: var(--alv-rose);
+  border-radius: var(--alv-radius-full);
+}
+
+/* Tabel lembur / koreksi memakai gaya ApprovalTable; panel hanya memberi jarak dalam. */
+.pendingQueue__panel { padding: 16px 24px 24px; }

@@ -11,6 +11,7 @@ import useServerFeatureFlags from '../hooks/useServerFeatureFlags'; // [BARU]
 import { isThemeToggleEnabled } from '../utils/featureFlags'; // [BARU]
 import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
+import { getSickApprovals } from '../services/attendanceService'; // [BARU] badge Persetujuan Sakit & Izin (HRD)
 import usePresence from '../hooks/usePresence'; // [BARU] animasi keluar overlay sidebar mobile
 import RouteFallback from '../components/RouteFallback'; // [BARU] indikator saat chunk halaman diunduh
 import RouteErrorBoundary from '../components/RouteErrorBoundary'; // [BARU] pengaman chunk gagal dimuat
@@ -25,6 +26,7 @@ export default function MainLayout({ onLogout, user }) {
   const { t } = useI18n();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [approvalCount, setApprovalCount] = useState(0);
+  const [permissionCount, setPermissionCount] = useState(0); // [BARU] sakit/izin menunggu (HRD_ADMIN)
   const location = useLocation();
   // [BARU] Overlay tetap di DOM sebentar setelah sidebar ditutup supaya bisa memudar.
   const overlay = usePresence(isSidebarOpen, 250);
@@ -58,6 +60,7 @@ export default function MainLayout({ onLogout, user }) {
   const menuItems = getMenuItems(user);
   const role = String(user?.role || user?.jabatan || '').trim().toUpperCase().replace(/^ROLE_/, '');
   const canApproveLeave = ['LEADER', 'SPV', 'MANAGER'].includes(role);
+  const canApprovePermission = role === 'HRD_ADMIN'; // [BARU] persetujuan sakit & izin hanya HRD_ADMIN
 
   useEffect(() => {
     if (!canApproveLeave) {
@@ -82,6 +85,25 @@ export default function MainLayout({ onLogout, user }) {
     return () => window.clearInterval(intervalId);
   }, [canApproveLeave]);
 
+  // [BARU] Badge "Persetujuan Sakit & Izin" di sidebar HRD_ADMIN: jumlah pengajuan sakit berstatus PENDING.
+  useEffect(() => {
+    // Role selain HRD_ADMIN tidak memanggil API; hitungan tetap 0 (nilai awal state).
+    if (!canApprovePermission) return undefined;
+
+    const refreshPermissionCount = async () => {
+      try {
+        const records = await getSickApprovals({ silent: true });
+        setPermissionCount((records || []).filter((item) => String(item.approvalStatus).toUpperCase() === 'PENDING').length);
+      } catch {
+        setPermissionCount(0);
+      }
+    };
+
+    refreshPermissionCount();
+    const intervalId = window.setInterval(refreshPermissionCount, 15000);
+    return () => window.clearInterval(intervalId);
+  }, [canApprovePermission]);
+
   // [UBAH] data-theme dipasang di root layout: token warna gelap di
   // styles/tokens.css hanya aktif di dalam area ini (Login dsb. tidak terpengaruh).
   return (
@@ -95,7 +117,7 @@ export default function MainLayout({ onLogout, user }) {
         user={user} 
         onLogout={onLogout} 
         menuItems={menuItems} 
-        notificationCounts={{ approval: approvalCount }} 
+        notificationCounts={{ approval: approvalCount, permissionApproval: permissionCount }} 
         onNavigate={() => setIsSidebarOpen(false)} />
       </aside>
 

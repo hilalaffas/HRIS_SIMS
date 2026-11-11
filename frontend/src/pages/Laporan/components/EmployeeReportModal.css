@@ -142,3 +142,16 @@
 @media (max-width: 720px) {
   .lpr-modal-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+.lpr-proof-photo { display: flex; flex-direction: column; gap: 4px; align-items: center; padding: 4px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); color: var(--color-primary); cursor: pointer; white-space: nowrap; font: inherit; }
+.lpr-proof-photo img { width: 64px; height: 64px; object-fit: cover; border-radius: 5px; }
+.lpr-proof-photo:hover { outline: 2px solid var(--color-primary); }
+.lpr-proof-gps { display: flex; flex-direction: column; gap: 4px; min-width: 160px; color: var(--color-primary); }
+.lpr-proof-gps > span { white-space: nowrap; }
+.lpr-proof-gps small { max-width: 220px; }
+.lpr-photo-overlay { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .78); }
+.lpr-photo-modal { width: min(760px, 100%); max-height: calc(100dvh - 32px); overflow: auto; border-radius: 12px; background: var(--color-surface); color: var(--color-text); box-shadow: 0 20px 60px #0006; }
+.lpr-photo-modal header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 16px; }
+.lpr-photo-modal h3 { margin: 0; font-size: 15px; }
+.lpr-photo-modal button { display: grid; place-items: center; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.lpr-photo-modal > img { display: block; width: 100%; max-height: calc(100dvh - 110px); object-fit: contain; }

@@ -21,14 +21,15 @@ import Dropdown from '../../../components/Dropdown';
 import MedicalDocumentDropzone from './MedicalDocumentDropzone';
 import './PermissionRequestModal.css';
 
+// [UBAH] Label dropdown dipersingkat: "Sakit" dan "Terlambat" (nilai value tetap SAKIT / TERLAMBAT)
 const TYPE_OPTIONS = [
-  { value: 'SAKIT', label: 'Izin Sakit (Butuh Surat Sakit Dokter)' },
-  { value: 'TERLAMBAT', label: 'Izin Terlambat (Kendala Tak Terduga)' },
+  { value: 'SAKIT', label: 'Sakit' },
+  { value: 'TERLAMBAT', label: 'Terlambat' },
 ];
 const NOTE_MAX_LENGTH = 255; // attendances.note VARCHAR(255)
 const MAX_SICK_DAYS = 30; // sama dengan AttendanceService.MAX_SICK_DAYS
 
-export default function PermissionRequestModal({ onSubmit, onClose }) {
+export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckout = false }) {
   const submitLockRef = useRef(false); // gerbang sinkron anti double-submit
   const [type, setType] = useState('SAKIT');
   const [days, setDays] = useState('1');
@@ -57,7 +58,7 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
     setDocumentLater(event.target.checked);
     if (event.target.checked) {
       setDocumentFile(null);
-      setDays('1'); // [BARU] surat menyusul -> lama izin dikunci 1 hari
+      if (!earlyCheckout) setDays('1'); // [BARU] surat menyusul -> lama izin dikunci 1 hari
     }
     setErrorMessage('');
   };
@@ -66,7 +67,8 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
     if (!note.trim()) return 'Keterangan wajib diisi.';
     if (isSick) {
       const dayCount = Number(days);
-      if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_SICK_DAYS) {
+      if (earlyCheckout ? ![0.5, 1].includes(dayCount) : (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_SICK_DAYS)) {
+        if (earlyCheckout) return 'Lama izin sakit harus 0,5 atau 1 hari.';
         return `Lama izin sakit harus 1 sampai ${MAX_SICK_DAYS} hari.`;
       }
       if (!documentFile && !documentLater) {
@@ -91,7 +93,7 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
       await onSubmit({
         type,
         note: note.trim(),
-        days: documentLater ? 1 : Number(days),
+        days: documentLater && !earlyCheckout ? 1 : Number(days),
         documentFile: isSick ? documentFile : null,
       });
     } catch (error) {
@@ -128,7 +130,7 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
               name="permissionType"
               value={type}
               onChange={handleTypeChange}
-              options={TYPE_OPTIONS}
+              options={earlyCheckout ? TYPE_OPTIONS.slice(0, 1) : TYPE_OPTIONS}
               disabled={isSubmitting}
               ariaLabel="Pilihan jenis izin"
             />
@@ -171,18 +173,18 @@ export default function PermissionRequestModal({ onSubmit, onClose }) {
                   <input
                     id="abs-permission-days"
                     type="number"
-                    min="1"
-                    max={MAX_SICK_DAYS}
-                    step="1"
-                    inputMode="numeric"
+                    min={earlyCheckout ? "0.5" : "1"}
+                    max={earlyCheckout ? 1 : MAX_SICK_DAYS}
+                    step={earlyCheckout ? "0.5" : "1"}
+                    inputMode="decimal"
                     value={days}
                     onChange={(event) => setDays(event.target.value)}
-                    disabled={isSubmitting || documentLater}
+                    disabled={isSubmitting || (documentLater && !earlyCheckout)}
                   />
                   <span>hari kerja</span>
                 </div>
               </div>
-              {documentLater && (
+              {documentLater && !earlyCheckout && (
                 <p className="abs-permission-hint">
                   Lama izin dikunci 1 hari selama surat dokter menyusul. Lampirkan surat sekarang
                   bila izin lebih dari 1 hari.

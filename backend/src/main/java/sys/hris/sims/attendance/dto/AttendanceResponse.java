@@ -52,7 +52,7 @@ public class AttendanceResponse {
     private String officeLocationStatus;
 
     // [UBAH] Lama izin sakit (hari kerja, tanpa Sabtu/Minggu), default 1.
-    private Integer leaveDays;
+    private Double leaveDays;
 
     // [BARU] URL surat dokter (null = belum diunggah) & apakah surat wajib.
     private String documentUrl;

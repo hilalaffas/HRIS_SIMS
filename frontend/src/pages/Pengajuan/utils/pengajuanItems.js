@@ -204,7 +204,7 @@ function toLateItem(record) {
 
 // Catatan absensi biasa (Masuk/Keluar hadir) TIDAK termasuk pengajuan.
 // Sakit = MASUK + reason SAKIT; izin terlambat disimpan sebagai action IZIN.
-const isSickRecord = (record) => record.actionCode === 'MASUK' && record.reasonCode === 'SAKIT';
+const isSickRecord = (record) => record.reasonCode === 'SAKIT';
 const isLateRecord = (record) => record.actionCode === 'IZIN';
 
 export function buildPengajuanItems({ leaveHistory = [], leaveDetails = {}, overtimeRecords = [], attendanceRecords = [], shiftSwapRequests = [], isSupervisorRequester = false }) {
@@ -281,7 +281,7 @@ export function buildRequestDetail(item, cardModel) {
     return {
       ...base,
       title: 'Detail Pengajuan Izin Sakit',
-      subtitle: 'Pantau persetujuan atasan dan kelengkapan surat dokter',
+      subtitle: 'Pantau persetujuan HRD dan kelengkapan surat dokter',
       fields: [
         { label: 'Tanggal Pengajuan', value: formatDateLabel(record.attendanceDate) },
         { label: 'Lama Izin', value: `${record.leaveDays} Hari Kerja`, accent: true },

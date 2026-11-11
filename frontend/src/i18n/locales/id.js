@@ -25,6 +25,7 @@ const id = {
   'sidebar.manageEmployees': 'Kelola Karyawan (HR)',
   'sidebar.manageDivisionShift': 'Kelola Divisi & Shift',
   'sidebar.reports': 'Laporan',
+  'sidebar.permissionApprovals': 'Persetujuan Sakit & Izin',
   'sidebar.accountSettings': 'Pengaturan Akun',
   'sidebar.editProfile': 'EDIT PROFIL',
   'sidebar.logout': 'Keluar',

@@ -395,13 +395,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi")
                         .hasAnyRole(ADMIN_ROLES)
 
-                        // [UBAH] Persetujuan Sakit -- Leader, SPV, Manager (tab "Izin Sakit"
-                        // di Persetujuan Cuti). Cakupan per divisi dicek di AttendanceService.
+                        // [UBAH] Persetujuan Sakit & Izin -- HANYA HRD_ADMIN (halaman
+                        // "Persetujuan Sakit & Izin" di menu HRD). Sebelumnya Leader/SPV/Manager.
+                        // Pemilik pengajuan tidak boleh memprosesnya sendiri (dicek di AttendanceService).
                         .requestMatchers(HttpMethod.GET, "/api/absensi/approvals/sakit")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER")
+                        .hasRole("HRD_ADMIN")
 
                         .requestMatchers(HttpMethod.PUT, "/api/absensi/*/approval")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER")
+                        .hasRole("HRD_ADMIN")
 
                         // [BARU] Koreksi keterlambatan absensi. Pengajuan & riwayat milik sendiri
                         // terbuka untuk semua user login; daftar & keputusan persetujuan hanya
