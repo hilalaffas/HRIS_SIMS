@@ -3,8 +3,10 @@ import ApprovalTable from '../../../components/ApprovalTable';
 import Toast from '../../../components/Toast';
 import './OvertimeApprovalSection.css';
 
-export default function AttendanceCorrectionApprovalSection({ rows, loading, processingKey, toast, pendingCount, onDecision, padded = false }) {
-  const [filter, setFilter] = useState('pending');
+// [UBAH] + readOnly: dipakai tab "List Koreksi Absensi" (tanpa Setujui/Tolak). ACC koreksi sekarang
+// dilakukan di tab "Perlu Diproses"; mode readOnly membuka daftar "Semua" lebih dulu.
+export default function AttendanceCorrectionApprovalSection({ rows, loading, processingKey, toast, pendingCount, onDecision, padded = false, readOnly = false }) {
+  const [filter, setFilter] = useState(readOnly ? 'all' : 'pending');
   const visibleRows = useMemo(
     () => filter === 'pending' ? rows.filter((row) => row.status === 'PENDING') : rows,
     [rows, filter],
@@ -19,7 +21,7 @@ export default function AttendanceCorrectionApprovalSection({ rows, loading, pro
       </div>
       <ApprovalTable rows={visibleRows} loading={loading} processingKey={processingKey}
         emptyMessage={filter === 'pending' ? 'Tidak ada koreksi absensi yang menunggu.' : 'Belum ada pengajuan koreksi absensi.'}
-        onDecision={onDecision} detailTitle="Detail Koreksi Absensi" />
+        onDecision={onDecision} detailTitle="Detail Koreksi Absensi" readOnly={readOnly} />
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </div>
   );

@@ -4,13 +4,13 @@ import './ApproveLeave.css';
 
 import HeadlineApproval from './components/HeadlineApproval';
 import TabMenu from './components/TabMenu';
-import ApproveSection from './components/ApproveSection';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
-import OvertimeApprovalSection from '../../Persetujuan/components/OvertimeApprovalSection'; // [BARU] tab Persetujuan Lembur
+import PendingQueueSection from './components/PendingQueueSection'; // [BARU] isi tab "Perlu Diproses" (Cuti + Lembur + Koreksi)
+import OvertimeListSection from '../../Persetujuan/components/OvertimeListSection'; // [UBAH] tab "List Lembur" (dulu Persetujuan Lembur)
+import OvertimeDetailModal from '../../../components/OvertimeDetailModal'; // [BARU] popup Informasi Detail Berkas Lembur
 import useOvertimeApprovals from '../../../hooks/useOvertimeApprovals'; // [BARU]
-import PersetujuanIzin from '../../PersetujuanIzin/PersetujuanIzin'; // [BARU] tab Surat Sakit & Izin
-import usePermissionApprovals from '../../../hooks/usePermissionApprovals'; // [BARU]
+import { isActionableRow } from '../../../utils/approvalQueue'; // [BARU]
 import AttendanceCorrectionApprovalSection from '../../Persetujuan/components/AttendanceCorrectionApprovalSection';
 import useAttendanceCorrectionApprovals from '../../../hooks/useAttendanceCorrectionApprovals';
 import ActionReasonModal from './components/ActionReasonModal';
@@ -20,7 +20,11 @@ import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
 /**
  * ApproveLeaving.jsx
  * ------------------------------------------------------------------
- * Halaman "Pusat Persetujuan" (cuti, izin sakit, lembur).
+ * Halaman "Pusat Persetujuan" (cuti, lembur, koreksi absensi).
+ *
+ * [UBAH] Semua aksi ACC ada di tab "Perlu Diproses" (Cuti / Lembur / Koreksi Absensi).
+ * Tab "List Cuti", "List Lembur", dan "List Koreksi Absensi" hanya riwayat + detail berkas.
+ * Surat Sakit & Izin TIDAK lagi diproses di sini (persetujuannya hanya dari HRD_Admin).
  *
  * AKSES:
  * Halaman ini hanya boleh dirender untuk role berikut:
@@ -42,17 +46,18 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU]
   // [BARU] Persetujuan Lembur hanya untuk Leader/SPV/Manager (HR Karyawan tidak).
   const canApproveOvertime = isManagerOrSpv(user);
-  // [BARU] Surat Sakit & Izin juga hanya untuk Leader/SPV/Manager (HR Karyawan tidak berwenang).
-  const canApprovePermission = isManagerOrSpv(user);
-  // [UBAH] 'proses' | 'list' | 'lembur' | 'izin'. Tab awal bisa dipilih lewat ?tab=lembur / ?tab=izin
-  // (dipakai redirect dari URL lama /persetujuan dan /persetujuan-izin).
+  // [UBAH] Dulu bernama canApprovePermission (juga mengatur tab Surat Sakit & Izin yang sekarang dihapus).
+  // Sekarang hanya mengatur Koreksi Absensi -- tetap Leader/SPV/Manager.
+  const canApproveCorrection = isManagerOrSpv(user);
+  // [UBAH] 'proses' | 'list' | 'lembur' | 'koreksi-absen'. Tab awal bisa dipilih lewat ?tab=lembur
+  // (dipakai redirect dari URL lama /persetujuan). ?tab=izin sudah tidak ada -> jatuh ke 'proses'.
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam === 'lembur' && canApproveOvertime) return 'lembur';
-    if (tabParam === 'izin' && canApprovePermission) return 'izin';
     return 'proses';
   });
   const [selectedDetail, setSelectedDetail] = useState(null);
+  const [selectedOvertime, setSelectedOvertime] = useState(null); // [BARU] baris lembur untuk popup detail berkas
 
   const [pending, setPending] = useState([]);
   const [history, setHistory] = useState([]);
@@ -167,21 +172,25 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   // [BARU] Data Persetujuan Lembur dimuat di sini (bukan di dalam tab) supaya
   // badge jumlah tetap muncul walau tab belum dibuka.
   const overtime = useOvertimeApprovals(canApproveOvertime);
-  // [BARU] Sama untuk Surat Sakit & Izin (enabled=false -> tidak memanggil API sama sekali)
-  const permission = usePermissionApprovals(canApprovePermission);
-  const attendanceCorrections = useAttendanceCorrectionApprovals(canApprovePermission);
+  const attendanceCorrections = useAttendanceCorrectionApprovals(canApproveCorrection);
+
+  // [BARU] Antrean "Perlu Diproses": hanya pengajuan yang GILIRAN approver ini (canAct dari backend),
+  // supaya ACC berjenjang Leader -> SPV -> Manager tidak saling tumpang tindih.
+  const overtimeQueueRows = useMemo(() => overtime.rows.filter(isActionableRow), [overtime.rows]);
+  const correctionQueueRows = useMemo(() => attendanceCorrections.rows.filter(isActionableRow), [attendanceCorrections.rows]);
+  const processCount = pendingCount + overtimeQueueRows.length + correctionQueueRows.length;
 
   const tabs = useMemo(
     () => [
-      { key: "proses", label: "Perlu Diproses", badge: pendingCount },
+      // [UBAH] Badge = total semua yang perlu diproses (cuti + lembur + koreksi absensi)
+      { key: "proses", label: "Perlu Diproses", badge: processCount },
       { key: "list", label: "List Cuti", badge: 0 },
-      // [BARU] Tab Surat Sakit & Izin (pindahan dari menu sidebar)
-      ...(canApprovePermission ? [{ key: "izin", label: "Surat Sakit & Izin", badge: permission.stats.pending }] : []),
-      // [BARU] Tab Persetujuan Lembur (pindahan dari menu sidebar)
-      ...(canApproveOvertime ? [{ key: "lembur", label: "Persetujuan Lembur", badge: overtime.pendingCount }] : []),
-      ...(canApprovePermission ? [{ key: "koreksi-absen", label: "Koreksi Absensi", badge: attendanceCorrections.pendingCount }] : []),
+      // [UBAH] Dulu "Persetujuan Lembur" (ada aksi ACC). Sekarang daftar + detail berkas saja.
+      ...(canApproveOvertime ? [{ key: "lembur", label: "List Lembur", badge: 0 }] : []),
+      // [UBAH] Aksi ACC koreksi absensi pindah ke "Perlu Diproses"; tab ini jadi daftar saja.
+      ...(canApproveCorrection ? [{ key: "koreksi-absen", label: "List Koreksi Absensi", badge: 0 }] : []),
     ],
-    [pendingCount, canApproveOvertime, overtime.pendingCount, canApprovePermission, permission.stats.pending, attendanceCorrections.pendingCount]
+    [processCount, canApproveOvertime, canApproveCorrection]
   );
 
   return (
@@ -192,44 +201,41 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
         {error && <div className="approvalSection__empty">{error}</div>}
         <TabMenu tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />
       
+        {/* [UBAH] Semua aksi ACC (cuti, lembur, koreksi absensi) ada di tab ini */}
         {activeTab === "proses" && (
-          <ApproveSection
-            data={pending}
+          <PendingQueueSection
             user={user}
+            leaveData={pending}
             onRequestAction={handleRequestAction}
-            onOpenDetail={handleOpenDetail}
+            onOpenLeaveDetail={handleOpenDetail}
+            overtime={canApproveOvertime ? overtime : null}
+            overtimeRows={overtimeQueueRows}
+            corrections={canApproveCorrection ? attendanceCorrections : null}
+            correctionRows={correctionQueueRows}
+            onOpenOvertimeDetail={setSelectedOvertime}
           />
         )}
         {activeTab === "list" && (
           <ListCutiSection data={history} onOpenDetail={handleOpenDetail} />
         )}
-        {/* [BARU] Tab Surat Sakit & Izin */}
-        {activeTab === "izin" && canApprovePermission && (
-          <PersetujuanIzin approvals={permission} embedded />
+        {/* [UBAH] Tab List Lembur: daftar + "Rincian" (tanpa aksi ACC), gaya sama dengan List Cuti */}
+        {activeTab === "lembur" && canApproveOvertime && (
+          <OvertimeListSection rows={overtime.rows} loading={overtime.loading} toast={overtime.toast} />
         )}
-        
-        {activeTab === "koreksi-absen" && canApprovePermission && (
+        {/* [UBAH] Koreksi absensi: daftar saja (readOnly), ACC ada di "Perlu Diproses" */}
+        {activeTab === "koreksi-absen" && canApproveCorrection && (
           <AttendanceCorrectionApprovalSection
-            padded rows={attendanceCorrections.rows} loading={attendanceCorrections.loading}
+            padded readOnly rows={attendanceCorrections.rows} loading={attendanceCorrections.loading}
             processingKey={attendanceCorrections.processingKey} toast={attendanceCorrections.toast}
             pendingCount={attendanceCorrections.pendingCount} onDecision={attendanceCorrections.handleDecision}
-          />
-        )}
-        {/* [BARU] Tab Persetujuan Lembur */}
-        {activeTab === "lembur" && canApproveOvertime && (
-          <OvertimeApprovalSection
-            padded
-            rows={overtime.rows}
-            loading={overtime.loading}
-            processingKey={overtime.processingKey}
-            toast={overtime.toast}
-            pendingCount={overtime.pendingCount}
-            onDecision={overtime.handleDecision}
           />
         )}
       </div>
       {/*Bagian popup detail riwayat (FormCuti)*/}
       {selectedDetail && <FormCuti data={selectedDetail} onClose={handleCloseDetail} />}
+
+      {/* [BARU] Popup Informasi Detail Berkas Lembur (dari "Perlu Diproses" maupun "List Lembur") */}
+      {selectedOvertime && <OvertimeDetailModal row={selectedOvertime} onClose={() => setSelectedOvertime(null)} />}
 
       {/*Bagian popup alasan ACC/Revisi/Tolak*/}
       <ActionReasonModal

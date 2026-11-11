@@ -19,8 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
-import sys.hris.sims.common.service.ApprovalScopeService;
-import sys.hris.sims.common.service.ApprovalScopeService.ApprovalScope;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
 import sys.hris.sims.attendance.dto.LeaveTodayResponse;
@@ -50,11 +48,12 @@ public class AttendanceService {
     // [UBAH] Batas lama izin sakit dalam satu pengajuan (HARI KERJA, Sabtu & Minggu tidak dihitung).
     private static final int MAX_SICK_DAYS = 30;
 
+    // [BARU] Authority Spring Security untuk role HRD_ADMIN (persetujuan sakit & izin).
+    private static final String ROLE_HRD_ADMIN = "ROLE_HRD_ADMIN";
+
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
     private final CloudinaryService cloudinaryService;
-    // [BARU] Aturan siapa boleh melihat / memutuskan sakit siapa.
-    private final ApprovalScopeService approvalScopeService;
     // [BARU] Nama lokasi dari koordinat GPS (Google Geocoding, opsional).
     private final ReverseGeocodingService reverseGeocodingService;
     private final WorkScheduleRepository workScheduleRepository;
@@ -287,13 +286,25 @@ public class AttendanceService {
         return toResponse(saved);
     }
 
-    // [UBAH] Daftar pengajuan Sakit untuk tab "Izin Sakit" di Persetujuan Cuti:
-    // hanya bawahan di divisi approver (lihat ApprovalScopeService).
+    // [BARU] Persetujuan Sakit & Izin hanya dipegang HRD_ADMIN (SecurityConfig sudah membatasi
+    // endpoint-nya; pengecekan ini lapisan kedua). Mengembalikan data karyawan HRD yang login
+    // supaya pengajuan miliknya sendiri bisa dikecualikan.
+    private Employee requireHrdApprover(Authentication authentication) {
+        boolean isHrdAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> ROLE_HRD_ADMIN.equals(authority.getAuthority()));
+        if (!isHrdAdmin) {
+            throw new IllegalStateException("Hanya HRD Admin yang berwenang memproses pengajuan sakit.");
+        }
+        return resolveEmployee(authentication.getName());
+    }
+
+    // [UBAH] Daftar pengajuan Sakit untuk halaman "Persetujuan Sakit & Izin" (HRD_ADMIN):
+    // semua divisi, kecuali pengajuan milik HRD yang sedang login.
     public List<AttendanceResponse> getSickApprovals(Authentication authentication) {
-        ApprovalScope scope = approvalScopeService.resolve(authentication);
+        Long approverId = requireHrdApprover(authentication).getEmployeeId();
         return attendanceRepository.findByReasonOrderByRecordedAtDesc("SAKIT")
                 .stream()
-                .filter(attendance -> scope.canHandle(attendance.getEmployee()))
+                .filter(attendance -> !approverId.equals(attendance.getEmployee().getEmployeeId()))
                 .map(this::toResponse)
                 .toList();
     }
@@ -467,9 +478,10 @@ public class AttendanceService {
         if (!"SAKIT".equals(attendance.getReason())) {
             throw new IllegalArgumentException("Hanya pengajuan Sakit yang bisa diputuskan.");
         }
-        // [BARU] Cegah memutuskan sakit di luar divisi / jenjang / milik sendiri.
-        if (!approvalScopeService.resolve(authentication).canHandle(attendance.getEmployee())) {
-            throw new IllegalStateException("Anda tidak berwenang memproses pengajuan sakit ini.");
+        // [UBAH] Hanya HRD_ADMIN, dan tidak boleh memutuskan pengajuan sakit miliknya sendiri.
+        Employee approver = requireHrdApprover(authentication);
+        if (approver.getEmployeeId().equals(attendance.getEmployee().getEmployeeId())) {
+            throw new IllegalStateException("Anda tidak dapat memproses pengajuan sakit milik sendiri.");
         }
         if (!"PENDING".equals(attendance.getApprovalStatus())) {
             throw new IllegalStateException("Pengajuan ini sudah diproses.");

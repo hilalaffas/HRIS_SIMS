@@ -158,7 +158,7 @@ export function buildLeaveCardModel(item, detail, { isLatest = false, isSupervis
 
 // ------------------------------------------------------------- IZIN SAKIT
 // `record` = hasil toDisplayRecord() (services/attendanceService.js) dengan reasonCode SAKIT.
-// Persetujuan sakit satu tahap (Leader/SPV/Manager divisi yang sama), lalu
+// [UBAH] Persetujuan sakit satu tahap dari HRD_Admin (bukan lagi Leader/SPV/Manager), lalu
 // surat dokter yang boleh menyusul.
 export function buildSickCardModel(record, { isLatest = false } = {}) {
   const approval = record.approvalStatus || 'PENDING';
@@ -171,12 +171,12 @@ export function buildSickCardModel(record, { isLatest = false } = {}) {
   else if (approval === 'APPROVED' && letterMissing) letterState = 'current';
 
   let tone = 'warning';
-  let badgeLabel = 'Menunggu Atasan';
-  let hint = 'Menunggu review dari Leader/SPV/Manager divisi Anda.';
+  let badgeLabel = 'Menunggu HRD';
+  let hint = 'Menunggu review dari HRD Admin.';
   if (approval === 'REJECTED') {
     tone = 'danger';
     badgeLabel = 'Ditolak';
-    hint = 'Pengajuan izin sakit ditolak oleh atasan.';
+    hint = 'Pengajuan izin sakit ditolak oleh HRD.';
   } else if (approval === 'APPROVED' && letterMissing) {
     badgeLabel = 'Susul Surat Dokter';
     hint = 'Pengajuan disetujui. Surat dokter tetap wajib: klik Aksi untuk mengunggah surat susulan.';
@@ -185,13 +185,13 @@ export function buildSickCardModel(record, { isLatest = false } = {}) {
     badgeLabel = 'Disetujui';
     hint = 'Pengajuan izin sakit telah disetujui.';
   } else if (letterMissing) {
-    hint = 'Menunggu review atasan. Surat dokter masih perlu diunggah (boleh menyusul).';
+    hint = 'Menunggu review HRD. Surat dokter masih perlu diunggah (boleh menyusul).';
   }
 
-  // Urutan tampilan: Diajukan -> Surat Dokter -> Review Atasan (review di paling akhir).
+  // Urutan tampilan: Diajukan -> Surat Dokter -> Review HRD (review di paling akhir).
   const steps = [{ key: 'submitted', label: 'Diajukan', state: 'done' }];
   if (record.documentRequired) steps.push({ key: 'letter', label: 'Surat Dokter', state: letterState });
-  steps.push({ key: 'review', label: 'Review Atasan', state: reviewState });
+  steps.push({ key: 'review', label: 'Review HRD', state: reviewState });
 
   return {
     tone,

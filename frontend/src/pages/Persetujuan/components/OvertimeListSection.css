@@ -1,0 +1,29 @@
+/* src/pages/Persetujuan/components/OvertimeListSection.css
+   Pelengkap "List Lembur" di atas gaya List Cuti (.leaveList__*). Variabel --alv-* berasal dari
+   wrapper .approve-leaving-page. */
+
+/* Alasan lembur dipotong 2 baris supaya tinggi baris tabel tetap rapi */
+.overtimeList__reason {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--alv-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Lencana status + posisi tahap approval disusun ke bawah */
+.overtimeList__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.overtimeList__progress {
+  display: block;
+  font-size: 11.5px;
+  color: var(--alv-text-muted);
+}

@@ -30,6 +30,7 @@ const ja = {
   'sidebar.manageEmployees': '従業員管理（人事）',
   'sidebar.manageDivisionShift': '部署・シフト管理',
   'sidebar.reports': 'レポート',
+  'sidebar.permissionApprovals': '病気・遅刻の承認',
   'sidebar.accountSettings': 'アカウント設定',
   'sidebar.editProfile': 'プロフィール編集',
   'sidebar.logout': 'ログアウト',

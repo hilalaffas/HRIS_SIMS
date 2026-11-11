@@ -13,7 +13,11 @@ const badgeClass = (status) => {
   return 'apv-status--blue';
 };
 
-export default function ApprovalTable({ rows, loading, processingKey, emptyMessage, onDecision, showProof = false, detailTitle = 'Detail Pengajuan Lembur' }) {
+// [UBAH] + readOnly: tanpa tombol Setujui/Tolak (hanya "Rincian"). Dipakai tab "List ..." karena semua ACC
+// sekarang dilakukan di tab "Perlu Diproses".
+// [UBAH] + onOpenDetail: kalau diisi, tombol detail memanggil callback ini (mis. membuka OvertimeDetailModal)
+// dan popup bawaan di bawah tidak dipakai.
+export default function ApprovalTable({ rows, loading, processingKey, emptyMessage, onDecision, showProof = false, detailTitle = 'Detail Pengajuan Lembur', readOnly = false, onOpenDetail = null }) {
   const [detailRow, setDetailRow] = useState(null);
   const columnCount = showProof ? 6 : 5;
   return (
@@ -23,7 +27,7 @@ export default function ApprovalTable({ rows, loading, processingKey, emptyMessa
           <thead><tr>
             <th>KARYAWAN</th><th>TANGGAL</th><th>DETAIL / ALASAN</th>
             {showProof && <th className="apv-center">BUKTI LAMPIRAN</th>}
-            <th>STATUS PERSETUJUAN</th><th className="apv-center">AKSI TINDAKAN</th>
+            <th>STATUS PERSETUJUAN</th><th className="apv-center">{readOnly ? 'LOG DETAIL' : 'AKSI TINDAKAN'}</th>
           </tr></thead>
           <tbody>
             {loading && <tr><td colSpan={columnCount} className="apv-empty-row">Memuat data...</td></tr>}
@@ -39,10 +43,13 @@ export default function ApprovalTable({ rows, loading, processingKey, emptyMessa
                 {showProof && <td className="apv-center">{toSafeHttpUrl(row.proofUrl) ? <a className="apv-proof" href={toSafeHttpUrl(row.proofUrl)} target="_blank" rel="noreferrer"><Paperclip aria-hidden="true" /> Foto Bukti</a> : <span className="apv-muted">-</span>}</td>}
                 <td><span className={`apv-status ${badgeClass(row.approvalProgressStatus)}`}>{row.approvalProgressStatus || 'Dalam proses persetujuan'}</span></td>
                 <td className="apv-center"><div className="apv-actions">
-                  <button type="button" className="apv-btn apv-btn-approve" disabled={!canAct || isProcessing} title={!canAct ? 'Menunggu tahap approval sebelumnya' : 'Setujui'} onClick={() => onDecision(row, 'APPROVED')}>Setujui</button>
-                  <button type="button" className="apv-btn apv-btn-reject" disabled={!canAct || isProcessing} title={!canAct ? 'Menunggu tahap approval sebelumnya' : 'Tolak'} onClick={() => onDecision(row, 'REJECTED')}>Tolak</button>
-                  <button type="button" className="apv-detail-btn" title="Lihat detail lembur dan alur approval" aria-label="Lihat detail lembur" onClick={() => setDetailRow(row)}><Clock3 size={16} /></button>
-                </div>{isPending && !canAct && <small className="apv-waiting-hint">Menunggu tahap sebelumnya / nama approval</small>}</td>
+                  {/* [UBAH] Tombol ACC disembunyikan di mode readOnly (ACC hanya di "Perlu Diproses") */}
+                  {!readOnly && <>
+                    <button type="button" className="apv-btn apv-btn-approve" disabled={!canAct || isProcessing} title={!canAct ? 'Menunggu tahap approval sebelumnya' : 'Setujui'} onClick={() => onDecision(row, 'APPROVED')}>Setujui</button>
+                    <button type="button" className="apv-btn apv-btn-reject" disabled={!canAct || isProcessing} title={!canAct ? 'Menunggu tahap approval sebelumnya' : 'Tolak'} onClick={() => onDecision(row, 'REJECTED')}>Tolak</button>
+                  </>}
+                  <button type="button" className="apv-detail-btn" title="Lihat detail dan alur approval" aria-label="Lihat detail pengajuan" onClick={() => (onOpenDetail ? onOpenDetail(row) : setDetailRow(row))}><Clock3 size={16} /></button>
+                </div>{!readOnly && isPending && !canAct && <small className="apv-waiting-hint">Menunggu tahap sebelumnya / nama approval</small>}</td>
               </tr>;
             })}
           </tbody>

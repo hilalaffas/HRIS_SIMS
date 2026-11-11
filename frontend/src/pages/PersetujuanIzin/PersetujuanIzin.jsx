@@ -1,13 +1,11 @@
 // src/pages/PersetujuanIzin/PersetujuanIzin.jsx
 //
-// [BARU] Halaman "Persetujuan Surat Sakit & Izin" untuk Leader / SPV / Manager.
-// Verifikasi surat dokter & bukti izin bawahan (satu divisi) sebelum dicatat ke
-// rekap absensi. Komponen ini hanya MERAKIT: data & aksi di
+// [BARU] Halaman "Persetujuan Surat Sakit & Izin".
+// [UBAH] Sekarang HANYA untuk HRD_Admin (semua divisi), dirender oleh PersetujuanIzinPage.jsx.
+// Verifikasi surat dokter & bukti izin karyawan sebelum dicatat ke rekap absensi. Komponen ini hanya MERAKIT: data & aksi di
 // hooks/usePermissionApprovals.js, logika murni di utils/permissionRequest.js,
 // tampilan di components/.
-// [UBAH] Sekarang dirender sebagai TAB "Surat Sakit & Izin" di Pusat Persetujuan
-// (pages/Cuti/approve/ApproveLeave.jsx). Hook dipanggil di parent (pola yang sama
-// dengan Persetujuan Lembur) supaya badge jumlah menunggu tampil di tab sebelum dibuka.
+// Hook dipanggil di parent (PersetujuanIzinPage.jsx); komponen ini hanya menampilkan.
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCheck, FilePlus2, MousePointerClick } from 'lucide-react';
 import Toast from '../../components/Toast';
@@ -30,8 +28,8 @@ const EMPTY_MESSAGES = {
 
 /**
  * @param {object} approvals - hasil usePermissionApprovals() dari parent
- * @param {boolean} embedded - true = dipakai sebagai tab (judul halaman disembunyikan,
- *   karena sudah ada judul "Pusat Persetujuan" di atasnya)
+ * @param {boolean} embedded - true = dipakai di dalam halaman lain (judul disembunyikan);
+ *   false (dipakai PersetujuanIzinPage) = halaman penuh dengan judul sendiri
  */
 export default function PersetujuanIzin({ approvals, embedded = true }) {
   const {

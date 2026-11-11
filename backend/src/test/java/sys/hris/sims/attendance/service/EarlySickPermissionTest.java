@@ -31,7 +31,7 @@ class EarlySickPermissionTest {
         when(records.findByEmployee_EmployeeIdAndReasonAndActionOrderByRecordedAtDesc(anyLong(), anyString(), anyString()))
                 .thenReturn(List.of());
         when(records.save(any(Attendance.class))).thenAnswer(call -> call.getArgument(0));
-        service = new AttendanceService(records, employees, null, null, null, null, null, policy);
+        service = new AttendanceService(records, employees, null, null, null, null, policy);
     }
 
     private PermissionSubmitRequest request(double days, boolean early) {

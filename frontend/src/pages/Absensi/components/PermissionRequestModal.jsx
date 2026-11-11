@@ -21,9 +21,10 @@ import Dropdown from '../../../components/Dropdown';
 import MedicalDocumentDropzone from './MedicalDocumentDropzone';
 import './PermissionRequestModal.css';
 
+// [UBAH] Label dropdown dipersingkat: "Sakit" dan "Terlambat" (nilai value tetap SAKIT / TERLAMBAT)
 const TYPE_OPTIONS = [
-  { value: 'SAKIT', label: 'Izin Sakit (Butuh Surat Sakit Dokter)' },
-  { value: 'TERLAMBAT', label: 'Izin Terlambat (Kendala Tak Terduga)' },
+  { value: 'SAKIT', label: 'Sakit' },
+  { value: 'TERLAMBAT', label: 'Terlambat' },
 ];
 const NOTE_MAX_LENGTH = 255; // attendances.note VARCHAR(255)
 const MAX_SICK_DAYS = 30; // sama dengan AttendanceService.MAX_SICK_DAYS
