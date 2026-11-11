@@ -22,6 +22,7 @@ import {
   getCurrentPeriod,
   getPeriodRange,
 } from '../../Absensi/utils/monthlyAttendance';
+import { applyOvertimeAcc } from './overtimeAcc'; // [BARU]
 
 // Nilai tone baris laporan (dipakai badge di layar & warna PDF):
 // hadir | telat | sakit | menunggu | ditolak | izin | leave | alpha | belum | ''
@@ -110,7 +111,8 @@ function normalizeRow(row, { joinDate, leaveDayMap }) {
 
 export function summarizeRows(rows, overtimes = []) {
   const summary = {
-    present: 0, late: 0, lateMinutes: 0, sick: 0, izin: 0, leave: 0, absent: 0, pending: 0, overtimeMinutes: 0,
+    present: 0, late: 0, lateMinutes: 0, sick: 0, izin: 0, leave: 0, absent: 0, pending: 0,
+    overtimeMinutes: 0, overtimeAccMinutes: 0,
   };
   rows.forEach((row) => {
     switch (row.tone) {
@@ -145,6 +147,7 @@ export function summarizeRows(rows, overtimes = []) {
   summary.overtimeMinutes = overtimes
     .filter((item) => item.statusCode === 'APPROVED')
     .reduce((total, item) => total + (item.totalMinutes || 0), 0);
+  summary.overtimeAccMinutes = rows.reduce((total, row) => total + (row.overtimeAccMinutes || 0), 0);
   return summary;
 }
 
@@ -183,15 +186,22 @@ export function buildEmployeeReport(
     .map((row) => ({ ...normalizeRow(row, { joinDate: employee.joinDate, leaveDayMap }), ...evidenceByDate.get(row.date) }))
     .sort((a, b) => (a.date < b.date ? -1 : 1)); // terlama dulu
 
+  // [UBAH] Hitungan lembur ACC (pengali jam) dipisah ke utils/overtimeAcc.js.
+  const reportRows = applyOvertimeAcc(rows, overtimes, {
+    holidaysByDate,
+    divisionType: employee.divisionType,
+  });
+
   return {
     employeeId: employee.employeeId,
     fullName: employee.fullName || '-',
     nik: employee.nik || '-',
     position: employee.position || '-',
+    divisionType: employee.divisionType || 'REGULAR',
     divisionId: employee.divisionId ?? null,
     divisionName: employee.divisionName || 'Tanpa Divisi',
-    rows,
-    summary: summarizeRows(rows, overtimes),
+    rows: reportRows,
+    summary: summarizeRows(reportRows, overtimes),
   };
 }
 

@@ -4,8 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
-import java.time.temporal.TemporalAdjusters;
-import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -195,22 +193,16 @@ public class WorkScheduleService {
     private void validateShiftRoster(List<ScheduleEntryRequest> entries,
                                      Map<Long, Employee> employees,
                                      Map<Long, Shift> shifts) {
-        Map<String, WeeklyRoster> weeks = new HashMap<>();
         Map<Long, List<ShiftInterval>> intervalsByEmployee = new HashMap<>();
 
         for (ScheduleEntryRequest entry : entries) {
             Employee employee = employees.get(entry.employeeId());
-            LocalDate monday = entry.date().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-            String weekKey = entry.employeeId() + "|" + monday;
-            WeeklyRoster week = weeks.computeIfAbsent(weekKey, ignored -> new WeeklyRoster());
             if (entry.shiftId() == null) {
-                week.hasRestDay = true;
                 continue;
             }
 
             Shift shift = shifts.get(entry.shiftId());
-            long minutes = shiftDurationMinutes(shift);
-            week.workMinutes += minutes;
+            shiftDurationMinutes(shift);
 
             LocalDateTime start = LocalDateTime.of(entry.date(), shift.getStartTime());
             LocalDateTime end = LocalDateTime.of(entry.date(), shift.getEndTime());
@@ -219,17 +211,6 @@ public class WorkScheduleService {
             }
             intervalsByEmployee.computeIfAbsent(employee.getEmployeeId(), ignored -> new ArrayList<>())
                     .add(new ShiftInterval(start, end));
-        }
-
-        for (Map.Entry<String, WeeklyRoster> item : weeks.entrySet()) {
-            WeeklyRoster week = item.getValue();
-            if (week.workMinutes > 40 * 60) {
-                throw new IllegalArgumentException("Jadwal shift melewati batas 40 jam kerja per minggu untuk karyawan "
-                        + item.getKey().substring(0, item.getKey().indexOf('|')) + ".");
-            }
-            if (!week.hasRestDay) {
-                throw new IllegalArgumentException("Setiap karyawan wajib memiliki minimal 1 hari libur pada setiap minggu jadwal.");
-            }
         }
 
         for (Map.Entry<Long, List<ShiftInterval>> item : intervalsByEmployee.entrySet()) {
@@ -248,15 +229,10 @@ public class WorkScheduleService {
         LocalTime start = shift.getStartTime();
         LocalTime end = shift.getEndTime();
         long minutes = (end.toSecondOfDay() - start.toSecondOfDay() + 24L * 60 * 60) % (24L * 60 * 60) / 60;
-        if (minutes <= 0 || minutes > 12 * 60) {
-            throw new IllegalArgumentException("Durasi shift tidak valid. Periksa pengaturan shift divisi.");
+        if (minutes <= 0) {
+            throw new IllegalArgumentException("Durasi shift harus lebih dari 0 jam. Periksa pengaturan shift divisi.");
         }
         return minutes;
-    }
-
-    private static class WeeklyRoster {
-        private long workMinutes;
-        private boolean hasRestDay;
     }
 
     private record ShiftInterval(LocalDateTime start, LocalDateTime end) { }

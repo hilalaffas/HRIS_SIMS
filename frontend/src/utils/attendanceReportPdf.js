@@ -72,9 +72,18 @@ export const downloadSheetsPdf = ({ sheets, fileNamePrefix }) => {
 
     if (sheet.footer) {
       const finalY = doc.lastAutoTable?.finalY ?? 24;
-      doc.setFontSize(8.5);
-      doc.setTextColor(...TEXT_DARK);
-      doc.text(sheet.footer, PAGE_MARGIN, finalY + 6);
+      const footerRows = Array.isArray(sheet.footer) ? sheet.footer : [[sheet.footer, '']];
+      autoTable(doc, {
+        body: footerRows.map(([label, value]) => [String(label ?? ''), String(value ?? '')]),
+        startY: finalY + 3,
+        theme: 'plain',
+        margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, bottom: 14 },
+        styles: { fontSize: 8.5, cellPadding: 0.7, textColor: TEXT_DARK },
+        didParseCell: ({ row, column, cell }) => {
+          if (row.index === 0) cell.styles.fontStyle = 'bold';
+          if (column.index === 1) cell.styles.halign = 'right';
+        },
+      });
     }
   });
 

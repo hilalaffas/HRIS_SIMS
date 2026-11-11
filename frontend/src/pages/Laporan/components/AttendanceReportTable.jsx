@@ -14,8 +14,8 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
 import Skeleton from '../../../components/Skeleton';
-import { formatOvertimeDuration } from '../../../services/overtimeService';
 import { PAGE_SIZE_OPTIONS, STATUS_TONE_CLASS } from '../config/laporanConfig';
+import { formatAccHours } from '../utils/attendanceReportSheets'; // [UBAH] jam lembur ACC sama dengan file ekspor
 import './AttendanceReportTable.css';
 
 const SKELETON_ROW_COUNT = 8;
@@ -134,7 +134,7 @@ export default function AttendanceReportTable({
                       <td className="lpr-col-num"><CountCell value={summary.leave} tone="izin" display={formatLeave(summary.leave)} /></td>
                       <td className="lpr-col-num"><CountCell value={summary.absent} tone="alpha" /></td>
                       <td className="lpr-col-num">
-                        <CountCell value={summary.overtimeMinutes} tone="lembur" display={formatOvertimeDuration(summary.overtimeMinutes)} />
+                        <CountCell value={summary.overtimeAccMinutes} tone="lembur" display={formatAccHours(summary.overtimeAccMinutes)} />
                       </td>
                     </>
                   )}
