@@ -156,6 +156,7 @@ public class DevLeaveHistoryService {
     // [BARU] Baris export Excel untuk tampilan tab "Histori Cuti" (LeaveLedgerController): isi yang sama
     // dengan exportXlsx -- cuti khusus bernilai 0 + komentar tipe, dan baris hangus/expired. from & to
     // null = seluruh riwayat.
+    @Transactional(readOnly = true) // [BARU] satu sesi untuk seluruh pemuatan data massal
     public List<ExportEmployee> exportRows(LocalDate from, LocalDate to) {
         return buildExportRows(from, to, true);
     }
@@ -170,14 +171,15 @@ public class DevLeaveHistoryService {
 
         // [UBAH] Superadmin dan akun dev tidak ikut export.
         List<Employee> employees = reportableEmployees();
-        LocalDate today = leaveSummaryService.today(); // [BARU] acuan "periode sudah berakhir"
+        // [UBAH] Performa: seluruh riwayat cuti APPROVED + jenis cuti tahunan + aturan hangus dimuat SEKALI
+        // (sebelumnya ~9 query per karyawan: riwayat, forfeit, saldo, kuota). Rumus & hasil tetap sama.
+        LeaveSummaryService.BulkContext bulk = leaveSummaryService.loadBulkContext();
 
         Map<Long, List<LeaveRequest>> leavesByEmployee = new HashMap<>();
         LocalDate minDate = null;
         LocalDate maxDate = null;
         for (Employee employee : employees) {
-            List<LeaveRequest> leaves = leaveRepository
-                    .findByEmployee_EmployeeIdAndStatus_StatusNameIn(employee.getEmployeeId(), List.of(STATUS_APPROVED))
+            List<LeaveRequest> leaves = bulk.approvedOf(employee) // [UBAH] dari memori, bukan query per karyawan
                     .stream()
                     .filter(leave -> leave.getLeaveType() != null
                             && (includeSpecialLeave || deductsQuota(leave.getLeaveType())))
@@ -222,7 +224,7 @@ public class DevLeaveHistoryService {
             // pada hari terakhir periode, dengan komentar "hangus/expired". Hanya export Excel (komentar
             // tidak bisa disimpan di CSV). Periode yang sudah punya catatan hangus tersimpan dilewati.
             if (includeSpecialLeave) {
-                for (Forfeit forfeit : leaveSummaryService.computeForfeits(employee, today)) {
+                for (Forfeit forfeit : leaveSummaryService.computeForfeits(employee, bulk)) {
                     LocalDate date = forfeit.expiryDate();
                     boolean inPeriod = from == null || (!date.isBefore(from) && !date.isAfter(to));
                     if (forfeit.stored() || !inPeriod) {
@@ -235,7 +237,8 @@ public class DevLeaveHistoryService {
             }
             List<DayUsage> usages = new ArrayList<>(merged.values());
 
-            LeaveBalanceResponse balance = leaveService.getLeaveBalanceOf(employee);
+            LeaveBalanceResponse balance = leaveService.getLeaveBalanceOf(employee,
+                    bulk.approvedOf(employee), bulk.annualLeave()); // [UBAH] tanpa query per karyawan
             rows.add(new ExportEmployee(
                     LeaveLedgerCsv.nikNumberOf(employee.getNikKaryawan()),
                     employee.getFullName(),
@@ -937,7 +940,8 @@ public class DevLeaveHistoryService {
 
     // [UBAH] dulu withoutDevEmployees; sekarang juga tanpa SUPER_ADMIN (aturan yang sama dengan laporan).
     private List<Employee> reportableEmployees() {
-        return reportScopeService.onlyReportableEmployees(employeeRepository.findAll());
+        // [UBAH] findAllWithRelations(): user, role & divisi dalam 1 query (findAll() memicu N+1)
+        return reportScopeService.onlyReportableEmployees(employeeRepository.findAllWithRelations());
     }
 
     private static String nameKey(String name) {

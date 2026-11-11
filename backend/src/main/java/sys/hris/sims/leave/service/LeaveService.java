@@ -75,7 +75,7 @@ public class LeaveService {
     // [UBAH] Sumber data tab "Cuti Karyawan" & ekspor cuti: pengajuan milik
     // SUPER_ADMIN / akun dev tidak ditampilkan, hanya karyawan asli.
     public List<LeaveRequest> getAllCuti() {
-        return cutiRepository.findAll().stream()
+        return cutiRepository.findAllWithDetails().stream() // [UBAH] 1 query (findAll() memicu N+1)
                 .filter(cuti -> !reportScopeService.isExcludedFromReports(cuti.getEmployee()))
                 .toList();
     }
@@ -413,6 +413,17 @@ public class LeaveService {
         return getLeaveBalance(employee);
     }
 
+    // [BARU] Performa: versi massal -- riwayat cuti APPROVED & jenis "Cuti tahunan" sudah dimuat
+    // SEKALI oleh pemanggil, jadi tidak ada query per karyawan. Rumus tetap sama (buildLeaveBalance).
+    public LeaveBalanceResponse getLeaveBalanceOf(Employee employee, List<LeaveRequest> approvedLeaves,
+                                                  LeaveType annualLeave) {
+        return buildLeaveBalance(employee, approvedLeaves, annualLeave);
+    }
+
+    // [BARU] Jenis "Cuti tahunan" (null bila belum ada) -- dibaca sekali untuk perhitungan massal.
+    public LeaveType getAnnualLeaveType() {
+        return leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan").orElse(null);
+    }
     public LeaveBalanceResponse getMyLeaveBalance(String username) {
         return getLeaveBalance(getEmployeeByUsername(username));
     }
@@ -1009,6 +1020,11 @@ public class LeaveService {
     // LeaveSummaryService supaya angkanya sama dengan getLeaveBalance().
     public BigDecimal getBaseAnnualQuotaOf(Employee employee) {
         LeaveType annualLeave = leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan").orElse(null);
+        return BigDecimal.valueOf(getAnnualQuota(employee, annualLeave));
+    }
+
+    // [BARU] Versi massal: jenis cuti tahunan diberikan pemanggil (tanpa query).
+    public BigDecimal getBaseAnnualQuotaOf(Employee employee, LeaveType annualLeave) {
         return BigDecimal.valueOf(getAnnualQuota(employee, annualLeave));
     }
 
