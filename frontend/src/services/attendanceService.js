@@ -50,8 +50,8 @@ export async function getLocationName(latitude, longitude) {
   return api.get(`/api/absensi/location-name?${query.toString()}`);
 }
 
-// [UBAH] Persetujuan Sakit (Leader/SPV/Manager, tab "Izin Sakit" di Persetujuan Cuti):
-// daftar pengajuan bawahan di divisi yang sama & keputusan.
+// [UBAH] Persetujuan Sakit & Izin -- HANYA HRD_ADMIN (halaman /persetujuan-izin):
+// daftar pengajuan sakit semua divisi (kecuali milik HRD sendiri) & keputusan.
 // status: 'APPROVED' | 'REJECTED'
 // [UBAH] + `config` opsional ({ silent: true } untuk polling latar belakang).
 export async function getSickApprovals(config = {}) {

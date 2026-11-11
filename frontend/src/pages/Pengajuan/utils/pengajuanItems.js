@@ -281,7 +281,7 @@ export function buildRequestDetail(item, cardModel) {
     return {
       ...base,
       title: 'Detail Pengajuan Izin Sakit',
-      subtitle: 'Pantau persetujuan atasan dan kelengkapan surat dokter',
+      subtitle: 'Pantau persetujuan HRD dan kelengkapan surat dokter',
       fields: [
         { label: 'Tanggal Pengajuan', value: formatDateLabel(record.attendanceDate) },
         { label: 'Lama Izin', value: `${record.leaveDays} Hari Kerja`, accent: true },

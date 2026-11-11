@@ -21,6 +21,7 @@ export const longText = {
 "lama izin dihitung dalam hari kerja (sabtu & minggu tidak dihitung). surat dokter tetap wajib diunggah. bila menyusul, unggah lewat kolom keterangan / catatan pada tabel jadwal & log absensi bulanan.": "休暇日数は営業日で計算されます（土曜・日曜は含まれません）。診断書のアップロードは引き続き必須です。後日提出する場合は、「月間スケジュール・勤怠ログ」表の「備考・コメント」列からアップロードしてください。",
 "mengubah tanggal masuk menggeser periode cuti dan menghapus penyesuaian sisa tahun berjalan; isi ulang sisa tahun berjalan bila perlu (setelah disimpan).": "入社日を変更すると休暇期間がずれ、当年の残日数の調整が削除されます。必要に応じて、保存後に当年の残日数を再入力してください。",
 "menunggu review atasan. surat dokter masih perlu diunggah (boleh menyusul).": "上長の確認待ちです。診断書のアップロードが必要です（後日提出も可）。",
+"menunggu review hrd. surat dokter masih perlu diunggah (boleh menyusul).": "人事の確認待ちです。診断書のアップロードが必要です（後日提出も可）。",
 "nik harus angka 4-6 digit (contoh 0012).": "NIKは4〜6桁の数字で入力してください（例：0012）。",
 "opsi import berubah setelah validasi. jalankan pre-flight validation ulang sebelum melanjutkan.": "検証後にインポートのオプションが変更されました。続行する前に、事前検証をもう一度実行してください。",
 "pengaturan jadwal ini khusus untuk karyawan divisi non regular (shift).": "このスケジュール設定は、非レギュラー（シフト制）部署の従業員専用です。",

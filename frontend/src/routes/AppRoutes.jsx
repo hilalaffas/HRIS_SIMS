@@ -39,6 +39,8 @@ const Persetujuan = lazyPage(() => import('../pages/Persetujuan/Persetujuan'));
 const Pengajuan = lazyPage(() => import('../pages/Pengajuan/Pengajuan'));
 // [BARU] Halaman Laporan (khusus HRD_ADMIN) -- tab pertama: Laporan Absen
 const Laporan = lazyPage(() => import('../pages/Laporan/Laporan'));
+// [BARU] Halaman Persetujuan Sakit & Izin (khusus HRD_ADMIN)
+const PersetujuanIzinPage = lazyPage(() => import('../pages/PersetujuanIzin/PersetujuanIzinPage'));
 import { isManagerOrSpv, isSuperAdmin, isHrAdmin } from '../utils/roles';
 import KelolaDivisiShift from '../pages/Karyawan/KelolaDivisiShift';
 
@@ -89,10 +91,10 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           {/* [BARU] Wadah Halaman Pusat Pengajuan Karyawan (menggabungkan Cuti, Sakit & Izin, Lembur) */}
           <Route path="/pengajuan" element={<Pengajuan user={user} />} />
 
-          {/* [UBAH] Persetujuan Lembur: SuperAdmin tetap di halaman ini.
-              Leader/SPV/Manager sekarang memakai tab "Persetujuan Lembur" di
-              Pusat Persetujuan, jadi URL lama dialihkan ke sana. Role lain
-              dialihkan ke dashboard (backend juga menolak 403). */}
+          {/* [UBAH] "List Lembur": SuperAdmin tetap di halaman ini (hanya lihat).
+              Leader/SPV/Manager memakai tab "List Lembur" di Pusat Persetujuan
+              (ACC-nya di tab "Perlu Diproses"), jadi URL lama dialihkan ke sana.
+              Role lain dialihkan ke dashboard (backend juga menolak 403). */}
           <Route
             path="/persetujuan"
             element={
@@ -102,11 +104,11 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
             }
           />
 
-          {/* [UBAH] Surat Sakit & Izin sekarang tab di Pusat Persetujuan (/ApproveLeave).
-              URL lama dialihkan ke tab tersebut (hanya Leader/SPV/Manager; backend tetap 403 untuk role lain). */}
+          {/* [UBAH] Persetujuan Sakit & Izin sekarang HANYA untuk HRD_ADMIN (menu SISTEM HRD).
+              Role lain dialihkan ke dashboard (backend juga menolak 403). */}
           <Route
             path="/persetujuan-izin"
-            element={<Navigate to={isManagerOrSpv(user) ? '/ApproveLeave?tab=izin' : '/dashboard'} replace />}
+            element={isHrAdmin(user) ? <PersetujuanIzinPage /> : <Navigate to="/dashboard" replace />}
           />
 
           {/* Wadah Halaman Manajemen Karyawan */}

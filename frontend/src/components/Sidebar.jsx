@@ -62,6 +62,14 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
 
   // Menu Khusus HRD (Gambar 3)
   const hrMenuItems = [
+    // [BARU] Persetujuan Sakit & Izin -- hanya HRD_ADMIN (bukan role "admin" lain), badge = jumlah menunggu
+    ...(userRole === 'hrd_admin' ? [{
+      path: '/persetujuan-izin',
+      name: t('sidebar.permissionApprovals'),
+      icon: 'fa-solid fa-file-circle-check',
+      badgeStyle: { backgroundColor: '#ff4d4d' },
+      count: notificationCounts?.permissionApproval ?? 0,
+    }] : []),
     { path: '/karyawan', name: t('sidebar.manageEmployees'), icon: 'fa-solid fa-users' },
     { path: '/kelola-divisi-shift', name: t('sidebar.manageDivisionShift'), icon: 'fa-solid fa-layer-group' },
     // [BARU] Menu Laporan hanya untuk role HRD_ADMIN (bukan role "admin" lain)
