@@ -162,11 +162,10 @@ public class LeaveService {
     public List<LeaveRequest> getCalendarLeaves(int year) {
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end = LocalDate.of(year, 12, 31);
-        return cutiRepository.findAll().stream()
+        // [UBAH] Rentang tanggal + status PENDING/APPROVED disaring di database (findCalendarLeaves);
+        // hasil sama dengan filter lama. Filter cuti hangus tetap di sini.
+        return cutiRepository.findCalendarLeaves(start, end).stream()
                 .filter(cuti -> !isForfeiture(cuti)) // [BARU] catatan hangus tidak tampil di kalender
-                .filter(cuti -> !cuti.getEndDate().isBefore(start) && !cuti.getStartDate().isAfter(end))
-                .filter(cuti -> ACTION_PENDING.equalsIgnoreCase(cuti.getStatus().getStatusName())
-                        || ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
                 .toList();
     }
 
@@ -376,22 +375,43 @@ public class LeaveService {
         // Tampilkan semua pengajuan pending yang ditugaskan kepada approver,
         // termasuk tahap yang belum aktif, agar SPV/Manager dapat melihat antrean
         // dan statusnya. Urutan tindakan tetap dipaksakan oleh processApprovalAction.
-        return approvalRepository.findByApproverEmployee_EmployeeIdAndAction(approver.getEmployeeId(), ACTION_PENDING).stream()
+        List<LeaveRequest> requests = approvalRepository
+                .findByApproverEmployee_EmployeeIdAndAction(approver.getEmployeeId(), ACTION_PENDING).stream()
                 .map(LeaveRequestApproval::getLeaveRequest)
                 .filter(cuti -> ACTION_PENDING.equalsIgnoreCase(cuti.getStatus().getStatusName()))
                 .distinct()
-                .map(cuti -> toApprovalResponse(cuti, approver.getEmployeeId()))
                 .toList();
+        // [UBAH] Performa: seluruh tahap approval dimuat SEKALI (sebelumnya 1 query per pengajuan).
+        Map<Long, List<LeaveRequestApproval>> approvalsByRequest = loadApprovalsByRequest(requests);
+        return requests.stream()
+                .map(cuti -> toApprovalResponse(cuti, approver.getEmployeeId(),
+                        approvalsByRequest.getOrDefault(cuti.getLeaveRequestId(), List.of())))
+                .toList();
+    }
+
+    // [BARU] Satu query untuk semua tahap approval dari sekumpulan pengajuan, dikelompokkan per pengajuan.
+    private Map<Long, List<LeaveRequestApproval>> loadApprovalsByRequest(List<LeaveRequest> requests) {
+        if (requests.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = requests.stream().map(LeaveRequest::getLeaveRequestId).toList();
+        return approvalRepository.findAllByLeaveRequestIds(ids).stream()
+                .collect(Collectors.groupingBy(approval -> approval.getLeaveRequest().getLeaveRequestId()));
     }
 
     public List<LeaveApprovalResponse> getApprovalHistory(String username, String status) {
         Employee approver = getCurrentApprover(username);
-        return approvalRepository.findByApproverEmployee_EmployeeId(approver.getEmployeeId()).stream()
+        List<LeaveRequest> requests = approvalRepository.findByApproverEmployee_EmployeeId(approver.getEmployeeId()).stream()
                 .map(LeaveRequestApproval::getLeaveRequest)
                 .distinct()
                 .filter(cuti -> status == null || status.isBlank()
                         || cuti.getStatus().getStatusName().equalsIgnoreCase(status))
-                .map(cuti -> toApprovalResponse(cuti, approver.getEmployeeId()))
+                .toList();
+        // [UBAH] Performa: tahap approval dimuat sekali (lihat getApprovalTasks).
+        Map<Long, List<LeaveRequestApproval>> approvalsByRequest = loadApprovalsByRequest(requests);
+        return requests.stream()
+                .map(cuti -> toApprovalResponse(cuti, approver.getEmployeeId(),
+                        approvalsByRequest.getOrDefault(cuti.getLeaveRequestId(), List.of())))
                 .toList();
     }
 
@@ -895,7 +915,13 @@ public class LeaveService {
     }
 
     private LeaveApprovalResponse toApprovalResponse(LeaveRequest cuti, Long currentEmployeeId) {
-        List<LeaveRequestApproval> approvals = approvalRepository.findByLeaveRequest_LeaveRequestId(cuti.getLeaveRequestId());
+        return toApprovalResponse(cuti, currentEmployeeId,
+                approvalRepository.findByLeaveRequest_LeaveRequestId(cuti.getLeaveRequestId()));
+    }
+
+    // [UBAH] Isi method lama dipindah ke sini; approvals diberikan pemanggil (bisa hasil pemuatan massal).
+    private LeaveApprovalResponse toApprovalResponse(LeaveRequest cuti, Long currentEmployeeId,
+                                                     List<LeaveRequestApproval> approvals) {
         String myApprovalStatus = approvals.stream()
                 .filter(approval -> approval.getApproverEmployee() != null
                         && approval.getApproverEmployee().getEmployeeId().equals(currentEmployeeId))

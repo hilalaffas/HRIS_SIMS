@@ -41,6 +41,15 @@ public class AttendanceService {
     private static final LocalTime ON_TIME_CUTOFF = LocalTime.of(8, 0);
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Jakarta");
 
+    // [BARU] Pool kecil untuk pekerjaan I/O jaringan saat absen (pencarian nama lokasi). Thread daemon,
+    // dibuat sesuai kebutuhan, sehingga tidak menghalangi shutdown dan tidak bergantung pada commonPool.
+    private static final java.util.concurrent.ExecutorService ATTENDANCE_IO_EXECUTOR =
+            java.util.concurrent.Executors.newCachedThreadPool(task -> {
+                Thread thread = new Thread(task, "attendance-io");
+                thread.setDaemon(true);
+                return thread;
+            });
+
     // [BARU] Durasi kerja minimum sebelum boleh check-out TANPA alasan. Di bawah
     // ini, keterangan (alasan pulang cepat) wajib diisi.
     private static final Duration MIN_WORK_DURATION = Duration.ofHours(8);
@@ -251,9 +260,14 @@ public class AttendanceService {
 
         // [BARU] Nama lokasi dicari SERVER dari koordinat -- tidak menerima nama dari
         // klien supaya tidak bisa dipalsukan. Gagal/kosong tidak menghalangi absensi.
-        String locationName = reverseGeocodingService
-                .resolveName(request.getLatitude(), request.getLongitude())
-                .orElse(null);
+        // [UBAH] Performa: pencarian nama lokasi dan unggah foto ke Cloudinary sama-sama panggilan jaringan
+        // yang tidak saling bergantung, jadi dijalankan BERSAMAAN (waktu tunggu = yang terlama, bukan jumlah
+        // keduanya). Hasil, urutan validasi, dan pesan error tetap sama; resolveName() sendiri tidak pernah
+        // melempar exception (gagal -> Optional kosong).
+        java.util.concurrent.CompletableFuture<java.util.Optional<String>> locationFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(
+                        () -> reverseGeocodingService.resolveName(request.getLatitude(), request.getLongitude()),
+                        ATTENDANCE_IO_EXECUTOR);
 
         String photoUrl;
         try {
@@ -262,6 +276,7 @@ public class AttendanceService {
         } catch (IOException e) {
             throw new IllegalStateException("Gagal mengunggah foto absensi. Silakan coba lagi.", e);
         }
+        String locationName = locationFuture.join().orElse(null);
 
         Attendance attendance = Attendance.builder()
                 .employee(employee)

@@ -1,5 +1,6 @@
 // src/pages/Dashboard/components/AnnouncementSection.jsx
 import React, { useState, useEffect, useMemo } from 'react';
+import { startPolling } from '../../../utils/polling'; // [BARU]
 import {
   getAnnouncements,
   getAllAnnouncementsForManagement,
@@ -58,8 +59,9 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
       }
     };
     loadAnnouncements();
-    const refreshTimer = window.setInterval(loadAnnouncements, 30000);
-    return () => window.clearInterval(refreshTimer);
+    // [UBAH] setInterval 30 dtk -> startPolling 60 dtk (widget sekunder; berhenti saat tab tersembunyi)
+    const stopPolling = startPolling(loadAnnouncements, 60000);
+    return () => stopPolling();
   }, [isAdminMode]);
 
   // [BARU] Hitung total halaman & potong data ke 3 item per halaman.

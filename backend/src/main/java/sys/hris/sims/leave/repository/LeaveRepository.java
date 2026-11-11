@@ -38,6 +38,20 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
             """)
     List<LeaveRequest> findAllWithDetails();
 
+    // [BARU] Performa kalender Dashboard: hanya cuti PENDING/APPROVED yang beririsan dengan rentang
+    // tanggal, langsung disaring di database (sebelumnya SELURUH tabel dimuat lalu disaring di memori).
+    @Query("""
+            select l from LeaveRequest l
+            join fetch l.employee e
+            join fetch l.status s
+            join fetch l.leaveType t
+            left join fetch l.reviewedBy rb
+            where l.endDate >= :start and l.startDate <= :end
+              and upper(s.statusName) in ('PENDING', 'APPROVED')
+            """)
+    List<LeaveRequest> findCalendarLeaves(@Param("start") java.time.LocalDate start,
+                                          @Param("end") java.time.LocalDate end);
+
     //Overlap Cuti
     List<LeaveRequest> findByEmployee_EmployeeIdAndStatus_StatusNameIn(Long employeeId, List<String> statusNames);
 

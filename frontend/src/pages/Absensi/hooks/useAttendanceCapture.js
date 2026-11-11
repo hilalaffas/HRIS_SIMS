@@ -177,8 +177,14 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     if (!video || video.readyState < 2) return;
 
     const canvas = document.createElement('canvas');
-    const sourceWidth = video.videoWidth || 640;
-    const sourceHeight = video.videoHeight || 480;
+    // [UBAH] Performa unggah: sisi terpanjang foto dibatasi 1280 px (kamera HP bisa 1920x1080 atau lebih).
+    // Foto tetap jelas untuk bukti absen & overlay, tetapi ukuran file lebih kecil sehingga unggah
+    // (terutama di jaringan seluler) lebih cepat. Kamera di bawah 1280 px tidak berubah.
+    const rawWidth = video.videoWidth || 640;
+    const rawHeight = video.videoHeight || 480;
+    const captureScale = Math.min(1, 1280 / Math.max(rawWidth, rawHeight));
+    const sourceWidth = Math.round(rawWidth * captureScale);
+    const sourceHeight = Math.round(rawHeight * captureScale);
     canvas.width = sourceWidth;
     canvas.height = sourceHeight;
 
@@ -225,7 +231,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     context.font = `500 ${Math.max(9, fontSize - 1)}px Arial, sans-serif`;
     context.fillText(`GPS: ${locationText}`, paddingX, firstLineY + lineHeight * 2, sourceWidth - paddingX * 2);
 
-    setCaptured(canvas.toDataURL('image/jpeg', 0.9));
+    setCaptured(canvas.toDataURL('image/jpeg', 0.85)); // [UBAH] kualitas 0.9 -> 0.85 (file lebih kecil, selisih visual nyaris tak terlihat)
     setSubmitError('');
   }, [coords, locationName, locationType]);
 

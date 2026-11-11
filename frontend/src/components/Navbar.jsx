@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getRiwayatByUser, getPendingApprovals, getMyApprovalUpdates } from '../services/CutiService';
+import { startPolling } from '../utils/polling'; // [BARU] polling hemat: lewati saat tab tersembunyi / request menumpuk
 import { getMyAttendanceHistory } from '../services/attendanceService';
 import { getPendingResetRequests } from '../services/passwordResetService';
 import { isHrAdmin, isSuperAdmin, isManagerOrSpv } from '../utils/roles';
@@ -219,11 +220,11 @@ export default function Navbar({ toggleSidebar, user }) {
     };
 
     fetchNotificationFromDB();
-    const intervalId = window.setInterval(fetchNotificationFromDB, 30000);
+    const stopPolling = startPolling(fetchNotificationFromDB, 30000); // [UBAH] setInterval -> startPolling
 
     return () => {
       isMounted = false;
-      window.clearInterval(intervalId);
+      stopPolling(); // [UBAH]
     };
   }, [notificationOwner, notificationStorageKey, userRole, notifRefreshTick, isDevAccount]); // [UBAH] showDropdown -> notifRefreshTick
 
@@ -259,11 +260,11 @@ export default function Navbar({ toggleSidebar, user }) {
     };
 
     fetchSickDecisions();
-    const intervalId = setInterval(fetchSickDecisions, 30000);
+    const stopPolling = startPolling(fetchSickDecisions, 30000); // [UBAH] setInterval -> startPolling
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
+      stopPolling(); // [UBAH]
     };
   }, [notificationOwner, isDevAccount]);
 
@@ -303,11 +304,11 @@ export default function Navbar({ toggleSidebar, user }) {
     };
 
     fetchResetRequests();
-    const intervalId = setInterval(fetchResetRequests, 30000);
+    const stopPolling = startPolling(fetchResetRequests, 30000); // [UBAH] setInterval -> startPolling
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
+      stopPolling(); // [UBAH]
     };
   }, [canSeeResetNotif]);
 
@@ -346,11 +347,11 @@ export default function Navbar({ toggleSidebar, user }) {
     };
 
     fetchLeaveApprovalTasks();
-    const intervalId = setInterval(fetchLeaveApprovalTasks, 30000);
+    const stopPolling = startPolling(fetchLeaveApprovalTasks, 30000); // [UBAH] setInterval -> startPolling
 
     return () => {
       isMounted = false;
-      clearInterval(intervalId);
+      stopPolling(); // [UBAH]
     };
   }, [canSeeLeaveApprovalNotif]);
 
