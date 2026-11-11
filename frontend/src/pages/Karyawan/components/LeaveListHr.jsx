@@ -3,6 +3,8 @@ import './LeaveListHr.css';
 import FilterStatusDropdown from './FilterStatusDropdown'; // Pastikan path ini benar di project Anda
 import Dropdown from '../../../components/Dropdown'; // [BARU] pilihan jumlah data per halaman
 import { SORT_DIRECTION, sortRows, toDateTimestamp } from '../../../utils/tableSort';
+import Skeleton from '../../../components/Skeleton'; // [BARU] loading skeleton
+import SkeletonGroup from '../../../components/SkeletonGroup'; // [BARU]
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "Semua Status" },
@@ -49,7 +51,40 @@ const SortIcon = ({ direction }) => (
   </svg>
 );
 
-const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUserRole, onRevokeLeave }) => {
+// [BARU] Skeleton tabel riwayat cuti: meniru grid asli (5 kolom yang sama) supaya tidak ada layout shift.
+const SKELETON_ROW_COUNT = 8;
+const LeaveListSkeleton = () => (
+  <SkeletonGroup label="Memuat riwayat cuti..." radius={8}>
+    <div className="leaveList__table_leaveListHr">
+      <div className="leaveList__row_leaveListHr leaveList__row--head_leaveListHr">
+        {SORT_COLUMNS.map(({ key, label, className }) => (
+          <div key={key} className={className}>
+            <span className="leaveList__sortBtn_leaveListHr">{label}</span>
+          </div>
+        ))}
+        <div className="leaveList__colLog_leaveListHr">Aksi</div>
+      </div>
+      {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
+        <div className="leaveList__row_leaveListHr" key={index}>
+          <div>
+            <Skeleton width="62%" height={14} style={{ marginBottom: 6 }} />
+            <Skeleton width="34%" height={11} />
+          </div>
+          <div>
+            <Skeleton width="55%" height={14} style={{ marginBottom: 6 }} />
+            <Skeleton width="40%" height={11} />
+          </div>
+          <div><Skeleton width={52} height={14} /></div>
+          <div className="leaveList__colStatus_leaveListHr"><Skeleton variant="pill" width={84} height={22} /></div>
+          <div className="leaveList__colLog_leaveListHr"><Skeleton width={78} height={30} style={{ borderRadius: 'var(--radius-sm)' }} /></div>
+        </div>
+      ))}
+    </div>
+  </SkeletonGroup>
+);
+
+// [UBAH] + isLoading: true selama data pertama belum selesai dimuat (lihat Karyawan.jsx).
+const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUserRole, onRevokeLeave, isLoading = false }) => {
   const [statusFilter, setStatusFilter] = useState("ALL");
   // [BARU] Pencarian nama, filter rentang tanggal (YYYY-MM-DD), dan pagination
   const [searchTerm, setSearchTerm] = useState("");
@@ -178,7 +213,7 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
     <div className="leaveList_leaveListHr">
       <div className="leaveList__toolbar_leaveListHr">
         <div className="leaveList__total_leaveListHr">
-          Total Riwayat: <strong>{filteredData.length} Data</strong>
+          Total Riwayat: {isLoading && data.length === 0 ? <Skeleton width={56} height={14} /> : <strong>{filteredData.length} Data</strong>}
         </div>
         <div className="leaveList__filters_leaveListHr">
           {/* [BARU] Cari nama */}
@@ -227,12 +262,14 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
         </div>
       </div>
 
-      {filteredData.length === 0 ? (
+      {isLoading && data.length === 0 ? (
+        <LeaveListSkeleton />
+      ) : filteredData.length === 0 ? (
         <div className="leaveList__empty_leaveListHr">
           {hasActiveFilter ? "Tidak ada riwayat cuti yang cocok dengan pencarian/filter." : "Belum ada riwayat cuti."}
         </div>
       ) : (
-        <div className="leaveList__table_leaveListHr">
+        <div className="leaveList__table_leaveListHr content-reveal">
           <div className="leaveList__row_leaveListHr leaveList__row--head_leaveListHr">
             {/* [UBAH] Header statis diganti header yang bisa diklik untuk sortir */}
             {SORT_COLUMNS.map(({ key, label, className }) => {

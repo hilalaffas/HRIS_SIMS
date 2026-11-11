@@ -61,3 +61,75 @@
     animation: none;
   }
 }
+
+/* =====================================================================
+   [BARU] Skeleton GROUP -- kilau tunggal berbasis transform (lihat SkeletonGroup.jsx)
+   Dipakai tab Cuti Karyawan, Ringkasan Cuti, Histori Cuti.
+   - Satu elemen ::after yang bergeser lewat translate3d => dikerjakan compositor/GPU,
+     tanpa repaint per bentuk (shimmer lama menganimasikan background-position di tiap bentuk).
+   - Bentuk <Skeleton /> di dalam grup berwarna datar (animasinya dimatikan di bawah).
+   - Muncul dengan jeda 120 ms: load cepat tidak berkedip, ruang tetap dipesan (tanpa layout shift).
+   ===================================================================== */
+.skeleton-group {
+  --skeleton-highlight: rgba(255, 255, 255, 0.65);
+  position: relative;
+  overflow: hidden;
+  animation: skeleton-group-appear 0.2s ease 0.12s backwards;
+}
+
+[data-theme='dark'] .skeleton-group {
+  --skeleton-highlight: rgba(255, 255, 255, 0.07);
+}
+
+.skeleton-group::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, var(--skeleton-highlight) 50%, transparent 80%);
+  transform: translate3d(-100%, 0, 0);
+  animation: skeleton-group-sweep 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+.skeleton-group .skeleton {
+  animation: none;
+  background-image: none;
+}
+
+@keyframes skeleton-group-sweep {
+  to { transform: translate3d(100%, 0, 0); }
+}
+
+@keyframes skeleton-group-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Teks untuk pembaca layar saja (tidak terlihat). */
+.skeleton-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* [BARU] Konten asli muncul halus (hanya opacity, murah) begitu skeleton selesai. */
+.content-reveal {
+  animation: content-reveal 0.3s ease-out backwards;
+}
+
+@keyframes content-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-group,
+  .skeleton-group::after,
+  .content-reveal {
+    animation: none;
+  }
+}

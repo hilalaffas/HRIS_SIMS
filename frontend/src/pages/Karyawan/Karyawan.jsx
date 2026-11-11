@@ -79,6 +79,9 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   // [UBAH] State data cuti HR — sekarang diisi dari backend asli (lihat
   // fetchRiwayatCuti), tidak lagi dari mock allLeaveHistory.
   const [riwayatCuti, setRiwayatCuti] = useState([]);
+  // [BARU] true hanya sampai data cuti PERTAMA selesai dimuat -> tabel menampilkan skeleton.
+  // Pemuatan ulang berikutnya diam-diam (data lama tetap tampil), tidak memunculkan skeleton lagi.
+  const [isLoadingRiwayatCuti, setIsLoadingRiwayatCuti] = useState(true);
   
   // [BARU] State untuk mengontrol Tab Menu yang sedang aktif
   const [activeTab, setActiveTab] = useState('List Karyawan');
@@ -271,6 +274,8 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     } catch (error) {
       console.error('Gagal menarik data cuti karyawan:', error);
       return [];
+    } finally {
+      setIsLoadingRiwayatCuti(false); // [BARU] skeleton tidak boleh nyangkut walau request gagal
     }
   };
 
@@ -574,6 +579,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
               currentUserRole={currentUserRole}
               onOpenDetail={(item) => setDetailCutiTarget(item)}
               onRevokeLeave={handleRevokeCuti}
+              isLoading={isLoadingRiwayatCuti} // [BARU]
             />
           </div>
         )}
