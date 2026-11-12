@@ -136,19 +136,15 @@ const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
                   <button
                     type="button"
                     className="approvalSection__detailBtn"
-                    aria-label="Lihat riwayat detail"
-                    title="Lihat riwayat detail"
+                    title="Lihat rincian dan alur approval"
                     onClick={() => onOpenDetail(item)}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
+                    {/* [UBAH] Dulu ikon jam saja; kini "Rincian" + ikon mata, sama persis dengan List Cuti (ListSection.jsx) */}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
                     </svg>
+                    Rincian
                   </button>
                 </div>
               </div>

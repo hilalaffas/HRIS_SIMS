@@ -42,6 +42,28 @@
   gap: 8px;
 }
 
+/* [BARU] Tombol "Rincian": gaya SAMA dengan .leaveList__detailsBtn di List Cuti (teks + ikon mata, tanpa kotak). */
+.approvalSection__detailBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 4px;
+  background: none;
+  border: none;
+  color: var(--alv-text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.approvalSection__detailBtn svg { flex-shrink: 0; }
+.approvalSection__detailBtn:hover { color: var(--dk-text-green, var(--alv-primary)); }
+.approvalSection__detailBtn:focus-visible { outline: 2px solid var(--color-info, #2563eb); outline-offset: 2px; border-radius: 4px; }
+
 /* Original Action Button Styles */
 .alvBtnPill {
   border-radius: var(--alv-radius-md);

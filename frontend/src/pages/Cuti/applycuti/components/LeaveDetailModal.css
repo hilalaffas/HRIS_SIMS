@@ -384,7 +384,7 @@
   color: var(--dk-text, #1e293b);
 }
 
-/* Aksen Warna Hijau Khusus Durasi Kerja / Tanggal */
+/* Aksen Warna Hijau Khusus Durasi Cuti / Tanggal */
 .form-cuti__value--accent {
   color: var(--dk-text-green, #0f4c3a);
 }

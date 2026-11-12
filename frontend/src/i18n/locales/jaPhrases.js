@@ -311,6 +311,7 @@ export const exact = {
 "durasi": "所要時間",
 "durasi (hari)": "期間（日）",
 "durasi cuti urgent *": "緊急休暇の日数 *",
+"durasi cuti": "休暇期間",
 "durasi kerja": "勤務時間",
 "durasi sesi setengah hari *": "半日休暇の時間帯 *",
 "edit": "編集",

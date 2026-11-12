@@ -356,7 +356,7 @@ export function mapApproval(item, employeeLookup = {}) {
     },
     jenisCuti: item.leaveType?.name || item.leaveType || 'Cuti',
     // [UBAH] Sesi Pagi/Siang disisipkan di sini supaya otomatis tampil di
-    // popup Detail Cuti (Form.jsx -> "Durasi Kerja") & ListSection.jsx.
+    // popup Detail Cuti (Form.jsx -> "Durasi Cuti") & ListSection.jsx.
     durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari${sessionSuffix(item)})`,
     startDate: item.startDate || null, // [BARU] untuk urutan tanggal cuti di Riwayat Cuti
     totalDays,

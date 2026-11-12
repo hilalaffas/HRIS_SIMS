@@ -103,7 +103,10 @@
 .apv-btn:disabled { opacity:.42; cursor:not-allowed; }
 /* [UBAH] Sel aksi: kolom selebar isi (tidak membungkus), tombol sejajar tengah dengan tinggi seragam. */
 .apv-col-action { width: 1%; white-space: nowrap; }
-.apv-actions { display: inline-flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; }
+/* [UBAH] `.apv-table th` (rata kiri) lebih spesifik dari `.apv-center`, sehingga header kolom tidak ikut rata
+   tengah. Selector ini menyamakan header dengan isi selnya. */
+.apv-table th.apv-center { text-align: center; }
+.apv-actions { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; width: 100%; }
 .apv-actions .apv-btn { display: inline-flex; align-items: center; justify-content: center; height: 30px; padding: 0 14px; line-height: 1; }
 
 /* [UBAH] Tombol "Rincian": gaya SAMA dengan .leaveList__detailsBtn di List Cuti (teks + ikon mata, tanpa kotak). */
@@ -112,7 +115,7 @@
   align-items: center;
   gap: 6px;
   height: 30px;
-  padding: 0 4px;
+  padding: 0 8px;
   background: none;
   border: none;
   color: var(--alv-text-secondary, var(--color-text-secondary));
