@@ -46,7 +46,10 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    private final ObjectMapper objectMapper;
+
+    // Dibuat sendiri (bukan bean Spring): Spring Boot 4 memakai Jackson 3, jadi tidak ada bean
+    // com.fasterxml ObjectMapper. Pola yang sama dipakai RestAuthenticationEntryPoint.
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ===================== MEMBUAT NOTIFIKASI =====================
 
