@@ -9,8 +9,11 @@
 // lama disembunyikan. Hanya dipakai ApplyCuti/Pengajuan (pemohon); Karyawan.jsx
 // tidak mengirim prop ini, jadi di sana popup tetap read-only.
 //
+// `extraAction`: tombol tambahan opsional di footer ({ label, onClick }), mis. "Buka Pusat
+// Persetujuan" saat popup dibuka dari notifikasi atasan.
+//
 // Contoh pemakaian:
-// <FormCuti data={selectedDetail} onClose={fn} onEdit={fn} editForm={null} />
+// <FormCuti data={selectedDetail} onClose={fn} onEdit={fn} editForm={null} extraAction={null} />
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import ApprovalProgressStepper from '../../../../components/ApprovalProgressStepper';
@@ -40,7 +43,7 @@ const getLogTone = (badge = '') => {
   return 'neutral';
 };
 
-const FormCuti = ({ data, onClose, onEdit = null, editForm = null }) => {
+const FormCuti = ({ data, onClose, onEdit = null, editForm = null, extraAction = null }) => {
   const { closing, close } = useModalExit();
   const [isLogOpen, setIsLogOpen] = useState(false); // [BARU] riwayat log dilipat -> hanya 1 scroll di modal
   const requestClose = () => close(onClose);
@@ -139,6 +142,7 @@ const FormCuti = ({ data, onClose, onEdit = null, editForm = null }) => {
 
             <footer className="form-cuti__footer">
               {onEdit && <button type="button" className="form-cuti__edit-btn" onClick={onEdit}>Edit Berkas</button>}
+              {extraAction && <button type="button" className="form-cuti__edit-btn" onClick={extraAction.onClick}>{extraAction.label}</button>}
               <button type="button" className="form-cuti__close-btn" onClick={requestClose}>Tutup Detail</button>
             </footer>
           </>

@@ -5,6 +5,7 @@
 // $1, $2 ... = hasil tangkapan (otomatis ikut diterjemahkan).
 
 export const extraExact = {
+  'buka pusat persetujuan': '承認センターを開く', 'detail cuti tidak dapat dimuat.': '休暇の詳細を読み込めませんでした。',
   senin: '月曜日', selasa: '火曜日', rabu: '水曜日', kamis: '木曜日', jumat: '金曜日', "jum'at": '金曜日', sabtu: '土曜日', minggu: '日曜日',
   sen: '月', sel: '火', rab: '水', kam: '木', jum: '金', sab: '土', min: '日',
   leader: 'リーダー', spv: 'スーパーバイザー', supervisor: 'スーパーバイザー', manager: 'マネージャー',

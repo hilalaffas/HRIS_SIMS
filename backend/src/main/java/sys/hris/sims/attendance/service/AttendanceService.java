@@ -8,8 +8,10 @@ import java.time.LocalDateTime;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
@@ -31,6 +33,7 @@ import sys.hris.sims.storage.CloudinaryService;
 import sys.hris.sims.schedule.entity.WorkSchedule;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 import sys.hris.sims.holiday.repository.HolidayRepository;
+import sys.hris.sims.notification.service.NotificationService;
 
 @Service
 @RequiredArgsConstructor
@@ -68,6 +71,7 @@ public class AttendanceService {
     private final WorkScheduleRepository workScheduleRepository;
     private final HolidayRepository holidayRepository;
     private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] aturan cuti <-> absen
+    private final NotificationService notificationService; // [BARU] notifikasi lonceng disimpan di database
 
     // Titik kantor dan toleransi radius menggunakan konfigurasi application.properties;
     // environment variable deployment dapat menimpa nilai default.
@@ -514,7 +518,22 @@ public class AttendanceService {
         attendance.setApprovalStatus(status);
         attendance.setReviewNote(reviewNote.isEmpty() ? null : reviewNote);
         attendance.setReviewedAt(LocalDateTime.now());
-        return toResponse(attendanceRepository.save(attendance));
+        Attendance decided = attendanceRepository.save(attendance);
+
+        // [BARU] Kabari karyawan pemohon. Keputusan sudah tersimpan, jadi kegagalan
+        // membuat notifikasi tidak boleh membatalkannya.
+        try {
+            Map<String, Object> params = new LinkedHashMap<>();
+            params.put("attendanceId", decided.getAttendanceId());
+            params.put("attendanceDate", String.valueOf(decided.getAttendanceDate()));
+            params.put("daysCount", decided.getLeaveDays() == null ? 1 : decided.getLeaveDays().intValue());
+            notificationService.notifyUser(decided.getEmployee().getUser(),
+                    "APPROVED".equals(status) ? NotificationService.TYPE_SICK_APPROVED : NotificationService.TYPE_SICK_REJECTED,
+                    decided.getAttendanceId(), params);
+        } catch (Exception ex) {
+            System.err.println("Gagal membuat notifikasi izin sakit: " + ex.getMessage());
+        }
+        return toResponse(decided);
     }
 
     // ===================== ALAT DEV (panel /devAccess) =====================
