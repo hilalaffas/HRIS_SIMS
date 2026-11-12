@@ -118,7 +118,7 @@
 }
 
 .tone-mint { background: var(--dk-tint-green, #edfbf4); border-color: #7ce0b2; color: var(--dk-text-green, #08765a); }
-.tone-yellow { background: var(--dk-tint-amber, #fffbec); border-color: #f7d269; color: var(--dk-text-amber, #a46500); }
+.tone-yellow { background: var(--dk-tint-amber, #fffbec); border-color: var(--dk-border-amber, #f7d269); color: var(--dk-text-amber, #a46500); }
 .tone-blue { background: var(--dk-tint-blue, #eff2ff); border-color: var(--dk-border-blue, #a9b9ff); color: var(--dk-text-blue, #283b9a); }
 
 @media (max-width: 768px) {

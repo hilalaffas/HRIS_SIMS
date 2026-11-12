@@ -35,7 +35,7 @@
   font-size: 16px;
   color: var(--color-text, #0f172a);
 }
-.pgj-swap-header h2 svg { width: 20px; height: 20px; color: #9333ea; }
+.pgj-swap-header h2 svg { width: 20px; height: 20px; color: var(--dk-text-purple, #9333ea); }
 .pgj-swap-header button {
   display: grid;
   place-items: center;
@@ -73,7 +73,7 @@
 .pgj-swap-field textarea:focus { border-color: #9333ea; box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15); }
 .pgj-swap-field textarea.is-invalid { border-color: #e11d48; }
 
-.pgj-swap-error { margin: 0; font-size: 12px; font-weight: 700; color: #e11d48; animation: pgjSwapFade 0.2s ease-out both; }
+.pgj-swap-error { margin: 0; font-size: 12px; font-weight: 700; color: var(--dk-text-red, #e11d48); animation: pgjSwapFade 0.2s ease-out both; }
 
 .pgj-swap-footer {
   display: flex;

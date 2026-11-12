@@ -65,8 +65,8 @@
   color: var(--color-text-secondary, #64748b);
 }
 .pgj-detail-value { font-size: 14px; font-weight: 700; color: var(--color-text, #25334a); }
-.pgj-detail-value.is-accent { color: #057354; }
-.pgj-detail-link { color: #2563eb; text-decoration: underline; }
+.pgj-detail-value.is-accent { color: var(--dk-text-green, #057354); }
+.pgj-detail-link { color: var(--dk-text-blue, #2563eb); text-decoration: underline; }
 .pgj-detail-status {
   align-self: flex-start;
   padding: 3px 9px;

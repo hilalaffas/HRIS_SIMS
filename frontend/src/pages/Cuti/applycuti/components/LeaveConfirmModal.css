@@ -71,7 +71,7 @@
   line-height: 1.5;
   color: var(--dk-text-amber, #92400e);
   background: var(--dk-tint-amber, #fffbeb);
-  border: 1px solid #fcd34d;
+  border: 1px solid var(--dk-border-amber, #fcd34d);
   border-radius: var(--radius-md, 10px);
 }
 
