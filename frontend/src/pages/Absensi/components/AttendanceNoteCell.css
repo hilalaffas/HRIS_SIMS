@@ -30,11 +30,11 @@
 /* Ikon jam pasir bergoyang pelan: menandakan "sedang diproses" */
 .abs-notice-warning svg { animation: abs-note-hourglass 2.4s ease-in-out infinite; }
 
-/* Tombol aksi: solid (Susul Surat Dokter) atau link (Ajukan Koreksi) */
+/* Tombol aksi seukuran chip GPS/Peta, dengan gradasi biru lembut. */
 .abs-note-action {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   border: 0;
   font-family: inherit;
   font-size: 10px;
@@ -45,33 +45,26 @@
 }
 
 .abs-note-action svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
 }
 
 .abs-action-solid {
-  padding: 6px 11px;
-  border-radius: var(--radius-sm, 6px);
-  color: #ffffff;
-  background: var(--color-info);
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25);
+  padding: 2px 7px;
+  border-radius: 10px;
+  color: var(--dk-text-blue, #1d4ed8);
+  background: linear-gradient(135deg, var(--color-info-bg, #eff6ff), var(--color-primary-tint, #dbeafe));
+  background: linear-gradient(135deg, color-mix(in srgb, #3b82f6 10%, var(--color-surface, white)), color-mix(in srgb, #2563eb 20%, var(--color-surface, white)));
+  white-space: nowrap;
 }
 
 .abs-action-solid:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, color-mix(in srgb, #3b82f6 18%, var(--color-surface, white)), color-mix(in srgb, #2563eb 28%, var(--color-surface, white)));
 }
 
 .abs-action-solid:active { transform: translateY(0); }
-
-.abs-action-link {
-  padding: 0;
-  background: none;
-  color: var(--dk-text-blue, var(--color-info));
-}
-
-.abs-action-link:hover { text-decoration: underline; }
 
 .abs-note-action:focus-visible,
 .abs-note-notice.is-link:focus-visible {
@@ -95,3 +88,7 @@
   .abs-notice-warning svg { animation: none; }
   .abs-action-solid:hover { transform: none; }
 }
+
+.abs-note-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.abs-note-action.abs-action-solid { min-height: 0; font-size: 10px; text-decoration: none; }
+.abs-note-action:disabled { opacity: .6; cursor: not-allowed; }

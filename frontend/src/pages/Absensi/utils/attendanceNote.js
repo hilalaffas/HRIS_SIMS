@@ -57,7 +57,7 @@ function resolveDocumentNotice(document) {
       action: {
         type: 'uploadDocument',
         variant: 'solid',
-        label: 'Susul Surat Dokter',
+        label: 'Upload Surat Sakit',
         payload: document.recordId,
       },
     };
@@ -85,11 +85,11 @@ function resolveLateCorrection(row, correctionStatus) {
   }
   return {
     notice: null,
-    action: { type: 'requestCorrection', variant: 'link', label: 'Ajukan Koreksi', payload: row.date },
+    action: { type: 'requestCorrection', variant: 'solid', label: 'Ajukan Koreksi', payload: row.date },
   };
 }
 
-export function resolveNoteMeta(row, { correctionStatus = '' } = {}) {
+function resolveBaseNoteMeta(row, { correctionStatus = '' } = {}) {
   const empty = { badge: null, detail: '', notice: null, action: null };
   const hasNote = row.note && row.note !== '-';
   if (!row.tone && !hasNote) return empty;
@@ -122,7 +122,6 @@ export function resolveNoteMeta(row, { correctionStatus = '' } = {}) {
       ...empty,
       badge: { label: row.status, tone: 'sakit' },
       detail,
-      ...(row.document ? resolveDocumentNotice(row.document) : {}),
     };
   }
 
@@ -144,5 +143,17 @@ export function resolveNoteMeta(row, { correctionStatus = '' } = {}) {
     ...empty,
     badge: row.tone ? { label: row.status, tone: row.tone } : null,
     detail: hasNote ? row.note : '',
+  };
+}
+
+// Document submission is available while approval is pending and alongside
+// attendance corrections for an employee who went home sick after checking in.
+export function resolveNoteMeta(row, options = {}) {
+  const meta = resolveBaseNoteMeta(row, options);
+  const document = row.document ? resolveDocumentNotice(row.document) : null;
+  return {
+    ...meta,
+    notices: [meta.notice, document?.notice].filter(Boolean),
+    actions: [meta.action, document?.action].filter(Boolean),
   };
 }

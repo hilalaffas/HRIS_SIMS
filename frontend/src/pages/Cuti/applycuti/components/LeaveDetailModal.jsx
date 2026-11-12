@@ -208,7 +208,7 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
               <span className="form-cuti__value">{jenisCuti}</span>
             </div>
             <div className="form-cuti__field">
-              <span className="form-cuti__label">Durasi Kerja</span>
+              <span className="form-cuti__label">Durasi Cuti</span>
               <span className="form-cuti__value form-cuti__value--accent">
                 {formatShortDateRange(durasi)}
               </span>            

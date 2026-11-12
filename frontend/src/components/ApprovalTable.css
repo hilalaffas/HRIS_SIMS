@@ -100,26 +100,34 @@
 .apv-status--amber { background:#fff2d6; color:#946200; }
 .apv-status--green { background:#e3f6e9; color:#18713a; }
 .apv-status--rose { background:#ffe7e7; color:#a52b35; }
-.apv-actions { align-items:center; }
 .apv-btn:disabled { opacity:.42; cursor:not-allowed; }
-.apv-detail-btn { display:inline-flex; align-items:center; justify-content:center; width:29px; height:27px; border:1px solid var(--color-border); border-radius:6px; background:var(--dk-bg-subtle,#f6f8fa); color:var(--color-text-secondary); cursor:pointer; }
-.apv-detail-btn:hover { color:var(--color-primary); border-color:var(--color-primary); }
-.apv-detail-overlay { position:fixed; inset:0; z-index:1200; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.48); }
-.apv-detail-modal { width:min(620px,100%); max-height:85vh; overflow:auto; padding:20px; border-radius:14px; background:var(--color-surface,#fff); color:var(--color-text); box-shadow:0 18px 55px rgba(0,0,0,.22); }
-.apv-detail-modal header,.apv-detail-modal footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.apv-detail-modal header h2 { margin:0; font-size:18px; }
-.apv-detail-modal header button { border:0; background:transparent; font-size:25px; cursor:pointer; color:inherit; }
-.apv-detail-modal dl { display:grid; gap:10px; margin:18px 0; }
-.apv-detail-modal dl div { display:grid; grid-template-columns:135px 1fr; gap:12px; }
-.apv-detail-modal dt { color:var(--color-text-secondary); font-size:12px; }
-.apv-detail-modal dd { margin:0; font-size:13px; font-weight:600; }
-.apv-detail-modal h3 { margin:18px 0 8px; font-size:14px; }
-.apv-timeline { margin:0; padding-left:22px; }
-.apv-timeline li { padding:5px 0 10px 4px; }
-.apv-timeline li span,.apv-timeline li em,.apv-timeline li small { display:block; margin-top:3px; font-size:12px; font-style:normal; }
-.apv-step-approved { color:#18713a; } .apv-step-rejected { color:#a52b35; } .apv-step-pending { color:#946200; }
-.apv-detail-modal footer { justify-content:flex-end; margin-top:18px; }
-.apv-detail-modal footer button { padding:7px 16px; border:1px solid var(--color-border); border-radius:7px; background:var(--dk-bg-subtle,#f6f8fa); color:inherit; cursor:pointer; }
-@media (max-width:640px) { .apv-detail-modal dl div { grid-template-columns:1fr; gap:3px; } .apv-actions { flex-wrap:wrap; } }
+/* [UBAH] Sel aksi: kolom selebar isi (tidak membungkus), tombol sejajar tengah dengan tinggi seragam. */
+.apv-col-action { width: 1%; white-space: nowrap; }
+/* [UBAH] `.apv-table th` (rata kiri) lebih spesifik dari `.apv-center`, sehingga header kolom tidak ikut rata
+   tengah. Selector ini menyamakan header dengan isi selnya. */
+.apv-table th.apv-center { text-align: center; }
+.apv-actions { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; width: 100%; }
+.apv-actions .apv-btn { display: inline-flex; align-items: center; justify-content: center; height: 30px; padding: 0 14px; line-height: 1; }
 
-.apv-waiting-hint { display:block; margin-top:5px; color:var(--color-text-muted); font-size:10px; }
+/* [UBAH] Tombol "Rincian": gaya SAMA dengan .leaveList__detailsBtn di List Cuti (teks + ikon mata, tanpa kotak). */
+.apv-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  background: none;
+  border: none;
+  color: var(--alv-text-secondary, var(--color-text-secondary));
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.apv-detail-btn svg { flex-shrink: 0; }
+.apv-detail-btn:hover { color: var(--dk-text-green, var(--alv-primary, var(--color-primary))); }
+.apv-detail-btn:focus-visible { outline: 2px solid var(--color-info, #2563eb); outline-offset: 2px; border-radius: 4px; }
+
+.apv-waiting-hint { display:block; margin-top:5px; white-space:normal; color:var(--color-text-muted); font-size:10px; }

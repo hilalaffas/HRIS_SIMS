@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import ApprovalTable from '../../../components/ApprovalTable';
+import AttendanceCorrectionDetailModal from '../../../components/AttendanceCorrectionDetailModal'; // [BARU]
 import Toast from '../../../components/Toast';
 import './OvertimeApprovalSection.css';
 
@@ -7,6 +8,7 @@ import './OvertimeApprovalSection.css';
 // dilakukan di tab "Perlu Diproses"; mode readOnly membuka daftar "Semua" lebih dulu.
 export default function AttendanceCorrectionApprovalSection({ rows, loading, processingKey, toast, pendingCount, onDecision, padded = false, readOnly = false }) {
   const [filter, setFilter] = useState(readOnly ? 'all' : 'pending');
+  const [detailRow, setDetailRow] = useState(null); // [BARU] baris untuk popup Informasi Detail Berkas
   const visibleRows = useMemo(
     () => filter === 'pending' ? rows.filter((row) => row.status === 'PENDING') : rows,
     [rows, filter],
@@ -21,7 +23,8 @@ export default function AttendanceCorrectionApprovalSection({ rows, loading, pro
       </div>
       <ApprovalTable rows={visibleRows} loading={loading} processingKey={processingKey}
         emptyMessage={filter === 'pending' ? 'Tidak ada koreksi absensi yang menunggu.' : 'Belum ada pengajuan koreksi absensi.'}
-        onDecision={onDecision} detailTitle="Detail Koreksi Absensi" readOnly={readOnly} />
+        onDecision={onDecision} readOnly={readOnly} onOpenDetail={setDetailRow} />
+      {detailRow && <AttendanceCorrectionDetailModal row={detailRow} onClose={() => setDetailRow(null)} />}
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </div>
   );

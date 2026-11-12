@@ -141,7 +141,9 @@ function groupByDate(records) {
     const key = record.attendanceDate;
     if (!key) return;
     const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null, rejectedSick: null };
-    if (isRejectedSick(record)) {
+    if (record.actionCode === 'SAKIT' && record.reasonCode === 'SAKIT') {
+      if (!isRejectedSick(record)) entry.sickNotice = record;
+    } else if (isRejectedSick(record)) {
       entry.rejectedSick = record; // [BARU] riwayat saja -- bukan check-in
     } else if (record.actionCode === 'IZIN') {
       entry.lateNotice = record; // [BARU] izin terlambat: bukan check-in, hanya catatan
@@ -206,13 +208,16 @@ function getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate = L
 }
 
 function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026) {
-  const { checkIn, checkOut, lateNotice, rejectedSick } = entry;
+  const { checkIn, checkOut, lateNotice, rejectedSick, sickNotice } = entry;
   const isToday = key === todayKey;
   // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
   const lateSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
   const noticeSuffix = `${lateSuffix}${rejectedSick ? ' · Izin sakit ditolak' : ''}`;
   const scheduleLabel = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
   const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: scheduleLabel, lateMinutes: 0, noteDetail: '' }; // [UBAH] + lateMinutes, noteDetail (jadwal shift dari teman)
+  const sickDocument = sickNotice?.documentRequired
+    ? { recordId: sickNotice.id, url: sickNotice.documentUrl, reviewStatus: sickNotice.documentReviewStatus }
+    : null;
   const empty = { checkIn: null, checkOut: null, duration: null, durationMinutes: null };
 
   // [BARU] Hari lampau yang hanya punya pengajuan sakit DITOLAK: tampil "DITOLAK"
@@ -299,6 +304,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     status: isLate ? 'TERLAMBAT' : 'HADIR TEPAT WAKTU',
     tone: isLate ? 'telat' : 'hadir',
     lateMinutes: isLate ? lateMinutes : 0, // [BARU]
+    document: sickDocument,
     noteDetail, // [BARU]
     note,
     photoUrl: proof.photoUrl || checkOut?.photoUrl || '',

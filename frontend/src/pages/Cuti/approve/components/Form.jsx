@@ -92,7 +92,7 @@ const FormCuti = ({ data, onClose, onEdit = null, editForm = null, extraAction =
               <div className="form-cuti__grid">
                 <InfoField label="Pemohon" value={data.karyawan?.nama} />
                 <InfoField label="Jenis Permohonan" value={data.jenisCuti} />
-                <InfoField label="Durasi Kerja" value={data.durasi} accent />
+                <InfoField label="Durasi Cuti" value={data.durasi} accent />
                 <div className="form-cuti__field">
                   <span className="form-cuti__label">Status Sekarang</span>
                   <span className={`form-cuti__status form-cuti__status--${status.tone}`}>{status.label}</span>
