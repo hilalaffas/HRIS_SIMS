@@ -40,14 +40,19 @@
 }
 
 .toast-error {
-  background-color: var(--color-text);
+  /* [UBAH] Sebelumnya var(--color-text) (abu gelap di terang, tapi abu TERANG
+     di tema gelap -> teks putih tidak terbaca). Sekarang merah di kedua tema. */
+  background-color: var(--color-danger);
 }
 
+/* [UBAH] Tema gelap: merah versi gelap (bukan merah terang menyala), teks
+   merah muda kontras ~5.6:1, ring tipis lewat inset box-shadow supaya
+   ukuran toast tidak bergeser. */
 [data-theme='dark'] .toast-error {
-  background-color: var(--dk-tint-red, #2d1218);
+  background-color: var(--dk-border-red, #6b1d2c);
   color: var(--dk-text-red, #fca5a5);
   box-shadow:
-    inset 0 0 0 1px var(--dk-border-red, #6b1d2c),
+    inset 0 0 0 1px rgba(252, 165, 165, 0.28),
     var(--shadow-md),
     0 20px 25px -8px rgba(0, 0, 0, 0.5);
 }
