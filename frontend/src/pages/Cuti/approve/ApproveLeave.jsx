@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom'; // [BARU] baca query param dari notifikasi cuti
 import './ApproveLeave.css';
 
@@ -112,15 +112,28 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
 
   const pendingCount = pending.length;
 
+  // [BARU] Penanda permintaan detail terakhir. Dulu modal ditutup SEBELUM getApprovalDetail() selesai
+  // (API lambat / cold start), lalu hasilnya tetap dipasang ke state sehingga modal MUNCUL LAGI beberapa
+  // detik setelah ditutup. Sekarang hasil fetch hanya dipakai bila permintaan itu masih yang terbaru
+  // dan modal belum ditutup.
+  const detailRequestRef = useRef(0);
+
   const handleOpenDetail = async (item) => {
+    const requestId = ++detailRequestRef.current; // [BARU]
     setSelectedDetail(item);
     try {
-      setSelectedDetail(await getApprovalDetail(item.id));
+      const detail = await getApprovalDetail(item.id);
+      if (detailRequestRef.current !== requestId) return; // [BARU] sudah ditutup / diganti detail lain
+      setSelectedDetail(detail);
     } catch (err) {
+      if (detailRequestRef.current !== requestId) return; // [BARU]
       setError(err.message || 'Gagal memuat detail cuti.');
     }
   };
-  const handleCloseDetail = () => setSelectedDetail(null);
+  const handleCloseDetail = () => {
+    detailRequestRef.current += 1; // [BARU] batalkan fetch detail yang masih berjalan
+    setSelectedDetail(null);
+  };
 
   // [BARU] Auto-buka detail pengajuan cuti kalau halaman ini diakses dari
   // notifikasi "Cuti Perlu Diproses" (query param leaveRequestId, dikirim
