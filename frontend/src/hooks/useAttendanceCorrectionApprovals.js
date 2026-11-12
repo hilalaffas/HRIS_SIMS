@@ -13,6 +13,8 @@ function toRow(item) {
     subDetail: 'Koreksi keterlambatan absensi',
     status: String(item.status || '').toUpperCase(),
     canAct: Boolean(item.canAct),
+    createdAt: item.createdAt || null, // [BARU] untuk log "DIAJUKAN" di popup detail
+    reviewNote: item.reviewNote || '', // [BARU]
     approvalProgressStatus: current ? `Menunggu Persetujuan ${current.role}` :
       item.status === 'APPROVED' ? 'Sudah Di-ACC' : item.status === 'REJECTED' ? 'Ditolak' : 'Dalam Proses Persetujuan',
     approvals: steps,

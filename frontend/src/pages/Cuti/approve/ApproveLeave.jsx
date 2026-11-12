@@ -9,6 +9,7 @@ import FormCuti from './components/Form';
 import PendingQueueSection from './components/PendingQueueSection'; // [BARU] isi tab "Perlu Diproses" (Cuti + Lembur + Koreksi)
 import OvertimeListSection from '../../Persetujuan/components/OvertimeListSection'; // [UBAH] tab "List Lembur" (dulu Persetujuan Lembur)
 import OvertimeDetailModal from '../../../components/OvertimeDetailModal'; // [BARU] popup Informasi Detail Berkas Lembur
+import AttendanceCorrectionDetailModal from '../../../components/AttendanceCorrectionDetailModal'; // [BARU] popup Informasi Detail Berkas Koreksi Absensi
 import useOvertimeApprovals from '../../../hooks/useOvertimeApprovals'; // [BARU]
 import { isActionableRow } from '../../../utils/approvalQueue'; // [BARU]
 import AttendanceCorrectionApprovalSection from '../../Persetujuan/components/AttendanceCorrectionApprovalSection';
@@ -58,6 +59,7 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   });
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [selectedOvertime, setSelectedOvertime] = useState(null); // [BARU] baris lembur untuk popup detail berkas
+  const [selectedCorrection, setSelectedCorrection] = useState(null); // [BARU] baris koreksi absensi untuk popup detail berkas
 
   const [pending, setPending] = useState([]);
   const [history, setHistory] = useState([]);
@@ -213,6 +215,7 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
             corrections={canApproveCorrection ? attendanceCorrections : null}
             correctionRows={correctionQueueRows}
             onOpenOvertimeDetail={setSelectedOvertime}
+            onOpenCorrectionDetail={setSelectedCorrection}
           />
         )}
         {activeTab === "list" && (
@@ -236,6 +239,9 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
 
       {/* [BARU] Popup Informasi Detail Berkas Lembur (dari "Perlu Diproses" maupun "List Lembur") */}
       {selectedOvertime && <OvertimeDetailModal row={selectedOvertime} onClose={() => setSelectedOvertime(null)} />}
+
+      {/* [BARU] Popup Informasi Detail Berkas Koreksi Absensi (dari "Perlu Diproses"; tab List punya popup sendiri) */}
+      {selectedCorrection && <AttendanceCorrectionDetailModal row={selectedCorrection} onClose={() => setSelectedCorrection(null)} />}
 
       {/*Bagian popup alasan ACC/Revisi/Tolak*/}
       <ActionReasonModal

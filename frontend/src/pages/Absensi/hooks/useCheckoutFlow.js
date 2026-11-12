@@ -11,8 +11,8 @@
 //   selain itu                  -> langsung buka kamera
 //
 // Tombol di halaman TETAP "Absen Keluar" sampai karyawan check-out; menambah
-// lembur tidak mengubah status absen. Pulang cepat didahulukan: durasi kerja
-// < 8 jam tidak ditanya soal lembur.
+// lembur tidak mengubah status absen. Setelah jadwal pulang, pilihan lembur
+// berlaku meskipun durasi kerja belum penuh.
 //
 // Contoh pemakaian:
 // const flow = useCheckoutFlow({ openCapture: capture.open, checkInAt, onOvertimeSubmitted });
@@ -20,7 +20,6 @@
 // <CheckoutFlowModals flow={flow} />
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useEarlyCheckout from './useEarlyCheckout';
-import { isEarlyCheckout } from '../utils/earlyCheckout';
 import { isAfterWorkEnd } from '../utils/overtimeCheckout';
 import {
   getOvertimeExtensionWindow,
@@ -70,13 +69,13 @@ export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubm
   }, []);
 
   const startAttendance = useCallback((action) => {
-    if (action === 'Keluar' && !isEarlyCheckout(checkInAt, new Date(), requiredWorkHours) && isAfterWorkEnd(new Date(), shiftEndTime)) {
+    if (action === 'Keluar' && isAfterWorkEnd(new Date(), shiftEndTime)) {
       setStep('choice');
       loadWindow();
       return;
     }
     startEarlyAware(action); // pulang cepat -> popup peringatan; selain itu -> kamera
-  }, [checkInAt, loadWindow, requiredWorkHours, shiftEndTime, startEarlyAware]);
+  }, [loadWindow, shiftEndTime, startEarlyAware]);
 
   const close = useCallback(() => {
     requestRef.current += 1;

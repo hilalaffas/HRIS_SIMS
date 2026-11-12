@@ -247,7 +247,10 @@ public class AttendanceService {
         // SERVER (sama seperti Attendance.prePersist()), bukan jam perangkat.
         // [UBAH] Cuti setengah hari: karyawan memang hanya bekerja setengah shift, jadi
         // aturan durasi minimum ("pulang cepat") tidak berlaku.
+        // [UBAH] Aturan alasan hanya berlaku SEBELUM jam pulang jadwal. Setelah jam pulang, check-out dianggap
+        // normal walau karyawan datang terlambat (durasi kerja < 8 jam), sejalan dengan useCheckoutFlow.js.
         if (action.equals("KELUAR") && !leaveToday.isHalfDay()
+                && nowDateTime.isBefore(getScheduledCheckoutTime(workDate, schedule)) // [BARU]
                 && (request.getNote() == null || request.getNote().isBlank())) {
             WorkSchedule scheduleForCheckout = schedule;
             attendanceRepository
@@ -621,6 +624,18 @@ public class AttendanceService {
         return workScheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
                         employeeId, date, date)
                 .stream().findFirst().orElse(null);
+    }
+
+    // [BARU] Waktu pulang terjadwal (shift malam: selesai di hari berikutnya). Tanpa jadwal -> 08:00-17:00.
+    private LocalDateTime getScheduledCheckoutTime(LocalDate workDate, WorkSchedule schedule) {
+        LocalTime start = LocalTime.of(8, 0);
+        LocalTime end = LocalTime.of(17, 0);
+        if (schedule != null && schedule.getShift() != null) {
+            start = schedule.getShift().getStartTime();
+            end = schedule.getShift().getEndTime();
+        }
+        LocalDate endDate = !end.isAfter(start) ? workDate.plusDays(1) : workDate;
+        return LocalDateTime.of(endDate, end);
     }
 
     private Duration getRequiredShiftDuration(WorkSchedule schedule) {

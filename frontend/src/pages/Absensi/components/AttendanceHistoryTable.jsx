@@ -29,6 +29,10 @@
 // pengajuan Izin lewat halaman Absensi. Untuk memasukkan cuti tahunan yang
 // disetujui di modul Cuti (leave_requests), tambahkan sumber datanya di
 // buildMonthlyRows() -- struktur tabel tidak perlu diubah.
+//
+// [UBAH] Mode ringkas = minggu berjalan; "Lihat semua" = navigasi mingguan Senin-Minggu di dalam periode
+// tutup buku 21-20 (utils/attendanceWeeks.js), menggantikan paginasi 10/20/30 baris. Ekspor CSV/PDF tetap satu periode penuh.
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, FileDown, FileText } from 'lucide-react'; // CircleCheck, MapPin, Upload dipindah ke AttendanceNoteCell
 import { downloadCsv } from '../../../utils/csvExport';
@@ -40,6 +44,7 @@ import {
   getCurrentPeriod,
   toReportRows,
 } from '../utils/monthlyAttendance';
+import { buildAttendanceWeeks, currentAttendanceWeek } from '../utils/attendanceWeeks';
 import AttendanceNoteCell from './AttendanceNoteCell'; // [BARU]
 import { IS_NOTE_DEMO_ENABLED, buildDemoNoteRows } from '../utils/dummyAttendanceNotes'; // [BARU][SEMENTARA] data dummy, hapus saat backend siap
 import './AttendanceHistoryTable.css';
@@ -49,9 +54,6 @@ import { getHolidaysByMonth } from '../../../services/holidayService';
 import { getRiwayatByUser } from '../../../services/CutiService'; // [BARU] cuti disetujui
 import { attachApprovedLeave, filterApprovedLeaves } from '../utils/approvedLeave'; // [BARU]
 
-const COLLAPSED_ROW_COUNT = 3;
-const PAGE_SIZE_OPTIONS = [10, 20, 30]; // pilihan jumlah baris per halaman (mode "Lihat semua")
-const DEFAULT_PAGE_SIZE = 10;
 // [BARU] Definisi kolom: `value` = nilai yang dipakai untuk sort. Nilai kosong
 // (null / '' / '-') selalu ditaruh paling bawah.
 const COLUMNS = [
@@ -90,8 +92,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   const currentPeriod = useMemo(() => getCurrentPeriod(new Date()), []);
   const [period, setPeriod] = useState(currentPeriod);
   const [expanded, setExpanded] = useState(false);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [selectedWeek, setSelectedWeek] = useState(null);
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' });
   const [exporting, setExporting] = useState(false);
   const [schedules, setSchedules] = useState([]);
@@ -112,7 +113,6 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   useEffect(() => {
     let active = true;
     const previousMonth = new Date(period.year, period.month - 1, 1); // aman untuk Januari -> Desember tahun lalu
-    setScheduleLoaded(false);
     Promise.all([
       getMyWorkSchedule(period.year, period.month + 1),
       // [UBAH] Periode tutup buku (21 s/d 20) melewati DUA bulan kalender: libur bulan
@@ -139,7 +139,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
     return () => { active = false; };
   }, [period.year, period.month]);
 
-      const isCurrentPeriod = period.year === currentPeriod.year && period.month === currentPeriod.month;
+  const isCurrentPeriod = period.year === currentPeriod.year && period.month === currentPeriod.month;
   const periodLabel = formatPeriodLabel(period.year, period.month);
   const upcomingSchedules = useMemo(() => {
     const start = new Date();
@@ -195,44 +195,34 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
         ? { key, dir: current.dir === 'asc' ? 'desc' : 'asc' }
         : { key, dir: 'asc' }
     ));
-    setPage(0);
   };
 
-  const totalPages = Math.max(1, Math.ceil(dailyRows.length / pageSize));
-  const safePage = Math.min(page, totalPages - 1);
-
-  const visibleRows = useMemo(() => {
-    if (!expanded) return sortedRows.slice(0, COLLAPSED_ROW_COUNT);
-    const start = safePage * pageSize;
-    return sortedRows.slice(start, start + pageSize);
-  }, [sortedRows, expanded, safePage, pageSize]);
-
-  const rangeStart = dailyRows.length === 0 ? 0 : safePage * pageSize + 1;
-  const rangeEnd = Math.min(dailyRows.length, (safePage + 1) * pageSize);
-
-  const changePageSize = (event) => {
-    setPageSize(Number(event.target.value));
-    setPage(0); // kembali ke halaman 1 supaya tidak melompat ke halaman kosong
-  };
-
-  const goToPage = (next) => {
-    if (next < 0 || next >= totalPages) return;
-    setPage(next);
-  };
+  const weeks = useMemo(() => buildAttendanceWeeks(period.year, period.month), [period.year, period.month]);
+  const defaultWeek = currentAttendanceWeek(weeks);
+  const weekIndex = expanded && selectedWeek !== null
+    ? Math.min(Math.max(0, selectedWeek), weeks.length - 1)
+    : defaultWeek;
+  const activeWeek = weeks[weekIndex];
+  const visibleRows = sortedRows.filter((row) => row.date >= activeWeek.from && row.date <= activeWeek.to);
+  const formatWeekDate = (key) => new Date(`${key}T00:00:00`).toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+  const weekLabel = `${formatWeekDate(activeWeek.from)} – ${formatWeekDate(activeWeek.to)}`;
 
   const toggleExpanded = () => {
     setExpanded((current) => !current);
-    setPage(0);
+    setSelectedWeek(null);
   };
 
   const shiftPeriod = (delta) => {
+    setScheduleLoaded(false);
     setPeriod((current) => {
       const target = new Date(current.year, current.month + delta, 1);
       // Tidak boleh melewati periode yang sedang berjalan.
       if (target > new Date(currentPeriod.year, currentPeriod.month, 1)) return current;
       return { year: target.getFullYear(), month: target.getMonth() };
     });
-    setPage(0);
+    setSelectedWeek(null);
   };
 
   const filePrefix = `rekap_absensi_tutup-buku_${period.year}-${String(period.month + 1).padStart(2, '0')}`;
@@ -341,7 +331,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
           </thead>
           {/* key={...} memaksa remount <tbody> supaya animasi baris
               (abs-tbody-page) terpicu ulang tiap ganti halaman/bulan. */}
-          <tbody key={`${period.year}-${period.month}-${sort.key}-${sort.dir}-${pageSize}-${expanded ? `page-${safePage}` : 'collapsed'}`} className="abs-tbody-page">
+          <tbody key={`${period.year}-${period.month}-${sort.key}-${sort.dir}-${weekIndex}-${expanded ? 'expanded' : 'collapsed'}`} className="abs-tbody-page">
             {visibleRows.length === 0 && (
               <tr>
                 <td colSpan={COLUMNS.length} className="abs-empty-row">Belum ada riwayat absensi pada periode ini.</td>
@@ -375,49 +365,25 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
         </table>
       </div>
 
-      {expanded && (
-        <div className="abs-footer-bar">
-          <label className="abs-page-size">
-            Tampilkan
-            <select value={pageSize} onChange={changePageSize} aria-label="Jumlah baris per halaman">
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-            baris
-          </label>
-
-          {totalPages > 1 ? (
-            <div className="abs-pagination">
-              <button
-                type="button"
-                className="abs-page-nav"
-                onClick={() => goToPage(safePage - 1)}
-                disabled={safePage === 0}
-                aria-label="Halaman sebelumnya"
-              >
-                <ChevronLeft aria-hidden="true" />
-              </button>
-              <span className="abs-page-indicator">
-                Halaman {safePage + 1} dari {totalPages}
-              </span>
-              <button
-                type="button"
-                className="abs-page-nav"
-                onClick={() => goToPage(safePage + 1)}
-                disabled={safePage === totalPages - 1}
-                aria-label="Halaman berikutnya"
-              >
-                <ChevronRight aria-hidden="true" />
-              </button>
-            </div>
-          ) : <span />}
-
-          <span className="abs-page-range">
-            {rangeStart}-{rangeEnd} dari {dailyRows.length} hari
-          </span>
-        </div>
-      )}
+      <div className="abs-footer-bar" aria-label="Rentang minggu absensi">
+        <span className="abs-page-range" aria-live="polite">
+          {expanded ? `Minggu ${weekIndex + 1} dari ${weeks.length}` : isCurrentPeriod ? 'Minggu berjalan' : 'Minggu terakhir periode'} · {weekLabel}
+        </span>
+        {expanded && (
+          <div className="abs-pagination">
+            <button type="button" className="abs-page-nav" onClick={() => setSelectedWeek(weekIndex - 1)}
+              disabled={weekIndex === 0} aria-label="Minggu sebelumnya">
+              <ChevronLeft aria-hidden="true" />
+            </button>
+            <span className="abs-page-indicator">Senin–Minggu</span>
+            <button type="button" className="abs-page-nav" onClick={() => setSelectedWeek(weekIndex + 1)}
+              disabled={weekIndex === weeks.length - 1} aria-label="Minggu berikutnya">
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        <span className="abs-page-range">{visibleRows.length} hari</span>
+      </div>
     </section>
   );
 }

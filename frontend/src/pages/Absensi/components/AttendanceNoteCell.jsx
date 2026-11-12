@@ -62,11 +62,11 @@ function NoteNotice({ notice }) {
 }
 
 export default function AttendanceNoteCell({ row, correctionStatus, onUploadDocument, onRequestCorrection }) {
-  const { badge, detail, notice, action } = resolveNoteMeta(row, { correctionStatus });
+  const { badge, detail, notices, actions } = resolveNoteMeta(row, { correctionStatus });
   const hasProof = Boolean(row.photoUrl || row.mapsUrl);
-  if (!badge && !detail && !notice && !action && !hasProof) return <span className="abs-empty-cell">-</span>;
+  if (!badge && !detail && !notices.length && !actions.length && !hasProof) return <span className="abs-empty-cell">-</span>;
 
-  const handleAction = () => {
+  const handleAction = (action) => {
     if (action.type === 'uploadDocument') onUploadDocument(action.payload);
     if (action.type === 'requestCorrection') onRequestCorrection(action.payload);
   };
@@ -75,13 +75,13 @@ export default function AttendanceNoteCell({ row, correctionStatus, onUploadDocu
     <div className="abs-note-stack">
       {badge && <span className={`abs-record-status abs-status-${badge.tone}`}>{badge.label}</span>}
       {detail && <span className="abs-note-text">{detail}</span>}
-      {notice && <NoteNotice notice={notice} />}
-      {action && (
-        <button type="button" className={`abs-note-action abs-action-${action.variant}`} onClick={handleAction}>
+      {notices.map((notice, index) => <NoteNotice key={`${notice.label}-${index}`} notice={notice} />)}
+      {actions.length > 0 && <div className="abs-note-actions">{actions.map((action) => (
+        <button type="button" key={action.type} className="abs-note-action abs-action-solid" onClick={() => handleAction(action)}>
           {action.type === 'uploadDocument' ? <Upload aria-hidden="true" /> : <Pencil aria-hidden="true" />}
           {action.label}
         </button>
-      )}
+      ))}</div>}
       <ProofLinks row={row} />
     </div>
   );

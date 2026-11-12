@@ -3,7 +3,7 @@
 // [BARU] Isi tab "Perlu Diproses" di Pusat Persetujuan. SEMUA aksi ACC dipusatkan di sini:
 //   - Cuti             -> ApproveSection (ACC / Revisi / Tolak + alasan, tidak berubah)
 //   - Lembur           -> ApprovalTable (Setujui / Tolak), detail = OvertimeDetailModal
-//   - Koreksi Absensi  -> ApprovalTable (Setujui / Tolak)
+//   - Koreksi Absensi  -> ApprovalTable (Setujui / Tolak), detail = AttendanceCorrectionDetailModal
 // Hanya Leader/SPV/Manager yang punya antrean Lembur & Koreksi (props `overtime` /
 // `corrections` bernilai null untuk role lain), jadi role lain tetap melihat daftar cuti saja
 // tanpa pilihan jenis.
@@ -14,7 +14,7 @@
 // Contoh pemakaian:
 // <PendingQueueSection user={user} leaveData={pending} onRequestAction={fn} onOpenLeaveDetail={fn}
 //   overtime={overtime} overtimeRows={rows} corrections={corrections} correctionRows={rows}
-//   onOpenOvertimeDetail={fn} />
+//   onOpenOvertimeDetail={fn} onOpenCorrectionDetail={fn} />
 import React, { useMemo, useState } from 'react';
 import ApproveSection from './ApproveSection';
 import ApprovalTable from '../../../../components/ApprovalTable';
@@ -33,6 +33,7 @@ export default function PendingQueueSection({
   corrections = null,
   correctionRows = [],
   onOpenOvertimeDetail,
+  onOpenCorrectionDetail, // [BARU] buka popup Informasi Detail Berkas Koreksi Absensi
 }) {
   const [activeQueue, setActiveQueue] = useState(QUEUE.LEAVE);
 
@@ -97,7 +98,7 @@ export default function PendingQueueSection({
             processingKey={corrections.processingKey}
             emptyMessage="Tidak ada koreksi absensi yang perlu Anda proses saat ini."
             onDecision={corrections.handleDecision}
-            detailTitle="Detail Koreksi Absensi"
+            onOpenDetail={onOpenCorrectionDetail}
           />
           <Toast show={!!corrections.toast} message={corrections.toast?.message} type={corrections.toast?.type} />
         </div>
