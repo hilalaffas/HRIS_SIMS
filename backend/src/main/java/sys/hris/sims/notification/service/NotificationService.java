@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.notification.dto.NotificationPageResponse;
 import sys.hris.sims.notification.dto.NotificationResponse;
+import sys.hris.sims.notification.dto.NotificationSummaryResponse;
 import sys.hris.sims.notification.entity.Notification;
 import sys.hris.sims.notification.repository.NotificationRepository;
 import sys.hris.sims.user.entity.User;
@@ -106,6 +107,17 @@ public class NotificationService {
                 result.getSize(),
                 result.getTotalElements(),
                 result.getTotalPages(),
+                notificationRepository.countByUserIdAndReadAtIsNull(userId),
+                notificationRepository.findTop5ByUserIdAndReadAtIsNullOrderByCreatedAtDescIdDesc(userId)
+                        .stream().map(this::toResponse).toList());
+    }
+
+    // [BARU] Versi ringan dari list(): 3 query (user, hitung belum dibaca, 5 terbaru belum dibaca),
+    // tanpa count(*) total dan tanpa halaman. Dipakai polling saat dropdown tertutup.
+    @Transactional(readOnly = true)
+    public NotificationSummaryResponse summary(String username) {
+        Long userId = requireUserId(username);
+        return new NotificationSummaryResponse(
                 notificationRepository.countByUserIdAndReadAtIsNull(userId),
                 notificationRepository.findTop5ByUserIdAndReadAtIsNullOrderByCreatedAtDescIdDesc(userId)
                         .stream().map(this::toResponse).toList());

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.notification.dto.NotificationPageResponse;
+import sys.hris.sims.notification.dto.NotificationSummaryResponse;
 import sys.hris.sims.notification.service.NotificationService;
 
 // Tidak dicatat ke activity log: endpoint list di-poll otomatis tiap 30 detik.
@@ -32,6 +33,12 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(notificationService.list(authentication.getName(), page, size));
+    }
+
+    // [BARU] Polling ringan (dropdown tertutup): jumlah belum dibaca + 5 belum dibaca terbaru.
+    @GetMapping("/summary")
+    public ResponseEntity<NotificationSummaryResponse> summary(Authentication authentication) {
+        return ResponseEntity.ok(notificationService.summary(authentication.getName()));
     }
 
     @PutMapping("/{id}/read")

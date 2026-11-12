@@ -85,6 +85,7 @@ export default function Navbar({ toggleSidebar, user }) {
   const notifications = useNotifications({
     enabled: notificationsEnabled,
     pageSize: NOTIF_PAGE_SIZE,
+    isOpen: showDropdown, // dropdown tertutup -> polling ringan (/summary)
     onNewUnread: handleNewUnread,
   });
 

@@ -9,11 +9,15 @@
 //    pernah terlihat sesi ini; pemuatan pertama hanya menjadi baseline (tanpa popup).
 //
 // Contoh pemakaian:
-// const n = useNotifications({ enabled: true, pageSize: 10, onNewUnread: (fresh) => {} });
+// const n = useNotifications({ enabled: true, pageSize: 10, isOpen: false, onNewUnread: (fresh) => {} });
+//
+// Polling: saat dropdown TERTUTUP hanya memanggil /summary (ringan: badge + deteksi notifikasi baru);
+// saat TERBUKA memuat halaman penuh. Halaman penuh juga dimuat sekali di awal & tiap dropdown dibuka.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   deleteNotification,
   deleteReadNotifications,
+  getNotificationSummary,
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -23,7 +27,7 @@ import { startPolling } from '../utils/polling';
 const EMPTY = { content: [], totalElements: 0, totalPages: 0, unreadCount: 0 };
 const POLL_MS = 30000;
 
-export default function useNotifications({ enabled = true, pageSize = 10, onNewUnread } = {}) {
+export default function useNotifications({ enabled = true, pageSize = 10, isOpen = false, onNewUnread } = {}) {
   const [page, setPage] = useState(0);
   const [data, setData] = useState(EMPTY);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,9 +37,22 @@ export default function useNotifications({ enabled = true, pageSize = 10, onNewU
   const baselineDoneRef = useRef(false);
   const requestSeqRef = useRef(0);
   const onNewUnreadRef = useRef(onNewUnread);
+  const isOpenRef = useRef(isOpen);
 
   useEffect(() => { pageRef.current = page; }, [page]);
   useEffect(() => { onNewUnreadRef.current = onNewUnread; }, [onNewUnread]);
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
+
+  // Bandingkan notifikasi belum dibaca dengan yang sudah pernah terlihat; kembalikan yang baru.
+  const reportUnread = useCallback((unread) => {
+    const fresh = unread.filter((item) => !seenIdsRef.current.has(item.id));
+    unread.forEach((item) => seenIdsRef.current.add(item.id));
+    if (!baselineDoneRef.current) {
+      baselineDoneRef.current = true; // pemuatan pertama: jangan banjir popup
+      return;
+    }
+    if (fresh.length > 0) onNewUnreadRef.current?.(fresh);
+  }, []);
 
   const load = useCallback(async (targetPage = pageRef.current) => {
     if (!enabled) return;
@@ -59,26 +76,31 @@ export default function useNotifications({ enabled = true, pageSize = 10, onNewU
         unreadCount: res.unreadCount || 0,
       });
 
-      const unread = res.latestUnread || [];
-      const fresh = unread.filter((item) => !seenIdsRef.current.has(item.id));
-      unread.forEach((item) => seenIdsRef.current.add(item.id));
-      if (!baselineDoneRef.current) {
-        baselineDoneRef.current = true; // pemuatan pertama: jangan banjir popup
-        return;
-      }
-      if (fresh.length > 0) onNewUnreadRef.current?.(fresh);
+      reportUnread(res.latestUnread || []);
     } catch (error) {
       console.error('Gagal memuat notifikasi:', error);
     }
-  }, [enabled, pageSize]);
+  }, [enabled, pageSize, reportUnread]);
+
+  // Polling ringan saat dropdown tertutup: hanya jumlah belum dibaca + deteksi notifikasi baru.
+  const loadSummary = useCallback(async () => {
+    if (!enabled) return;
+    try {
+      const res = await getNotificationSummary();
+      setData((current) => ({ ...current, unreadCount: res.unreadCount || 0 }));
+      reportUnread(res.latestUnread || []);
+    } catch (error) {
+      console.error('Gagal memuat ringkasan notifikasi:', error);
+    }
+  }, [enabled, reportUnread]);
 
   // Polling halaman yang sedang dibuka (lewati saat tab tersembunyi, lihat utils/polling.js)
   useEffect(() => {
     if (!enabled) return undefined;
     load(0);
-    const stop = startPolling(() => load(pageRef.current), POLL_MS);
+    const stop = startPolling(() => (isOpenRef.current ? load(pageRef.current) : loadSummary()), POLL_MS);
     return () => stop();
-  }, [enabled, load]);
+  }, [enabled, load, loadSummary]);
 
   const goToPage = useCallback((nextPage) => {
     const safePage = Math.max(0, nextPage);
