@@ -8,10 +8,10 @@
 .leaveSummary__input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
 .leaveSummary__search { width: 210px; }
 .leaveSummary__dateField { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dk-text-3, #6b7280); }
-.leaveSummary__reset { min-height: 34px; padding: 6px 10px; font-size: 13px; font-weight: 600; border: none; background: none; color: #2563eb; text-decoration: underline; cursor: pointer; }
+.leaveSummary__reset { min-height: 34px; padding: 6px 10px; font-size: 13px; font-weight: 600; border: none; background: none; color: var(--dk-text-blue, #2563eb); text-decoration: underline; cursor: pointer; }
 .leaveSummary__sort { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: none; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; white-space: nowrap; }
 .leaveSummary__sort svg { width: 12px; height: 12px; opacity: 0.45; flex-shrink: 0; }
-.leaveSummary__sort.is-active { color: #2563eb; }
+.leaveSummary__sort.is-active { color: var(--dk-text-blue, #2563eb); }
 .leaveSummary__sort.is-active svg { opacity: 1; }
 .leaveSummary__sort:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 4px; }
 .leaveSummary__state { text-align: center; padding: 32px; font-size: 14px; color: var(--dk-text-3, #6b7280); background: var(--dk-bg-subtle, #f9fafb); border-radius: 8px; }

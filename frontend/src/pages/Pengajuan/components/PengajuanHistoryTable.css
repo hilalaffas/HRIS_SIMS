@@ -112,7 +112,7 @@ button.pgj-status:focus-visible { outline: 2px solid #57b89a; outline-offset: 2p
 .pgj-status svg { width: 12px; height: 12px; }
 .pgj-status--warning { color: #d47700; background: var(--dk-tint-amber-strong, #fff1d6); }
 .pgj-status--success { color: #11824e; background: var(--dk-tint-green-strong, #dcf8e9); }
-.pgj-status--danger { color: #e11d48; background: var(--dk-tint-red, #ffe1e6); }
+.pgj-status--danger { color: var(--dk-text-red, #e11d48); background: var(--dk-tint-red, #ffe1e6); }
 .pgj-status--info { color: #3472d2; background: var(--dk-tint-blue-strong, #dceaff); }
 .pgj-status--muted { color: #64748b; background: var(--dk-bg-hover, #e2e8f0); }
 /* Penanda baris yang sedang tampil di kartu: cincin tipis, tanpa mengubah ukuran */

@@ -104,7 +104,7 @@
 .leaveList__input_leaveListHr:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
 .leaveList__search_leaveListHr { width: 220px; }
 .leaveList__dateField_leaveListHr { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--dk-text-3, #6b7280); }
-.leaveList__resetBtn_leaveListHr { min-height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 600; border: none; background: none; color: #2563eb; cursor: pointer; text-decoration: underline; }
+.leaveList__resetBtn_leaveListHr { min-height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 600; border: none; background: none; color: var(--dk-text-blue, #2563eb); cursor: pointer; text-decoration: underline; }
 .leaveList__pagination_leaveListHr { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 4px 0; }
 .leaveList__pageInfo_leaveListHr { font-size: 13px; color: var(--dk-text-3, #64748b); }
 .leaveList__pageControls_leaveListHr { display: flex; align-items: center; gap: 12px; }

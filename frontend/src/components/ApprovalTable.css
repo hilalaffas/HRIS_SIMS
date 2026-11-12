@@ -96,10 +96,10 @@
 
 
 .apv-status { display:inline-block; max-width:260px; padding:5px 9px; border-radius:999px; font-size:10px; line-height:1.35; font-weight:700; }
-.apv-status--blue { background:#e8f1ff; color:#2457a6; }
-.apv-status--amber { background:#fff2d6; color:#946200; }
-.apv-status--green { background:#e3f6e9; color:#18713a; }
-.apv-status--rose { background:#ffe7e7; color:#a52b35; }
+.apv-status--blue { background:var(--dk-tint-blue,#e8f1ff); color:var(--dk-text-blue,#2457a6); }
+.apv-status--amber { background:var(--dk-tint-amber,#fff2d6); color:var(--dk-text-amber,#946200); }
+.apv-status--green { background:var(--dk-tint-green,#e3f6e9); color:var(--dk-text-green,#18713a); }
+.apv-status--rose { background:var(--dk-tint-red,#ffe7e7); color:var(--dk-text-red,#a52b35); }
 .apv-btn:disabled { opacity:.42; cursor:not-allowed; }
 /* [UBAH] Sel aksi: kolom selebar isi (tidak membungkus), tombol sejajar tengah dengan tinggi seragam. */
 .apv-col-action { width: 1%; white-space: nowrap; }

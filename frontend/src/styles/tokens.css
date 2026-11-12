@@ -105,6 +105,10 @@
      dropdown <select>, autofill) -- tanpa ini mereka tetap putih. */
   color-scheme: dark;
 
+  /* [BARU] Permukaan "redup" (kartu di dalam kartu, mis. Jadwal Kerja Saya).
+     Hanya didefinisikan di tema gelap; tema terang memakai fallback hex di CSS pemakainya. */
+  --color-surface-muted: #1a2621;
+
   /* ------------------------------------------------------------------
    * [BARU] TOKEN ADAPTIF "--dk-*"
    * Dipakai CSS lama yang dulunya hardcode hex, dengan pola:
@@ -142,6 +146,7 @@
   --dk-tint-red: #2d1218;     --dk-tint-red-strong: #6b1d2c;
   --dk-tint-amber: #2a2008;   --dk-tint-amber-strong: #5c4a12;
   --dk-tint-blue: #0f1f3d;    --dk-tint-blue-strong: #1e3a6e;
+  --dk-bg-purple: #231a3a;    /* [BARU] badge Sakit (Laporan) -- sebelumnya token ini tidak pernah didefinisikan */
   --dk-tint-purple: #231a3a;  --dk-tint-purple-strong: #3b2a66;
   --dk-tint-orange: #2e1a0a;  /* [BARU] kode shift "SO" (Kelola Divisi & Shift) */
   /* Garis berwarna */

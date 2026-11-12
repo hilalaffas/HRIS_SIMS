@@ -2,7 +2,7 @@
 .leaveChart { display: grid; grid-template-columns: 150px 1fr; gap: 20px; align-items: stretch; padding: 12px 16px; margin-bottom: 14px; background: var(--dk-bg-subtle, #f9fafb); border: 1px solid var(--dk-border, #e5e7eb); border-radius: 10px; }
 .leaveChart--empty { display: block; text-align: center; font-size: 13px; color: var(--dk-text-3, #6b7280); }
 .leaveChart__summary { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.leaveChart__total { font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: #2563eb; }
+.leaveChart__total { font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--dk-text-blue, #2563eb); }
 .leaveChart__totalLabel { margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--dk-text, #111827); }
 .leaveChart__meta { margin-top: 4px; font-size: 11px; line-height: 1.35; color: var(--dk-text-3, #6b7280); }
 .leaveChart__plot { min-width: 0; }

@@ -59,7 +59,7 @@
 
 /* ---------- Kotak isi ---------- */
 .form-cuti__box { padding: 8px 12px; color: var(--dk-text-2, #334155); font-size: 13px; line-height: 1.45; background: var(--dk-bg-subtle, #f8fafc); border: 1px solid var(--dk-border, #e2e8f0); border-radius: 10px; overflow-wrap: anywhere; }
-.form-cuti__box--warning { border-color: #f5d66e; background: var(--dk-tint-amber, #fffbeb); }
+.form-cuti__box--warning { border-color: var(--dk-border-amber, #f5d66e); background: var(--dk-tint-amber, #fffbeb); }
 .form-cuti__box--info { border-color: var(--dk-border-blue, #b8d8ff); background: var(--dk-tint-blue, #eff6ff); font-weight: 700; }
 .form-cuti__box--italic { font-style: italic; }
 

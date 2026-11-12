@@ -13,7 +13,7 @@
 .ledger__iconBtn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--dk-border, #d1d5db); border-radius: 8px; background: var(--dk-bg-card, #fff); color: var(--dk-text-2, #4b5563); cursor: pointer; }
 .ledger__iconBtn:hover { background: var(--dk-bg-subtle, #f3f4f6); }
 .ledger__iconBtn svg { width: 15px; height: 15px; }
-.ledger__reset, .ledger__retry { padding: 0 4px; font: inherit; font-size: 13px; font-weight: 600; color: #2563eb; background: none; border: none; text-decoration: underline; cursor: pointer; }
+.ledger__reset, .ledger__retry { padding: 0 4px; font: inherit; font-size: 13px; font-weight: 600; color: var(--dk-text-blue, #2563eb); background: none; border: none; text-decoration: underline; cursor: pointer; }
 
 .ledger__state { padding: 28px; margin-bottom: 8px; text-align: center; font-size: 14px; color: var(--dk-text-3, #6b7280); background: var(--dk-bg-subtle, #f9fafb); border-radius: 8px; }
 .ledger__state--error { color: var(--dk-text-red, #be123c); }
@@ -28,7 +28,7 @@
 .ledger__headRow:first-child .ledger__label { z-index: 4; }
 .ledger__headRow:nth-child(2) th { position: sticky; top: 33px; z-index: 3; background: var(--dk-bg-subtle, #f3f4f6); }
 .ledger__headRow:nth-child(2) .ledger__label { z-index: 4; }
-.ledger__nik { text-align: center; font-weight: 700; color: #2563eb !important; }
+.ledger__nik { text-align: center; font-weight: 700; color: var(--dk-text-blue, #2563eb) !important; }
 .ledger__person { text-align: left; font-weight: 600; }
 .ledger__person .ledger__name { display: inline-block; max-width: 128px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
 .ledger__person .ledger__remaining { float: right; margin-left: 12px; font-weight: 700; color: #059669; }
@@ -39,7 +39,7 @@
 /* Penanda sel: segitiga di pojok kanan atas seperti catatan sel Excel */
 .ledger__days.has-comment::after { content: ''; position: absolute; top: 0; right: 0; border-top: 8px solid #f59e0b; border-left: 8px solid transparent; }
 .ledger__days--special { background: rgba(37, 99, 235, 0.08); }
-.ledger__days--special.has-comment::after { border-top-color: #2563eb; }
+.ledger__days--special.has-comment::after { border-top-color: var(--dk-text-blue, #2563eb); }
 .ledger__days--forfeit, .ledger__date--forfeit { background: rgba(245, 158, 11, 0.16); }
 .ledger__days--forfeit.has-comment::after { display: none; }
 .ledger__table .ledger__totalRow th { position: static; background: var(--dk-bg-subtle, #f3f4f6); border-top: 2px solid var(--dk-border, #d1d5db); }
@@ -48,10 +48,10 @@
 
 /* [BARU] Ringkasan pemeriksaan data sejak masuk */
 .ledger__reconRow .ledger__recon { text-align: right; font-size: 12.5px; padding: 6px 10px; }
-.ledger__badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #f3f4f6; color: #4b5563; }
-.ledger__badge.is-ok { background: rgba(22, 163, 74, 0.14); color: #15803d; }
-.ledger__badge.is-mismatch { background: rgba(220, 38, 38, 0.14); color: #b91c1c; }
-.ledger__badge.is-skip { background: #f3f4f6; color: #6b7280; }
+.ledger__badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--dk-bg-muted, #f3f4f6); color: var(--dk-text-3, #4b5563); }
+.ledger__badge.is-ok { background: rgba(22, 163, 74, 0.14); color: var(--dk-text-green, #15803d); }
+.ledger__badge.is-mismatch { background: rgba(220, 38, 38, 0.14); color: var(--dk-text-red, #b91c1c); }
+.ledger__badge.is-skip { background: var(--dk-bg-muted, #f3f4f6); color: var(--dk-text-4, #6b7280); }
 
 .ledger__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 12px; color: var(--dk-text-3, #6b7280); }
 .ledger__legend span { display: inline-flex; align-items: center; gap: 6px; }
