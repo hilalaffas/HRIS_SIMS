@@ -43,6 +43,15 @@
   background-color: var(--color-text);
 }
 
+[data-theme='dark'] .toast-error {
+  background-color: var(--dk-tint-red, #2d1218);
+  color: var(--dk-text-red, #fca5a5);
+  box-shadow:
+    inset 0 0 0 1px var(--dk-border-red, #6b1d2c),
+    var(--shadow-md),
+    0 20px 25px -8px rgba(0, 0, 0, 0.5);
+}
+
 .toast-row {
   display: flex;
   align-items: center;
