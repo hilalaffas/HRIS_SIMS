@@ -8,9 +8,11 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,6 +39,7 @@ import sys.hris.sims.leavestatus.entity.LeaveStatus;
 import sys.hris.sims.leavestatus.repository.LeaveStatusRepository;
 import sys.hris.sims.leavetype.entity.LeaveType;
 import sys.hris.sims.leavetype.repository.LeaveTypeRepository;
+import sys.hris.sims.notification.service.NotificationService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
@@ -71,6 +74,7 @@ public class LeaveService {
     private final HolidayRepository holidayRepository;
     private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] hapus absen di tanggal cuti saat disetujui
     private final ReportScopeService reportScopeService; // [BARU] sembunyikan superadmin & akun dev dari laporan
+    private final NotificationService notificationService; // [BARU] notifikasi lonceng disimpan di database
 
     // [UBAH] Sumber data tab "Cuti Karyawan" & ekspor cuti: pengajuan milik
     // SUPER_ADMIN / akun dev tidak ditampilkan, hanya karyawan asli.
@@ -222,6 +226,7 @@ public class LeaveService {
 
         LeaveRequest savedCuti = cutiRepository.save(cuti);
         createApprovalSteps(savedCuti, requester);
+        notifyApproversOfNewRequest(savedCuti, requester); // [BARU]
         return savedCuti;
     }
 
@@ -293,6 +298,9 @@ public class LeaveService {
         LeaveRequest savedCuti = cutiRepository.save(cuti);
         // [BARU] Cuti susulan langsung APPROVED: absen yang sudah tercatat di tanggal cuti dihapus.
         leaveAttendancePolicy.reconcileOnApproval(savedCuti);
+        // [BARU] Cuti susulan langsung disetujui: karyawan yang bersangkutan diberi tahu.
+        notificationService.notifyUser(targetEmployee.getUser(), NotificationService.TYPE_LEAVE_APPROVED,
+                savedCuti.getLeaveRequestId(), buildLeaveNotificationParams(savedCuti));
         return savedCuti;
     }
 
@@ -347,10 +355,12 @@ public class LeaveService {
         return rejectCuti(leaveRequestId, reviewer.getUser().getUsername(), note);
     }
 
+    @Transactional // [BARU] penolakan + notifikasi satu kesatuan
     public LeaveRequest rejectCuti(Long leaveRequestId, String reviewerUsername, String note) {
         return processApprovalAction(leaveRequestId, reviewerUsername, ACTION_REJECTED, note);
     }
 
+    @Transactional // [BARU] pengembalian + notifikasi satu kesatuan
     public LeaveRequest returnCuti(Long leaveRequestId, String reviewerUsername, String note) {
         return processApprovalAction(leaveRequestId, reviewerUsername, ACTION_RETURNED, note);
     }
@@ -787,6 +797,7 @@ public class LeaveService {
         approvalRepository.flush();
         LeaveRequest savedCuti = cutiRepository.save(existingCuti);
         createApprovalSteps(savedCuti, requester);
+        notifyApproversOfNewRequest(savedCuti, requester); // [BARU]
         return savedCuti;
     }
 
@@ -846,9 +857,11 @@ public class LeaveService {
         if (ACTION_REJECTED.equals(action)) {
             cuti.setStatus(getStatus(ACTION_REJECTED));
             cuti.setApprovedAt(LocalDateTime.now());
+            notifyRequester(cuti, NotificationService.TYPE_LEAVE_REJECTED, null); // [BARU]
         } else if (ACTION_RETURNED.equals(action)) {
             cuti.setStatus(getStatus(ACTION_RETURNED));
             cuti.setReturnedAt(LocalDateTime.now());
+            notifyRequester(cuti, NotificationService.TYPE_LEAVE_RETURNED, null); // [BARU]
         } else if (isAllApprovalsApproved(leaveRequestId)) {
             // [FIX] Hitung ulang totalDays di sini, JANGAN percaya begitu saja
             // nilai yang tersimpan sejak pengajuan dibuat. Kalau pengajuan
@@ -872,10 +885,54 @@ public class LeaveService {
             // dihapus & hari itu tampil sebagai CUTI. Satu transaksi dengan approval.
             LeaveRequest approvedCuti = cutiRepository.save(cuti);
             leaveAttendancePolicy.reconcileOnApproval(approvedCuti);
+            notifyRequester(approvedCuti, NotificationService.TYPE_LEAVE_APPROVED, null); // [BARU]
             return approvedCuti;
         }
 
+        // [BARU] Tahap ini disetujui tapi berkas belum final: kabari pemohon per tahap.
+        notifyRequester(cuti, NotificationService.TYPE_LEAVE_STEP_APPROVED, Map.of(
+                "actorRole", approverRole,
+                "actorName", reviewer.getFullName() == null ? "-" : reviewer.getFullName()));
         return cutiRepository.save(cuti);
+    }
+
+    // ===================== [BARU] NOTIFIKASI DATABASE =====================
+
+    private Map<String, Object> buildLeaveNotificationParams(LeaveRequest cuti) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("leaveRequestId", cuti.getLeaveRequestId());
+        params.put("leaveType", cuti.getLeaveType() != null && cuti.getLeaveType().getName() != null
+                ? cuti.getLeaveType().getName() : "");
+        params.put("startDate", cuti.getStartDate() == null ? null : cuti.getStartDate().toString());
+        params.put("endDate", cuti.getEndDate() == null ? null : cuti.getEndDate().toString());
+        return params;
+    }
+
+    // Kabari pemohon (status final / progres per tahap).
+    private void notifyRequester(LeaveRequest cuti, String type, Map<String, Object> extra) {
+        Employee requester = cuti.getEmployee();
+        if (requester == null) {
+            return;
+        }
+        Map<String, Object> params = buildLeaveNotificationParams(cuti);
+        if (extra != null) {
+            params.putAll(extra);
+        }
+        notificationService.notifyUser(requester.getUser(), type, cuti.getLeaveRequestId(), params);
+    }
+
+    // Kabari semua approver yang ditugaskan (Leader/SPV/Manager) bahwa ada pengajuan baru.
+    private void notifyApproversOfNewRequest(LeaveRequest cuti, Employee requester) {
+        Map<String, Object> params = buildLeaveNotificationParams(cuti);
+        params.put("requesterName", requester.getFullName() == null ? "" : requester.getFullName());
+        approvalRepository.findByLeaveRequest_LeaveRequestId(cuti.getLeaveRequestId()).stream()
+                .map(LeaveRequestApproval::getApproverEmployee)
+                .filter(Objects::nonNull)
+                .map(Employee::getUser)
+                .filter(Objects::nonNull)
+                .distinct()
+                .forEach(user -> notificationService.notifyUser(user, NotificationService.TYPE_LEAVE_APPROVAL,
+                        cuti.getLeaveRequestId(), params));
     }
 
     private void createApprovalSteps(LeaveRequest cuti, Employee requester) {

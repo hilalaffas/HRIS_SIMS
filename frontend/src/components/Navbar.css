@@ -425,3 +425,101 @@
     transform: none;
   }
 }
+
+/* ============================================================
+   [BARU] Notifikasi dari database: status dibaca, pagination, hapus
+   ============================================================ */
+
+/* Sudah dibaca -> abu-abu, tetapi TETAP bisa diklik (kursor & hover tidak berubah) */
+.notification-item--read {
+  background-color: var(--dk-bg-subtle, #f9fafb);
+}
+.notification-item--read .notification-text,
+.notification-item--read .notification-text strong {
+  color: var(--dk-text-4, #9ca3af);
+  font-weight: 500;
+}
+.notification-item--read .notification-text strong {
+  font-weight: 600;
+}
+.notification-item--read .notification-time {
+  color: var(--dk-text-4, #b4bac4);
+}
+.notification-item--read .notification-icon-wrapper {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.notification-item--read .notification-action-hint {
+  color: var(--dk-text-4, #9ca3af);
+}
+
+/* Titik "belum dibaca" (pengganti tombol hapus, karena yang belum dibaca tidak boleh dihapus) */
+.notification-unread-dot {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary-soft, #217a5b);
+}
+
+.btn-mark-read:disabled {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
+}
+
+/* Footer: pagination + hapus yang sudah dibaca */
+.notification-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem 0.85rem;
+  border-top: 1px solid var(--dk-border-soft, #f3f4f6);
+  background-color: var(--dk-bg-card, #ffffff);
+}
+.notification-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.notification-pager__info {
+  font-size: 0.78rem;
+  color: var(--dk-text-3, #6b7280);
+  font-weight: 500;
+}
+.notification-pager__btn {
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dk-text-green, #1e463a);
+  cursor: pointer;
+}
+.notification-pager__btn:hover:not(:disabled) {
+  background-color: var(--dk-bg-subtle, #f3f4f6);
+}
+.notification-pager__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.notification-clear-read {
+  align-self: center;
+  background: none;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dk-text-3, #6b7280);
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.4rem;
+}
+.notification-clear-read:hover {
+  color: #ef4444;
+  background-color: var(--dk-bg-subtle, #f3f4f6);
+}
+

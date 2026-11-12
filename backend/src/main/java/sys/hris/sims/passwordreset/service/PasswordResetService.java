@@ -1,7 +1,9 @@
 package sys.hris.sims.passwordreset.service;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.security.core.Authentication;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
+import sys.hris.sims.notification.service.NotificationService;
 import sys.hris.sims.passwordreset.dto.ApprovePasswordResetRequest;
 import sys.hris.sims.passwordreset.dto.ForgotPasswordRequest;
 import sys.hris.sims.passwordreset.dto.PasswordResetResponse;
@@ -28,17 +31,20 @@ public class PasswordResetService {
     // [BARU] dibutuhkan untuk enrich pending request dengan employeeId, nama,
     // jabatan, & divisi -- lihat getPendingRequests() di bawah.
     private final EmployeeRepository employeeRepository;
+    private final NotificationService notificationService; // [BARU] notifikasi lonceng disimpan di database
 
     public PasswordResetService(
             PasswordResetRequestRepository passwordResetRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            EmployeeRepository employeeRepository) {
+            EmployeeRepository employeeRepository,
+            NotificationService notificationService) {
 
         this.passwordResetRepository = passwordResetRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.employeeRepository = employeeRepository;
+        this.notificationService = notificationService;
     }
 
     public PasswordResetResponse createRequest(ForgotPasswordRequest request) {
@@ -56,6 +62,26 @@ public class PasswordResetService {
                 .build();
 
         passwordResetRepository.save(resetRequest);
+
+        // [BARU] Kabari semua HRD_ADMIN & SUPER_ADMIN lewat notifikasi database.
+        PendingPasswordResetResponse detail = toPendingResponse(resetRequest);
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("requestId", detail.getId());
+        params.put("userId", detail.getUserId());
+        params.put("username", detail.getUsername());
+        params.put("email", detail.getEmail());
+        params.put("employeeId", detail.getEmployeeId());
+        params.put("employeeName", detail.getEmployeeName());
+        params.put("position", detail.getPosition());
+        params.put("divisiName", detail.getDivisiName());
+        params.put("requestedAt", String.valueOf(detail.getRequestedAt()));
+        try {
+            notificationService.notifyUsers(notificationService.findPasswordResetRecipients(),
+                    NotificationService.TYPE_PASSWORD_RESET, resetRequest.getId(), params);
+        } catch (Exception ex) {
+            // Permintaan reset sudah tersimpan; gagal membuat notifikasi tidak boleh membatalkannya.
+            System.err.println("Gagal membuat notifikasi reset sandi: " + ex.getMessage());
+        }
 
         return PasswordResetResponse.builder()
                 .id(resetRequest.getId())
