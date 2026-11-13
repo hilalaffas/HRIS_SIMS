@@ -609,11 +609,12 @@
 .quickAtt__locationInfo .quickAtt__coords {
   display: block;
   max-width: 100%;
-  color: #fff !important;
+  color: #14532d !important;
+  background: #dcfce7;
   font: 700 .56rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: normal;
   overflow-wrap: anywhere;
-  text-shadow: 0 1px 2px #000;
+  text-shadow: none;
 }
 .quickAtt__locationInfo .quickAtt__gps { color: #fff; font-size: .56rem; }
 .quickAtt__locationInfo .quickAtt__refresh { pointer-events: auto; color: #fff; background: rgba(255,255,255,.16); }
@@ -624,3 +625,27 @@
   .quickAtt__locationInfo { top: 5px; right: 5px; width: min(170px, 42%); padding: 4px 6px; gap: 2px; }
   .quickAtt__locationInfo .quickAtt__coords { font-size: .50rem; }
 }
+
+/* Checkout uses GPS directly, without a camera or photo preview. */
+.quickAtt__gpsOnly { min-width: 0; border-radius: 12px; overflow: hidden; background: #182433; }
+.quickAtt__gpsOnly .quickAtt__locationInfo { position: static; width: auto; max-height: none; padding: 16px; gap: 10px; border-radius: 0; pointer-events: auto; }
+.quickAtt__gpsOnly .quickAtt__locationInfo > strong { font-size: .85rem; }
+.quickAtt__gpsOnly .quickAtt__locationInfo :is(p, .quickAtt__coords, .quickAtt__gps) { font-size: .8rem; line-height: 1.5; }
+.quickAtt__gpsOnly .quickAtt__locationInfo .quickAtt__coords { font-size: .75rem; text-shadow: none; }
+
+.quickAtt__gpsOnly .quickAtt__locationInfo .quickAtt__coords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-self: flex-start;
+  padding: 4px 8px;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  color: #14532d !important;
+  font-size: .75rem;
+  line-height: 1.4;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.quickAtt__gpsOnly .quickAtt__coords > span { white-space: nowrap; }

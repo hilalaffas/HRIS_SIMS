@@ -53,10 +53,19 @@ public class AttendanceResponse {
 
     // [UBAH] Lama izin sakit (hari kerja, tanpa Sabtu/Minggu), default 1.
     private Double leaveDays;
+    private LocalDate sickStartDate;
+    private LocalDate sickEndDate;
 
     // [BARU] URL surat dokter (null = belum diunggah) & apakah surat wajib.
     private String documentUrl;
     private Boolean documentRequired;
+    private String documentReviewStatus;
+    private LocalDate documentUploadDeadline;
+    private boolean documentDeadlineExpired;
+    private LocalDate documentStartDate;
+    private LocalDate documentEndDate;
+    private String documentReviewNote;
+    private LocalDateTime documentReviewedAt;
 
     // [BARU] Nama divisi karyawan (untuk daftar Persetujuan Surat Sakit & Izin).
     private String divisionName;

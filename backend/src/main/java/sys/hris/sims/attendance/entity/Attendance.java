@@ -101,9 +101,15 @@ public class Attendance {
     @Column(name = "office_location_status", length = 24)
     private String officeLocationStatus;
 
-    // [UBAH] Lama izin sakit (HARI KERJA, tanpa Sabtu/Minggu) mulai dari attendanceDate. Default 1.
+    // Durasi sakit: tanggal eksplisit memakai hari kalender; baris lama tanpa tanggal mempertahankan hari kerja.
     @Column(name = "leave_days", nullable = false)
     private Double leaveDays;
+
+    @Column(name = "sick_start_date")
+    private LocalDate sickStartDate;
+
+    @Column(name = "sick_end_date")
+    private LocalDate sickEndDate;
 
     // [BARU] URL surat dokter; null = belum diunggah (surat boleh menyusul).
     @Column(name = "document_url", length = 500)
@@ -112,6 +118,26 @@ public class Attendance {
     // [BARU] true bila pengajuan ini wajib melampirkan surat dokter.
     @Column(name = "document_required", nullable = false)
     private Boolean documentRequired;
+
+    @Builder.Default
+    @Column(name = "document_review_status", nullable = false, length = 24)
+    private String documentReviewStatus = "NOT_REQUIRED";
+
+    @Column(name = "document_upload_deadline")
+    private LocalDate documentUploadDeadline;
+
+    // Proposed certificate dates; effective sick dates change only when HRD accepts them.
+    @Column(name = "document_start_date")
+    private LocalDate documentStartDate;
+
+    @Column(name = "document_end_date")
+    private LocalDate documentEndDate;
+
+    @Column(name = "document_review_note", length = 500)
+    private String documentReviewNote;
+
+    @Column(name = "document_reviewed_at")
+    private LocalDateTime documentReviewedAt;
 
     // [BARU] Catatan peninjau untuk karyawan (wajib saat DITOLAK) & waktu keputusan.
     // Dipakai halaman Persetujuan Surat Sakit & Izin (migration V48).

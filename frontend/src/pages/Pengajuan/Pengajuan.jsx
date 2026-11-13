@@ -187,8 +187,8 @@ export default function Pengajuan({ user }) {
     );
   };
 
-  const handleLetterSubmit = async (file) => {
-    const saved = await uploadMedicalDocument(letterTargetId, file);
+  const handleLetterSubmit = async (file, dates) => {
+    const saved = await uploadMedicalDocument(letterTargetId, file, dates);
     upsertAttendance(toDisplayRecord(saved));
     setLetterTargetId(null);
     showToast('Surat dokter berhasil diunggah.');
@@ -322,6 +322,9 @@ export default function Pengajuan({ user }) {
       {letterTargetId !== null && (
         <MedicalLetterModal
           dateLabel={letterTarget ? formatDateLabel(letterTarget.attendanceDate) : ''}
+          record={letterTarget}
+          reviewNote={letterTarget?.documentReviewNote || letterTarget?.reviewNote}
+          isReupload={letterTarget?.documentReviewStatus === 'REJECTED' || letterTarget?.approvalStatus === 'REJECTED'}
           onSubmit={handleLetterSubmit}
           onClose={() => setLetterTargetId(null)}
         />

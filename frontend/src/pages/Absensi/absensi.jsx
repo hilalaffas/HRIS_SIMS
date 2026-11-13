@@ -21,21 +21,19 @@
 // POST /api/absensi/me (multipart: foto + koordinat GPS + field lain).
 // Jam yang tercatat adalah jam SERVER (lihat Attendance.prePersist() di
 // backend), bukan jam perangkat, supaya tidak bisa dimanipulasi klien.
-import React, { useCallback, useEffect, useMemo, useState } from 'react'; // [UBAH] useRef tidak dipakai lagi
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react'; // [UBAH] useRef tidak dipakai lagi; + Suspense
 import Toast from '../../components/Toast';
 import AttendancePortalCard from './components/AttendancePortalCard'; // [UBAH] menggantikan AttendanceCameraCard + AttendanceTodayCard
 import AttendanceHistoryTable from './components/AttendanceHistoryTable';
-import PermissionRequestModal from './components/PermissionRequestModal'; // [BARU]
-import MedicalLetterModal from './components/MedicalLetterModal'; // [BARU]
-import CorrectionRequestModal from './components/CorrectionRequestModal'; // [BARU]
 import { getMyCorrectionRequests, submitCorrectionRequest } from '../../services/attendanceCorrectionService';
-import CheckoutFlowModals from './components/CheckoutFlowModals'; // [UBAH] popup "Pulang Cepat" + "Check-Out Jam Kerja (17:00+)" (sebelumnya EarlyCheckoutModal)
-import QuickAttendanceModal from '../Dashboard/components/QuickAttendanceModal'; // [BARU] popup kamera+peta yang sama dgn Dashboard
+import { lazyPage } from '../../routes/lazyPages'; // [BARU] popup dimuat saat dibutuhkan (diunduh diam-diam saat idle)
+import useActiveWorkShift from './hooks/useActiveWorkShift';
+import { jakartaWallClock, workDateKey } from './utils/activeWorkShift';
 import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
 import useTodayLeave from './hooks/useTodayLeave'; // [BARU] cuti disetujui mengunci tombol absen
 import { applyLeaveGate } from './utils/leaveToday'; // [BARU]
-import { SHIFT_HOURS, getSickRecordCovering, isRejectedSick, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
+import { getSickRecordCovering, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
 import {
   formatDateLabel,
   getMyAttendanceHistory,
@@ -45,6 +43,13 @@ import {
   uploadMedicalDocument, // [BARU]
 } from '../../services/attendanceService';
 import useAttendanceCapture from './hooks/useAttendanceCapture'; // [BARU] logika kamera+GPS+kirim, dibagi dgn popup Dashboard
+
+// [UBAH] Semua popup dimuat malas: halaman Absensi lebih ringan dibuka, fungsi popup tidak berubah.
+const PermissionRequestModal = lazyPage(() => import('./components/PermissionRequestModal'));
+const MedicalLetterModal = lazyPage(() => import('./components/MedicalLetterModal'));
+const CorrectionRequestModal = lazyPage(() => import('./components/CorrectionRequestModal'));
+const QuickAttendanceModal = lazyPage(() => import('../Dashboard/components/QuickAttendanceModal'));
+const CheckoutFlowModals = lazyPage(() => import('./components/CheckoutFlowModals'));
 // [BARU] Data lembur untuk kolom "Lembur" di tabel riwayat
 import { getMyOvertime, toDisplayOvertime } from '../../services/overtimeService';
 import './Absensi.css';
@@ -52,7 +57,7 @@ import './Absensi.css';
 export default function Absensi() {
   const [records, setRecords] = useState([]);
   const [overtimeRecords, setOvertimeRecords] = useState([]); // [BARU]
-  const [myWorkSchedule, setMyWorkSchedule] = useState({ divisionType: 'REGULAR', schedules: [] });
+  const [myWorkSchedule, setMyWorkSchedule] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [toast, setToast] = useState(null);
   // [BARU] Popup pengajuan izin/sakit & popup upload surat dokter susulan
@@ -63,15 +68,6 @@ export default function Absensi() {
   const [correctionTargetDate, setCorrectionTargetDate] = useState(null);
   const [corrections, setCorrections] = useState({});
 
-  const [todayDate, setTodayDate] = useState(() => new Date());
-
-  // Reset otomatis saat pergantian hari, walau halaman dibiarkan terbuka
-  useEffect(() => {
-    const now = new Date();
-    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const timerId = window.setTimeout(() => setTodayDate(new Date()), nextMidnight - now);
-    return () => window.clearTimeout(timerId);
-  }, [todayDate]);
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 3500);
@@ -79,12 +75,11 @@ export default function Absensi() {
 
   // ===================== AMBIL RIWAYAT DARI BACKEND =====================
   const loadHistory = useCallback(async () => {
-    setHistoryLoading(true);
     try {
       // [UBAH] Riwayat absensi + data lembur diambil bersamaan. Kegagalan
       // lembur sengaja tidak menggagalkan riwayat absensi (kolom Lembur
       // cukup menampilkan "-").
-      const now = new Date();
+      const now = jakartaWallClock();
       const [data, overtimeData, scheduleData, correctionData] = await Promise.all([
         getMyAttendanceHistory(),
         getMyOvertime().catch(() => []),
@@ -97,7 +92,7 @@ export default function Absensi() {
         return [item.attendanceDate, { status: item.status, currentApproverRole: current?.role || '' }];
       })));
       setOvertimeRecords((overtimeData || []).map(toDisplayOvertime));
-      if (scheduleData) setMyWorkSchedule(scheduleData);
+      setMyWorkSchedule(scheduleData);
     } catch (error) {
       showToast(error?.message || 'Gagal memuat riwayat absensi.', 'error');
     } finally {
@@ -106,7 +101,9 @@ export default function Absensi() {
   }, [showToast]);
 
   useEffect(() => {
-    loadHistory();
+    Promise.resolve().then(loadHistory);
+    window.addEventListener('focus', loadHistory);
+    return () => window.removeEventListener('focus', loadHistory);
   }, [loadHistory]);
 
   // ===================== KAMERA, LOKASI & SUBMIT (hook bersama) =====================
@@ -120,42 +117,17 @@ export default function Absensi() {
   const capture = useAttendanceCapture({ onSubmitted: handleSubmitted });
 
   // ===================== STATUS HARI INI =====================
-  const todayKey = useMemo(() => {
-    const y = todayDate.getFullYear();
-    const m = String(todayDate.getMonth() + 1).padStart(2, '0');
-    const d = String(todayDate.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }, [todayDate]);
-
-  const todayCheckIn = useMemo(
-    // [UBAH] sakit yang DITOLAK bukan check-in: tombol Absen Masuk & Ajukan Izin aktif lagi
-    () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'MASUK' && !isRejectedSick(record)),
-    [records, todayKey],
-  );
-  const activeShift = useMemo(() => {
-    const scheduleDate = todayCheckIn?.attendanceDate || todayKey;
-    return (myWorkSchedule.schedules || []).find((item) => item.date === scheduleDate)
-      || (myWorkSchedule.schedules || []).find((item) => item.date === todayKey)
-      || null;
-  }, [myWorkSchedule, todayCheckIn, todayKey]);
-  const requiredWorkHours = useMemo(() => {
-    if (String(myWorkSchedule.divisionType || '').toUpperCase() !== 'SHIFTING') return 8;
-    if (!activeShift?.startTime || !activeShift?.endTime) return 8;
-    const [startHour, startMinute] = activeShift.startTime.slice(0, 5).split(':').map(Number);
-    const [endHour, endMinute] = activeShift.endTime.slice(0, 5).split(':').map(Number);
-    return ((endHour * 60 + endMinute - startHour * 60 - startMinute + 1440) % 1440) / 60 || 8;
-  }, [activeShift, myWorkSchedule.divisionType]);
-  const todayCheckOut = useMemo(
-    () => records.find((record) => record.attendanceDate === todayKey && record.actionCode === 'KELUAR'),
-    [records, todayKey],
-  );
+  const shiftContext = useActiveWorkShift(myWorkSchedule, records);
+  const todayKey = shiftContext.workDate;
+  const todayCheckIn = shiftContext.checkIn;
+  const todayCheckOut = shiftContext.checkOut;
 
   // [UBAH] Catatan Sakit/Izin yang berlaku hari ini -- termasuk hari lanjutan izin
   // sakit multi-hari (lihat getSickRecordCovering). Kalau ada, karyawan dianggap
   // tidak bekerja hari ini.
   const todaySickRecord = useMemo(
-    () => getSickRecordCovering(records, todayKey),
-    [records, todayKey],
+    () => getSickRecordCovering(records, todayKey, myWorkSchedule || {}),
+    [records, todayKey, myWorkSchedule],
   );
 
   // idle -> "Masuk", checkedIn -> "Keluar", done -> abu-abu,
@@ -166,7 +138,8 @@ export default function Absensi() {
   const baseAttendanceStatus = todaySickRecord
     ? resolveSickTodayStatus(todaySickRecord) // [UBAH] sick | sickPending
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
-  const attendanceStatus = applyLeaveGate(baseAttendanceStatus, leaveGate);
+  const attendanceStatus = shiftContext.workDate !== workDateKey(jakartaWallClock()) && todayCheckIn && !todayCheckOut
+    ? baseAttendanceStatus : applyLeaveGate(baseAttendanceStatus, leaveGate);
   // [UBAH] Izin/Sakit hanya bisa diajukan sebelum check-in, selama belum tercatat sakit,
   // dan tidak sedang cuti sehari penuh.
   const disablePermission = Boolean(todayCheckIn) || Boolean(todaySickRecord) || leaveGate === 'onLeave';
@@ -185,12 +158,14 @@ export default function Absensi() {
   const checkoutFlow = useCheckoutFlow({
     openCapture: capture.open,
     checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
-    shiftEndTime: activeShift?.endTime || '17:00',
-    requiredWorkHours,
+    shiftEndTime: shiftContext.endsAt ? shiftContext.hoursLabel.split(' - ')[1] : null,
+    shiftEndAt: shiftContext.endsAt,
+    requiredWorkHours: shiftContext.requiredWorkHours,
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 
   const handleStartAttendance = (action) => {
+    if (!shiftContext.endsAt || (action === 'Masuk' && !shiftContext.canCheckIn)) return;
     checkoutFlow.startAttendance(action); // [UBAH] sebelumnya earlyCheckout.startAttendance
   };
 
@@ -207,8 +182,8 @@ export default function Absensi() {
   }, [showToast]);
 
   // [BARU] Kirim surat dokter susulan; catatan sakit terkait diganti dengan data terbaru.
-  const handleDocumentSubmit = useCallback(async (file) => {
-    const saved = await uploadMedicalDocument(documentTargetId, file);
+  const handleDocumentSubmit = useCallback(async (file, dates) => {
+    const saved = await uploadMedicalDocument(documentTargetId, file, dates);
     setRecords((current) => current.map((record) => (
       record.id === saved.attendanceId ? toDisplayRecord(saved) : record
     )));
@@ -237,6 +212,7 @@ export default function Absensi() {
       <section className="abs-attendance-grid">
         <AttendancePortalCard
           attendanceStatus={attendanceStatus}
+          shiftContext={shiftContext}
           isLoading={historyLoading} /* status baru valid setelah riwayat termuat */
           disablePermission={disablePermission}
           leaveOpensLabel={leaveOpensLabel} /* [BARU] "Absen Dibuka 12:00" saat cuti setengah hari pagi */
@@ -253,43 +229,51 @@ export default function Absensi() {
         />
       </section>
 
-      {/* Masuk/Keluar: popup yang sama dengan Dashboard. Kamera terblokir -> unggah foto (cadangan). */}
-      {capture.isOpen && (
-        <QuickAttendanceModal
-          capture={capture}
-          shiftHours={SHIFT_HOURS}
-          onUploadFallback={capture.handleUploadFallback}
-        />
-      )}
+      {/* [UBAH] Satu Suspense untuk semua popup (kosong saat memuat; chunk sudah di-preload saat idle) */}
+      <Suspense fallback={null}>
+        {/* Masuk/Keluar: popup yang sama dengan Dashboard. Kamera terblokir -> unggah foto (cadangan). */}
+        {capture.isOpen && (
+          <QuickAttendanceModal
+            capture={capture}
+            shiftHours={shiftContext.hoursLabel}
+            shiftName={shiftContext.shiftName}
+            shiftOvernight={shiftContext.overnight}
+            onUploadFallback={capture.handleUploadFallback}
+          />
+        )}
 
-      {/* [UBAH] Popup check-out: peringatan pulang cepat + Check-Out Jam Kerja (17:00+) (portal ke <body>) */}
-      <CheckoutFlowModals flow={checkoutFlow} />
+        {/* [UBAH] Popup check-out: peringatan pulang cepat + Check-Out Jam Kerja (17:00+) (portal ke <body>) */}
+        {(checkoutFlow.early.isPromptOpen || checkoutFlow.overtime) && <CheckoutFlowModals flow={checkoutFlow} />} {/* [UBAH] di-mount hanya saat popup terbuka */}
 
-      {/* [BARU] Popup Pengajuan Izin / Surat Sakit */}
-      {isPermissionOpen && (
-        <PermissionRequestModal
-          onSubmit={handlePermissionSubmit}
-          onClose={() => setIsPermissionOpen(false)}
-        />
-      )}
+        {/* [BARU] Popup Pengajuan Izin / Surat Sakit */}
+        {isPermissionOpen && (
+          <PermissionRequestModal
+            onSubmit={handlePermissionSubmit}
+            onClose={() => setIsPermissionOpen(false)}
+          />
+        )}
 
-      {/* [BARU] Popup upload surat dokter susulan */}
-      {documentTargetId !== null && (
-        <MedicalLetterModal
-          dateLabel={documentTarget ? formatDateLabel(documentTarget.attendanceDate) : ''}
-          onSubmit={handleDocumentSubmit}
-          onClose={() => setDocumentTargetId(null)}
-        />
-      )}
+        {/* [BARU] Popup upload surat dokter susulan */}
+        {documentTargetId !== null && (
+          <MedicalLetterModal
+            dateLabel={documentTarget ? formatDateLabel(documentTarget.attendanceDate) : ''}
+            record={documentTarget}
+            reviewNote={documentTarget?.documentReviewNote || documentTarget?.reviewNote}
+            isReupload={documentTarget?.documentReviewStatus === 'REJECTED' || documentTarget?.approvalStatus === 'REJECTED'}
+            onSubmit={handleDocumentSubmit}
+            onClose={() => setDocumentTargetId(null)}
+          />
+        )}
 
-      {/* [BARU] Popup Ajukan Koreksi keterlambatan */}
-      {correctionTargetDate !== null && (
-        <CorrectionRequestModal
-          dateLabel={formatDateLabel(correctionTargetDate)}
-          onSubmit={handleCorrectionSubmit}
-          onClose={handleCorrectionClose}
-        />
-      )}
+        {/* [BARU] Popup Ajukan Koreksi keterlambatan */}
+        {correctionTargetDate !== null && (
+          <CorrectionRequestModal
+            dateLabel={formatDateLabel(correctionTargetDate)}
+            onSubmit={handleCorrectionSubmit}
+            onClose={handleCorrectionClose}
+          />
+        )}
+      </Suspense>
 
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </div>

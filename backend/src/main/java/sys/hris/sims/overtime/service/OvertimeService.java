@@ -323,17 +323,9 @@ public class OvertimeService {
     }
 
     private ScheduleContext resolveScheduleContext(Employee employee, ZonedDateTime now) {
-        LocalDate today = now.toLocalDate();
-        WorkSchedule todaySchedule = findSchedule(employee.getEmployeeId(), today);
-        LocalDate previousDate = today.minusDays(1);
-        WorkSchedule previousSchedule = findSchedule(employee.getEmployeeId(), previousDate);
-        boolean continuingOvernight = previousSchedule != null && previousSchedule.getShift() != null
-                && previousSchedule.getShift().getEndTime().isBefore(previousSchedule.getShift().getStartTime())
-                && now.toLocalDateTime().isBefore(LocalDateTime.of(today, previousSchedule.getShift().getEndTime()))
-                && attendanceRepository.existsActiveByAction(employee.getEmployeeId(), previousDate, "MASUK");
-        return continuingOvernight
-                ? new ScheduleContext(previousDate, previousSchedule)
-                : new ScheduleContext(today, todaySchedule);
+        var context = sys.hris.sims.attendance.service.AttendanceWorkday.resolve(
+                employee, now.toLocalDateTime(), true, workScheduleRepository, attendanceRepository);
+        return new ScheduleContext(context.workDate(), context.schedule());
     }
 
     private boolean hasPassedWorkEnd(ScheduleContext context, ZonedDateTime now) {

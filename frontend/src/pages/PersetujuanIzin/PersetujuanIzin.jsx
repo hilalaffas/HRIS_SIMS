@@ -21,6 +21,7 @@ const LEAVE_ANIMATION_MS = 320; // sinkron dengan --motion-slow (animasi baris k
 
 const EMPTY_MESSAGES = {
   PENDING: 'Tidak ada pengajuan yang menunggu persetujuan.',
+  DOCUMENT_PENDING: 'Tidak ada surat susulan yang menunggu verifikasi.',
   APPROVED: 'Belum ada pengajuan yang disetujui.',
   REJECTED: 'Belum ada pengajuan yang ditolak.',
 };
@@ -60,7 +61,7 @@ export default function PersetujuanIzin({ approvals, embedded = true, mode = 'qu
   // Baris yang baru diputuskan tetap tampil sebentar (leavingId) supaya sempat
   // memutar animasi keluar sebelum hilang dari tab "Menunggu".
   const visibleRows = useMemo(
-    () => rows.filter((row) => (row.status === tab || row.id === leavingId)
+    () => rows.filter((row) => ((tab === 'DOCUMENT_PENDING' ? row.documentReviewPending : row.status === tab) || row.id === leavingId)
       && matchesFilters(row, { type, query: deferredQuery })),
     [rows, tab, type, deferredQuery, leavingId],
   );
@@ -95,7 +96,7 @@ export default function PersetujuanIzin({ approvals, embedded = true, mode = 'qu
   }, []);
 
   const handleDecision = useCallback(
-    (row, status, note) => decide(row, status, note, { onApplied: tab === 'PENDING' ? startLeaving : undefined }),
+    (row, status, note) => decide(row, status, note, { onApplied: ['PENDING', 'DOCUMENT_PENDING'].includes(tab) ? startLeaving : undefined }),
     [decide, tab, startLeaving],
   );
 
@@ -132,7 +133,7 @@ export default function PersetujuanIzin({ approvals, embedded = true, mode = 'qu
 
       <section className="pzn-panel">
         <div className="pzn-panel__bar">
-          <StatusTabs tabs={statusTabs} activeKey={tab} pendingCount={stats.pending} onChange={handleTabChange} />
+          <StatusTabs tabs={statusTabs} activeKey={tab} pendingCount={stats.pending} documentPendingCount={stats.documentPending} onChange={handleTabChange} />
           <ApprovalToolbar type={type} query={query} onTypeChange={setType} onQueryChange={setQuery} />
         </div>
 
@@ -152,7 +153,7 @@ export default function PersetujuanIzin({ approvals, embedded = true, mode = 'qu
           <div className="pzn-panel__detail" ref={detailRef}>
             {selected ? (
               <RequestDetail
-                key={selected.id}
+                key={`${selected.id}-${selected.status}-${selected.document.code}`}
                 row={selected}
                 processing={processingIds.has(selected.id)}
                 onApprove={(row, note) => handleDecision(row, 'APPROVED', note)}

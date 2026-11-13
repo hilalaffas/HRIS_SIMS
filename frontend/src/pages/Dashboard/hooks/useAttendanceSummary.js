@@ -4,8 +4,10 @@
 // berjalan (tutup buku tgl 21 - 20), status absen hari ini, dan divisi.
 // Memakai ulang buildMonthlyRows() dari modul Absensi supaya angka di
 // Dashboard SAMA PERSIS dengan tabel "Jadwal & Log Absensi Bulanan".
-import { useCallback, useEffect, useRef, useState } from 'react'; // [UBAH] + useCallback, useRef
-import { getMyAttendanceHistory, toDisplayRecord } from '../../../services/attendanceService';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // [UBAH] + useCallback, useRef, useMemo
+import { getMyAttendanceHistory, getMyWorkSchedule, toDisplayRecord } from '../../../services/attendanceService';
+import useActiveWorkShift from '../../Absensi/hooks/useActiveWorkShift';
+import { jakartaWallClock, workDateKey } from '../../Absensi/utils/activeWorkShift';
 import { getMyProfile } from '../../../services/profileService';
 import useTodayLeave from '../../Absensi/hooks/useTodayLeave'; // [BARU] cuti disetujui mengunci tombol absen
 import { applyLeaveGate } from '../../Absensi/utils/leaveToday'; // [BARU]
@@ -33,6 +35,8 @@ const INITIAL_STATE = {
   checkInTime: '',
   checkInAt: null, // [BARU] Date jam Masuk hari ini -- dasar hitung "pulang cepat"
   division: '',
+  records: [],
+  scheduleData: null,
 };
 
 // Hitung rekap dari baris harian. "Izin / Cuti" = IZIN + SAKIT dari absensi.
@@ -45,13 +49,13 @@ function summarizeRows(rows) {
   };
 }
 
-function resolveTodayStatus(records, todayKey) {
+function resolveTodayStatus(records, todayKey, scheduleData) {
   const todays = records.filter((record) => record.attendanceDate === todayKey);
-  const checkIn = todays.find((record) => record.actionCode === 'MASUK' && !isRejectedSick(record)); // [UBAH] sakit ditolak bukan check-in
+  const checkIn = todays.find((record) => record.actionCode === 'MASUK' && record.reasonCode === 'ABSEN' && !isRejectedSick(record)); // [UBAH] sakit ditolak bukan check-in
   const checkOut = todays.find((record) => record.actionCode === 'KELUAR');
   // [UBAH] Sama dengan halaman Absensi (termasuk hari lanjutan izin sakit multi-hari);
   // "sick" baru muncul setelah disetujui, selama menunggu -> sickPending.
-  const sickRecord = getSickRecordCovering(records, todayKey);
+  const sickRecord = getSickRecordCovering(records, todayKey, scheduleData || {});
   const isSick = Boolean(sickRecord);
 
   let todayStatus = 'idle';
@@ -71,24 +75,27 @@ function resolveTodayStatus(records, todayKey) {
 async function loadSummary() {
   try {
     // Profil hanya untuk nama divisi -- kegagalannya tidak boleh menggagalkan rekap.
-    const [history, profile] = await Promise.all([
+    const wall = jakartaWallClock();
+    const { year, month } = getCurrentPeriod(wall);
+    const [history, profile, scheduleData] = await Promise.all([
       getMyAttendanceHistory(),
       getMyProfile().catch(() => null),
+      getMyWorkSchedule(year, month + 1).catch(() => null),
     ]);
 
-    const now = new Date();
+    const now = wall;
     const records = (history || []).map(toDisplayRecord);
-    const { year, month } = getCurrentPeriod(now);
-    const rows = buildMonthlyRows(records, year, month, now);
+    const rows = buildMonthlyRows(records, year, month, now, scheduleData?.schedules || [], scheduleData?.divisionType || 'REGULAR');
     const periodEnd = new Date(year, month, 1);
 
     return {
       isLoading: false,
       hasError: false,
+      records, scheduleData,
       ...summarizeRows(rows),
       periodShort: periodEnd.toLocaleDateString('id-ID', MONTH_FORMAT),
       periodRange: formatPeriodLabel(year, month),
-      ...resolveTodayStatus(records, dateKey(now)),
+      ...resolveTodayStatus(records, dateKey(now), scheduleData),
       division: profile?.divisi && profile.divisi !== '-' ? profile.divisi : '',
     };
   } catch {
@@ -125,10 +132,19 @@ export default function useAttendanceSummary() {
 
   // [BARU] Cuti yang sudah disetujui menimpa status tombol (sakit tetap menang).
   const { gate: leaveGate, leaveOpensLabel } = useTodayLeave();
+  const shiftContext = useActiveWorkShift(state.scheduleData, state.records);
+  // [UBAH] Dihitung ulang hanya saat data/hari kerja berubah, bukan di setiap render Dashboard.
+  const activeStatus = useMemo(
+    () => resolveTodayStatus(state.records, shiftContext.workDate, state.scheduleData),
+    [state.records, state.scheduleData, shiftContext.workDate],
+  );
+  const continuing = shiftContext.workDate !== workDateKey(jakartaWallClock()) && activeStatus.todayStatus === 'checkedIn';
 
   return {
     ...state,
-    todayStatus: applyLeaveGate(state.todayStatus, leaveGate),
+    ...activeStatus,
+    shiftContext,
+    todayStatus: continuing ? activeStatus.todayStatus : applyLeaveGate(activeStatus.todayStatus, leaveGate),
     leaveOpensLabel,
     refresh,
   };

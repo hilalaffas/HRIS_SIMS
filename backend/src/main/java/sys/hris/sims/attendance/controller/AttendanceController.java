@@ -32,7 +32,7 @@ import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
 import sys.hris.sims.attendance.service.AttendanceReportService;
 import sys.hris.sims.attendance.service.AttendanceService;
 import sys.hris.sims.attendance.service.ReverseGeocodingService;
-import sys.hris.sims.common.dto.ApprovalDecisionRequest;
+import sys.hris.sims.attendance.dto.MedicalDocumentDecisionRequest;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
@@ -119,9 +119,11 @@ public class AttendanceController {
     public ResponseEntity<AttendanceResponse> uploadMedicalDocument(
             @PathVariable Long attendanceId,
             @RequestPart("document") MultipartFile document,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             Authentication authentication,
             HttpServletRequest httpRequest) {
-        AttendanceResponse response = attendanceService.uploadMedicalDocument(attendanceId, document, authentication.getName());
+        AttendanceResponse response = attendanceService.uploadMedicalDocument(attendanceId, document, authentication.getName(), startDate, endDate);
 
         activityLogService.log(
                 authentication.getName(),
@@ -129,7 +131,7 @@ public class AttendanceController {
                 "UPLOAD_SURAT_DOKTER",
                 "attendances",
                 response.getAttendanceId(),
-                "Surat dokter susulan diunggah",
+                "Surat dokter susulan diunggah; periode usulan " + response.getDocumentStartDate() + " s/d " + response.getDocumentEndDate(),
                 httpRequest);
 
         return ResponseEntity.ok(response);
@@ -170,10 +172,10 @@ public class AttendanceController {
     @PutMapping("/{attendanceId}/approval")
     public ResponseEntity<AttendanceResponse> decideSick(
             @PathVariable Long attendanceId,
-            @RequestBody ApprovalDecisionRequest request,
+            @RequestBody MedicalDocumentDecisionRequest request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
-        AttendanceResponse response = attendanceService.decideSick(attendanceId, request.getStatus(), request.getNote(), authentication);
+        AttendanceResponse response = attendanceService.decideSick(attendanceId, request.getStatus(), request.getNote(), authentication, request.getDocumentUrl());
 
         activityLogService.log(
                 authentication.getName(),
@@ -185,6 +187,20 @@ public class AttendanceController {
                         + ("APPROVED".equals(response.getApprovalStatus()) ? "disetujui" : "ditolak"),
                 httpRequest);
 
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{attendanceId}/document-review")
+    public ResponseEntity<AttendanceResponse> reviewMedicalDocument(
+            @PathVariable Long attendanceId,
+            @RequestBody MedicalDocumentDecisionRequest request,
+            Authentication authentication, HttpServletRequest httpRequest) {
+        AttendanceResponse response = attendanceService.reviewMedicalDocument(attendanceId,
+                request.getStatus(), request.getNote(), request.getDocumentUrl(), authentication);
+        activityLogService.log(authentication.getName(), getCurrentUserId(authentication),
+                "REVIEW_SURAT_DOKTER", "attendances", attendanceId,
+                "Surat dokter " + response.getDocumentReviewStatus() + ": "
+                        + response.getDocumentUrl() + "; " + (response.getDocumentReviewNote() == null ? "" : response.getDocumentReviewNote()), httpRequest);
         return ResponseEntity.ok(response);
     }
 

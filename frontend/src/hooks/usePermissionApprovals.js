@@ -5,7 +5,7 @@
 // hooks/useOvertimeApprovals.js. Penyaringan/pemilihan baris (state tampilan)
 // ada di pages/PersetujuanIzin/PersetujuanIzin.jsx.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { decideSickApproval, getSickApprovals } from '../services/attendanceService';
+import { decideSickApproval, getSickApprovals, reviewMedicalDocument } from '../services/attendanceService';
 import {
   isProcessedThisMonth,
   sortRows,
@@ -79,7 +79,9 @@ export default function usePermissionApprovals(enabled = true) {
     if (busyRef.current.has(row.id)) return false;
     markProcessing(row.id, true);
     try {
-      const updated = await decideSickApproval(row.id, status, note);
+      const updated = row.documentReviewPending
+        ? await reviewMedicalDocument(row.id, status === 'APPROVED' ? 'VALID' : 'REJECTED', note, row.attachment.url)
+        : await decideSickApproval(row.id, status, note, row.attachment?.url);
       const nextRow = toPermissionRow(updated);
       // Dipanggil di tick yang sama dengan setRows supaya React menggabungkannya jadi satu render
       // (dipakai halaman untuk memulai animasi keluar tanpa kedipan).
@@ -88,7 +90,7 @@ export default function usePermissionApprovals(enabled = true) {
         .map((item) => (item.id === row.id ? { ...item, ...nextRow, division: nextRow.division !== '-' ? nextRow.division : item.division } : item))
         .sort(sortRows));
       if (!quiet) {
-        showToast(status === 'APPROVED' ? 'Pengajuan disetujui.' : 'Pengajuan ditolak.');
+        showToast(row.documentReviewPending ? (status === 'APPROVED' ? 'Surat dokter dinyatakan valid.' : 'Surat ditolak. Karyawan dapat upload ulang.') : (status === 'APPROVED' ? 'Pengajuan disetujui.' : 'Pengajuan ditolak.'));
       }
       return true;
     } catch (error) {
@@ -120,6 +122,7 @@ export default function usePermissionApprovals(enabled = true) {
     const pending = rows.filter((row) => row.status === 'PENDING');
     return {
       pending: pending.length,
+      documentPending: rows.filter((row) => row.documentReviewPending).length,
       sick: pending.filter((row) => row.type === 'SAKIT').length,
       other: pending.filter((row) => row.type !== 'SAKIT').length,
       processedThisMonth: rows.filter((row) => isProcessedThisMonth(row)).length,

@@ -1,3 +1,4 @@
+import { medicalDocumentStatus } from '../../../utils/medicalDocumentStatus';
 // src/pages/Absensi/components/MedicalLetterModal.jsx
 //
 // [BARU] Popup upload surat dokter SUSULAN -- dibuka dari kolom Keterangan /
@@ -10,8 +11,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FileText, X } from 'lucide-react';
 import MedicalDocumentDropzone from './MedicalDocumentDropzone';
 import './PermissionRequestModal.css';
+import SickDateFields from './SickDateFields';
+import useSickDates from '../../../hooks/useSickDates';
+import { calendarDayCount } from '../../../utils/sickDates';
+import { getSickEndKey } from '../utils/monthlyAttendance';
 
-export default function MedicalLetterModal({ dateLabel, onSubmit, onClose }) {
+export default function MedicalLetterModal({ record, dateLabel, reviewNote = '', isReupload = false, onSubmit, onClose }) {
+  const earlyCheckout = record?.actionCode === 'SAKIT';
+  const startDate = record?.sickStartDate || record?.attendanceDate;
+  const endDate = record && !earlyCheckout ? getSickEndKey(record) : startDate;
+  const dates = useSickDates({ earlyCheckout, initialRange: { startDate, endDate, days: String(earlyCheckout ? record.leaveDays : calendarDayCount(startDate, endDate)) } });
   const submitLockRef = useRef(false);
   const [documentFile, setDocumentFile] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -27,16 +36,19 @@ export default function MedicalLetterModal({ dateLabel, onSubmit, onClose }) {
 
   const handleSubmit = async () => {
     if (submitLockRef.current) return;
+    if (record && medicalDocumentStatus(record).code === 'EXPIRED') { setErrorMessage('Batas upload surat dokter terlewati.'); return; }
     if (!documentFile) {
       setErrorMessage('Pilih file surat dokter terlebih dahulu.');
       return;
     }
 
+    const dateError = dates.validateDates();
+    if (dateError) { setErrorMessage(dateError); return; }
     submitLockRef.current = true;
     setIsSubmitting(true);
     setErrorMessage('');
     try {
-      await onSubmit(documentFile);
+      await onSubmit(documentFile, { startDate: dates.startDate, endDate: dates.endDate });
     } catch (error) {
       setErrorMessage(error?.message || 'Gagal mengunggah surat dokter. Silakan coba lagi.');
     } finally {
@@ -56,7 +68,7 @@ export default function MedicalLetterModal({ dateLabel, onSubmit, onClose }) {
         <div className="abs-permission-header">
           <h2 id="abs-letter-title">
             <FileText aria-hidden="true" />
-            Upload Surat Dokter Susulan
+            {isReupload ? 'Upload Ulang Surat Dokter' : 'Upload Surat Dokter Susulan'}
           </h2>
           <button type="button" aria-label="Tutup" onClick={onClose} disabled={isSubmitting}>
             <X aria-hidden="true" />
@@ -65,13 +77,17 @@ export default function MedicalLetterModal({ dateLabel, onSubmit, onClose }) {
 
         <div className="abs-permission-body">
           {dateLabel && <p className="abs-permission-hint">Pengajuan izin sakit tanggal {dateLabel}.</p>}
+          {record && <p className="abs-permission-hint">Batas upload: {medicalDocumentStatus(record).deadline?.split('-').reverse().join('/')} pukul 23.59 WIB.</p>}
+          {reviewNote && <p className="abs-permission-error">Catatan HRD: {reviewNote}</p>}
+          <SickDateFields dates={dates} documentLater={false} earlyCheckout={earlyCheckout} disabled={isSubmitting || earlyCheckout}
+            hint={earlyCheckout ? 'Periode pulang cepat mengikuti tanggal pengajuan. Sakit hari berikutnya diajukan melalui pengajuan baru.' : 'Sesuaikan tanggal dengan surat dokter. Perubahan periode berlaku setelah diverifikasi HRD.'} />
           <MedicalDocumentDropzone
             file={documentFile}
             onChange={setDocumentFile}
             onError={setErrorMessage}
             disabled={isSubmitting}
           />
-          <p className="abs-permission-hint">Surat yang sudah dikirim tidak dapat diganti.</p>
+          <p className="abs-permission-hint">Surat akan diverifikasi HRD. Upload ulang tersedia jika surat ditolak.</p>
           {errorMessage && <p className="abs-permission-error" role="alert">{errorMessage}</p>}
         </div>
 

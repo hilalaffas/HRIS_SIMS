@@ -7,7 +7,7 @@ import { Check, X } from 'lucide-react';
 import { MAX_REVIEW_NOTE_LENGTH } from '../utils/permissionRequest';
 import './DecisionPanel.css';
 
-function DecisionPanel({ note, noteError, canApprove, approveHint, processing, onNoteChange, onApprove, onReject }) {
+function DecisionPanel({ note, noteError, canApprove, approveHint, processing, onNoteChange, onApprove, onReject, approveLabel = 'Setujui', rejectLabel = 'Tolak' }) {
   const noteRef = useRef(null);
   const errorId = 'pzn-note-error';
 
@@ -37,7 +37,7 @@ function DecisionPanel({ note, noteError, canApprove, approveHint, processing, o
       <div className="pzn-decision__actions">
         <button type="button" className="pzn-btn pzn-btn--reject" disabled={processing} onClick={handleReject}>
           <X aria-hidden="true" />
-          Tolak
+          {rejectLabel}
         </button>
         <button
           type="button"
@@ -47,7 +47,7 @@ function DecisionPanel({ note, noteError, canApprove, approveHint, processing, o
           onClick={onApprove}
         >
           <Check aria-hidden="true" />
-          {processing ? 'Memproses...' : 'Setujui'}
+          {processing ? 'Memproses...' : approveLabel}
         </button>
       </div>
     </div>

@@ -36,11 +36,12 @@ function EntryList({ entries }) {
   );
 }
 
-export function CheckoutChoicePanel({ windowState, onCheckout, onAddOvertime, onRetry, onClose }) {
+export function CheckoutChoicePanel({ windowState, onCheckout, onAddOvertime, onRetry, onClose, workEndLabel = WORK_END_LABEL }) {
   const { status, data, error } = windowState;
   const isLoading = status === 'loading' || status === 'idle';
   const isError = status === 'error';
   const isReady = status === 'ready';
+  const endLabel = data?.workEnd && data.workEnd !== '-' ? data.workEnd : (workEndLabel || WORK_END_LABEL).slice(0, 5);
   const entries = data?.entries ?? [];
   const hasOvertime = entries.length > 0;
   const addBlocked = isReady && !data.canExtend;
@@ -55,7 +56,7 @@ export function CheckoutChoicePanel({ windowState, onCheckout, onAddOvertime, on
   if (hasOvertime) {
     bodyText = `Lembur Anda hari ini tercatat sampai pukul ${data.start} WIB. Apakah Anda masih lembur setelah itu, atau sudah selesai dan ingin Check-Out sekarang?`;
   } else {
-    bodyText = `Anda melakukan Check-Out setelah jam kerja ${WORK_END_LABEL} WIB. Apakah Anda melakukan lembur hari ini?`;
+    bodyText = `Anda melakukan Check-Out setelah jam kerja ${endLabel} WIB. Apakah Anda melakukan lembur hari ini?`;
   }
 
   let checkoutLabel = 'Check-Out Sekarang';
@@ -69,7 +70,7 @@ export function CheckoutChoicePanel({ windowState, onCheckout, onAddOvertime, on
       <header className="coOt__header">
         <span className="coOt__icon" aria-hidden="true"><History size={22} strokeWidth={2.4} /></span>
         <div>
-          <h2 id="coOtTitle">Check-Out Jam Kerja ({WORK_END_LABEL}+)</h2>
+          <h2 id="coOtTitle">Check-Out Jam Kerja ({endLabel}+)</h2>
           <p>Konfirmasi status kerja tambahan hari ini.</p>
         </div>
       </header>
@@ -97,7 +98,7 @@ export function CheckoutChoicePanel({ windowState, onCheckout, onAddOvertime, on
               <p className="coOt__hint">
                 {hasOvertime
                   ? `Belum ada waktu setelah ${data.start} WIB yang bisa diajukan sebagai lembur tambahan.`
-                  : `Belum ada waktu setelah ${WORK_END_LABEL} WIB yang bisa diajukan sebagai lembur.`}
+                  : `Belum ada waktu setelah ${endLabel} WIB yang bisa diajukan sebagai lembur.`}
               </p>
             )}
           </>

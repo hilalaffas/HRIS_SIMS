@@ -55,6 +55,7 @@ export default function DatePickerField({
   maxDate = '',
   placeholder = 'dd/mm/yyyy',
   ariaLabel = 'Pilih tanggal',
+  disabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState(() => parseViewMonth(value));
@@ -131,6 +132,7 @@ export default function DatePickerField({
     <div className="dpf" ref={rootRef}>
       <button
         ref={triggerRef}
+        disabled={disabled}
         type="button"
         className={`dpf-trigger${isOpen ? ' is-open' : ''}`}
         onClick={() => (isOpen ? setIsOpen(false) : openPanel())}
@@ -143,7 +145,7 @@ export default function DatePickerField({
         <span className={value ? '' : 'dpf-placeholder'}>{formatDisplay(value) || placeholder}</span>
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div id={panelId} className="dpf-pop" role="dialog" aria-label={ariaLabel}>
           <header className="dpf-head">
             <strong>{MONTH_NAMES[view.month]} {view.year}</strong>

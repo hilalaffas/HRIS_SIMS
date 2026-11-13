@@ -400,6 +400,8 @@ public class SecurityConfig {
 
                         // [BARU] Laporan Absensi -- hanya HRD_ADMIN & SUPER_ADMIN (lebih ketat
                         // dari ADMIN_ROLES, tidak termasuk role "ADMIN" generik).
+                        .requestMatchers(HttpMethod.POST, "/api/absensi/laporan/*/revisions")
+                        .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/absensi/laporan")
                         .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN", "DEV")
 
@@ -411,6 +413,9 @@ public class SecurityConfig {
                         // Pemilik pengajuan tidak boleh memprosesnya sendiri (dicek di AttendanceService).
                         .requestMatchers(HttpMethod.GET, "/api/absensi/approvals/sakit")
                         .hasAnyRole(HRD_ROLES)
+
+                        .requestMatchers(HttpMethod.PUT, "/api/absensi/*/document-review")
+                        .hasRole("HRD_ADMIN")
 
                         .requestMatchers(HttpMethod.PUT, "/api/absensi/*/approval")
                         .hasAnyRole(HRD_ROLES)

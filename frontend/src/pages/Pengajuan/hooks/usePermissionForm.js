@@ -2,7 +2,7 @@
 //
 // State + validasi formulir inline "Sakit & Izin" (tab Pengajuan). Aturannya
 // sama dengan PermissionRequestModal di halaman Absensi:
-//  - Izin Sakit     : keterangan + lama izin (hari kerja, maks 30) + surat dokter
+//  - Izin Sakit     : keterangan + lama izin (hari kalender, maks 30) + surat dokter
 //                     (boleh menyusul; selama menyusul lama izin dikunci 1 hari).
 //  - Izin Terlambat : cukup keterangan.
 // Validasi di sini hanya untuk UX -- aturan sebenarnya ditegakkan backend.
@@ -11,6 +11,7 @@
 // Contoh pemakaian:
 // const form = usePermissionForm(async (payload) => { await submit(payload); });
 import { useRef, useState } from 'react';
+import useSickDates from '../../../hooks/useSickDates';
 import { validateRequired } from '../../../utils/validation';
 
 export const PERMISSION_NOTE_MAX_LENGTH = 255; // attendances.note VARCHAR(255)
@@ -21,7 +22,8 @@ const TYPE_SICK = 'SAKIT';
 export default function usePermissionForm(onSubmit) {
   const submitLockRef = useRef(false); // gerbang sinkron anti double-submit
   const [type, setType] = useState(TYPE_SICK);
-  const [days, setDays] = useState('1');
+  const dates = useSickDates();
+  const { days } = dates;
   const [note, setNote] = useState('');
   const [documentFile, setDocumentFile] = useState(null);
   const [documentLater, setDocumentLater] = useState(false);
@@ -48,7 +50,7 @@ export default function usePermissionForm(onSubmit) {
   };
 
   const changeDays = (value) => {
-    setDays(value);
+    dates.changeDays(value);
     clearFieldError('days');
   };
 
@@ -61,7 +63,7 @@ export default function usePermissionForm(onSubmit) {
     setDocumentLater(checked);
     if (checked) {
       setDocumentFile(null);
-      setDays('1'); // surat menyusul -> lama izin dikunci 1 hari
+      dates.lockToday(); // surat menyusul -> lama izin dikunci 1 hari
     }
     setFieldErrors({});
     setErrorMessage('');
@@ -70,10 +72,8 @@ export default function usePermissionForm(onSubmit) {
   const validate = () => {
     const { errors } = validateRequired([{ field: 'note', label: 'Keterangan', value: note }]);
     if (isSick) {
-      const dayCount = Number(days);
-      if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_SICK_DAYS) {
-        errors.days = `Lama izin sakit harus 1 sampai ${MAX_SICK_DAYS} hari.`;
-      }
+      const dateError = dates.validateDates();
+      if (dateError) errors.days = dateError;
       if (!documentFile && !documentLater) {
         errors.documentFile = 'Surat dokter perlu diunggah, atau centang "Surat dokter menyusul".';
       }
@@ -82,7 +82,7 @@ export default function usePermissionForm(onSubmit) {
   };
 
   const resetForm = () => {
-    setDays('1');
+    dates.resetDates();
     setNote('');
     setDocumentFile(null);
     setDocumentLater(false);
@@ -108,6 +108,9 @@ export default function usePermissionForm(onSubmit) {
         type,
         note: note.trim(),
         days: documentLater ? 1 : Number(days),
+        startDate: isSick ? dates.startDate : null,
+        endDate: isSick ? dates.endDate : null,
+        documentLater,
         documentFile: isSick ? documentFile : null,
       });
       resetForm();
@@ -122,6 +125,10 @@ export default function usePermissionForm(onSubmit) {
 
   return {
     type,
+    dates: { ...dates,
+      changeStartDate: (value) => { dates.changeStartDate(value); clearFieldError('days'); },
+      changeEndDate: (value) => { dates.changeEndDate(value); clearFieldError('days'); },
+    },
     days,
     note,
     documentFile,

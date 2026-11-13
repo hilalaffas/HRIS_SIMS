@@ -200,3 +200,6 @@ button.pgj-status.is-active:hover { box-shadow: 0 0 0 2px currentColor, 0 3px 8p
   .pgj-action, button.pgj-status, .pgj-more { transition: none; }
   .pgj-action--review svg { animation: none; }
 }
+
+.pgj-document-status { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 6px; }
+.pgj-document-status small { color: var(--color-text-muted); max-width: 280px; white-space: normal; overflow-wrap: anywhere; }

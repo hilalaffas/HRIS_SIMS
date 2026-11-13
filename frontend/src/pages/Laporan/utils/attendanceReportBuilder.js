@@ -22,6 +22,7 @@ import {
   getCurrentPeriod,
   getPeriodRange,
 } from '../../Absensi/utils/monthlyAttendance';
+import { attachReportEdits } from './reportEdits';
 import { applyOvertimeAcc } from './overtimeAcc'; // [BARU]
 
 // Nilai tone baris laporan (dipakai badge di layar & warna PDF):
@@ -187,7 +188,7 @@ export function buildEmployeeReport(
     .sort((a, b) => (a.date < b.date ? -1 : 1)); // terlama dulu
 
   // [UBAH] Hitungan lembur ACC (pengali jam) dipisah ke utils/overtimeAcc.js.
-  const reportRows = applyOvertimeAcc(rows, overtimes, {
+  const reportRows = applyOvertimeAcc(attachReportEdits(rows, employee, now), overtimes, {
     holidaysByDate,
     divisionType: employee.divisionType,
   });

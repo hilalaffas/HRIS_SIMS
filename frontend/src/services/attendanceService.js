@@ -60,13 +60,16 @@ export async function getSickApprovals(config = {}) {
 
 // [UBAH] + `note` (catatan untuk karyawan). WAJIB saat status 'REJECTED' --
 // backend menolak tanpa catatan (AttendanceService.decideSick()).
-export async function decideSickApproval(attendanceId, status, note) {
-  const body = note ? { status, note } : { status };
+export async function decideSickApproval(attendanceId, status, note, documentUrl) {
+  const body = { status, note, documentUrl };
   return api.put(`/api/absensi/${attendanceId}/approval`, body);
 }
 
-// POST catat absensi. `photoBlob` WAJIB, `latitude`/`longitude` WAJIB --
-// backend menolak tanpa GPS/foto (lihat AttendanceService.submit()).
+export async function reviewMedicalDocument(attendanceId, status, note, documentUrl) {
+  return api.put(`/api/absensi/${attendanceId}/document-review`, { status, note, documentUrl });
+}
+
+// GPS wajib untuk masuk/keluar. Foto wajib hanya untuk absen masuk.
 export async function submitAttendance({ action, reason, note, latitude, longitude, locationType, photoBlob }) {
   const formData = new FormData();
   formData.append('action', action);
@@ -75,27 +78,34 @@ export async function submitAttendance({ action, reason, note, latitude, longitu
   formData.append('latitude', latitude);
   formData.append('longitude', longitude);
   if (locationType) formData.append('locationType', locationType);
-  formData.append('photo', photoBlob, 'absensi.jpg');
+  if (action !== 'KELUAR' && photoBlob) formData.append('photo', photoBlob, 'absensi.jpg');
   return api.postForm('/api/absensi/me', formData);
 }
 
 // [BARU] Pengajuan Izin / Sakit (popup "Ajukan Izin / Sakit") -- TANPA selfie & GPS.
 // type: 'SAKIT' | 'TERLAMBAT'. `days` hanya dikirim untuk SAKIT. `documentFile`
 // (surat dokter) opsional: kosong = surat menyusul (lihat uploadMedicalDocument).
-export async function submitPermissionRequest({ type, note, days, documentFile, earlyCheckout = false }) {
+export async function submitPermissionRequest({ type, note, days, documentFile, earlyCheckout = false, startDate, endDate, documentLater = false }) {
   const formData = new FormData();
   formData.append('earlyCheckout', earlyCheckout);
   formData.append('type', type);
   formData.append('note', note);
-  if (type === 'SAKIT') formData.append('days', days);
+  if (type === 'SAKIT') {
+    formData.append('days', days);
+    formData.append('documentLater', documentLater);
+    if (startDate) formData.append('startDate', startDate);
+    if (endDate) formData.append('endDate', endDate);
+  }
   if (documentFile) formData.append('document', documentFile);
   return api.postForm('/api/absensi/me/izin', formData);
 }
 
 // [BARU] Surat dokter SUSULAN untuk pengajuan Sakit milik sendiri.
-export async function uploadMedicalDocument(attendanceId, documentFile) {
+export async function uploadMedicalDocument(attendanceId, documentFile, dates = {}) {
   const formData = new FormData();
   formData.append('document', documentFile);
+  if (dates.startDate) formData.append('startDate', dates.startDate);
+  if (dates.endDate) formData.append('endDate', dates.endDate);
   return api.postForm(`/api/absensi/${attendanceId}/document`, formData);
 }
 
@@ -180,11 +190,21 @@ export function toDisplayRecord(item) {
     officeDistanceMeters: item.officeDistanceMeters ?? null,
     officeLocationStatus: String(item.officeLocationStatus || '').toUpperCase(),
     attendanceDate: item.attendanceDate,
-    approvalStatus: String(item.approvalStatus || '').toUpperCase(), // [BARU]
+    approvalStatus: String(item.approvalStatus || '').toUpperCase(),
+    reviewNote: item.reviewNote || '',
+    reviewedAt: parseNaiveDateTime(item.reviewedAt),
+    sickStartDate: item.sickStartDate || null,
+    sickEndDate: item.sickEndDate || null,
     leaveDays: item.leaveDays || 1, // [BARU] lama izin sakit (hari)
     documentUrl: item.documentUrl || '', // [BARU] surat dokter; kosong = belum diunggah
     documentRequired: Boolean(item.documentRequired), // [BARU]
-    documentReviewStatus: String(item.documentReviewStatus || '').toUpperCase(), // [BARU] PENDING | VALID | REJECTED (backend belum ada -> kosong = menunggu verifikasi)
+    documentReviewStatus: String(item.documentReviewStatus || '').toUpperCase(),
+    documentReviewNote: item.documentReviewNote || '',
+    documentUploadDeadline: item.documentUploadDeadline || null,
+    documentDeadlineExpired: Boolean(item.documentDeadlineExpired),
+    documentStartDate: item.documentStartDate || null,
+    documentEndDate: item.documentEndDate || null,
+    documentReviewedAt: parseNaiveDateTime(item.documentReviewedAt),
     recordedAt,
     time: formatTimeLabel(recordedAt),
   };
