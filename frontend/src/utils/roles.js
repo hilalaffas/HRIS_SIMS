@@ -6,6 +6,7 @@ export const ROLES = {
   SPV: 'spv',
   MANAGER: 'manager',
   HR_ADMIN: 'hrd_admin',
+  HR_KARYAWAN: 'hrd_karyawan', // [BARU]
   SUPER_ADMIN: 'super_admin',
 };
 
@@ -32,6 +33,23 @@ export function isManagerOrSpv(user) {
 
 export function isHrAdmin(user) {
   return getUserRole(user) === ROLES.HR_ADMIN;
+}
+
+/**
+ * [BARU] HRD = HRD_Admin + HRD_Karyawan. Hanya role ini yang menyetujui Cuti, Lembur,
+ * Koreksi Terlambat, dan Sakit & Izin.
+ */
+export function isHrd(user) {
+  const role = getUserRole(user);
+  return role === ROLES.HR_ADMIN || role === ROLES.HR_KARYAWAN;
+}
+
+/**
+ * [BARU] Boleh membuka Pusat Persetujuan: HRD (approver pengajuan baru) serta
+ * Leader/SPV/Manager (hanya untuk pengajuan lama yang masih berjalan).
+ */
+export function isApprover(user) {
+  return isManagerOrSpv(user) || isHrd(user);
 }
 
 /**

@@ -22,8 +22,14 @@ export const TYPE_FILTER_OPTIONS = [
   { value: 'PRIBADI', label: REQUEST_TYPES.PRIBADI.label },
 ];
 
-export const STATUS_TABS = [
+// [UBAH] Dipisah per mode tampilan (sama seperti Cuti/Lembur/Koreksi di Pusat Persetujuan):
+//   - QUEUE_TABS   : pilihan "Sakit & Izin" di tab "Perlu Diproses" -- hanya yang menunggu (ada aksi ACC/Tolak)
+//   - HISTORY_TABS : tab "List Sakit & Izin" -- riwayat keputusan, hanya baca
+export const QUEUE_TABS = [
   { key: 'PENDING', label: 'Menunggu' },
+];
+
+export const HISTORY_TABS = [
   { key: 'APPROVED', label: 'Disetujui' },
   { key: 'REJECTED', label: 'Ditolak' },
 ];

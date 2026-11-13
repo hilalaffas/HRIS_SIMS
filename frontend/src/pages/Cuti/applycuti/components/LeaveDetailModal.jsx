@@ -74,13 +74,15 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
       const fetchLatestDetail = async () => {
         setIsLoading(true);
         try {
-          const isAtasan = ['LEADER', 'SPV', 'MANAGER'].includes(
+          const isAtasan = ['LEADER', 'SPV', 'MANAGER', 'HRD_ADMIN', 'HRD_KARYAWAN'].includes(
             String(currentUserRole).toUpperCase().replace(/^ROLE_/, '')
           );
 
-          // Panggil API sesuai dengan Role User yang sedang login
-          const rawData = isAtasan 
-            ? await getApprovalDetail(selectedDetail.id)
+          // Panggil API sesuai dengan Role User yang sedang login. Approver (termasuk HRD) membuka
+          // detail lewat endpoint approval; kalau ini berkas milik sendiri (bukan penugasannya),
+          // jatuh ke endpoint detail pemohon.
+          const rawData = isAtasan
+            ? await getApprovalDetail(selectedDetail.id).catch(() => getMyLeaveDetail(selectedDetail.id))
             : await getMyLeaveDetail(selectedDetail.id);
 
           const formattedData = mapApproval(rawData, employeeLookup);
@@ -178,7 +180,7 @@ const LeaveDetailModal = ({ selectedDetail, onClose, currentUserRole, onRefreshD
   };
 
   // Cek apakah user saat ini adalah atasan yang berwenang di alur dokumen ini
-  const isAtasan = ['LEADER', 'SPV', 'MANAGER'].includes(String(currentUserRole).toUpperCase());
+  const isAtasan = ['LEADER', 'SPV', 'MANAGER', 'HRD_ADMIN', 'HRD_KARYAWAN'].includes(String(currentUserRole).toUpperCase().replace(/^ROLE_/, ''));
 
   // [BARU] Tahap persetujuan untuk stepper progres (Leader -> SPV -> Manager)
   const progressSteps = buildLeaveProgressSteps(detailData);

@@ -40,6 +40,9 @@ public class LeaveApprovalResponse {
     private String spvName;
     private Long managerEmployeeId;
     private String managerName;
+    // [BARU] Approver HRD (pengajuan baru). Null untuk pengajuan lama berjenjang Leader/SPV/Manager.
+    private Long hrdEmployeeId;
+    private String hrdName;
     private LocalDateTime submittedAt;
     private String overallStatus;
     private String myApprovalStatus;

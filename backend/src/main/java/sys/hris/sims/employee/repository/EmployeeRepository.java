@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import sys.hris.sims.employee.entity.Employee;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import sys.hris.sims.user.entity.User;
@@ -52,4 +53,15 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             order by e.fullName asc
             """)
     List<Employee> findActiveForReportByDivisi(@Param("divisiId") Long divisiId);
+
+    // [BARU] Karyawan AKTIF dengan role tertentu (huruf besar), lintas divisi -- dipakai daftar approver HRD.
+    @Query("""
+            select e from Employee e
+            join fetch e.user u
+            join fetch u.roleId r
+            left join fetch e.divisi d
+            where e.isActive = true and upper(r.roleName) in :roleNames
+            order by e.fullName asc
+            """)
+    List<Employee> findActiveByRoleNamesUpper(@Param("roleNames") Collection<String> roleNames);
 }

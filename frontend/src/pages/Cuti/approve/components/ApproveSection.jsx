@@ -1,7 +1,7 @@
 import React from 'react';
 import './ApproveSection.css';
 import { dayText } from '../../../../services/CutiService';
-import { getUserRole } from '../../../../utils/roles';
+import { getUserRole, isHrd } from '../../../../utils/roles';
 
 /**
  * PerluDiprosesSection.jsx  ("bagianApproval")
@@ -27,7 +27,8 @@ import { getUserRole } from '../../../../utils/roles';
  * ------------------------------------------------------------------
  */
 const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
-  const currentRole = getUserRole(user).toUpperCase();
+  // [UBAH] HRD_ADMIN & HRD_KARYAWAN sama-sama memegang tahap "HRD".
+  const currentRole = isHrd(user) ? 'HRD' : getUserRole(user).toUpperCase();
   const statusBadgeClass = (status) => {
     const value = String(status || '').toUpperCase();
     if (value.includes('DITOLAK')) return 'statusBadge--rose';
@@ -40,6 +41,7 @@ const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
     if (status.includes('MENUNGGU PERSETUJUAN LEADER')) return 'LEADER';
     if (status.includes('MENUNGGU PERSETUJUAN SPV')) return 'SPV';
     if (status.includes('MENUNGGU PERSETUJUAN MANAGER')) return 'MANAGER';
+    if (status.includes('MENUNGGU PERSETUJUAN HRD')) return 'HRD'; // [BARU]
     return null;
   };
   return (

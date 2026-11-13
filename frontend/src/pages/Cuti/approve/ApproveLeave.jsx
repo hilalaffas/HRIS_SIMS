@@ -14,9 +14,11 @@ import useOvertimeApprovals from '../../../hooks/useOvertimeApprovals'; // [BARU
 import { isActionableRow } from '../../../utils/approvalQueue'; // [BARU]
 import AttendanceCorrectionApprovalSection from '../../Persetujuan/components/AttendanceCorrectionApprovalSection';
 import useAttendanceCorrectionApprovals from '../../../hooks/useAttendanceCorrectionApprovals';
+import usePermissionApprovals from '../../../hooks/usePermissionApprovals'; // [BARU] antrean Sakit & Izin (HRD)
+import PersetujuanIzin from '../../PersetujuanIzin/PersetujuanIzin'; // [BARU] isi tab "List Sakit & Izin" (mode history)
 import ActionReasonModal from './components/ActionReasonModal';
 import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
-import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
+import { isApprover, isHrd } from '../../../utils/roles'; // [UBAH] HRD + Leader/SPV/Manager
 
 /**
  * ApproveLeaving.jsx
@@ -25,7 +27,8 @@ import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
  *
  * [UBAH] Semua aksi ACC ada di tab "Perlu Diproses" (Cuti / Lembur / Koreksi Absensi).
  * Tab "List Cuti", "List Lembur", dan "List Koreksi Absensi" hanya riwayat + detail berkas.
- * Surat Sakit & Izin TIDAK lagi diproses di sini (persetujuannya hanya dari HRD_Admin).
+ * [UBAH] Surat Sakit & Izin diproses di sini (pilihan "Sakit & Izin" di tab "Perlu Diproses"), riwayatnya
+ * di tab "List Sakit & Izin" -- khusus HRD_Admin & HRD_Karyawan. Menu sidebar terpisahnya sudah dihapus.
  *
  * AKSES:
  * Halaman ini hanya boleh dirender untuk role berikut:
@@ -45,18 +48,23 @@ import { isManagerOrSpv } from '../../../utils/roles'; // [BARU]
  */
 const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim AppRoutes)
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU]
-  // [BARU] Persetujuan Lembur hanya untuk Leader/SPV/Manager (HR Karyawan tidak).
-  const canApproveOvertime = isManagerOrSpv(user);
+  // [UBAH] Persetujuan Lembur dipegang HRD (HRD_Admin & HRD_Karyawan); Leader/SPV/Manager tetap
+  // diizinkan hanya untuk pengajuan lama yang masih berjalan.
+  const canApproveOvertime = isApprover(user);
   // [UBAH] Dulu bernama canApprovePermission (juga mengatur tab Surat Sakit & Izin yang sekarang dihapus).
-  // Sekarang hanya mengatur Koreksi Absensi -- tetap Leader/SPV/Manager.
-  const canApproveCorrection = isManagerOrSpv(user);
-  // [UBAH] 'proses' | 'list' | 'lembur' | 'koreksi-absen'. Tab awal bisa dipilih lewat ?tab=lembur
-  // (dipakai redirect dari URL lama /persetujuan). ?tab=izin sudah tidak ada -> jatuh ke 'proses'.
+  // Sekarang hanya mengatur Koreksi Absensi -- HRD (+ Leader/SPV/Manager untuk pengajuan lama).
+  const canApproveCorrection = isApprover(user);
+  // [BARU] Sakit & Izin: hanya HRD (HRD_Admin & HRD_Karyawan).
+  const canApprovePermission = isHrd(user);
+  // [UBAH] 'proses' | 'list' | 'lembur' | 'koreksi-absen' | 'sakit-izin'. Tab awal bisa dipilih lewat ?tab=lembur
+  // (dipakai redirect dari URL lama /persetujuan). ?queue=sakit membuka pilihan "Sakit & Izin" di tab 'proses'.
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam === 'lembur' && canApproveOvertime) return 'lembur';
     return 'proses';
   });
+  // [BARU] Pilihan awal di "Perlu Diproses" (?queue=sakit dari URL lama /persetujuan-izin). Dibaca sekali saja.
+  const [initialQueue] = useState(() => (searchParams.get('queue') === 'sakit' ? 'sakit' : 'cuti'));
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [selectedOvertime, setSelectedOvertime] = useState(null); // [BARU] baris lembur untuk popup detail berkas
   const [selectedCorrection, setSelectedCorrection] = useState(null); // [BARU] baris koreksi absensi untuk popup detail berkas
@@ -188,24 +196,28 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   // badge jumlah tetap muncul walau tab belum dibuka.
   const overtime = useOvertimeApprovals(canApproveOvertime);
   const attendanceCorrections = useAttendanceCorrectionApprovals(canApproveCorrection);
+  const permission = usePermissionApprovals(canApprovePermission); // [BARU]
 
   // [BARU] Antrean "Perlu Diproses": hanya pengajuan yang GILIRAN approver ini (canAct dari backend),
   // supaya ACC berjenjang Leader -> SPV -> Manager tidak saling tumpang tindih.
   const overtimeQueueRows = useMemo(() => overtime.rows.filter(isActionableRow), [overtime.rows]);
   const correctionQueueRows = useMemo(() => attendanceCorrections.rows.filter(isActionableRow), [attendanceCorrections.rows]);
-  const processCount = pendingCount + overtimeQueueRows.length + correctionQueueRows.length;
+  // [UBAH] + sakit & izin yang menunggu (semuanya bisa diproses HRD; pemohon sendiri sudah dikecualikan backend)
+  const processCount = pendingCount + overtimeQueueRows.length + correctionQueueRows.length + (canApprovePermission ? permission.stats.pending : 0);
 
   const tabs = useMemo(
     () => [
-      // [UBAH] Badge = total semua yang perlu diproses (cuti + lembur + koreksi absensi)
+      // [UBAH] Badge = total semua yang perlu diproses (cuti + lembur + koreksi absensi + sakit & izin)
       { key: "proses", label: "Perlu Diproses", badge: processCount },
       { key: "list", label: "List Cuti", badge: 0 },
       // [UBAH] Dulu "Persetujuan Lembur" (ada aksi ACC). Sekarang daftar + detail berkas saja.
       ...(canApproveOvertime ? [{ key: "lembur", label: "List Lembur", badge: 0 }] : []),
       // [UBAH] Aksi ACC koreksi absensi pindah ke "Perlu Diproses"; tab ini jadi daftar saja.
       ...(canApproveCorrection ? [{ key: "koreksi-absen", label: "List Koreksi Absensi", badge: 0 }] : []),
+      // [BARU] Riwayat Sakit & Izin (hanya HRD); aksi ACC ada di "Perlu Diproses" > "Sakit & Izin".
+      ...(canApprovePermission ? [{ key: "sakit-izin", label: "List Sakit & Izin", badge: 0 }] : []),
     ],
-    [processCount, canApproveOvertime, canApproveCorrection]
+    [processCount, canApproveOvertime, canApproveCorrection, canApprovePermission]
   );
 
   return (
@@ -227,6 +239,8 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
             overtimeRows={overtimeQueueRows}
             corrections={canApproveCorrection ? attendanceCorrections : null}
             correctionRows={correctionQueueRows}
+            permission={canApprovePermission ? permission : null}
+            initialQueue={initialQueue}
             onOpenOvertimeDetail={setSelectedOvertime}
             onOpenCorrectionDetail={setSelectedCorrection}
           />
@@ -245,6 +259,10 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
             processingKey={attendanceCorrections.processingKey} toast={attendanceCorrections.toast}
             pendingCount={attendanceCorrections.pendingCount} onDecision={attendanceCorrections.handleDecision}
           />
+        )}
+        {/* [BARU] Riwayat Sakit & Izin: Disetujui / Ditolak, hanya baca (ACC ada di "Perlu Diproses") */}
+        {activeTab === "sakit-izin" && canApprovePermission && (
+          <PersetujuanIzin approvals={permission} embedded mode="history" />
         )}
       </div>
       {/*Bagian popup detail riwayat (FormCuti)*/}

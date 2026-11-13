@@ -11,7 +11,6 @@ import java.time.DayOfWeek;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Locale;
-import java.util.ArrayList;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -21,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import sys.hris.sims.attendance.repository.AttendanceRepository;
 import sys.hris.sims.common.service.ApprovalScopeService;
 import sys.hris.sims.common.service.ApprovalScopeService.ApprovalScope;
+import sys.hris.sims.common.service.HrdApproverPolicy;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.overtime.dto.OvertimeExtensionRequest;
@@ -58,6 +58,7 @@ public class OvertimeService {
     // [BARU] Aturan siapa boleh melihat / memutuskan lembur siapa.
     private final ApprovalScopeService approvalScopeService;
     private final WorkScheduleRepository workScheduleRepository;
+    private final HrdApproverPolicy hrdApproverPolicy; // [BARU] aturan approver HRD
 
     public List<OvertimeResponse> getMyOvertime(String username) {
         Employee employee = resolveEmployee(username);
@@ -100,6 +101,10 @@ public class OvertimeService {
         if (!status.equals("APPROVED") && !status.equals("REJECTED"))
             throw new IllegalArgumentException("Keputusan tidak valid. Gunakan APPROVED atau REJECTED.");
         Employee actor = resolveEmployee(authentication.getName());
+        OvertimeRequest target = overtimeRepository.findById(overtimeId)
+                .orElseThrow(() -> new IllegalArgumentException("Pengajuan lembur tidak ditemukan."));
+        // [BARU] Pemohon tidak boleh memproses lemburnya sendiri.
+        hrdApproverPolicy.assertNotOwnRequest(actor, target.getEmployee());
         List<OvertimeApproval> steps = approvalRepository.findByOvertime_OvertimeIdOrderByApprovalIdAsc(overtimeId);
         if (steps.isEmpty()) throw new IllegalStateException("Nama approval belum dilengkapi. Pemohon harus mengedit pengajuan terlebih dahulu.");
         OvertimeApproval mine = steps.stream().filter(a -> a.getApproverEmployee().getEmployeeId().equals(actor.getEmployeeId()))
@@ -118,47 +123,16 @@ public class OvertimeService {
         return toResponse(overtime);
     }
 
-    private String normalizeRole(Employee employee) {
-        String role = employee.getUser().getRoleId().getRoleName().toUpperCase(Locale.ROOT);
-        if (role.contains("LEADER")) return "LEADER";
-        if (role.contains("SPV") || role.contains("SUPERVISOR")) return "SPV";
-        if (role.contains("MANAGER")) return "MANAGER";
-        return role;
-    }
-
-    private Employee selectedApprover(Long id, String expected, Employee requester) {
-        if (id == null) throw new IllegalArgumentException("Approver " + expected + " wajib dipilih.");
-        Employee approver = employeeRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Approver tidak ditemukan."));
-        if (!expected.equals(normalizeRole(approver))) throw new IllegalArgumentException("Approver harus memiliki role " + expected + ".");
-        if (!Boolean.TRUE.equals(approver.getIsActive())) throw new IllegalArgumentException("Approver sudah tidak aktif.");
-        if (requester.getDivisi() == null || approver.getDivisi() == null
-                || !requester.getDivisi().getId().equals(approver.getDivisi().getId()))
-            throw new IllegalArgumentException("Approver harus berasal dari divisi yang sama.");
-        return approver;
-    }
-
+    // [UBAH] Pengajuan lembur baru punya SATU tahap approval: HRD (HRD_ADMIN / HRD_KARYAWAN).
+    // Server hanya memakai hrdEmployeeId; leader/spv/manager dari klien diabaikan.
     private void createApprovalSteps(OvertimeRequest overtime, Employee requester, OvertimeSubmitRequest request) {
-        List<OvertimeApproval> steps = new ArrayList<>();
-        String requesterRole = normalizeRole(requester);
-        if ("LEADER".equals(requesterRole)) {
-            // Leader adalah tahap pertama yang sudah dilewati oleh pemohon;
-            // approval dimulai dari SPV lalu Manager.
-            steps.add(OvertimeApproval.builder().overtime(overtime).approverRole("SPV").approverEmployee(selectedApprover(request.getSpvEmployeeId(), "SPV", requester)).action("PENDING").build());
-            steps.add(OvertimeApproval.builder().overtime(overtime).approverRole("MANAGER").approverEmployee(selectedApprover(request.getManagerEmployeeId(), "MANAGER", requester)).action("PENDING").build());
-        } else if ("SPV".equals(requesterRole)) {
-            // SPV melewati tahap Leader dan SPV; berikutnya Manager.
-            steps.add(OvertimeApproval.builder().overtime(overtime).approverRole("MANAGER").approverEmployee(selectedApprover(request.getManagerEmployeeId(), "MANAGER", requester)).action("PENDING").build());
-        } else if ("MANAGER".equals(requesterRole)) {
-            // Pertahankan mekanisme lama untuk Manager: approval Manager lain.
-            Employee manager = selectedApprover(request.getManagerEmployeeId(), "MANAGER", requester);
-            if (manager.getEmployeeId().equals(requester.getEmployeeId())) throw new IllegalArgumentException("Manager tidak boleh menyetujui lembur sendiri.");
-            steps.add(OvertimeApproval.builder().overtime(overtime).approverRole("MANAGER").approverEmployee(manager).action("PENDING").build());
-        } else {
-            steps.add(OvertimeApproval.builder().overtime(overtime).approverRole("LEADER").approverEmployee(selectedApprover(request.getLeaderEmployeeId(), "LEADER", requester)).action("PENDING").build());
-            steps.add(OvertimeApproval.builder().overtime(overtime).approverRole("SPV").approverEmployee(selectedApprover(request.getSpvEmployeeId(), "SPV", requester)).action("PENDING").build());
-            steps.add(OvertimeApproval.builder().overtime(overtime).approverRole("MANAGER").approverEmployee(selectedApprover(request.getManagerEmployeeId(), "MANAGER", requester)).action("PENDING").build());
-        }
-        approvalRepository.saveAll(steps);
+        Employee hrd = hrdApproverPolicy.requireSelectableApprover(request.getHrdEmployeeId(), requester);
+        approvalRepository.save(OvertimeApproval.builder()
+                .overtime(overtime)
+                .approverRole(HrdApproverPolicy.STAGE_ROLE)
+                .approverEmployee(hrd)
+                .action("PENDING")
+                .build());
     }
 
     @Transactional
@@ -301,7 +275,15 @@ public class OvertimeService {
                 .findByEmployee_EmployeeIdOrderByOvertimeDateDescOvertimeIdDesc(employeeId).stream()
                 .filter(item -> !item.getOvertimeId().equals(saved.getOvertimeId()))
                 .map(item -> approvalRepository.findByOvertime_OvertimeIdOrderByApprovalIdAsc(item.getOvertimeId()))
-                .filter(items -> !items.isEmpty()).findFirst().orElse(List.of());
+                // [UBAH] Hanya salin approver dari pengajuan sebelumnya bila itu approver HRD yang masih
+                // aktif dan bukan pemohon sendiri. Pengajuan lama berjenjang Leader/SPV/Manager TIDAK
+                // disalin: pemohon melengkapi nama approver HRD lewat "Lengkapi Nama Approval".
+                .filter(items -> !items.isEmpty() && items.stream().allMatch(a ->
+                        HrdApproverPolicy.STAGE_ROLE.equals(a.getApproverRole())
+                                && HrdApproverPolicy.isHrd(a.getApproverEmployee())
+                                && Boolean.TRUE.equals(a.getApproverEmployee().getIsActive())
+                                && !a.getApproverEmployee().getEmployeeId().equals(employeeId)))
+                .findFirst().orElse(List.of());
         if (!previousSteps.isEmpty()) {
             approvalRepository.saveAll(previousSteps.stream().map(a -> OvertimeApproval.builder()
                     .overtime(saved).approverRole(a.getApproverRole()).approverEmployee(a.getApproverEmployee())

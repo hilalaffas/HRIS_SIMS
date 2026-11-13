@@ -185,6 +185,21 @@
 .badge-approval.leader { color: var(--dk-text, #000000); }
 .badge-approval.spv    { color: var(--dk-text, #000000); }
 .badge-approval.manager { color: var(--dk-text, #000000); }
+.badge-approval.hrd     { color: var(--dk-text, #000000); }
+
+/* [BARU] Satu dropdown approver HRD: kolom 1 = dropdown, kolom 2-3 = keterangan singkat. */
+.approval-row--single .approval-hint {
+  grid-column: 2 / -1;
+  align-self: end;
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+.approval-row--single .approval-hint--warning { color: var(--color-danger, #e11d48); font-weight: 600; }
+@media (max-width: 768px) {
+  .approval-row--single { grid-template-columns: minmax(0, 1fr); }
+  .approval-row--single .approval-hint { grid-column: auto; margin: 0; }
+}
 
 /* ==========================================
    TOMBOL AKSI / ACTION BUTTONS

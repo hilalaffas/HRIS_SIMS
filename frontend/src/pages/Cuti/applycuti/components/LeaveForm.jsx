@@ -14,9 +14,7 @@ const LeaveForm = ({
   startDate, setStartDate,
   endDate, setEndDate,
   reason, setReason,
-  leaderEmployeeId, setLeaderEmployeeId,
-  spvEmployeeId, setSpvEmployeeId,
-  managerEmployeeId, setManagerEmployeeId,
+  hrdEmployeeId, setHrdEmployeeId, // [UBAH] satu approver HRD (menggantikan leader/spv/manager)
   pendingWork, setPendingWork,
   coveredBy, setCoveredBy,
   coverOptions = [],
@@ -34,8 +32,7 @@ const LeaveForm = ({
   canApplyCuti,
   todayStr,
   leaveTypes = [],
-  approvers = { LEADER: [], SPV: [], MANAGER: [] },
-  isSupervisor = false,
+  approvers = { HRD: [] },
   isFemale = false,
   isEditing,
   onCancelEdit,
@@ -89,11 +86,8 @@ const LeaveForm = ({
         />
 
         <ApprovalFlowSection
-          leaderEmployeeId={leaderEmployeeId} setLeaderEmployeeId={setLeaderEmployeeId}
-          spvEmployeeId={spvEmployeeId} setSpvEmployeeId={setSpvEmployeeId}
-          managerEmployeeId={managerEmployeeId} setManagerEmployeeId={setManagerEmployeeId}
+          hrdEmployeeId={hrdEmployeeId} setHrdEmployeeId={setHrdEmployeeId}
           approvers={approvers}
-          isSupervisor={isSupervisor}
           invalidField={invalidField}
         />
 

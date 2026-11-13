@@ -1,21 +1,20 @@
 // src/pages/PersetujuanIzin/PersetujuanIzin.jsx
 //
 // [BARU] Halaman "Persetujuan Surat Sakit & Izin".
-// [UBAH] Sekarang HANYA untuk HRD_Admin (semua divisi), dirender oleh PersetujuanIzinPage.jsx.
+// [UBAH] Untuk HRD (HRD_Admin & HRD_Karyawan, semua divisi). Dirender di Pusat Persetujuan > Perlu Diproses > "Sakit & Izin".
 // Verifikasi surat dokter & bukti izin karyawan sebelum dicatat ke rekap absensi. Komponen ini hanya MERAKIT: data & aksi di
 // hooks/usePermissionApprovals.js, logika murni di utils/permissionRequest.js,
 // tampilan di components/.
-// Hook dipanggil di parent (PersetujuanIzinPage.jsx); komponen ini hanya menampilkan.
+// Hook (usePermissionApprovals) dipanggil di ApproveLeave.jsx; komponen ini hanya menampilkan.
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCheck, FilePlus2, MousePointerClick } from 'lucide-react';
 import Toast from '../../components/Toast';
-import ApprovalStatCards from './components/ApprovalStatCards';
 import ApprovalToolbar from './components/ApprovalToolbar';
 import BulkApproveModal from './components/BulkApproveModal';
 import RequestDetail from './components/RequestDetail';
 import RequestList from './components/RequestList';
 import StatusTabs from './components/StatusTabs';
-import { STATUS_TABS, matchesFilters } from './utils/permissionRequest';
+import { HISTORY_TABS, QUEUE_TABS, matchesFilters } from './utils/permissionRequest';
 import './PersetujuanIzin.css';
 
 const LEAVE_ANIMATION_MS = 320; // sinkron dengan --motion-slow (animasi baris keluar)
@@ -26,17 +25,26 @@ const EMPTY_MESSAGES = {
   REJECTED: 'Belum ada pengajuan yang ditolak.',
 };
 
+const HEADER_TEXT = {
+  queue: 'Verifikasi surat dokter dan bukti izin karyawan sebelum dicatat ke rekap absensi.',
+  history: 'Riwayat pengajuan sakit & izin yang sudah disetujui atau ditolak.',
+};
+
 /**
  * @param {object} approvals - hasil usePermissionApprovals() dari parent
  * @param {boolean} embedded - true = dipakai di dalam halaman lain (judul disembunyikan);
- *   false (dipakai PersetujuanIzinPage) = halaman penuh dengan judul sendiri
+ *   false = halaman penuh dengan judul sendiri
+ * @param {'queue'|'history'} mode - 'queue' (tab "Perlu Diproses"): hanya yang menunggu + aksi ACC/Tolak,
+ *   ringkasan, dan ACC massal. 'history' (tab "List Sakit & Izin"): Disetujui/Ditolak, hanya baca.
  */
-export default function PersetujuanIzin({ approvals, embedded = true }) {
+export default function PersetujuanIzin({ approvals, embedded = true, mode = 'queue' }) {
+  const isHistory = mode === 'history';
+  const statusTabs = isHistory ? HISTORY_TABS : QUEUE_TABS;
   const {
     rows, loading, loadError, stats, toast, processingIds, bulkRunning, decide, approveMany,
   } = approvals;
 
-  const [tab, setTab] = useState('PENDING');
+  const [tab, setTab] = useState(statusTabs[0].key);
   const [type, setType] = useState('ALL');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
@@ -106,25 +114,25 @@ export default function PersetujuanIzin({ approvals, embedded = true }) {
               Persetujuan Surat Sakit &amp; Izin
             </h1>
           )}
-          <p>Verifikasi surat dokter dan bukti izin karyawan sebelum dicatat ke rekap absensi.</p>
+          <p>{HEADER_TEXT[mode]}</p>
         </div>
-        <button
-          type="button"
-          className="pzn-bulk-btn"
-          disabled={bulkTargets.length === 0 || bulkRunning}
-          title={bulkTargets.length === 0 ? 'Tidak ada pengajuan menunggu yang berlampiran' : undefined}
-          onClick={() => setBulkOpen(true)}
-        >
-          <CheckCheck aria-hidden="true" />
-          ACC Semua Berlampiran
-        </button>
+        {!isHistory && (
+          <button
+            type="button"
+            className="pzn-bulk-btn"
+            disabled={bulkTargets.length === 0 || bulkRunning}
+            title={bulkTargets.length === 0 ? 'Tidak ada pengajuan menunggu yang berlampiran' : undefined}
+            onClick={() => setBulkOpen(true)}
+          >
+            <CheckCheck aria-hidden="true" />
+            ACC Semua Berlampiran
+          </button>
+        )}
       </header>
-
-      <ApprovalStatCards stats={stats} />
 
       <section className="pzn-panel">
         <div className="pzn-panel__bar">
-          <StatusTabs tabs={STATUS_TABS} activeKey={tab} pendingCount={stats.pending} onChange={handleTabChange} />
+          <StatusTabs tabs={statusTabs} activeKey={tab} pendingCount={stats.pending} onChange={handleTabChange} />
           <ApprovalToolbar type={type} query={query} onTypeChange={setType} onQueryChange={setQuery} />
         </div>
 
@@ -160,7 +168,7 @@ export default function PersetujuanIzin({ approvals, embedded = true }) {
         </div>
       </section>
 
-      {bulkOpen && (
+      {!isHistory && bulkOpen && (
         <BulkApproveModal
           count={bulkTargets.length}
           running={bulkRunning}

@@ -40,7 +40,7 @@ export function buildOvertimeCardModel(record, { isLatest = false } = {}) {
           { key: 'submitted', label: 'Diajukan', state: 'done' },
           ...record.approvals.map((step) => ({
             key: String(step.role || '').toLowerCase(),
-            label: `${({ LEADER: 'Review Leader', SPV: 'Review SPV', MANAGER: 'ACC Manager' })[step.role] || step.role}${step.employeeName ? `: ${step.employeeName}` : ''}`,
+            label: `${({ LEADER: 'Review Leader', SPV: 'Review SPV', MANAGER: 'ACC Manager', HRD: 'ACC HRD' })[step.role] || step.role}${step.employeeName ? `: ${step.employeeName}` : ''}`,
             state: step.action === 'APPROVED' ? 'done'
               : step.action === 'REJECTED' ? 'rejected'
                 : record.statusCode === 'PENDING' && record.approvals.find((item) => item.action === 'PENDING') === step ? 'current' : 'upcoming',
@@ -58,9 +58,11 @@ export function buildOvertimeCardModel(record, { isLatest = false } = {}) {
 // Leader -> SPV -> Manager. Hanya SATU langkah yang "current" (approver pertama yang belum
 // ACC); langkah sesudahnya "upcoming" sampai giliran tiba. Cuti baru APPROVED setelah
 // semuanya ACC, dan satu aksi tolak/kembalikan langsung mengakhiri proses.
-const CUTI_ROLE_ORDER = ['LEADER', 'SPV', 'MANAGER'];
-const CUTI_ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager' };
-const CUTI_STEP_LABEL = { LEADER: 'Review Leader', SPV: 'Review SPV', MANAGER: 'ACC Manager' };
+// [UBAH] + HRD: pengajuan baru hanya punya SATU tahap (ACC HRD). Leader/SPV/Manager tetap
+// dikenali agar pengajuan lama yang masih berjalan tampil benar.
+const CUTI_ROLE_ORDER = ['LEADER', 'SPV', 'MANAGER', 'HRD'];
+const CUTI_ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager', HRD: 'HRD' };
+const CUTI_STEP_LABEL = { LEADER: 'Review Leader', SPV: 'Review SPV', MANAGER: 'ACC Manager', HRD: 'ACC HRD' };
 const CUTI_STEP_STATE_BY_ACTION = {
   APPROVED: 'done',
   REJECTED: 'rejected',
@@ -80,7 +82,7 @@ const CUTI_OVERALL_BY_LABEL = {
 
 // Daftar langkah approval: dari log approval kalau sudah dimuat, kalau belum
 // (detail masih diambil) tebak dari peran pemohon.
-function resolveCutiApprovals(detail, isSupervisorRequester) {
+function resolveCutiApprovals(detail) {
   const logs = Array.isArray(detail?.approvalLogs) ? detail.approvalLogs : [];
   if (logs.length > 0) {
     return CUTI_ROLE_ORDER
@@ -90,15 +92,16 @@ function resolveCutiApprovals(detail, isSupervisorRequester) {
       })
       .filter(Boolean);
   }
-  const roles = isSupervisorRequester ? ['MANAGER'] : CUTI_ROLE_ORDER;
+  // [UBAH] Detail belum dimuat: pengajuan baru selalu satu tahap HRD.
+  const roles = ['HRD'];
   return roles.map((role) => ({ role, action: 'PENDING', note: '' }));
 }
 
 // `item`   = hasil mapMyLeave() (services/CutiService.js)
 // `detail` = respons mentah GET /api/cuti/{id}/detail (boleh null selagi dimuat)
-export function buildLeaveCardModel(item, detail, { isLatest = false, isSupervisorRequester = false } = {}) {
+export function buildLeaveCardModel(item, detail, { isLatest = false } = {}) {
   const overall = CUTI_OVERALL_BY_LABEL[item.status] || 'PENDING';
-  const approvals = resolveCutiApprovals(detail, isSupervisorRequester);
+  const approvals = resolveCutiApprovals(detail);
   // [BARU] Approver yang sedang ditunggu = yang pertama belum ACC/aksi (urutan Leader -> SPV -> Manager)
   const currentRole = approvals.find((approval) => !CUTI_STEP_STATE_BY_ACTION[approval.action])?.role || null;
 

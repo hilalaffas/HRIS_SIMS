@@ -40,8 +40,7 @@ const Pengajuan = lazyPage(() => import('../pages/Pengajuan/Pengajuan'));
 // [BARU] Halaman Laporan (khusus HRD_ADMIN) -- tab pertama: Laporan Absen
 const Laporan = lazyPage(() => import('../pages/Laporan/Laporan'));
 // [BARU] Halaman Persetujuan Sakit & Izin (khusus HRD_ADMIN)
-const PersetujuanIzinPage = lazyPage(() => import('../pages/PersetujuanIzin/PersetujuanIzinPage'));
-import { isManagerOrSpv, isSuperAdmin, isHrAdmin } from '../utils/roles';
+import { isSuperAdmin, isHrAdmin, isHrd, isApprover } from '../utils/roles';
 import KelolaDivisiShift from '../pages/Karyawan/KelolaDivisiShift';
 
 
@@ -99,7 +98,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
             path="/persetujuan"
             element={
               isSuperAdmin(user) ? <Persetujuan />
-                : isManagerOrSpv(user) ? <Navigate to="/ApproveLeave?tab=lembur" replace />
+                : isApprover(user) ? <Navigate to="/ApproveLeave?tab=lembur" replace />
                 : <Navigate to="/dashboard" replace />
             }
           />
@@ -108,7 +107,9 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
               Role lain dialihkan ke dashboard (backend juga menolak 403). */}
           <Route
             path="/persetujuan-izin"
-            element={isHrAdmin(user) ? <PersetujuanIzinPage /> : <Navigate to="/dashboard" replace />}
+            // [UBAH] Persetujuan Sakit & Izin pindah ke tab "Perlu Diproses" (pilihan "Sakit & Izin") di Pusat Persetujuan.
+            // URL lama tetap hidup supaya bookmark tidak patah.
+            element={<Navigate to={isHrd(user) ? '/ApproveLeave?queue=sakit' : '/dashboard'} replace />}
           />
 
           {/* Wadah Halaman Manajemen Karyawan */}

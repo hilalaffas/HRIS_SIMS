@@ -30,16 +30,11 @@ const toMinutes = (time) => {
   return hour * 60 + minute;
 };
 
-const createInitialForm = () => ({ overtimeDate: getTodayKey(), startTime: '', endTime: '', reason: '', leaderEmployeeId: '', spvEmployeeId: '', managerEmployeeId: '' });
+const createInitialForm = () => ({ overtimeDate: getTodayKey(), startTime: '', endTime: '', reason: '', hrdEmployeeId: '' });
 
-export default function useOvertimeForm(onSubmit, { requesterRole = 'MEMBER', requesterEmployeeId = null } = {}) {
-  const role = String(requesterRole || 'MEMBER').toUpperCase().replace(/^ROLE_/, '');
-  const isLeader = role === 'LEADER';
-  const isSpv = role === 'SPV' || role === 'SUPERVISOR';
-  const isManager = role === 'MANAGER';
-  const isLeadership = isLeader || isSpv || isManager;
+export default function useOvertimeForm(onSubmit) {
   const submitLockRef = useRef(false); // gerbang sinkron anti double-submit
-  const [form, setForm] = useState(() => ({ ...createInitialForm(), ...(isLeader ? { leaderEmployeeId: requesterEmployeeId ? String(requesterEmployeeId) : '' } : {}), ...(isSpv ? { spvEmployeeId: requesterEmployeeId ? String(requesterEmployeeId) : '' } : {}) }));
+  const [form, setForm] = useState(createInitialForm);
   const [fieldErrors, setFieldErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,9 +58,7 @@ export default function useOvertimeForm(onSubmit, { requesterRole = 'MEMBER', re
       { field: 'startTime', label: 'Jam mulai', value: form.startTime },
       { field: 'endTime', label: 'Jam selesai', value: form.endTime },
       { field: 'reason', label: 'Alasan / pekerjaan lembur', value: form.reason },
-      ...(!isLeadership ? [{ field: 'leaderEmployeeId', label: 'Leader', value: form.leaderEmployeeId }, { field: 'spvEmployeeId', label: 'SPV', value: form.spvEmployeeId }] : []),
-      ...(isLeader ? [{ field: 'spvEmployeeId', label: 'SPV', value: form.spvEmployeeId }] : []),
-      { field: 'managerEmployeeId', label: 'Manager', value: form.managerEmployeeId },
+      { field: 'hrdEmployeeId', label: 'Approver HRD', value: form.hrdEmployeeId },
     ]);
     if (!errors.overtimeDate && form.overtimeDate > getTodayKey()) {
       errors.overtimeDate = 'Tanggal lembur tidak boleh melebihi hari ini.';
@@ -93,11 +86,9 @@ export default function useOvertimeForm(onSubmit, { requesterRole = 'MEMBER', re
       await onSubmit({
         ...form,
         reason: form.reason.trim(),
-        leaderEmployeeId: isLeadership || !form.leaderEmployeeId ? null : Number(form.leaderEmployeeId),
-        spvEmployeeId: isSpv || !form.spvEmployeeId ? null : Number(form.spvEmployeeId),
-        managerEmployeeId: !form.managerEmployeeId ? null : Number(form.managerEmployeeId),
+        hrdEmployeeId: Number(form.hrdEmployeeId),
       });
-      setForm({ ...createInitialForm(), ...(isLeader ? { leaderEmployeeId: requesterEmployeeId ? String(requesterEmployeeId) : '' } : {}), ...(isSpv ? { spvEmployeeId: requesterEmployeeId ? String(requesterEmployeeId) : '' } : {}) });
+      setForm(createInitialForm());
       setFieldErrors({});
     } catch (error) {
       setErrorMessage(error?.message || 'Gagal mengirim pengajuan lembur.');

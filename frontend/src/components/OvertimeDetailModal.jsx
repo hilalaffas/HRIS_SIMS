@@ -22,7 +22,7 @@ import { formatDateLabel } from '../services/attendanceService';
 import { formatOvertimeDuration } from '../services/overtimeService';
 import '../pages/Cuti/approve/components/Form.css'; // gaya popup dipakai bersama dengan detail berkas cuti
 
-const ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager' };
+const ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager', HRD: 'HRD' }; // [UBAH] + HRD
 
 // Status keseluruhan pengajuan -> kode berkas yang dipahami buildLeaveProgressSteps()
 const BERKAS_BY_STATUS = { PENDING: 'PROSES', APPROVED: 'DISETUJUI', REJECTED: 'DITOLAK' };

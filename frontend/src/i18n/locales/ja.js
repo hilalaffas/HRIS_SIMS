@@ -74,6 +74,7 @@ const ja = {
   'notif.approverRole.LEADER': 'リーダー',
   'notif.approverRole.SPV': 'スーパーバイザー',
   'notif.approverRole.MANAGER': 'マネージャー',
+  'notif.approverRole.HRD': 'HRD',
   'notif.approverFormat': '{name} {role}',
   'notif.hint.process': 'クリックして対応する →',
   'notif.hint.detail': 'クリックして詳細を確認 →',
