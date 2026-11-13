@@ -71,6 +71,8 @@ export default function HolidayModal({ isOpen, onClose, onSubmit, initialData = 
       await onSubmit({ tanggal, nama, isNational });
       resetForm();
       onClose();
+    } catch (err) {
+      showToast(err.message || 'Gagal menyimpan hari libur.');
     } finally {
       setIsSubmitting(false);
     }

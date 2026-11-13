@@ -1,16 +1,19 @@
 // src/pages/Dashboard/DashboardHR.jsx
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import AnnouncementSection from './components/AnnouncementSection';
 import CalendarCard from './components/CalendarCard';
 import KaryawanCutiPanel from './components/KaryawanCutiPanel';
 import AnnouncementModal from './components/AnnouncementModal';
 import HolidayModal from './components/HolidayModal';
+import HolidayListPanel from './components/HolidayListPanel';
+import SidebarPanelTabs from './components/SidebarPanelTabs';
+import { SIDEBAR_PANEL } from '../../constants/dashboardPanels';
 import {
   addAnnouncement,
   updateAnnouncement,
   deleteAnnouncement,
 } from '../../services/announcementService';
-import { addHoliday } from '../../services/holidayService';
+import { addHoliday, updateHoliday, deleteHoliday } from '../../services/holidayService';
 import './Dashboard.css';
 import { formatSelectedDayLabel } from '../../utils/dateUtils'; // [BARU] label judul panel "Cuti Tanggal ..."
 
@@ -28,6 +31,8 @@ export default function DashboardHR({ user }) {
   // Bulan Ini" digantikan "Karyawan Cuti Bulan Ini" (highlight libur di
   // kotak kalender sendiri tidak berubah, itu internal CalendarCard).
   const [teamLeavesThisMonth, setTeamLeavesThisMonth] = useState([]);
+  const [holidaysThisMonth, setHolidaysThisMonth] = useState([]);
+  const [sidebarPanel, setSidebarPanel] = useState(SIDEBAR_PANEL.leaves);
 
   // Kunci untuk memaksa AnnouncementSection & CalendarCard refresh data setelah submit
   const [announcementRefreshKey, setAnnouncementRefreshKey] = useState(0);
@@ -35,6 +40,8 @@ export default function DashboardHR({ user }) {
 
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
+  // Hari libur yang sedang diedit. null berarti modal dalam mode "Tambah".
+  const [editingHoliday, setEditingHoliday] = useState(null);
 
   // Item yang sedang diedit. null berarti modal dalam mode "Tambah".
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
@@ -79,28 +86,50 @@ export default function DashboardHR({ user }) {
     setAnnouncementRefreshKey((k) => k + 1);
   };
 
-  // ----- Hari Libur (sudah tersambung ke backend /api/holidays) -----
-  // [UBAH] handleOpenEditHoliday & handleDeleteHoliday DIHAPUS -- satu-
-  // satunya pemicu keduanya adalah tombol Edit/Hapus di HariLiburPanel, dan
-  // panel itu sudah digantikan KaryawanCutiPanel. "Tambah Hari Libur" di
-  // atas kalender tetap ada & berfungsi seperti biasa.
+  // ----- Hari Libur (tersambung ke backend /api/holidays: tambah, ubah, hapus) -----
 
-  const handleOpenAddHoliday = () => {
+  const handleOpenAddHoliday = useCallback(() => {
+    setEditingHoliday(null);
     setIsHolidayModalOpen(true);
-  };
+  }, []);
+
+  const handleOpenEditHoliday = useCallback((holiday) => {
+    const month = String(holiday.month + 1).padStart(2, '0');
+    const day = String(holiday.day).padStart(2, '0');
+    setEditingHoliday({
+      id: holiday.holidayId,
+      tanggal: `${holiday.year}-${month}-${day}`,
+      nama: holiday.agenda,
+      isNational: holiday.isNational,
+    });
+    setIsHolidayModalOpen(true);
+  }, []);
 
   const handleCloseHolidayModal = () => {
     setIsHolidayModalOpen(false);
+    setEditingHoliday(null);
   };
 
+  // Error sengaja tidak ditangkap di sini: HolidayModal yang menampilkan toast
+  // dan menjaga modal tetap terbuka bila penyimpanan gagal.
   const handleSubmitHoliday = async ({ tanggal, nama, isNational }) => {
-    try {
+    if (editingHoliday) {
+      await updateHoliday(editingHoliday.id, { tanggal, nama, isNational });
+    } else {
       await addHoliday({ tanggal, nama, isNational });
+    }
+    setCalendarRefreshKey((k) => k + 1);
+  };
+
+  const handleDeleteHoliday = useCallback(async (holiday) => {
+    if (!window.confirm(`Hapus hari libur “${holiday.agenda}” pada tanggal ${holiday.day}?`)) return;
+    try {
+      await deleteHoliday(holiday.holidayId);
       setCalendarRefreshKey((k) => k + 1);
     } catch (err) {
-      alert(err.message || 'Gagal menyimpan hari libur.');
+      alert(err.message || 'Gagal menghapus hari libur.');
     }
-  };
+  }, []);
 
   return (
     <div className="dashboard">
@@ -132,17 +161,29 @@ export default function DashboardHR({ user }) {
         <CalendarCard
           selectedDate={selectedDate}
           onDateClick={setSelectedDate}
+          onHolidaysChange={setHolidaysThisMonth}
           onTeamLeavesChange={setTeamLeavesThisMonth}
           refreshTrigger={calendarRefreshKey}
         />
-        {/* [UBAH] Satu panel dgn 2 tab: "Bulan Ini" & tanggal yang
-            diklik di kalender (bukan 2 panel terpisah) -- lihat tab
-            switcher di dalam KaryawanCutiPanel.jsx. */}
-        <KaryawanCutiPanel
-          monthLeaves={teamLeavesThisMonth}
-          dayLeaves={selectedDate.teamLeaveList || []}
-          dayLabel={formatSelectedDayLabel(selectedDate)}
+        <SidebarPanelTabs
+          activePanel={sidebarPanel}
+          onChange={setSidebarPanel}
+          holidayCount={holidaysThisMonth.length}
         />
+        {sidebarPanel === SIDEBAR_PANEL.leaves ? (
+          <KaryawanCutiPanel
+            monthLeaves={teamLeavesThisMonth}
+            dayLeaves={selectedDate.teamLeaveList || []}
+            dayLabel={formatSelectedDayLabel(selectedDate)}
+          />
+        ) : (
+          <HolidayListPanel
+            holidays={holidaysThisMonth}
+            onAdd={handleOpenAddHoliday}
+            onEdit={handleOpenEditHoliday}
+            onDelete={handleDeleteHoliday}
+          />
+        )}
       </div>
 
       {/* Modal Pengumuman (Tambah / Edit) */}
@@ -153,11 +194,12 @@ export default function DashboardHR({ user }) {
         initialData={editingAnnouncement}
       />
 
-      {/* Modal Hari Libur (Tambah) */}
+      {/* Modal Hari Libur (Tambah / Edit) */}
       <HolidayModal
         isOpen={isHolidayModalOpen}
         onClose={handleCloseHolidayModal}
         onSubmit={handleSubmitHoliday}
+        initialData={editingHoliday}
       />
     </div>
   );
