@@ -27,6 +27,7 @@ import sys.hris.sims.attendance.dto.LeaveTodayResponse;
 import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
 import sys.hris.sims.attendance.entity.Attendance;
 import sys.hris.sims.attendance.repository.AttendanceRepository;
+import sys.hris.sims.common.service.HrdApproverPolicy;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.storage.CloudinaryService;
@@ -60,8 +61,6 @@ public class AttendanceService {
     // [UBAH] Batas lama izin sakit dalam satu pengajuan (HARI KERJA, Sabtu & Minggu tidak dihitung).
     private static final int MAX_SICK_DAYS = 30;
 
-    // [BARU] Authority Spring Security untuk role HRD_ADMIN (persetujuan sakit & izin).
-    private static final String ROLE_HRD_ADMIN = "ROLE_HRD_ADMIN";
 
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
@@ -308,14 +307,12 @@ public class AttendanceService {
         return toResponse(saved);
     }
 
-    // [BARU] Persetujuan Sakit & Izin hanya dipegang HRD_ADMIN (SecurityConfig sudah membatasi
-    // endpoint-nya; pengecekan ini lapisan kedua). Mengembalikan data karyawan HRD yang login
+    // [UBAH] Persetujuan Sakit & Izin dipegang HRD (HRD_ADMIN dan HRD_KARYAWAN). SecurityConfig sudah
+    // membatasi endpoint-nya; pengecekan ini lapisan kedua. Mengembalikan data karyawan HRD yang login
     // supaya pengajuan miliknya sendiri bisa dikecualikan.
     private Employee requireHrdApprover(Authentication authentication) {
-        boolean isHrdAdmin = authentication.getAuthorities().stream()
-                .anyMatch(authority -> ROLE_HRD_ADMIN.equals(authority.getAuthority()));
-        if (!isHrdAdmin) {
-            throw new IllegalStateException("Hanya HRD Admin yang berwenang memproses pengajuan sakit.");
+        if (!HrdApproverPolicy.hasHrdAuthority(authentication)) {
+            throw new IllegalStateException("Hanya HRD yang berwenang memproses pengajuan sakit.");
         }
         return resolveEmployee(authentication.getName());
     }
@@ -500,7 +497,7 @@ public class AttendanceService {
         if (!"SAKIT".equals(attendance.getReason())) {
             throw new IllegalArgumentException("Hanya pengajuan Sakit yang bisa diputuskan.");
         }
-        // [UBAH] Hanya HRD_ADMIN, dan tidak boleh memutuskan pengajuan sakit miliknya sendiri.
+        // [UBAH] Hanya HRD, dan tidak boleh memutuskan pengajuan sakit miliknya sendiri.
         Employee approver = requireHrdApprover(authentication);
         if (approver.getEmployeeId().equals(attendance.getEmployee().getEmployeeId())) {
             throw new IllegalStateException("Anda tidak dapat memproses pengajuan sakit milik sendiri.");

@@ -4,59 +4,40 @@ import './LeaveForm.css';
 import { dropdownErrorClass } from '../../../../utils/validation';
 
 /**
- * Bagian: PILIH ALUR APPROVAL CUTI (Leader / SPV / Manager)
- * Nama prop mengikuti field payload backend (leaderEmployeeId/spvEmployeeId/managerEmployeeId)
- * supaya tidak perlu mapping ulang saat submit ke API.
+ * Bagian: PILIH APPROVER HRD
+ * Semua pengajuan cuti hanya boleh disetujui rekan ber-role HRD (HRD Admin / HRD Karyawan),
+ * jadi form cukup satu dropdown. Pemohon sendiri tidak ikut di daftar (disaring backend).
+ * Nama prop mengikuti field payload backend (hrdEmployeeId).
  */
 const ApprovalFlowSection = ({
-  leaderEmployeeId, setLeaderEmployeeId,
-  spvEmployeeId, setSpvEmployeeId,
-  managerEmployeeId, setManagerEmployeeId,
-  approvers = { LEADER: [], SPV: [], MANAGER: [] },
-  isSupervisor = false,
+  hrdEmployeeId, setHrdEmployeeId,
+  approvers = { HRD: [] },
   invalidField = '',
 }) => {
+  const hrdOptions = approvers.HRD || [];
+  const hasOptions = hrdOptions.length > 0;
   return (
-    <div className="form-group form-group--approval">{/* [UBAH] + form-group--approval (hook layout compact) */}
-      <label className="form-label">PILIH ALUR APPROVAL CUTI *</label>
-      <div className="approval-row">
+    <div className="form-group form-group--approval">
+      <label className="form-label" htmlFor="leave-hrd-approver">PILIH APPROVER CUTI (HRD) *</label>
+      <div className="approval-row approval-row--single">
         <div className="approval-col">
-          <span className="badge-approval leader">Leader</span>
+          <span className="badge-approval hrd">HRD</span>
           <Dropdown
-            name="leaderEmployeeId"
-            value={isSupervisor ? '' : leaderEmployeeId}
-            onChange={(e) => setLeaderEmployeeId(e.target.value)}
-            options={approvers.LEADER.map(person => ({ value: person.employeeId, label: person.fullName }))}
-            placeholder={isSupervisor ? 'None' : 'Pilih...'}
-            disabled={isSupervisor}
-            className={dropdownErrorClass(invalidField === 'leaderEmployeeId')}
+            id="leave-hrd-approver"
+            name="hrdEmployeeId"
+            value={hrdEmployeeId}
+            onChange={(e) => setHrdEmployeeId(e.target.value)}
+            options={hrdOptions.map((person) => ({ value: person.employeeId, label: person.fullName }))}
+            placeholder={hasOptions ? 'Pilih...' : 'Belum ada HRD tersedia'}
+            disabled={!hasOptions}
+            className={dropdownErrorClass(invalidField === 'hrdEmployeeId')}
           />
         </div>
-
-        <div className="approval-col">
-          <span className="badge-approval spv">SPV</span>
-          <Dropdown
-            name="spvEmployeeId"
-            value={isSupervisor ? '' : spvEmployeeId}
-            onChange={(e) => setSpvEmployeeId(e.target.value)}
-            options={approvers.SPV.map(person => ({ value: person.employeeId, label: person.fullName }))}
-            placeholder={isSupervisor ? 'None' : 'Pilih...'}
-            disabled={isSupervisor}
-            className={dropdownErrorClass(invalidField === 'spvEmployeeId')}
-          />
-        </div>
-
-        <div className="approval-col">
-          <span className="badge-approval manager">Manager</span>
-          <Dropdown
-            name="managerEmployeeId"
-            value={managerEmployeeId}
-            onChange={(e) => setManagerEmployeeId(e.target.value)}
-            options={approvers.MANAGER.map(person => ({ value: person.employeeId, label: person.fullName }))}
-            placeholder="Pilih..."
-            className={dropdownErrorClass(invalidField === 'managerEmployeeId')}
-          />
-        </div>
+        <p className={`approval-hint${hasOptions ? '' : ' approval-hint--warning'}`} role={hasOptions ? undefined : 'alert'}>
+          {hasOptions
+            ? 'Pengajuan cuti hanya dapat disetujui oleh rekan ber-role HRD.'
+            : 'Belum ada HRD lain yang dapat dipilih. Hubungi Super Admin.'}
+        </p>
       </div>
     </div>
   );

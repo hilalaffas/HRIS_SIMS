@@ -5,8 +5,9 @@
 //
 // Contoh pemakaian:
 // const steps = buildLeaveProgressSteps(detailData); // [{ key, label, name, caption, state }]
-const ROLE_ORDER = ['LEADER', 'SPV', 'MANAGER'];
-const ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager' };
+// [UBAH] + HRD (pengajuan baru satu tahap). LEADER/SPV/MANAGER untuk pengajuan lama.
+const ROLE_ORDER = ['LEADER', 'SPV', 'MANAGER', 'HRD'];
+const ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager', HRD: 'HRD' };
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
 // Status berkas (id/en) -> kode umum
@@ -47,7 +48,7 @@ export function buildLeaveProgressSteps(detail) {
       .filter((step) => step.name && step.name !== '-');
     source = assigned.length > 0
       ? assigned
-      : ROLE_ORDER.map((role) => ({ role, name: '', action: overall === 'APPROVED' ? 'APPROVED' : 'PENDING', actedAt: null }));
+      : ['HRD'].map((role) => ({ role, name: '', action: overall === 'APPROVED' ? 'APPROVED' : 'PENDING', actedAt: null }));
   }
 
   // Berkas ditolak/dikembalikan tetapi log belum memuatnya: tandai tahap pertama yang belum ACC.

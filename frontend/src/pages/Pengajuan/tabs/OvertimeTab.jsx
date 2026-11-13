@@ -16,19 +16,16 @@ import { inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
 import Dropdown from '../../../components/Dropdown';
 import '../../Cuti/applycuti/components/LeaveForm.css';
 
-export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectStatus, onAction, approvers = { LEADER: [], SPV: [], MANAGER: [] }, requesterRole = 'MEMBER', requesterEmployeeId = null }) {
-  const role = String(requesterRole || 'MEMBER').toUpperCase().replace(/^ROLE_/, '');
-  const isLeader = role === 'LEADER';
-  const isSpv = role === 'SPV' || role === 'SUPERVISOR';
-  const isManager = role === 'MANAGER';
-  const { form, fieldErrors, ...overtime } = useOvertimeForm(onSubmit, { requesterRole: role, requesterEmployeeId });
+export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectStatus, onAction, approvers = { HRD: [] } }) {
+  const { form, fieldErrors, ...overtime } = useOvertimeForm(onSubmit);
+  const hrdOptions = approvers.HRD || [];
 
   return (
     <>
       <PengajuanFormCard
         icon={BriefcaseBusiness}
         title="Formulir Pengajuan Lembur"
-        subtitle="Pengajuan lembur diproses secara berjenjang oleh atasan Anda."
+        subtitle="Pengajuan lembur diproses oleh HRD."
         onSubmit={overtime.handleSubmit}
         isSubmitting={overtime.isSubmitting}
         errorMessage={overtime.errorMessage}
@@ -84,47 +81,27 @@ export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectS
         </div>
 
         <div className="form-group form-group--approval">
-          <label className="form-label">PILIH ALUR APPROVAL LEMBUR *</label>
-          <div className="approval-row">
+          <label className="form-label" htmlFor="pgj-overtime-hrd">PILIH APPROVER LEMBUR (HRD) *</label>
+          <div className="approval-row approval-row--single">
             <div className="approval-col">
-              <span className="badge-approval leader">Leader</span>
+              <span className="badge-approval hrd">HRD</span>
               <Dropdown
-                name="leaderEmployeeId"
-                value={form.leaderEmployeeId}
+                id="pgj-overtime-hrd"
+                name="hrdEmployeeId"
+                value={form.hrdEmployeeId}
                 onChange={overtime.updateField}
-                options={(approvers.LEADER || []).map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
-                placeholder={isLeader ? 'Anda (Leader)' : isSpv || isManager ? 'Tidak diperlukan' : 'Pilih Leader...'}
-                disabled={isLeader || isSpv || isManager || overtime.isSubmitting}
-                className={dropdownErrorClass(Boolean(fieldErrors.leaderEmployeeId))}
+                options={hrdOptions.map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
+                placeholder={hrdOptions.length > 0 ? 'Pilih...' : 'Belum ada HRD tersedia'}
+                disabled={hrdOptions.length === 0 || overtime.isSubmitting}
+                className={dropdownErrorClass(Boolean(fieldErrors.hrdEmployeeId))}
               />
-              <FieldError message={fieldErrors.leaderEmployeeId} />
+              <FieldError message={fieldErrors.hrdEmployeeId} />
             </div>
-            <div className="approval-col">
-              <span className="badge-approval spv">SPV</span>
-              <Dropdown
-                name="spvEmployeeId"
-                value={form.spvEmployeeId}
-                onChange={overtime.updateField}
-                options={(approvers.SPV || []).map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
-                placeholder={isSpv ? 'Anda (SPV)' : isManager ? 'Tidak diperlukan' : 'Pilih SPV...'}
-                disabled={isSpv || isManager || overtime.isSubmitting}
-                className={dropdownErrorClass(Boolean(fieldErrors.spvEmployeeId))}
-              />
-              <FieldError message={fieldErrors.spvEmployeeId} />
-            </div>
-            <div className="approval-col">
-              <span className="badge-approval manager">Manager</span>
-              <Dropdown
-                name="managerEmployeeId"
-                value={form.managerEmployeeId}
-                onChange={overtime.updateField}
-                options={(approvers.MANAGER || []).map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
-                placeholder="Pilih Manager..."
-                disabled={overtime.isSubmitting}
-                className={dropdownErrorClass(Boolean(fieldErrors.managerEmployeeId))}
-              />
-              <FieldError message={fieldErrors.managerEmployeeId} />
-            </div>
+            <p className={`approval-hint${hrdOptions.length > 0 ? '' : ' approval-hint--warning'}`}>
+              {hrdOptions.length > 0
+                ? 'Pengajuan lembur hanya dapat disetujui oleh rekan ber-role HRD.'
+                : 'Belum ada HRD lain yang dapat dipilih. Hubungi Super Admin.'}
+            </p>
           </div>
         </div>
 

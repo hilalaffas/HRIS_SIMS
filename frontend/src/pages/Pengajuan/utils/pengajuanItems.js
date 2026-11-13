@@ -98,9 +98,9 @@ const getLeaveTypeName = (jenisCuti) => (
   (jenisCuti && typeof jenisCuti === 'object' ? jenisCuti.name : jenisCuti) || 'Cuti'
 );
 
-function toLeaveItem(record, leaveDetails, isSupervisorRequester) {
+function toLeaveItem(record, leaveDetails) {
   const detail = leaveDetails[record.id] || null;
-  const model = buildLeaveCardModel(record, detail, { isSupervisorRequester });
+  const model = buildLeaveCardModel(record, detail);
   const statusCode = LEAVE_STATUS_CODE[record.status] || 'PENDING';
   return {
     key: `leave-${record.id}`,
@@ -207,9 +207,9 @@ function toLateItem(record) {
 const isSickRecord = (record) => record.reasonCode === 'SAKIT';
 const isLateRecord = (record) => record.actionCode === 'IZIN';
 
-export function buildPengajuanItems({ leaveHistory = [], leaveDetails = {}, overtimeRecords = [], attendanceRecords = [], shiftSwapRequests = [], isSupervisorRequester = false }) {
+export function buildPengajuanItems({ leaveHistory = [], leaveDetails = {}, overtimeRecords = [], attendanceRecords = [], shiftSwapRequests = [] }) {
   const items = [
-    ...leaveHistory.map((record) => toLeaveItem(record, leaveDetails, isSupervisorRequester)),
+    ...leaveHistory.map((record) => toLeaveItem(record, leaveDetails)),
     ...overtimeRecords.map(toOvertimeItem),
     ...shiftSwapRequests.map(toShiftSwapItem), // [BARU]
     ...attendanceRecords.filter(isSickRecord).map(toSickItem),
@@ -241,10 +241,10 @@ export const filterItemsByType = (items, typeKey) => {
 // Kartu alur persetujuan hanya untuk pengajuan yang butuh ACC atasan.
 export const getCardItems = (items) => items.filter((item) => item.requiresApproval);
 
-export function buildCardModelForItem(item, { leaveDetails = {}, isLatest = false, isSupervisorRequester = false } = {}) {
+export function buildCardModelForItem(item, { leaveDetails = {}, isLatest = false } = {}) {
   if (!item) return null;
   if (item.kind === REQUEST_KIND.LEAVE) {
-    return buildLeaveCardModel(item.source, leaveDetails[item.refId] || null, { isLatest, isSupervisorRequester });
+    return buildLeaveCardModel(item.source, leaveDetails[item.refId] || null, { isLatest });
   }
   if (item.kind === REQUEST_KIND.OVERTIME) return buildOvertimeCardModel(item.source, { isLatest });
   if (item.kind === REQUEST_KIND.SICK) return buildSickCardModel(item.source, { isLatest });

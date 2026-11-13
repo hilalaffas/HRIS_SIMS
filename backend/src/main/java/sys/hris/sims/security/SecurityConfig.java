@@ -36,14 +36,21 @@ public class SecurityConfig {
             "DEV"
     };
 
+    // [UBAH] + HRD_KARYAWAN: approver pengajuan baru adalah HRD (HRD_ADMIN & HRD_KARYAWAN).
+    // LEADER/SPV/MANAGER dipertahankan HANYA agar pengajuan lama yang masih PENDING bisa selesai;
+    // siapa yang boleh memutuskan tetap dicek per pengajuan di service (harus ditugaskan sebagai approver).
     private static final String[] APPROVER_ROLES = {
             "LEADER",
             "SPV",
             "MANAGER",
             "HRD_ADMIN",
+            "HRD_KARYAWAN",
             "SUPER_ADMIN",
             "DEV"
     };
+
+    // [BARU] Role HRD -- dipakai persetujuan Sakit & Izin.
+    private static final String[] HRD_ROLES = {"HRD_ADMIN", "HRD_KARYAWAN"};
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                            RestAuthenticationEntryPoint restAuthenticationEntryPoint,
@@ -158,6 +165,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/me")
                         .authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/approvers")
+                        .authenticated()
+                        // [BARU] Daftar approver HRD untuk form Cuti, Lembur, dan Koreksi Terlambat.
+                        .requestMatchers(HttpMethod.GET, "/api/karyawan/hrd-approvers")
                         .authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/karyawan/cover-options")
                         .authenticated()
@@ -318,6 +328,7 @@ public class SecurityConfig {
                         .hasAnyRole(
                                 "ADMIN",
                                 "HRD_ADMIN",
+                                "HRD_KARYAWAN", // [BARU] approver HRD
                                 "SUPER_ADMIN",
                                 "DEV",
                                 "LEADER",
@@ -395,14 +406,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi")
                         .hasAnyRole(ADMIN_ROLES)
 
-                        // [UBAH] Persetujuan Sakit & Izin -- HANYA HRD_ADMIN (halaman
+                        // [UBAH] Persetujuan Sakit & Izin -- HANYA HRD: HRD_ADMIN & HRD_KARYAWAN (halaman
                         // "Persetujuan Sakit & Izin" di menu HRD). Sebelumnya Leader/SPV/Manager.
                         // Pemilik pengajuan tidak boleh memprosesnya sendiri (dicek di AttendanceService).
                         .requestMatchers(HttpMethod.GET, "/api/absensi/approvals/sakit")
-                        .hasRole("HRD_ADMIN")
+                        .hasAnyRole(HRD_ROLES)
 
                         .requestMatchers(HttpMethod.PUT, "/api/absensi/*/approval")
-                        .hasRole("HRD_ADMIN")
+                        .hasAnyRole(HRD_ROLES)
 
                         // [BARU] Koreksi keterlambatan absensi. Pengajuan & riwayat milik sendiri
                         // terbuka untuk semua user login; daftar & keputusan persetujuan hanya
@@ -414,11 +425,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi/corrections/me")
                         .authenticated()
 
+                        // [UBAH] + HRD_ADMIN & HRD_KARYAWAN (approver pengajuan baru). LEADER/SPV/MANAGER
+                        // dipertahankan untuk pengajuan lama yang masih PENDING.
                         .requestMatchers(HttpMethod.GET, "/api/absensi/corrections/approvals")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN", "DEV")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "HRD_ADMIN", "HRD_KARYAWAN", "SUPER_ADMIN", "DEV")
 
                         .requestMatchers(HttpMethod.PUT, "/api/absensi/corrections/*/approval")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "HRD_ADMIN", "HRD_KARYAWAN")
 
                         // ==========================
                         // PENGAJUAN LEMBUR (Overtime)
@@ -439,11 +452,13 @@ public class SecurityConfig {
 
                         // [UBAH] Persetujuan Lembur -- Leader, SPV, Manager, SuperAdmin.
                         // Cakupan per divisi dicek di OvertimeService.
+                        // [UBAH] + HRD_ADMIN & HRD_KARYAWAN (approver pengajuan baru). LEADER/SPV/MANAGER
+                        // dipertahankan untuk pengajuan lama yang masih PENDING.
                         .requestMatchers(HttpMethod.GET, "/api/lembur/approvals")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN", "DEV")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "HRD_ADMIN", "HRD_KARYAWAN", "SUPER_ADMIN", "DEV")
 
                         .requestMatchers(HttpMethod.PUT, "/api/lembur/*/approval")
-                        .hasAnyRole("LEADER", "SPV", "MANAGER", "SUPER_ADMIN", "DEV")
+                        .hasAnyRole("LEADER", "SPV", "MANAGER", "HRD_ADMIN", "HRD_KARYAWAN", "SUPER_ADMIN", "DEV")
 
                         // [BARU] Pemohon melengkapi nama approver (Leader/SPV/Manager) untuk
                         // pengajuannya sendiri. Kepemilikan dicek di OvertimeService.updateApprovers().

@@ -91,6 +91,10 @@ export const getApprovers = (role, employeeId) => {
   return api.get(`/api/karyawan/approvers?${query}`);
 };
 
+// [BARU] Daftar HRD (HRD_Admin & HRD_Karyawan) aktif yang boleh dipilih sebagai approver.
+// Pemohon sendiri sudah dikeluarkan oleh backend.
+export const getHrdApprovers = () => api.get('/api/karyawan/hrd-approvers');
+
 export const getCoverOptions = (employeeId) => {
   const query = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : '';
   return api.get(`/api/karyawan/cover-options${query}`);
@@ -111,9 +115,8 @@ export async function submitCuti(payload) {
     // memvalidasi & mengabaikan nilai ini untuk jenis cuti selain
     // setengah hari.
     session: payload.session || null,
-    leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
-    spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
-    managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
+    // [UBAH] Pengajuan baru hanya memakai satu approver HRD (leader/spv/manager tidak dikirim lagi).
+    hrdEmployeeId: payload.hrdEmployeeId ? Number(payload.hrdEmployeeId) : null,
   };
   return api.post('/api/cuti', body);
 }
@@ -144,9 +147,8 @@ export const resubmitCuti = (id, payload) => api.put(`/api/cuti/${id}/resubmit`,
   coveredBy: payload.coveredBy || payload.coverOleh,
   // [BARU] Sesi Cuti setengah hari, sama seperti submitCuti().
   session: payload.session || null,
-  leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
-  spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
-  managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
+  // [UBAH] Satu approver HRD (leader/spv/manager tidak dikirim lagi).
+  hrdEmployeeId: payload.hrdEmployeeId ? Number(payload.hrdEmployeeId) : null,
 });
 
 export function mapMyLeave(item) {
@@ -287,7 +289,8 @@ export async function getTeamLeaveByYear(year, config = {}) {
 
 // [BARU] Status tiap approver (Leader/SPV/Manager) dari log approval backend, dipakai stepper progres
 // di popup detail cuti. Role yang tidak ada di log (mis. pemohon level atasan) otomatis dilewati.
-const APPROVER_ROLES = ['LEADER', 'SPV', 'MANAGER'];
+// [UBAH] + HRD (pengajuan baru). LEADER/SPV/MANAGER tetap untuk pengajuan lama yang masih berjalan.
+const APPROVER_ROLES = ['LEADER', 'SPV', 'MANAGER', 'HRD'];
 const buildApprovalSteps = (logs, chain) => APPROVER_ROLES.map((role) => {
   const log = logs.find((entry) => String(entry.approverRole || '').toUpperCase() === role);
   if (!log) return null;
@@ -319,6 +322,8 @@ export function mapApproval(item, employeeLookup = {}) {
     leader: getApproverFromLog('LEADER') || leaderAssigned || leaderById || '-',
     spv: getApproverFromLog('SPV') || spvAssigned || spvById || '-',
     manager: getApproverFromLog('MANAGER') || managerAssigned || managerById || '-',
+    // [BARU] Approver HRD (pengajuan baru) -- dari log, atau field hrdName di respons detail.
+    hrd: getApproverFromLog('HRD') || item.hrdName || employeeLookup[item.hrdEmployeeId] || '-',
   };
 
   const submissionLog = item.submittedAt ? [{
@@ -329,7 +334,7 @@ export function mapApproval(item, employeeLookup = {}) {
   }] : [];
 
   const overallStatus = String(item.overallStatus || item.status?.statusName || item.status || 'PENDING').toUpperCase();
-  const approvalOrder = ['LEADER', 'SPV', 'MANAGER'];
+  const approvalOrder = ['LEADER', 'SPV', 'MANAGER', 'HRD']; // [UBAH] + HRD
   const pendingStep = approvalOrder.find((role) => {
     const step = logs.find((log) => String(log.approverRole || '').toUpperCase() === role);
     return step && String(step.action || '').toUpperCase() !== 'APPROVED';
@@ -338,7 +343,7 @@ export function mapApproval(item, employeeLookup = {}) {
     ? 'Cuti sudah di-ACC'
     : overallStatus === 'REJECTED' ? 'Cuti ditolak'
     : overallStatus === 'RETURNED' ? 'Menunggu revisi pemohon'
-    : pendingStep ? `Menunggu persetujuan ${pendingStep === 'SPV' ? 'SPV' : pendingStep === 'MANAGER' ? 'Manager' : 'Leader'}`
+    : pendingStep ? `Menunggu persetujuan ${pendingStep === 'SPV' ? 'SPV' : pendingStep === 'MANAGER' ? 'Manager' : pendingStep === 'HRD' ? 'HRD' : 'Leader'}`
     : 'Dalam proses persetujuan';
 
   return {
@@ -369,6 +374,7 @@ export function mapApproval(item, employeeLookup = {}) {
     statusBerkas: statusCode(item.overallStatus || item.status?.statusName || item.status),
     approvalChain: chain,
     approvalSteps: buildApprovalSteps(logs, chain), // [BARU]
+    hrdEmployeeId: item.hrdEmployeeId ?? null, // [BARU] prefill dropdown saat edit/ajukan ulang
     submittedAt: item.submittedAt || null, 
     riwayatLog: [
       ...submissionLog,
@@ -408,6 +414,8 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     leader: getApproverFromLog('LEADER') || leaderAssigned || leaderById || '-',
     spv: getApproverFromLog('SPV') || spvAssigned || spvById || '-',
     manager: getApproverFromLog('MANAGER') || managerAssigned || managerById || '-',
+    // [BARU] Approver HRD (pengajuan baru) -- dari log, atau field hrdName di respons detail.
+    hrd: getApproverFromLog('HRD') || item.hrdName || employeeLookup[item.hrdEmployeeId] || '-',
   };
 
   return {
@@ -441,6 +449,7 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     dicoverOleh: item.coveredBy || '-',
     approvalChain: chain,
     approvalSteps: buildApprovalSteps(logs, chain), // [BARU]
+    hrdEmployeeId: item.hrdEmployeeId ?? null, // [BARU] prefill dropdown saat edit/ajukan ulang
     riwayatLog: hasBeenReviewed ? [{
       nama: item.reviewedBy?.fullName || 'Sistem',
       waktu: logDateText(item.approvedAt || item.returnedAt),

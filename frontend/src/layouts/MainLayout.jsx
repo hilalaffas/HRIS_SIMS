@@ -64,8 +64,11 @@ export default function MainLayout({ onLogout, user }) {
   // Menu sidebar sekarang menyesuaikan role user (karyawan/manager/hr/super admin)
   const menuItems = getMenuItems(user);
   const role = String(user?.role || user?.jabatan || '').trim().toUpperCase().replace(/^ROLE_/, '');
-  const canApproveLeave = ['LEADER', 'SPV', 'MANAGER'].includes(role);
-  const canApprovePermission = role === 'HRD_ADMIN'; // [BARU] persetujuan sakit & izin hanya HRD_ADMIN
+  // [UBAH] Approver pengajuan baru = HRD (HRD_ADMIN & HRD_KARYAWAN). Leader/SPV/Manager tetap
+  // dihitung agar pengajuan lama yang masih PENDING tidak terlewat.
+  const isHrdRole = role === 'HRD_ADMIN' || role === 'HRD_KARYAWAN';
+  const canApproveLeave = isHrdRole || ['LEADER', 'SPV', 'MANAGER'].includes(role);
+  const canApprovePermission = isHrdRole; // persetujuan sakit & izin: HRD_ADMIN & HRD_KARYAWAN
 
   useEffect(() => {
     if (!canApproveLeave) {
@@ -91,9 +94,9 @@ export default function MainLayout({ onLogout, user }) {
     return () => stopPolling();
   }, [canApproveLeave]);
 
-  // [BARU] Badge "Persetujuan Sakit & Izin" di sidebar HRD_ADMIN: jumlah pengajuan sakit berstatus PENDING.
+  // [UBAH] Jumlah pengajuan sakit & izin berstatus PENDING (HRD), ditambahkan ke badge menu Persetujuan.
   useEffect(() => {
-    // Role selain HRD_ADMIN tidak memanggil API; hitungan tetap 0 (nilai awal state).
+    // Role selain HRD tidak memanggil API; hitungan tetap 0 (nilai awal state).
     if (!canApprovePermission) return undefined;
 
     const refreshPermissionCount = async () => {
@@ -124,7 +127,8 @@ export default function MainLayout({ onLogout, user }) {
         user={user} 
         onLogout={onLogout} 
         menuItems={menuItems} 
-        notificationCounts={{ approval: approvalCount, permissionApproval: permissionCount }} 
+        // [UBAH] Sakit & Izin kini ada di Pusat Persetujuan, jadi badge menu Persetujuan = cuti + sakit/izin.
+        notificationCounts={{ approval: approvalCount + permissionCount }} 
         onNavigate={() => setIsSidebarOpen(false)} />
       </aside>
 

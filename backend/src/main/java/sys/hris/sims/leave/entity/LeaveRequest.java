@@ -110,6 +110,11 @@ public class LeaveRequest {
     @Transient
     private Long managerEmployeeId;
 
+    // [BARU] Approver HRD yang dipilih pemohon (satu nama). Menggantikan leader/spv/manager
+    // untuk pengajuan baru; tiga field di atas dipertahankan hanya agar klien lama tidak error.
+    @Transient
+    private Long hrdEmployeeId;
+
     @PrePersist
     public void prePersist() {
         this.submittedAt = LocalDateTime.now();

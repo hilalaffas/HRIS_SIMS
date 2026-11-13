@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.common.service.HrdApproverPolicy;
 import sys.hris.sims.divisi.entity.Divisi;
 import sys.hris.sims.divisi.repository.DivisiRepository;
 import sys.hris.sims.employee.dto.UpdateEmployeeRequest;
@@ -51,6 +53,7 @@ public class EmployeeController {
 
     private final DivisiRepository divisiRepository;
     private final CloudinaryService cloudinaryService;
+    private final HrdApproverPolicy hrdApproverPolicy; // [BARU] daftar approver HRD
 
     // helper method ambil userId dari token
     private Long getCurrentUserId(Authentication authentication) {
@@ -109,6 +112,24 @@ public class EmployeeController {
                 ))
                 .toList();
 
+        return ResponseEntity.ok(response);
+    }
+
+    // [BARU] Daftar HRD (HRD_ADMIN & HRD_KARYAWAN) aktif yang boleh dipilih sebagai approver
+    // Cuti, Lembur, dan Koreksi Terlambat. Lintas divisi; pemohon sendiri tidak ikut.
+    @GetMapping("/hrd-approvers")
+    public ResponseEntity<List<Map<String, Object>>> getHrdApprovers(Authentication authentication) {
+        Employee requester = karyawanService.getKaryawanByUsername(authentication.getName());
+        List<Map<String, Object>> response = hrdApproverPolicy.findSelectableApprovers(requester).stream()
+                .map(employee -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("employeeId", employee.getEmployeeId());
+                    item.put("fullName", employee.getFullName());
+                    item.put("roleName", employee.getUser().getRoleId().getRoleName());
+                    item.put("namaDivisi", employee.getDivisi() == null ? null : employee.getDivisi().getNamaDivisi());
+                    return item;
+                })
+                .toList();
         return ResponseEntity.ok(response);
     }
 

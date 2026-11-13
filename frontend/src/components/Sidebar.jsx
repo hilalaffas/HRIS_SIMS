@@ -19,7 +19,8 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   // Definisi kondisi role-role khusus
   const isSuperAdmin = userRole.includes('super_admin');
   const isHRAdmin = userRole.includes('hrd_admin') || userRole.includes('admin') && !isSuperAdmin;
-  const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader') ||userRole.includes('hrd_karyawan');
+  // [UBAH] + hrd_admin: HRD_ADMIN juga melihat menu Persetujuan (Cuti, Lembur, Terlambat, Sakit & Izin).
+  const isManager = userRole.includes('manager') || userRole.includes('spv') || userRole.includes('leader') || userRole.includes('hrd_karyawan') || userRole.includes('hrd_admin');
 
   // 1. DAFTAR MENU BERDASARKAN HAK AKSES (MENYESUAIKAN GAMBAR)
   
@@ -62,14 +63,6 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
 
   // Menu Khusus HRD (Gambar 3)
   const hrMenuItems = [
-    // [BARU] Persetujuan Sakit & Izin -- hanya HRD_ADMIN (bukan role "admin" lain), badge = jumlah menunggu
-    ...(userRole === 'hrd_admin' ? [{
-      path: '/persetujuan-izin',
-      name: t('sidebar.permissionApprovals'),
-      icon: 'fa-solid fa-file-circle-check',
-      badgeStyle: { backgroundColor: '#ff4d4d' },
-      count: notificationCounts?.permissionApproval ?? 0,
-    }] : []),
     { path: '/karyawan', name: t('sidebar.manageEmployees'), icon: 'fa-solid fa-users' },
     { path: '/kelola-divisi-shift', name: t('sidebar.manageDivisionShift'), icon: 'fa-solid fa-layer-group' },
     // [BARU] Menu Laporan hanya untuk role HRD_ADMIN (bukan role "admin" lain)

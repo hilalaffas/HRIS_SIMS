@@ -13,8 +13,9 @@ export async function getMyOvertime(config = {}) {
 }
 
 // POST pengajuan lembur. Total jam & status dihitung backend, jadi tidak dikirim.
-export async function submitOvertime({ overtimeDate, startTime, endTime, reason, leaderEmployeeId, spvEmployeeId, managerEmployeeId }) {
-  return api.post('/api/lembur/me', { overtimeDate, startTime, endTime, reason, leaderEmployeeId, spvEmployeeId, managerEmployeeId });
+// [UBAH] Satu approver HRD (hrdEmployeeId) menggantikan leader/spv/manager.
+export async function submitOvertime({ overtimeDate, startTime, endTime, reason, hrdEmployeeId }) {
+  return api.post('/api/lembur/me', { overtimeDate, startTime, endTime, reason, hrdEmployeeId });
 }
 
 // [BARU] Tambah Lembur saat check-out (setelah 17:00).

@@ -69,6 +69,7 @@ const id = {
   'notif.approverRole.LEADER': 'Leader',
   'notif.approverRole.SPV': 'SPV',
   'notif.approverRole.MANAGER': 'Manager',
+  'notif.approverRole.HRD': 'HRD',
   'notif.approverFormat': '{role} {name}',
   'notif.hint.process': 'Klik untuk memproses →',
   'notif.hint.detail': 'Klik untuk lihat detail →',

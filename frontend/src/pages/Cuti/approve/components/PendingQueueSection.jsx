@@ -4,9 +4,9 @@
 //   - Cuti             -> ApproveSection (ACC / Revisi / Tolak + alasan, tidak berubah)
 //   - Lembur           -> ApprovalTable (Setujui / Tolak), detail = OvertimeDetailModal
 //   - Koreksi Absensi  -> ApprovalTable (Setujui / Tolak), detail = AttendanceCorrectionDetailModal
-// Hanya Leader/SPV/Manager yang punya antrean Lembur & Koreksi (props `overtime` /
-// `corrections` bernilai null untuk role lain), jadi role lain tetap melihat daftar cuti saja
-// tanpa pilihan jenis.
+//   - Sakit & Izin     -> PersetujuanIzin (verifikasi surat + bukti, ACC massal) -- hanya HRD
+// Props `overtime` / `corrections` / `permission` bernilai null untuk role yang tidak berhak,
+// jadi role tersebut tidak melihat pilihan jenisnya (role tanpa antrean lain melihat daftar cuti saja).
 //
 // ACC berjenjang: baris antrean sudah difilter `isActionableRow` (utils/approvalQueue.js),
 // yaitu hanya yang gilirannya tiba menurut backend. Komponen ini tidak menentukan urutan.
@@ -14,14 +14,16 @@
 // Contoh pemakaian:
 // <PendingQueueSection user={user} leaveData={pending} onRequestAction={fn} onOpenLeaveDetail={fn}
 //   overtime={overtime} overtimeRows={rows} corrections={corrections} correctionRows={rows}
+//   permission={permission} initialQueue="sakit"
 //   onOpenOvertimeDetail={fn} onOpenCorrectionDetail={fn} />
 import React, { useMemo, useState } from 'react';
 import ApproveSection from './ApproveSection';
 import ApprovalTable from '../../../../components/ApprovalTable';
+import PersetujuanIzin from '../../../PersetujuanIzin/PersetujuanIzin'; // [BARU] isi pilihan "Sakit & Izin"
 import Toast from '../../../../components/Toast';
 import './PendingQueueSection.css';
 
-const QUEUE = { LEAVE: 'cuti', OVERTIME: 'lembur', CORRECTION: 'koreksi' };
+const QUEUE = { LEAVE: 'cuti', OVERTIME: 'lembur', CORRECTION: 'koreksi', PERMISSION: 'sakit' };
 
 export default function PendingQueueSection({
   user,
@@ -34,8 +36,10 @@ export default function PendingQueueSection({
   correctionRows = [],
   onOpenOvertimeDetail,
   onOpenCorrectionDetail, // [BARU] buka popup Informasi Detail Berkas Koreksi Absensi
+  permission = null, // [BARU] hasil usePermissionApprovals() -- hanya untuk HRD
+  initialQueue = QUEUE.LEAVE, // [BARU] pilihan awal (mis. dari ?queue=sakit)
 }) {
-  const [activeQueue, setActiveQueue] = useState(QUEUE.LEAVE);
+  const [activeQueue, setActiveQueue] = useState(() => (initialQueue === QUEUE.PERMISSION && !permission ? QUEUE.LEAVE : initialQueue));
 
   // Pilihan jenis hanya tampil kalau role punya lebih dari satu antrean.
   const queues = useMemo(
@@ -43,8 +47,9 @@ export default function PendingQueueSection({
       { key: QUEUE.LEAVE, label: 'Cuti', count: leaveData.length },
       ...(overtime ? [{ key: QUEUE.OVERTIME, label: 'Lembur', count: overtimeRows.length }] : []),
       ...(corrections ? [{ key: QUEUE.CORRECTION, label: 'Koreksi Absensi', count: correctionRows.length }] : []),
+      ...(permission ? [{ key: QUEUE.PERMISSION, label: 'Sakit & Izin', count: permission.stats.pending }] : []),
     ],
-    [leaveData.length, overtime, overtimeRows.length, corrections, correctionRows.length],
+    [leaveData.length, overtime, overtimeRows.length, corrections, correctionRows.length, permission],
   );
 
   return (
@@ -102,6 +107,10 @@ export default function PendingQueueSection({
           />
           <Toast show={!!corrections.toast} message={corrections.toast?.message} type={corrections.toast?.type} />
         </div>
+      )}
+
+      {activeQueue === QUEUE.PERMISSION && permission && (
+        <PersetujuanIzin approvals={permission} embedded mode="queue" />
       )}
     </div>
   );
