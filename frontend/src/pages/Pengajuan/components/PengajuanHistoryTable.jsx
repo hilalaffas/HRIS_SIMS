@@ -142,7 +142,7 @@ export default function PengajuanHistoryTable({
               const needsOvertimeApprovers = item.kind === 'OVERTIME' && item.statusCode === 'PENDING'
                 && !(item.source?.approvals || []).length;
               const typeLabel = item.typeLabel || kind.label; // [BARU]
-              const pill = isUpload ? UPLOAD_ACTION_PILL : (needsOvertimeApprovers ? COMPLETE_APPROVAL_PILL : (ACTION_PILL[item.statusCode] || DEFAULT_ACTION_PILL));
+              const pill = isUpload ? { ...UPLOAD_ACTION_PILL, label: item.documentStatus?.code === 'REJECTED' ? 'UPLOAD ULANG' : UPLOAD_ACTION_PILL.label } : (needsOvertimeApprovers ? COMPLETE_APPROVAL_PILL : (ACTION_PILL[item.statusCode] || DEFAULT_ACTION_PILL));
               const ActionIcon = pill.Icon;
               const actionLabel = isUpload ? 'Upload surat dokter susulan' : (needsOvertimeApprovers
                 ? 'Lengkapi nama Leader, SPV, dan Manager untuk pengajuan lembur lama'
@@ -158,6 +158,12 @@ export default function PengajuanHistoryTable({
                   <td className="pgj-detail" title={item.detailText}>{item.detailText}</td>
                   <td>
                     <StatusCell item={item} isSelected={selectedKey === item.key} onSelectStatus={onSelectStatus} />
+                    {item.documentStatus && <div className="pgj-document-status">
+                      <span className={`pgj-status pgj-status--${item.documentStatus.tone}`}>{item.documentStatus.label}</span>
+                      {item.documentStatus.deadline && <small>Batas upload: {item.documentStatus.deadline.split('-').reverse().join('/')} · 23.59 WIB</small>}
+                      {item.documentStatus.periodLabel && <small>Periode surat: {item.documentStatus.periodLabel}</small>}
+                      {item.documentStatus.note && <small>{item.documentStatus.note}</small>}
+                    </div>}
                   </td>
                   <td className="pgj-right">
                     <button

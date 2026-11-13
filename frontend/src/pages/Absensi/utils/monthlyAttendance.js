@@ -1,3 +1,4 @@
+import { isSickDocumentExpired } from '../../../utils/sickDocumentDeadline';
 // src/pages/Absensi/utils/monthlyAttendance.js
 //
 // [BARU] Logika pembentukan baris "Jadwal & Log Absensi Bulanan". Dipisah dari
@@ -12,6 +13,7 @@
 // bulan sebelumnya s/d tanggal 20 bulan periode. Contoh: periode
 // "September 2026" = 21 Agustus 2026 - 20 September 2026. Periode
 // diidentifikasi lewat bulan AKHIR-nya ({ year, month }, month = 0-11).
+import { shiftBounds } from './activeWorkShift';
 import { normalWorkMinutes } from './normalWorkDuration';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { formatDateLabel, parseLocalDate } from '../../../services/attendanceService'; // [UBAH] + parseLocalDate
@@ -20,7 +22,6 @@ import { formatOvertimeDuration, getOvertimeStatus } from '../../../services/ove
 export const SHIFT_LABEL = 'Shift Normal (08:00 - 17:00)';
 // [BARU] "Shift Normal (08:00 - 17:00)" -> "08:00 - 17:00" (dipakai popup absen)
 export const SHIFT_HOURS = SHIFT_LABEL.match(/\((.+)\)/)?.[1] ?? SHIFT_LABEL;
-const SHIFT_START_MINUTES = 8 * 60; // dasar hitung "Terlambat N Menit"
 
 const pad = (value) => String(value).padStart(2, '0');
 
@@ -84,8 +85,15 @@ function addDays(date, amount) {
 // Tanggal (Date) tiap HARI KERJA lanjutan izin sakit setelah hari pengajuan,
 // beserta nomor harinya ("Hari ke-N").
 function getSickFollowUpDays(record) {
-  const start = parseLocalDate(record.attendanceDate);
+  const start = parseLocalDate(record.sickStartDate || record.attendanceDate);
   const days = [];
+  if (record.sickEndDate) {
+    const end = parseLocalDate(record.sickEndDate);
+    for (let cursor = addDays(start, 1), dayNumber = 2; cursor <= end; cursor = addDays(cursor, 1), dayNumber++) {
+      days.push({ date: cursor, dayNumber });
+    }
+    return days;
+  }
   let counted = isWeekend(start) ? 0 : 1;
   let cursor = start;
   while (counted < (record.leaveDays || 1)) {
@@ -99,7 +107,8 @@ function getSickFollowUpDays(record) {
 }
 
 // Tanggal terakhir (YYYY-MM-DD) izin sakit.
-function getSickEndKey(record) {
+export function getSickEndKey(record) {
+  if (record.sickEndDate) return record.sickEndDate;
   const followUps = getSickFollowUpDays(record);
   return followUps.length > 0 ? dateKey(followUps[followUps.length - 1].date) : record.attendanceDate;
 }
@@ -114,15 +123,24 @@ export function isRejectedSick(record) {
 // Absensi untuk status hari ini). Hari pengajuan: perilaku lama (MASUK dengan
 // reason bukan ABSEN). Hari lanjutan izin sakit multi-hari: hanya Sakit yang
 // belum ditolak dan hanya hari kerja.
-export function getSickRecordCovering(records, key) {
+export function isAttendanceWorkday(key, schedules = [], divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026) {
+  if (String(divisionType).toUpperCase() === 'SHIFTING') {
+    return Boolean(schedules.find((schedule) => schedule.date === key)?.shiftName);
+  }
+  return !isWeekend(parseLocalDate(key)) && !holidaysByDate[key];
+}
+
+export function getSickRecordCovering(records, key, scheduleData = {}) {
+  if (!isAttendanceWorkday(key, scheduleData.schedules, scheduleData.divisionType, scheduleData.holidaysByDate)) return undefined;
   return records.find((record) => {
-    if (record.actionCode !== 'MASUK') return false;
-    if (record.attendanceDate === key) return record.reasonCode !== 'ABSEN' && !isRejectedSick(record);
+    if (record.actionCode !== 'MASUK' || isSickDocumentExpired(record)) return false;
+    const startKey = record.reasonCode === 'SAKIT' ? record.sickStartDate || record.attendanceDate : record.attendanceDate;
+    if (startKey === key) return record.reasonCode !== 'ABSEN' && !isRejectedSick(record);
     return record.reasonCode === 'SAKIT'
       && !isRejectedSick(record)
-      && key > record.attendanceDate
+      && key > startKey
       && key <= getSickEndKey(record)
-      && !isWeekend(parseLocalDate(key));
+      && (Boolean(record.sickEndDate) || !isWeekend(parseLocalDate(key)));
   });
 }
 
@@ -138,11 +156,13 @@ export function resolveSickTodayStatus(record) {
 function groupByDate(records) {
   const byDate = new Map();
   records.forEach((record) => {
-    const key = record.attendanceDate;
+    const key = record.reasonCode === 'SAKIT' && record.actionCode === 'MASUK'
+      ? record.sickStartDate || record.attendanceDate : record.attendanceDate;
     if (!key) return;
     const entry = byDate.get(key) || { checkIn: null, checkOut: null, lateNotice: null, rejectedSick: null };
     if (record.actionCode === 'SAKIT' && record.reasonCode === 'SAKIT') {
-      if (!isRejectedSick(record)) entry.sickNotice = record;
+      if (isRejectedSick(record)) entry.rejectedSick = record;
+      else entry.sickNotice = record;
     } else if (isRejectedSick(record)) {
       entry.rejectedSick = record; // [BARU] riwayat saja -- bukan check-in
     } else if (record.actionCode === 'IZIN') {
@@ -199,7 +219,7 @@ function blankRow(key) {
 }
 
 function getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate = LOCAL_HOLIDAYS_2026) {
-  const schedule = schedulesByDate[key];
+  const schedule = String(divisionType).toUpperCase() === 'SHIFTING' ? schedulesByDate[key] : null;
   if (schedule) return schedule.shiftName
     ? `${schedule.shiftName} (${schedule.startTime?.slice(0, 5) || '--:--'} - ${schedule.endTime?.slice(0, 5) || '--:--'})`
     : 'Libur';
@@ -212,11 +232,16 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   const isToday = key === todayKey;
   // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
   const lateSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
-  const noticeSuffix = `${lateSuffix}${rejectedSick ? ' · Izin sakit ditolak' : ''}`;
+  const rejectionText = rejectedSick ? `Izin sakit ditolak${rejectedSick.reviewNote ? ` · Alasan Penolakan HRD: ${rejectedSick.reviewNote}` : ''}` : '';
+  const noticeSuffix = `${lateSuffix}${rejectionText ? ` · ${rejectionText}` : ''}`;
   const scheduleLabel = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
   const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: scheduleLabel, lateMinutes: 0, noteDetail: '' }; // [UBAH] + lateMinutes, noteDetail (jadwal shift dari teman)
-  const sickDocument = sickNotice?.documentRequired
-    ? { recordId: sickNotice.id, url: sickNotice.documentUrl, reviewStatus: sickNotice.documentReviewStatus }
+  const documentRecord = sickNotice || rejectedSick;
+  const sickDocument = documentRecord?.documentRequired
+    ? { recordId: documentRecord.id, url: documentRecord.documentUrl, expired: documentRecord.documentDeadlineExpired,
+      reviewStatus: rejectedSick ? 'REJECTED' : documentRecord.documentReviewStatus,
+      reviewNote: rejectedSick ? documentRecord.reviewNote : documentRecord.documentReviewNote,
+      startDate: documentRecord.documentStartDate, endDate: documentRecord.documentEndDate }
     : null;
   const empty = { checkIn: null, checkOut: null, duration: null, durationMinutes: null };
 
@@ -226,16 +251,16 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     return {
       ...base, ...empty,
       status: 'DITOLAK', tone: 'ditolak',
-      note: `${rejectedSick.note || 'Sakit'}${lateSuffix}`,
-      photoUrl: '', mapsUrl: '', proofLabel: '', document: null,
+      note: `${rejectedSick.note || 'Sakit'}${rejectedSick.reviewNote ? ` · Alasan Penolakan HRD: ${rejectedSick.reviewNote}` : ''}${lateSuffix}`,
+      photoUrl: '', mapsUrl: '', proofLabel: '', document: sickDocument,
     };
   }
 
   // Hari kerja tanpa catatan apa pun
   if (!checkIn && !checkOut) {
     return isToday
-      ? { ...base, ...empty, status: 'BELUM ABSEN', tone: 'belum', note: `Menunggu Absen Masuk${noticeSuffix}`, photoUrl: '', mapsUrl: '', proofLabel: '' }
-      : { ...base, ...empty, status: 'TANPA KETERANGAN', tone: 'alpha', note: `Tanpa Keterangan (Alpha)${noticeSuffix}`, photoUrl: '', mapsUrl: '', proofLabel: '' };
+      ? { ...base, ...empty, status: 'BELUM ABSEN', tone: 'belum', note: `Menunggu Absen Masuk${noticeSuffix}`, photoUrl: '', mapsUrl: '', proofLabel: '', document: sickDocument }
+      : { ...base, ...empty, status: 'TANPA KETERANGAN', tone: 'alpha', note: `Tanpa Keterangan (Alpha)${noticeSuffix}`, photoUrl: '', mapsUrl: '', proofLabel: '', document: sickDocument };
   }
 
   const proof = { photoUrl: checkIn?.photoUrl || '', mapsUrl: checkIn?.mapsUrl || '', locationName: checkIn?.locationName || '', locationType: checkIn?.locationType || '', officeDistanceMeters: checkIn?.officeDistanceMeters ?? null, officeLocationStatus: checkIn?.officeLocationStatus || '' }; // geofence kantor
@@ -246,6 +271,12 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     // [UBAH] Status baris mengikuti persetujuan: SAKIT hanya SETELAH disetujui; selama
     // menunggu tampil "MENUNGGU APPROVAL". (Yang ditolak tidak sampai sini -- lihat
     // rejectedSick di groupByDate.)
+    if (isSick && checkIn.documentDeadlineExpired) return {
+      ...base, ...empty, status: key > todayKey ? 'BELUM ABSEN' : 'TANPA KETERANGAN', tone: key > todayKey ? 'belum' : 'alpha',
+      note: 'Batas upload surat dokter terlewati',
+      photoUrl: '', mapsUrl: '', proofLabel: '',
+      document: { recordId: checkIn.id, url: checkIn.documentUrl, expired: true },
+    };
     const isPending = isSick && checkIn.approvalStatus === 'PENDING';
     // [BARU] Izin sakit multi-hari: "Hari ke-2 dari 3".
     const dayInfo = isSick && checkIn.leaveDays > 1 ? ` · Hari ke-${checkIn.dayNumber || 1} dari ${checkIn.leaveDays}` : '';
@@ -259,13 +290,15 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
       proofLabel: 'Foto Bukti',
       // [BARU] Surat dokter: link bila sudah diunggah, tombol upload susulan bila belum.
       document: isSick && checkIn.documentRequired
-        ? { recordId: checkIn.id, url: checkIn.documentUrl, reviewStatus: checkIn.documentReviewStatus } // [UBAH] + reviewStatus
+        ? { recordId: checkIn.id, url: checkIn.documentUrl, expired: checkIn.documentDeadlineExpired, reviewStatus: checkIn.documentReviewStatus, reviewNote: checkIn.documentReviewNote, startDate: checkIn.documentStartDate, endDate: checkIn.documentEndDate } // [UBAH] + reviewStatus
         : null,
     };
   }
 
-  const inMinutes = checkIn?.recordedAt ? checkIn.recordedAt.getHours() * 60 + checkIn.recordedAt.getMinutes() : null;
-  const lateMinutes = inMinutes != null ? Math.max(0, inMinutes - SHIFT_START_MINUTES) : 0;
+  const publishedShift = schedulesByDate[key];
+  const shifting = String(divisionType).toUpperCase() === 'SHIFTING';
+  const bounds = shiftBounds(key, shifting ? publishedShift?.startTime : '08:00', shifting ? publishedShift?.endTime : '17:00');
+  const lateMinutes = checkIn?.recordedAt && bounds ? Math.max(0, Math.floor((checkIn.recordedAt - bounds.startsAt) / 60000)) : 0;
   const isLate = Boolean(checkIn?.isLate);
 
   let note = 'Bekerja Normal';
@@ -288,11 +321,11 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     !checkOut ? (isToday ? 'Sedang bekerja' : 'Tidak absen pulang') : '',
     checkOut?.note || '',
     lateNotice ? `Izin terlambat: ${lateNotice.note}` : '',
-    rejectedSick ? 'Izin sakit ditolak' : '',
+    rejectionText,
   ].filter(Boolean).join(' · ');
 
-  const minutesWorked = normalWorkMinutes(
-    checkIn?.recordedAt, checkOut?.recordedAt, key, schedulesByDate[key],
+  const minutesWorked = shifting && !bounds ? null : normalWorkMinutes(
+    checkIn?.recordedAt, checkOut?.recordedAt, key, shifting ? publishedShift : null,
   );
 
   return {
@@ -318,7 +351,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
 }
 
 export function buildMonthlyRows(records, year, month, now = new Date(), schedules = [], divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026) {
-  const byDate = groupByDate(records);
+  const byDate = groupByDate(records.map((record) => ({ ...record, documentDeadlineExpired: isSickDocumentExpired(record, now) })));
   const schedulesByDate = Object.fromEntries((schedules || []).map((item) => [item.date, item]));
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayKey = dateKey(today);
@@ -332,7 +365,15 @@ export function buildMonthlyRows(records, year, month, now = new Date(), schedul
   const rows = [];
   for (let date = new Date(start); date <= end; date = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)) {
     const key = dateKey(date);
-    const entry = byDate.get(key);
+    let entry = byDate.get(key);
+    // The certificate covers calendar dates; attendance only counts scheduled workdays.
+    if (entry && !isAttendanceWorkday(key, schedules, divisionType, holidaysByDate)) {
+      entry = { ...entry };
+      if (entry.checkIn?.reasonCode === 'SAKIT') entry.checkIn = null;
+      entry.sickNotice = null;
+      entry.rejectedSick = null;
+      if (!entry.checkIn && !entry.checkOut && !entry.lateNotice) entry = null;
+    }
 
     if (date > today && !entry) {
       const future = blankRow(key);
@@ -369,7 +410,15 @@ export function buildMonthlyRows(records, year, month, now = new Date(), schedul
         continue;
       }
     }
-    rows.push(resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey, schedulesByDate, divisionType, holidaysByDate));
+    const row = resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey, schedulesByDate, divisionType, holidaysByDate);
+    // An early-checkout sick notice is subject to the same certificate obligation;
+    // retain recorded timestamps and duration as evidence while changing its status.
+    if (entry?.sickNotice?.documentDeadlineExpired && date <= today) {
+      row.status = 'TANPA KETERANGAN'; row.tone = 'alpha';
+      row.note = 'Batas upload surat dokter terlewati';
+      row.noteDetail = row.note;
+    }
+    rows.push(row);
   }
 
   return rows.sort((a, b) => (a.date < b.date ? 1 : -1));

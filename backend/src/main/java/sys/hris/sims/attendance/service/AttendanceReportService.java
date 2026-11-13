@@ -39,7 +39,7 @@ public class AttendanceReportService {
 
     // Izin sakit multi-hari yang DIMULAI sebelum rentang masih bisa menutup hari di
     // dalam rentang, jadi absensi diambil mundur sebanyak ini.
-    private static final long SICK_LOOKBACK_DAYS = 31;
+    private static final long SICK_LOOKBACK_DAYS = 45;
 
     private final EmployeeRepository employeeRepository;
     private final AttendanceRepository attendanceRepository;
@@ -47,6 +47,7 @@ public class AttendanceReportService {
     private final OvertimeRepository overtimeRepository;
     private final LeaveRepository leaveRepository;
     private final AttendanceService attendanceService;
+    private final sys.hris.sims.attendance.report.ReportRevisionRepository revisionRepository;
     private final ReportScopeService reportScopeService; // [BARU] sembunyikan superadmin & akun dev dari laporan
 
     @Transactional(readOnly = true)
@@ -89,9 +90,26 @@ public class AttendanceReportService {
                         leave -> leave.getEmployee().getEmployeeId(),
                         Collectors.mapping(this::toLeaveEntry, Collectors.toList())));
 
+        var revisions = revisionRepository.findByEmployeeIdInAndDateBetweenOrderByIdDesc(employeeIds, from, to)
+                .stream().collect(Collectors.groupingBy(sys.hris.sims.attendance.report.ReportRevision::getEmployeeId));
+        // Options come from the current division configuration, not employee assignments.
+        // Removed/replaced division shifts are excluded even if old master rows remain.
+        Map<Long, List<ScheduleEntryResponse>> options = new java.util.HashMap<>();
+        for (Employee employee : employees) {
+            Divisi division = employee.getDivisi();
+            if (division == null || options.containsKey(division.getId())) continue;
+            options.put(division.getId(), division.getShifts().stream()
+                    .filter(shift -> shift.getScheduleShiftId() != null)
+                    .sorted(java.util.Comparator.comparingInt(shift -> shift.getDisplayOrder() == null ? 0 : shift.getDisplayOrder()))
+                    .map(shift -> new ScheduleEntryResponse(null, null, shift.getScheduleShiftId(), shift.getName(),
+                            java.time.LocalTime.parse(shift.getStartTime()), java.time.LocalTime.parse(shift.getEndTime())))
+                    .toList());
+        }
         List<EmployeeReport> reports = employees.stream()
                 .map(employee -> toEmployeeReport(employee,
-                        attendancesByEmployee, schedulesByEmployee, overtimesByEmployee, leavesByEmployee))
+                        attendancesByEmployee, schedulesByEmployee, overtimesByEmployee, leavesByEmployee,
+                        revisions.getOrDefault(employee.getEmployeeId(), List.of()),
+                        employee.getDivisi() == null ? List.of() : options.getOrDefault(employee.getDivisi().getId(), List.of()).stream().distinct().toList()))
                 .toList();
 
         return new AttendanceReportResponse(from, to, reports);
@@ -113,7 +131,9 @@ public class AttendanceReportService {
                                             Map<Long, List<AttendanceResponse>> attendances,
                                             Map<Long, List<ScheduleEntryResponse>> schedules,
                                             Map<Long, List<OvertimeResponse>> overtimes,
-                                            Map<Long, List<LeaveEntry>> leaves) {
+                                            Map<Long, List<LeaveEntry>> leaves,
+                                            List<sys.hris.sims.attendance.report.ReportRevision> revisions,
+                                            List<ScheduleEntryResponse> shiftOptions) {
         Long employeeId = employee.getEmployeeId();
         Divisi division = employee.getDivisi();
         return new EmployeeReport(
@@ -128,7 +148,7 @@ public class AttendanceReportService {
                 attendances.getOrDefault(employeeId, List.of()),
                 schedules.getOrDefault(employeeId, List.of()),
                 overtimes.getOrDefault(employeeId, List.of()),
-                leaves.getOrDefault(employeeId, List.of()));
+                leaves.getOrDefault(employeeId, List.of()), revisions, shiftOptions);
     }
 
     // Alasan & catatan cuti (teks bebas) sengaja TIDAK disertakan.

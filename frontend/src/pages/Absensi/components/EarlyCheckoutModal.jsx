@@ -15,7 +15,7 @@ import { EARLY_REASON_MAX_LENGTH, MIN_WORK_HOURS } from '../utils/earlyCheckout'
 import EarlyCheckoutRequest from './EarlyCheckoutRequest';
 import './EarlyCheckoutModal.css';
 
-export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
+export default function EarlyCheckoutModal({ onConfirm, onCancel, requiredWorkHours = MIN_WORK_HOURS }) {
   const [category, setCategory] = useState('');
   const [requestOpen, setRequestOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -79,7 +79,7 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel }) {
           <AlertTriangle className="earlyOut__icon" size={26} aria-hidden="true" />
           <div>
             <h2 id="earlyOutTitle">Peringatan Pulang Cepat</h2>
-            <p>Durasi kerja Anda belum memenuhi {MIN_WORK_HOURS} jam kerja.</p>
+            <p>Durasi kerja Anda belum memenuhi {requiredWorkHours} jam kerja sesuai jadwal.</p>
           </div>
         </header>
 

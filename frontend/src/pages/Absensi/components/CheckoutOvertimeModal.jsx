@@ -19,6 +19,7 @@ import './CheckoutOvertimeModal.css';
 export default function CheckoutOvertimeModal({
   step,
   windowState,
+  workEndLabel,
   submitting,
   onCheckout,
   onAddOvertime,
@@ -84,6 +85,7 @@ export default function CheckoutOvertimeModal({
           ) : (
             <CheckoutChoicePanel
               windowState={windowState}
+              workEndLabel={workEndLabel}
               onCheckout={onCheckout}
               onAddOvertime={onAddOvertime}
               onRetry={onRetry}

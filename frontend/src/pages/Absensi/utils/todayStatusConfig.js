@@ -22,7 +22,7 @@ export const TODAY_STATUS_CONFIG = {
   checkedIn: {
     badge: 'Sedang Bekerja', badgeTone: 'success',
     pillLabel: 'Sudah Absen Masuk', pillTone: 'success', PillIcon: CheckCircle2,
-    buttonLabel: 'Absen Keluar (Selfie)', buttonIcon: LogOut, action: 'Keluar',
+    buttonLabel: 'Absen Keluar', buttonIcon: LogOut, action: 'Keluar',
   },
   done: {
     badge: 'Absensi Selesai', badgeTone: 'success',

@@ -3,7 +3,7 @@
 // [BARU] Menentukan rentang tanggal laporan dari mode yang dipilih HRD:
 //   PERIOD -> satu periode tutup buku (21 s/d 20)
 //   TODAY  -> hari ini saja
-//   CUSTOM -> tanggal bebas (Dari - Sampai), maksimal 62 hari dan tidak melewati hari ini
+//   CUSTOM -> tanggal bebas (Dari - Sampai), maksimal 62 hari; tanggal mendatang untuk ganti shift
 // Semua tanggal berupa kunci lokal 'YYYY-MM-DD' (tanpa konversi UTC).
 // Fungsi murni (tanpa React) supaya mudah dites.
 //
@@ -15,7 +15,7 @@ import { dateKey, formatPeriodLabel } from '../../Absensi/utils/monthlyAttendanc
 import { DEFAULT_CUSTOM_RANGE_DAYS, MAX_CUSTOM_RANGE_DAYS, RANGE_MODES } from '../config/laporanConfig';
 import { getReportDateRange } from './attendanceReportBuilder';
 
-export const getTodayKey = (now = new Date()) => dateKey(now);
+export const getTodayKey = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 
 export function shiftDateKey(key, days) {
   const date = parseLocalDate(key);
@@ -36,16 +36,14 @@ export function createDefaultCustomRange(now = new Date()) {
   return { from: shiftDateKey(to, -(DEFAULT_CUSTOM_RANGE_DAYS - 1)), to };
 }
 
-// Batas atas "Sampai": hari ini, dan paling jauh MAX hari setelah "Dari".
-export function getCustomMaxEnd(from, now = new Date()) {
-  const today = getTodayKey(now);
-  const limit = shiftDateKey(from, MAX_CUSTOM_RANGE_DAYS);
-  return limit < today ? limit : today;
+// Batas rentang tetap MAX hari, termasuk tanggal mendatang.
+export function getCustomMaxEnd(from) {
+  return shiftDateKey(from, MAX_CUSTOM_RANGE_DAYS);
 }
 
 // Saat "Dari" diganti: "Sampai" dipertahankan bila masih sah, kalau tidak ikut "Dari".
-export function applyCustomFrom(range, from, now = new Date()) {
-  const isStillValid = range.to >= from && range.to <= getCustomMaxEnd(from, now);
+export function applyCustomFrom(range, from) {
+  const isStillValid = range.to >= from && range.to <= getCustomMaxEnd(from);
   return { from, to: isStillValid ? range.to : from };
 }
 

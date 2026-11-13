@@ -155,3 +155,65 @@
 .lpr-photo-modal h3 { margin: 0; font-size: 15px; }
 .lpr-photo-modal button { display: grid; place-items: center; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
 .lpr-photo-modal > img { display: block; width: 100%; max-height: calc(100dvh - 110px); object-fit: contain; }
+
+.lpr-detail-page { min-width: 0; }
+.lpr-detail-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); background: var(--color-surface); font: inherit; font-size: 13px; cursor: pointer; }
+.lpr-detail-back:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.lpr-report-detail { width: 100%; max-height: none; box-shadow: none; animation: none; }
+.lpr-table-region { min-width: 0; }
+.lpr-table-top-scroll { overflow-x: auto; overflow-y: hidden; height: 18px; scrollbar-width: auto; }
+.lpr-table-top-scroll > div { height: 1px; }
+.lpr-report-detail .lpr-table-viewport { flex: none; max-height: 65vh; max-height: 65dvh; overflow: auto; scrollbar-width: auto; }
+.lpr-table-viewport .lpr-daily-table thead th { z-index: 1; }
+.lpr-table-viewport:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+@media (max-width: 640px) {
+  .lpr-report-detail .lpr-modal-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lpr-report-detail .lpr-modal-header { padding: 16px; }
+}
+
+.lpr-edit-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 145px; }
+.lpr-edit-actions button { padding: 4px 8px; border: 1px solid var(--color-border); border-radius: 7px; background: var(--color-info-bg); color: var(--dk-text-blue, #1d4ed8); font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.lpr-edit-tag { display: block; margin-top: 4px; color: var(--color-text-secondary); font-size: 10px; }
+.lpr-edit-dialog { position: fixed; inset: 0; margin: auto; box-sizing: border-box; width: min(480px, calc(100vw - 40px)); max-width: none; max-height: 92dvh; border: 0; }
+.lpr-edit-dialog::backdrop { background: rgba(19, 34, 56, .6); }
+.lpr-edit-history { min-width: 0; }
+.lpr-edit-history h3 { margin: 0 0 12px; font-size: 14px; }
+.lpr-edit-history article { padding: 12px 0; border-top: 1px solid var(--color-border); }
+.lpr-edit-history time { display: block; margin: 5px 0 10px; color: var(--color-text-secondary); font-size: 11px; }
+.lpr-edit-history table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.lpr-edit-history th { position: static !important; }
+.lpr-edit-history td, .lpr-edit-history p { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.lpr-edit-history :is(th, td) { padding: 8px; border: 1px solid var(--color-border); text-align: left; vertical-align: top; font-size: 12px; }
+.lpr-edit-history th { background: var(--color-bg-page); }
+.lpr-edit-history article p { margin-bottom: 0; font-size: 12px; line-height: 1.5; }
+
+.lpr-history-dialog { width: min(1100px, calc(100vw - 48px)); }
+@media (max-width: 640px) {
+  .lpr-history-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 18px 14px; }
+  .lpr-history-dialog .lpr-edit-history :is(th, td) { padding: 7px 5px; font-size: 11px; }
+}
+
+.lpr-history-mobile { display: none; }
+@media (max-width: 640px) {
+  .lpr-history-dialog { padding: 16px; }
+  .lpr-history-dialog .abs-permission-header { position: sticky; top: -16px; z-index: 2; padding-top: 12px; background: var(--color-surface); }
+  .lpr-history-dialog .abs-permission-header > button { min-width: 40px; min-height: 40px; }
+  .lpr-history-dialog .abs-permission-hint { font-size: 12px; overflow-wrap: anywhere; }
+  .lpr-history-dialog .lpr-history-desktop { display: none; }
+  .lpr-history-mobile { display: grid; gap: 12px; }
+  .lpr-history-dialog .lpr-edit-history article { padding: 16px 0; }
+  .lpr-history-dialog .lpr-edit-history article > strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+  .lpr-history-dialog .lpr-edit-history time { margin: 6px 0 14px; font-size: 12px; line-height: 1.5; }
+  .lpr-history-change { min-width: 0; border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; }
+  .lpr-history-dialog .lpr-history-change h3 { margin: 0; padding: 10px 12px; background: var(--color-bg-page); font-size: 13px; }
+  .lpr-history-change dl { margin: 0; }
+  .lpr-history-change dl > div { padding: 10px 12px; }
+  .lpr-history-before { border-bottom: 1px solid var(--color-border); }
+  .lpr-history-after { background: var(--color-info-bg, #eff6ff); }
+  .lpr-history-change dt { margin-bottom: 6px; font-size: 11px; font-weight: 700; color: var(--color-text-secondary); }
+  .lpr-history-change dd { margin: 0; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .lpr-history-dialog .lpr-history-reason { margin-top: 12px; padding: 12px; border-radius: 8px; background: var(--color-bg-page); font-size: 13px; }
+  .lpr-history-dialog .lpr-history-reason b { display: block; margin-bottom: 5px; }
+  .lpr-history-dialog .abs-permission-footer .abs-permission-submit { width: 100%; min-height: 44px; }
+}

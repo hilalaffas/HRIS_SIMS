@@ -4,7 +4,7 @@
 import React from 'react';
 import './StatusTabs.css';
 
-function StatusTabs({ tabs, activeKey, pendingCount, onChange }) {
+function StatusTabs({ tabs, activeKey, pendingCount, documentPendingCount, onChange }) {
   return (
     <div className="pzn-tabs" role="tablist" aria-label="Status pengajuan">
       {tabs.map((tab) => {
@@ -19,6 +19,7 @@ function StatusTabs({ tabs, activeKey, pendingCount, onChange }) {
             onClick={() => onChange(tab.key)}
           >
             {tab.label}
+            {tab.key === 'DOCUMENT_PENDING' && documentPendingCount > 0 && <span className="pzn-tab__badge">{documentPendingCount}</span>}
             {tab.key === 'PENDING' && pendingCount > 0 && (
               <span className="pzn-tab__badge">{pendingCount}</span>
             )}

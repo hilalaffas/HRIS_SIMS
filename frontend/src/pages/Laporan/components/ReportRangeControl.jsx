@@ -65,7 +65,6 @@ export default function ReportRangeControl({
             <DatePickerField
               value={customRange.from}
               onChange={onCustomFromChange}
-              maxDate={todayKey}
               ariaLabel="Laporan dari tanggal"
             />
           </div>
@@ -79,7 +78,7 @@ export default function ReportRangeControl({
               ariaLabel="Laporan sampai tanggal"
             />
           </div>
-          <p className="lpr-range-hint">Maksimal {MAX_CUSTOM_RANGE_DAYS} hari, sampai hari ini.</p>
+          <p className="lpr-range-hint">Maksimal {MAX_CUSTOM_RANGE_DAYS} hari. Tanggal mendatang tersedia untuk ganti shift.</p>
         </div>
       )}
     </div>

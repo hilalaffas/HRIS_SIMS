@@ -39,9 +39,10 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
   const [noteError, setNoteError] = useState('');
 
   const isPending = row.status === 'PENDING';
-  const needsChecklist = isPending && !!row.attachment;
+  const isDocumentReview = row.documentReviewPending;
+  const needsChecklist = (isPending || isDocumentReview) && !!row.attachment;
   const checklistDone = VERIFICATION_ITEMS.every((item) => checks[item.key]);
-  const canApprove = !needsChecklist || checklistDone;
+  const canApprove = row.document.code !== 'EXPIRED' && (!needsChecklist || checklistDone);
 
   const toggleCheck = (key) => setChecks((current) => ({ ...current, [key]: !current[key] }));
 
@@ -55,7 +56,7 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
   // Mengembalikan false bila catatan belum valid (DecisionPanel lalu memfokuskan kolom catatan).
   const handleReject = () => {
     if (note.trim().length < MIN_REJECT_NOTE_LENGTH) {
-      setNoteError('Catatan untuk karyawan wajib diisi saat menolak pengajuan.');
+      setNoteError('Catatan untuk karyawan wajib diisi saat menolak.');
       return false;
     }
     onReject(row, note.trim());
@@ -79,7 +80,7 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
         </div>
         <div>
           <dt>Durasi</dt>
-          <dd>{row.workDays} hari kerja</dd>
+          <dd>{row.workDays} {row.durationUnit || 'hari kerja'}</dd>
         </div>
         <div className="pzn-detail__wide">
           <dt>Periode</dt>
@@ -96,7 +97,17 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
         <AttachmentPreview attachment={row.attachment} />
       </section>
 
-      {isPending ? (
+      <section className="pzn-detail__section">
+        <h3 className="pzn-section-label">Status Surat Dokter</h3>
+        <p>{row.document.label}</p>
+        {row.document.deadline && <p className="pzn-detail__reason">Batas upload: {row.document.deadline.split('-').reverse().join('/')} pukul 23.59 WIB.</p>}
+        {row.document.periodLabel && <p className="pzn-detail__reason"><strong>Periode pada surat: </strong>{row.document.periodLabel}</p>}
+        {isDocumentReview && row.document.periodLabel && <p className="pzn-detail__reason">Periode izin saat ini: {formatPeriod(row.startDate, row.endDate)}. Validasi surat juga menyetujui periode pada surat di atas.</p>}
+        {row.document.note && <p className="pzn-detail__reason">Catatan HRD: {row.document.note}</p>}
+        {row.documentReviewedAt && <small>{formatSubmittedAt(row.documentReviewedAt)}</small>}
+      </section>
+      {isDocumentReview && <section className="pzn-detail__section"><DecidedBanner row={row} /></section>}
+      {isPending || isDocumentReview ? (
         <>
           {needsChecklist && (
             <section className="pzn-detail__section">
@@ -105,6 +116,8 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
           )}
           <section className="pzn-detail__section">
             <DecisionPanel
+              approveLabel={isDocumentReview ? "Validasi Surat" : "Setujui Izin"}
+              rejectLabel={isDocumentReview ? "Tolak Surat" : "Tolak Izin"}
               note={note}
               noteError={noteError}
               canApprove={canApprove}

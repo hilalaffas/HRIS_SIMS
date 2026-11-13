@@ -1,9 +1,11 @@
 /* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
 /* src/pages/PersetujuanIzin/components/StatusTabs.css */
-.pzn-tabs { display: flex; align-items: center; gap: var(--space-6); }
+.pzn-tabs { display: flex; align-items: center; gap: var(--space-6); max-width: 100%; overflow-x: auto; }
 
 .pzn-tab {
   position: relative;
+  flex-shrink: 0;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;

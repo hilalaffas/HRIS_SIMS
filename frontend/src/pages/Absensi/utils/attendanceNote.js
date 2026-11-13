@@ -18,9 +18,7 @@
 //   const meta = resolveNoteMeta(row, { correctionStatus: 'PENDING' });
 import { formatDuration } from './monthlyAttendance';
 
-// Status review surat dokter oleh HRD. Backend belum menyediakannya -- selama
-// field `documentReviewStatus` kosong, surat yang sudah diunggah dianggap
-// menunggu verifikasi.
+// Status verifikasi surat dokter terpisah dari persetujuan izin sakit.
 export const DOCUMENT_REVIEW = {
   PENDING: 'PENDING',
   VALID: 'VALID',
@@ -50,7 +48,9 @@ export function toSafeUrl(value) {
 const PLAIN_NOTES = new Set(['', '-', 'Sakit', 'Izin']);
 
 function resolveDocumentNotice(document) {
+  if (document.expired) return { notice: { tone: 'danger', icon: 'alert', label: 'Batas upload surat dokter terlewati' }, action: null };
   const href = toSafeUrl(document.url);
+  const period = document.startDate && document.endDate ? ` · Periode surat: ${document.startDate.split('-').reverse().join('/')} – ${document.endDate.split('-').reverse().join('/')}` : '';
   if (!href) {
     return {
       notice: { tone: 'danger', icon: 'alert', label: 'Bukti Belum Diunggah' },
@@ -66,9 +66,9 @@ function resolveDocumentNotice(document) {
     return { notice: { tone: 'success', icon: 'check', label: 'Surat Dokter Valid', href }, action: null };
   }
   if (document.reviewStatus === DOCUMENT_REVIEW.REJECTED) {
-    return { notice: { tone: 'danger', icon: 'alert', label: 'Surat Ditolak HRD', href }, action: null };
+    return { notice: { tone: 'danger', icon: 'alert', label: `Surat Ditolak HRD${document.reviewNote ? `: ${document.reviewNote}` : ''}`, href }, action: { type: 'uploadDocument', variant: 'solid', label: 'Upload Ulang Surat Sakit', payload: document.recordId } };
   }
-  return { notice: { tone: 'warning', icon: 'hourglass', label: 'Verifikasi HRD (Surat Terlampir)', href }, action: null };
+  return { notice: { tone: 'warning', icon: 'hourglass', label: `Verifikasi HRD (Surat Terlampir)${period}`, href }, action: null };
 }
 
 function resolveLateCorrection(row, correctionStatus) {

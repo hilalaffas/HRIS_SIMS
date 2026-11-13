@@ -30,6 +30,7 @@ function RequestListItem({ row, selected, leaving, index, onSelect }) {
               <time className="pzn-item__time">{formatSubmittedAt(row.submittedAt)}</time>
             </span>
             <span className="pzn-item__division">{row.division}</span>
+            <span className="pzn-item__division">{row.status === 'APPROVED' ? 'Izin disetujui · ' : ''}{row.document.label}</span>
             <span className="pzn-item__chips">
               <span className={`pzn-chip pzn-chip--${row.typeTone}`}>
                 <TypeIcon aria-hidden="true" />

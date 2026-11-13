@@ -25,7 +25,9 @@ public record AttendanceReportResponse(LocalDate from, LocalDate to, List<Employ
             List<AttendanceResponse> attendances,
             List<ScheduleEntryResponse> schedules,
             List<OvertimeResponse> overtimes,
-            List<LeaveEntry> leaves) {
+            List<LeaveEntry> leaves,
+            List<sys.hris.sims.attendance.report.ReportRevision> revisions,
+            List<ScheduleEntryResponse> shiftOptions) {
     }
 
     // Cuti yang sudah DISETUJUI (data mentah; sesi hanya terisi untuk cuti setengah hari).

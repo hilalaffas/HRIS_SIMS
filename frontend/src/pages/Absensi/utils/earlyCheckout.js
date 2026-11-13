@@ -19,20 +19,8 @@ export const buildEarlyCheckoutNote = (reason) => `${EARLY_CHECKOUT_PREFIX}${rea
 // jam lokal browser (lihat parseNaiveDateTime). Supaya sebanding, "sekarang"
 // juga dibaca sebagai jam dinding WIB, bukan zona waktu perangkat.
 // [UBAH] di-export: dipakai juga utils/overtimeCheckout.js (cek "setelah jam pulang 17:00").
-export function getJakartaWallClock(now) {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Jakarta',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const read = (type) => Number(parts.find((part) => part.type === type)?.value);
-  return new Date(read('year'), read('month') - 1, read('day'), read('hour'), read('minute'), read('second'));
-}
+export { jakartaWallClock as getJakartaWallClock } from './activeWorkShift';
+import { jakartaWallClock as getJakartaWallClock } from './activeWorkShift';
 
 // checkInAt = Date jam Masuk hari ini (record.recordedAt). Tidak diketahui -> false
 // (tidak memblokir; backend tetap memeriksa).

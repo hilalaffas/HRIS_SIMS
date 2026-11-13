@@ -10,12 +10,13 @@
 // [UBAH] Rentang laporan punya 3 mode (lihat ReportRangeControl): per periode tutup
 // buku, Hari Ini, atau tanggal pilihan (Dari - Sampai).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Toast from '../../../components/Toast';
 import { getAllDivisi } from '../../../services/divisiService';
 import { downloadCsv } from '../../../utils/csvExport';
 import { getCurrentPeriod } from '../../Absensi/utils/monthlyAttendance';
 import AttendanceReportTable from '../components/AttendanceReportTable';
-import EmployeeReportModal from '../components/EmployeeReportModal';
+import EmployeeReportDetail from '../components/EmployeeReportModal';
 import ReportFilterBar from '../components/ReportFilterBar';
 import ReportRangeControl from '../components/ReportRangeControl'; // [BARU]
 import ReportStatCards from '../components/ReportStatCards';
@@ -42,7 +43,16 @@ export default function AttendanceReportTab() {
   const [searchValue, setSearchValue] = useState('');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedEmployeeId = searchParams.get('employee');
+  const setSelectedEmployeeId = (id) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (id == null) next.delete('employee');
+      else next.set('employee', String(id));
+      return next;
+    });
+  };
   const [exportingKind, setExportingKind] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -101,7 +111,7 @@ export default function AttendanceReportTab() {
   const totalPages = Math.max(1, Math.ceil(filteredReports.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
   const pageRows = filteredReports.slice(safePage * pageSize, (safePage + 1) * pageSize);
-  const selectedReport = reports.find((report) => report.employeeId === selectedEmployeeId) || null;
+  const selectedReport = reports.find((report) => String(report.employeeId) === selectedEmployeeId) || null;
 
   // ---------- handler filter (semua mengembalikan tabel ke halaman pertama) ----------
   // [UBAH] Periode dipilih langsung dari PeriodPicker (panah / klik label) -- tidak boleh
@@ -170,6 +180,21 @@ export default function AttendanceReportTab() {
     }
   };
 
+  if (selectedEmployeeId !== null) {
+    return <div className="lpr-attendance-tab">
+      {selectedReport ? <EmployeeReportDetail report={selectedReport} periodLabel={range.label}
+        exportingKind={exportingKind}
+        onExport={(kind) => runExport(kind, [selectedReport], selectedReport.fullName)}
+        onClose={() => setSelectedEmployeeId(null)} onSaved={reload} />
+        : <div className="lpr-error-card" role="status">
+          <p>{isLoading ? 'Memuat detail laporan...' : error || 'Laporan karyawan tidak tersedia untuk periode dan divisi yang dipilih.'}</p>
+          <button type="button" onClick={() => setSelectedEmployeeId(null)}>Kembali ke daftar laporan</button>
+          {error && <button type="button" onClick={reload}>Coba Lagi</button>}
+        </div>}
+      <Toast show={Boolean(toast)} message={toast?.message} type={toast?.type} />
+    </div>;
+  }
+
   return (
     <div className="lpr-attendance-tab">
       <ReportFilterBar
@@ -219,15 +244,6 @@ export default function AttendanceReportTab() {
         />
       )}
 
-      {selectedReport && (
-        <EmployeeReportModal
-          report={selectedReport}
-          periodLabel={range.label}
-          exportingKind={exportingKind}
-          onExport={(kind) => runExport(kind, [selectedReport], selectedReport.fullName)}
-          onClose={() => setSelectedEmployeeId(null)}
-        />
-      )}
 
       <Toast show={Boolean(toast)} message={toast?.message} type={toast?.type} />
     </div>

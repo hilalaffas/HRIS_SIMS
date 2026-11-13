@@ -1,17 +1,10 @@
-// src/pages/Laporan/components/EmployeeReportModal.jsx
-//
-// [BARU] Popup "sheet" satu karyawan: identitas, rekap angka, dan tabel harian
-// satu periode penuh. Bisa mengunduh sheet karyawan ini saja (XLSX / CSV / PDF).
-// Menutup dengan tombol X, klik latar, atau Escape (animasi keluar via useModalExit).
-//
-// Contoh pemakaian:
-// <EmployeeReportModal report={report} periodLabel="..." exportingKind={null}
-//   onExport={(kind) => ...} onClose={() => setSelectedId(null)} />
+// Detail laporan karyawan dalam halaman Laporan.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FileDown, FileSpreadsheet, FileText, X } from 'lucide-react';
-import useModalExit from '../../../hooks/useModalExit';
+import { ArrowLeft, FileDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import { EXPORT_FORMATS, STATUS_TONE_CLASS } from '../config/laporanConfig';
 import { buildDailyRows, DAILY_HEADERS, formatAccHours } from '../utils/attendanceReportSheets';
+import ReportRowEditor from './ReportRowEditor';
+import ReportRowHistory from './ReportRowHistory';
 import './EmployeeReportModal.css';
 
 function safePhotoUrl(value) {
@@ -62,24 +55,48 @@ function PhotoPreview({ photo, onClose }) {
   </div>;
 }
 
+function ScrollableReportTable({ children }) {
+  const viewportRef = useRef(null);
+  const scrollbarRef = useRef(null);
+  const trackRef = useRef(null);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const scrollbar = scrollbarRef.current;
+    const table = viewport.querySelector('table');
+    const measure = () => {
+      trackRef.current.style.width = `${viewport.scrollWidth}px`;
+      scrollbar.scrollLeft = viewport.scrollLeft;
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    if (table) observer.observe(table);
+    measure();
+    return () => observer.disconnect();
+  }, []);
+  const syncScroll = (source, target) => {
+    if (target.current && target.current.scrollLeft !== source.scrollLeft) target.current.scrollLeft = source.scrollLeft;
+  };
+  return <div className="lpr-table-region">
+    <div ref={scrollbarRef} className="lpr-table-top-scroll" onScroll={(event) => syncScroll(event.currentTarget, viewportRef)} aria-hidden="true">
+      <div ref={trackRef} />
+    </div>
+    <div ref={viewportRef} className="lpr-modal-body lpr-table-viewport" tabIndex={0} role="region"
+      aria-label="Detail absensi, dapat digeser horizontal dan vertikal"
+      onScroll={(event) => syncScroll(event.currentTarget, scrollbarRef)}>{children}</div>
+  </div>;
+}
+
 const EXPORT_ICONS = { sheet: FileSpreadsheet, text: FileText, pdf: FileDown };
 
 const formatLeave = (value) => String(Number(value.toFixed(1))).replace('.', ',');
 
-export default function EmployeeReportModal({ report, periodLabel, exportingKind, onExport, onClose }) {
-  const { closing, close } = useModalExit();
+export default function EmployeeReportDetail({ report, periodLabel, exportingKind, onExport, onClose, onSaved }) {
   const [preview, setPreview] = useState(null);
+  const [editingDate, setEditingDate] = useState(null);
+  const [historyDate, setHistoryDate] = useState(null);
   // [UBAH] Baris harian dihitung SEKALI per laporan, bukan di setiap render
   // (render ulang terjadi saat foto dibuka/ditutup & saat animasi keluar).
   const dailyRows = useMemo(() => (report ? buildDailyRows(report) : []), [report]);
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !preview) close(onClose);
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [close, onClose, preview]);
 
   if (!report) return null;
 
@@ -96,13 +113,11 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
   ];
 
   return (
-    <div className={`lpr-modal-overlay${closing ? ' is-closing' : ''}`} onMouseDown={() => close(onClose)}>
+    <div className="lpr-detail-page">
+      <button type="button" className="lpr-detail-back" onClick={onClose}><ArrowLeft size={16} aria-hidden="true" /> Kembali ke daftar laporan</button>
       <section
-        className="lpr-modal"
-        role="dialog"
-        aria-modal="true"
+        className="lpr-modal lpr-report-detail"
         aria-labelledby="lpr-modal-title"
-        onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="lpr-modal-header">
           <div>
@@ -110,9 +125,6 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
             <p>{report.nik} · {report.position} · {report.divisionName}</p>
             <p>Periode {periodLabel}</p>
           </div>
-          <button type="button" onClick={() => close(onClose)} aria-label="Tutup detail">
-            <X />
-          </button>
         </header>
 
         <div className="lpr-modal-stats">
@@ -124,11 +136,11 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
           ))}
         </div>
 
-        <div className="lpr-modal-body">
+        <ScrollableReportTable>
           <table className="lpr-daily-table">
             <thead>
               <tr>{DAILY_HEADERS.map((header) => <th key={header}>{header}</th>)}
-                {["Foto Masuk", "Foto Pulang", "GPS Masuk", "GPS Pulang"].map((header) => <th key={header}>{header}</th>)}
+                {["Foto Masuk", "Foto Pulang", "GPS Masuk", "GPS Pulang", "Aksi"].map((header) => <th key={header}>{header}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -136,11 +148,12 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
                 const tone = report.rows[rowIndex].tone;
                 const isOff = !tone;
                 return (
-                  <tr key={report.rows[rowIndex].date} className={isOff ? 'is-off' : ''}>
+                  <React.Fragment key={report.rows[rowIndex].date}>
+                  <tr className={isOff ? 'is-off' : ''}>
                     {cells.map((cell, cellIndex) => (
                       <td key={DAILY_HEADERS[cellIndex]}>
                         {cellIndex === statusColumn && tone
-                          ? <span className={`lpr-badge lpr-badge--${STATUS_TONE_CLASS[tone] || 'belum'}`}>{cell}</span>
+                          ? <><span className={`lpr-badge lpr-badge--${STATUS_TONE_CLASS[tone] || 'belum'}`}>{cell}</span>{report.rows[rowIndex].history.length > 0 && <small className="lpr-edit-tag">Dikoreksi</small>}</>
                           : cell}
                       </td>
                     ))}
@@ -148,12 +161,18 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
                     <td><AttendancePhoto record={report.rows[rowIndex].checkOutEvidence} label={`Absen Pulang · ${report.rows[rowIndex].dateLabel}`} onPreview={setPreview} /></td>
                     <td><AttendanceGps record={report.rows[rowIndex].checkInEvidence} label="masuk" /></td>
                     <td><AttendanceGps record={report.rows[rowIndex].checkOutEvidence} label="pulang" /></td>
+                    <td><div className="lpr-edit-actions">
+                      {report.rows[rowIndex].canEdit && <button type="button" onClick={() => { setEditingDate(report.rows[rowIndex].date); setHistoryDate(null); }}>Edit/Sanggah</button>}
+                      {report.rows[rowIndex].history.length > 0 && <button type="button" aria-haspopup="dialog"
+                        onClick={() => { setHistoryDate(report.rows[rowIndex].date); setEditingDate(null); }}>Riwayat Edit ({report.rows[rowIndex].history.length})</button>}
+                    </div></td>
                   </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollableReportTable>
 
         <footer className="lpr-modal-footer">
           {EXPORT_FORMATS.map((format) => {
@@ -173,6 +192,10 @@ export default function EmployeeReportModal({ report, periodLabel, exportingKind
           })}
         </footer>
       </section>
+      {editingDate && <ReportRowEditor key={editingDate} row={report.rows.find((row) => row.date === editingDate)} report={report}
+        onClose={() => setEditingDate(null)} onSaved={() => { setEditingDate(null); onSaved?.(); }} />}
+      {historyDate && <ReportRowHistory key={historyDate} row={report.rows.find((row) => row.date === historyDate)} report={report}
+        onClose={() => setHistoryDate(null)} />}
       {preview && <PhotoPreview photo={preview} onClose={() => setPreview(null)} />}
     </div>
   );

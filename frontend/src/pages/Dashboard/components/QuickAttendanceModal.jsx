@@ -39,7 +39,7 @@ function gpsBadgeText(locationStatus, coords) {
   return 'GPS: Mencari sinyal...';
 }
 
-export default function QuickAttendanceModal({ capture, shiftHours, onUploadFallback }) { // [UBAH] + onUploadFallback (opsional)
+export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 'Shift Normal', shiftOvernight = false, onUploadFallback }) { // [UBAH] + onUploadFallback (opsional)
   const {
     action, note, captured, cameraError, submitError, coords, locationType, setLocationType,
     locationStatus, locationError, locationName, isLocationNameLoading, isSubmitting,
@@ -68,8 +68,9 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
     };
   }, [close]);
 
+  const isCheckout = action === 'Keluar';
   const hasLocation = Boolean(coords);
-  const canSubmit = Boolean(captured) && hasLocation && !isSubmitting;
+  const canSubmit = (isCheckout || Boolean(captured)) && hasLocation && !isSubmitting;
   const isLowAccuracy = hasLocation && coords.accuracy > LOW_ACCURACY_METERS;
 
   const handleOpenAbsensiPage = () => {
@@ -90,8 +91,8 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
       >
         <header className="quickAtt__header">
           <h2 id="quickAttTitle">
-            <Camera size={18} aria-hidden="true" />
-            Ambil Foto &amp; Konfirmasi Lokasi {action}
+            {isCheckout ? <MapPinned size={18} aria-hidden="true" /> : <Camera size={18} aria-hidden="true" />}
+            {isCheckout ? 'Konfirmasi GPS Absen Keluar' : `Ambil Foto & Konfirmasi Lokasi ${action}`}
           </h2>
           <button type="button" className="quickAtt__close" aria-label="Tutup" onClick={close} disabled={isSubmitting}>
             <X size={18} aria-hidden="true" />
@@ -115,9 +116,9 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
 
         <div className="quickAtt__body">
           {/* ---------- Kamera ---------- */}
-          <div className={`quickAtt__camera ${captured ? 'is-captured' : ''}`}>
+          <div className={isCheckout ? 'quickAtt__gpsOnly' : `quickAtt__camera ${captured ? 'is-captured' : ''}`}>
             {/* [UBAH] Foto hasil unggah (cadangan) tetap tampil walau kamera error */}
-            {cameraError && !captured ? (
+            {!isCheckout && (cameraError && !captured ? (
               <div className="quickAtt__cameraError" role="alert">
                 <Camera size={28} aria-hidden="true" />
                 <p>{cameraError}</p>
@@ -143,7 +144,7 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
                   </>
                 )}
               </>
-            )}
+            ))}
 
             <section className="quickAtt__locationInfo" aria-label="Informasi GPS dan waktu">
             <div className="quickAtt__locationInfoTop">
@@ -163,7 +164,10 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
             {hasLocation && <>
               {isLocationNameLoading && <p className="quickAtt__muted">Mencari nama lokasi...</p>}
               {locationName && <p className="quickAtt__place">{locationName}</p>}
-              <code className="quickAtt__coords">Lat: {coords.lat.toFixed(6)} | Lng: {coords.lng.toFixed(6)}</code>
+              <code className="quickAtt__coords">{isCheckout ? <>
+                <span>Lat: {coords.lat.toFixed(6)}</span>
+                <span>Lng: {coords.lng.toFixed(6)}</span>
+              </> : <>Lat: {coords.lat.toFixed(6)} | Lng: {coords.lng.toFixed(6)}</>}</code>
               {isLowAccuracy && <p className="quickAtt__warn"><AlertTriangle size={12} /> Akurasi GPS lebih dari 5000 m. Perbarui lokasi.</p>}
             </>}
             </section>
@@ -174,7 +178,7 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
         <section className="quickAtt__detail">
           <h3>Detail Presensi:</h3>
           <p>
-            Shift Normal Kerja: <strong>{shiftHours} WIB</strong>
+            {shiftName}: <strong>{shiftHours} WIB{shiftOvernight ? ' · selesai hari berikutnya' : ''}</strong>
           </p>
 
           <label className="quickAtt__noteField" htmlFor="quickAttNote">
@@ -210,7 +214,12 @@ export default function QuickAttendanceModal({ capture, shiftHours, onUploadFall
             Batal
           </button>
 
-          {captured ? (
+          {isCheckout ? (
+            <button type="button" className="quickAtt__btn quickAtt__btn--send" onClick={submit} disabled={!canSubmit}>
+              {isSubmitting ? <Loader2 size={15} className="quickAtt__spin" aria-hidden="true" /> : <Check size={15} aria-hidden="true" />}
+              {isSubmitting ? 'Mengirim...' : 'Absen Keluar'}
+            </button>
+          ) : captured ? (
             <div className="quickAtt__footerActions">
               <button type="button" className="quickAtt__btn quickAtt__btn--outline" onClick={retake} disabled={isSubmitting}>
                 Ambil Ulang

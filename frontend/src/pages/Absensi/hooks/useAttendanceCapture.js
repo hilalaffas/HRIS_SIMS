@@ -144,6 +144,8 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     setIsOpen(true);
     requestLocation();
 
+    if (nextAction === 'Keluar') return;
+
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError(CAMERA_ERROR_MESSAGE);
       return;
@@ -250,13 +252,13 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const submit = useCallback(async () => {
     const trimmedNote = note.trim();
     const noteRequired = reason !== 'Absen';
-    if (!captured || !coords || (noteRequired && !trimmedNote) || submitLockRef.current) return;
+    if ((action !== 'Keluar' && !captured) || !coords || (noteRequired && !trimmedNote) || submitLockRef.current) return;
 
     submitLockRef.current = true;
     setIsSubmitting(true);
     setSubmitError('');
     try {
-      const photoBlob = await dataUrlToBlob(captured);
+      const photoBlob = action === 'Keluar' ? null : await dataUrlToBlob(captured);
       const response = await submitAttendance({
         action: toActionCode(action),
         reason: toReasonCode(reason),

@@ -18,8 +18,9 @@ const WORK_END_MINUTES = 17 * 60;
 export const EXTENSION_REASON_MAX_LENGTH = 450;
 
 // true bila SEKARANG (jam dinding WIB) sudah lewat/sama dengan jam pulang.
-export function isAfterWorkEnd(now = new Date(), shiftEndTime = WORK_END_LABEL) {
+export function isAfterWorkEnd(now = new Date(), shiftEndTime = WORK_END_LABEL, shiftEndAt = null) {
   const wall = getJakartaWallClock(now);
+  if (shiftEndAt) return wall >= shiftEndAt;
   const [hour, minute] = String(shiftEndTime || WORK_END_LABEL).slice(0, 5).split(':').map(Number);
   const endMinutes = Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : WORK_END_MINUTES;
   const nowMinutes = wall.getHours() * 60 + wall.getMinutes();

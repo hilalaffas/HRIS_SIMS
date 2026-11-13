@@ -1,3 +1,4 @@
+import { medicalDocumentStatus } from '../../../utils/medicalDocumentStatus';
 // src/pages/PersetujuanIzin/utils/permissionRequest.js
 //
 // [BARU] Logika murni (tanpa React) untuk halaman Persetujuan Surat Sakit & Izin:
@@ -27,6 +28,7 @@ export const TYPE_FILTER_OPTIONS = [
 //   - HISTORY_TABS : tab "List Sakit & Izin" -- riwayat keputusan, hanya baca
 export const QUEUE_TABS = [
   { key: 'PENDING', label: 'Menunggu' },
+  { key: 'DOCUMENT_PENDING', label: 'Verifikasi Surat' },
 ];
 
 export const HISTORY_TABS = [
@@ -114,9 +116,9 @@ const getAvatarTone = (name) => {
 // Response backend (AttendanceResponse) -> baris tampilan.
 export function toPermissionRow(item) {
   const type = resolveType(item);
-  const start = parseLocalDate(item.attendanceDate);
+  const start = parseLocalDate(item.sickStartDate || item.attendanceDate);
   const workDays = item.leaveDays || 1;
-  const end = start ? getLastWorkDay(start, workDays) : null;
+  const end = item.sickEndDate ? parseLocalDate(item.sickEndDate) : start ? getLastWorkDay(start, workDays) : null;
   const attachment = describeAttachment(item.documentUrl || item.photoUrl);
   const employeeName = item.employeeName || '-';
 
@@ -130,10 +132,14 @@ export function toPermissionRow(item) {
     typeLabel: REQUEST_TYPES[type].label,
     typeTone: REQUEST_TYPES[type].tone,
     status: String(item.approvalStatus || '').toUpperCase(),
+    document: medicalDocumentStatus(item),
+    documentReviewPending: item.approvalStatus === 'APPROVED' && Boolean(item.documentUrl) && (!item.documentReviewStatus || item.documentReviewStatus === 'PENDING'),
+    documentReviewedAt: parseNaiveDateTime(item.documentReviewedAt),
     submittedAt: parseNaiveDateTime(item.recordedAt),
     startDate: start,
     endDate: end,
     workDays,
+    durationUnit: item.sickEndDate ? 'hari kalender' : 'hari kerja',
     reason: item.note || '-',
     attachment,
     reviewNote: item.reviewNote || '',

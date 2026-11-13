@@ -15,7 +15,7 @@ export default function CheckoutFlowModals({ flow }) {
   return (
     <>
       {flow.early.isPromptOpen && (
-        <EarlyCheckoutModal onConfirm={flow.early.onConfirm} onCancel={flow.early.onCancel} />
+        <EarlyCheckoutModal requiredWorkHours={flow.early.requiredWorkHours} onConfirm={flow.early.onConfirm} onCancel={flow.early.onCancel} />
       )}
       {flow.overtime && <CheckoutOvertimeModal {...flow.overtime} />}
     </>

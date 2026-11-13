@@ -9,7 +9,7 @@
 //
 // Contoh pemakaian:
 // <DashboardSummaryCard balance={leaveBalance} isLoadingBalance={isLoadingBalance} />
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react'; // [UBAH] + Suspense
 import {
   Building2,
   CalendarCheck,
@@ -24,14 +24,17 @@ import useAttendanceSummary from '../hooks/useAttendanceSummary';
 import useCountUp from '../hooks/useCountUp';
 import useLiveClock from '../hooks/useLiveClock'; // [BARU] jam WIB berjalan
 import useAttendanceCapture from '../../Absensi/hooks/useAttendanceCapture'; // [BARU] logika selfie+GPS+kirim (dibagi dgn halaman Absensi)
-import QuickAttendanceModal from './QuickAttendanceModal'; // [BARU]
-import CheckoutFlowModals from '../../Absensi/components/CheckoutFlowModals'; // [UBAH] popup "Pulang Cepat" + "Check-Out Jam Kerja (17:00+)" (sebelumnya EarlyCheckoutModal)
+import { lazyPage } from '../../../routes/lazyPages'; // [BARU] popup berat dimuat saat dibutuhkan (diunduh diam-diam saat idle)
 import useCheckoutFlow from '../../Absensi/hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from '../../Absensi/utils/overtimeCheckout'; // [BARU]
 import { getTodayStatusConfig } from '../../Absensi/utils/todayStatusConfig'; // [UBAH] dipindah dari file ini; + teks dinamis cuti setengah hari
 import { buildLeaveBalanceNote } from '../../../utils/leaveBalanceNote';
-import { SHIFT_HOURS, SHIFT_LABEL } from '../../Absensi/utils/monthlyAttendance'; // [UBAH] + SHIFT_HOURS
+ // [UBAH] + SHIFT_HOURS
 import './DashboardSummaryCard.css';
+
+// [UBAH] Popup absen & check-out dimuat malas: bundle Dashboard lebih kecil, fungsi tetap sama.
+const QuickAttendanceModal = lazyPage(() => import('./QuickAttendanceModal'));
+const CheckoutFlowModals = lazyPage(() => import('../../Absensi/components/CheckoutFlowModals'));
 
 // [UBAH] Konfigurasi status hari ini (TODAY_STATUS_CONFIG) dipindah ke
 // ../../Absensi/utils/todayStatusConfig.js supaya dipakai bersama halaman Absensi Saya.
@@ -104,6 +107,9 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
   const checkoutFlow = useCheckoutFlow({
     openCapture: capture.open,
     checkInAt: attendance.checkInAt,
+    shiftEndTime: attendance.shiftContext.endsAt ? attendance.shiftContext.hoursLabel.split(' - ')[1] : null,
+    shiftEndAt: attendance.shiftContext.endsAt,
+    requiredWorkHours: attendance.shiftContext.requiredWorkHours,
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 
@@ -188,9 +194,9 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
                   {attendance.division}
                 </span>
               )}
-              <span className="dashSummary__chip" title={SHIFT_LABEL}>
+              <span className="dashSummary__chip" title={attendance.shiftContext.label}>
                 <Clock size={12} aria-hidden="true" />
-                {SHIFT_HOURS}
+                {attendance.shiftContext.hoursLabel}{attendance.shiftContext.overnight ? ' (+1 hari)' : ''}
               </span>
               {/* [BARU] Jam masuk yang tercatat (dari server) */}
               <span className="dashSummary__checkIn">
@@ -216,11 +222,11 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
             <button
               type="button"
               className="dashSummary__btn dashSummary__btn--primary"
-              disabled={!statusConfig.action || attendance.isLoading}
+              disabled={!statusConfig.action || attendance.isLoading || !attendance.shiftContext.endsAt || (statusConfig.action === 'Masuk' && !attendance.shiftContext.canCheckIn)}
               onClick={() => checkoutFlow.startAttendance(statusConfig.action)} /* [UBAH] sebelumnya earlyCheckout.startAttendance */
             >
               <ActionIcon size={15} aria-hidden="true" />
-              {statusConfig.buttonLabel}
+              {!attendance.shiftContext.endsAt || (statusConfig.action === 'Masuk' && !attendance.shiftContext.canCheckIn) ? attendance.shiftContext.blockedLabel : statusConfig.buttonLabel}
             </button>
           </div>
         </div>
@@ -228,10 +234,13 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
 
       {/* [BARU] Popup absen: di luar <section> karena kartu memakai container-type
           (membuat position:fixed relatif ke kartu, bukan ke layar). Hanya di-mount saat terbuka. */}
-      {capture.isOpen && <QuickAttendanceModal capture={capture} shiftHours={SHIFT_HOURS} />}
+      <Suspense fallback={null}>
+        {capture.isOpen && <QuickAttendanceModal capture={capture} shiftHours={attendance.shiftContext.hoursLabel} shiftName={attendance.shiftContext.shiftName} shiftOvernight={attendance.shiftContext.overnight} />}
+        {/* [UBAH] hanya di-mount saat salah satu popup check-out benar-benar terbuka */}
+        {(checkoutFlow.early.isPromptOpen || checkoutFlow.overtime) && <CheckoutFlowModals flow={checkoutFlow} />}
+      </Suspense>
 
       {/* [UBAH] Popup check-out: peringatan pulang cepat + Check-Out Jam Kerja (17:00+) (portal ke <body>, jadi aman di luar <section>) */}
-      <CheckoutFlowModals flow={checkoutFlow} />
 
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
     </>

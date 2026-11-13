@@ -15,6 +15,10 @@ import sys.hris.sims.attendance.entity.Attendance;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Attendance a where a.attendanceId = :id")
+    Optional<Attendance> findForDocumentUpdate(@Param("id") Long id);
+
     // Riwayat absensi milik satu karyawan, terbaru duluan -- dipakai
     // GET /api/absensi/me (halaman Absensi karyawan).
     List<Attendance> findByEmployee_EmployeeIdOrderByRecordedAtDesc(Long employeeId);
@@ -99,7 +103,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             join fetch a.employee e
             left join fetch e.divisi
             where e.employeeId in :employeeIds
-              and a.attendanceDate between :startDate and :endDate
+              and (a.attendanceDate between :startDate and :endDate
+                   or (a.reason = 'SAKIT' and a.sickStartDate <= :endDate and a.sickEndDate >= :startDate))
             order by a.recordedAt asc
             """)
     List<Attendance> findForReport(@Param("employeeIds") List<Long> employeeIds,

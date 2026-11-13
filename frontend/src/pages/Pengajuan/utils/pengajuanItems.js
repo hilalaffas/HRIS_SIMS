@@ -1,3 +1,4 @@
+import { medicalDocumentStatus } from '../../../utils/medicalDocumentStatus';
 // src/pages/Pengajuan/utils/pengajuanItems.js
 //
 // Menggabungkan semua jenis pengajuan karyawan (cuti, izin sakit, izin
@@ -166,7 +167,8 @@ function toOvertimeItem(record) {
 
 function toSickItem(record) {
   const model = buildSickCardModel(record);
-  const needsLetter = record.documentRequired && !record.documentUrl && record.approvalStatus !== 'REJECTED';
+  const document = medicalDocumentStatus(record);
+  const needsLetter = document.canUpload;
   return {
     key: `sick-${record.id}`,
     kind: REQUEST_KIND.SICK,
@@ -174,12 +176,13 @@ function toSickItem(record) {
     sortKey: dateToSortKey(record.recordedAt, record.attendanceDate),
     detailText: withDetail(record.note, `${record.leaveDays} Hari`),
     statusCode: record.approvalStatus || 'PENDING',
-    statusLabel: needsLetter ? 'Susul Surat Dokter' : model.badgeLabel,
-    statusTone: needsLetter ? 'danger' : model.tone,
-    statusEmphasis: needsLetter, // tampil sebagai tombol merah penuh, seperti desain
+    statusLabel: record.approvalStatus === 'APPROVED' ? 'Disetujui' : model.badgeLabel,
+    documentStatus: document,
+    statusTone: model.tone,
+    statusEmphasis: false, // persetujuan izin dan status surat ditampilkan terpisah
     needsLetter,
     requiresApproval: true,
-    // Aksi izin sakit = unggah surat susulan (selama surat belum ada)
+    // Upload tersedia untuk surat yang belum ada atau ditolak HRD.
     action: needsLetter ? ROW_ACTION.UPLOAD_LETTER : ROW_ACTION.DETAIL,
     source: record,
   };
@@ -283,16 +286,18 @@ export function buildRequestDetail(item, cardModel) {
       title: 'Detail Pengajuan Izin Sakit',
       subtitle: 'Pantau persetujuan HRD dan kelengkapan surat dokter',
       fields: [
-        { label: 'Tanggal Pengajuan', value: formatDateLabel(record.attendanceDate) },
-        { label: 'Lama Izin', value: `${record.leaveDays} Hari Kerja`, accent: true },
+        { label: 'Tanggal Pengajuan', value: record.recordedAt ? record.recordedAt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : formatDateLabel(record.attendanceDate) },
+        ...(record.sickStartDate ? [{ label: 'Dari Tanggal', value: formatDateLabel(record.sickStartDate) }, { label: 'Sampai Tanggal', value: formatDateLabel(record.sickEndDate) }] : []),
+        { label: 'Lama Izin', value: `${record.leaveDays} ${record.sickEndDate ? 'Hari Kalender' : 'Hari Kerja'}`, accent: true },
         {
           label: 'Surat Dokter',
-          value: record.documentUrl ? 'Terlampir (buka berkas)' : 'Belum diunggah',
+          value: medicalDocumentStatus(record).label,
           href: toSafeHttpUrl(record.documentUrl), // hanya http(s), lihat utils/safeUrl.js
         },
+        ...(medicalDocumentStatus(record).periodLabel ? [{ label: 'Periode pada Surat Dokter', value: medicalDocumentStatus(record).periodLabel }] : []),
         { label: 'Waktu Pengajuan', value: record.time },
       ],
-      sections: [{ label: 'Keterangan', value: record.note || '-' }],
+      sections: [{ label: 'Keterangan', value: record.note || '-' }, ...(record.approvalStatus === 'REJECTED' && record.reviewNote ? [{ label: 'Alasan Penolakan HRD', value: record.reviewNote }] : []), ...(record.documentReviewNote ? [{ label: 'Catatan Verifikasi Surat HRD', value: record.documentReviewNote }] : [])],
     };
   }
 

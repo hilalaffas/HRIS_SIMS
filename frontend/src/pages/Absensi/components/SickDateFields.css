@@ -1,0 +1,13 @@
+.sick-period { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(150px, 0.55fr); align-items: start; gap: 12px; width: 100%; }
+.sick-period-dates { display: contents; }
+.sick-period-dates > div { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.sick-period-duration { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 7px 8px; min-width: 0; font-size: 12px; }
+.sick-period-duration label { grid-column: 1 / -1; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); }
+.sick-period-duration input { box-sizing: border-box; width: 100%; min-width: 0; height: 40px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text); background: var(--color-surface); font: inherit; }
+.sick-period :disabled { opacity: .6; cursor: not-allowed; }
+@media (max-width: 600px) { .sick-period { grid-template-columns: 1fr; } }
+
+.sick-period .dpf { width: 100%; }
+.sick-period .dpf-trigger { box-sizing: border-box; width: 100%; min-width: 0; height: 40px; flex-direction: row-reverse; justify-content: space-between; border-radius: 8px; }
+.sick-period > .abs-permission-hint { grid-column: 1 / -1; margin: 0; }
+.sick-period-duration > span { color: var(--color-text-muted); }

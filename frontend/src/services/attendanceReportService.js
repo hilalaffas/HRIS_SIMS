@@ -19,3 +19,7 @@ export async function getAttendanceReport({ from, to, divisionId }, config = {})
   if (divisionId) query.set('divisiId', String(divisionId));
   return api.get(`/api/absensi/laporan?${query.toString()}`, config);
 }
+
+export function saveReportRevision(employeeId, payload) {
+  return api.post(`/api/absensi/laporan/${employeeId}/revisions`, payload);
+}

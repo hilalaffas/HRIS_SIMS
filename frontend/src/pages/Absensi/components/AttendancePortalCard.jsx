@@ -19,6 +19,7 @@ import './AttendancePortalCard.css';
 
 export default function AttendancePortalCard({
   attendanceStatus = 'idle',
+  shiftContext,
   isLoading = false,
   disablePermission = false,
   leaveOpensLabel = '', // [BARU] jam absen dibuka (cuti setengah hari pagi), mis. "12:00"
@@ -35,7 +36,7 @@ export default function AttendancePortalCard({
           <Fingerprint aria-hidden="true" />
           Portal Absensi Harian Karyawan
         </h2>
-        <p>Jadwal kerja sebulan, absensi selfie real-time, izin sakit/terlambat, dan rekap otomatis.</p>
+        <p>{shiftContext?.label || 'Jadwal kerja, absensi, dan rekap otomatis.'}</p>
       </div>
 
       <div className="abs-portal-actions">
@@ -43,10 +44,10 @@ export default function AttendancePortalCard({
           type="button"
           className="abs-portal-button abs-portal-button--attendance"
           onClick={() => onStartAttendance(statusConfig.action)}
-          disabled={!statusConfig.action || isLoading}
+          disabled={!statusConfig.action || isLoading || (shiftContext && (!shiftContext.endsAt || (statusConfig.action === 'Masuk' && !shiftContext.canCheckIn)))}
         >
           <MainIcon aria-hidden="true" />
-          {statusConfig.buttonLabel}
+          {shiftContext && (!shiftContext.endsAt || (statusConfig.action === 'Masuk' && !shiftContext.canCheckIn)) ? shiftContext.blockedLabel : statusConfig.buttonLabel}
         </button>
         <button
           type="button"

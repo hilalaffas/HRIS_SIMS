@@ -1,3 +1,4 @@
+import { medicalDocumentStatus } from './medicalDocumentStatus';
 // src/utils/approvalCardModels.js
 //
 // [BARU] Adapter: mengubah data tiap jenis pengajuan (lembur, cuti, izin sakit)
@@ -165,12 +166,15 @@ export function buildLeaveCardModel(item, detail, { isLatest = false } = {}) {
 // surat dokter yang boleh menyusul.
 export function buildSickCardModel(record, { isLatest = false } = {}) {
   const approval = record.approvalStatus || 'PENDING';
+  const document = medicalDocumentStatus(record);
   const hasLetter = Boolean(record.documentUrl);
   const letterMissing = record.documentRequired && !hasLetter;
 
   const reviewState = { PENDING: 'current', APPROVED: 'done', REJECTED: 'rejected' }[approval] || 'current';
   let letterState = 'upcoming';
-  if (hasLetter) letterState = 'done';
+  if (document.code === 'VALID') letterState = 'done';
+  else if (document.code === 'REJECTED') letterState = 'rejected';
+  else if (hasLetter) letterState = 'current';
   else if (approval === 'APPROVED' && letterMissing) letterState = 'current';
 
   let tone = 'warning';
@@ -179,7 +183,7 @@ export function buildSickCardModel(record, { isLatest = false } = {}) {
   if (approval === 'REJECTED') {
     tone = 'danger';
     badgeLabel = 'Ditolak';
-    hint = 'Pengajuan izin sakit ditolak oleh HRD.';
+    hint = record.reviewNote ? `Alasan Penolakan HRD: ${record.reviewNote}` : 'Pengajuan izin sakit ditolak oleh HRD.';
   } else if (approval === 'APPROVED' && letterMissing) {
     badgeLabel = 'Susul Surat Dokter';
     hint = 'Pengajuan disetujui. Surat dokter tetap wajib: klik Aksi untuk mengunggah surat susulan.';
@@ -191,21 +195,34 @@ export function buildSickCardModel(record, { isLatest = false } = {}) {
     hint = 'Menunggu review HRD. Surat dokter masih perlu diunggah (boleh menyusul).';
   }
 
+  if (approval === 'APPROVED') {
+    tone = 'success'; badgeLabel = 'Disetujui';
+    hint = `Izin sakit disetujui. ${document.label}.${document.note ? ` Catatan HRD: ${document.note}` : ''}`;
+  }
+
+  if (approval !== 'REJECTED' && document.code === 'EXPIRED') {
+    hint = 'Batas upload surat dokter terlewati. Absensi pada hari kerja dihitung Tanpa Keterangan, meskipun izin sebelumnya disetujui.';
+  }
+
   // Urutan tampilan: Diajukan -> Surat Dokter -> Review HRD (review di paling akhir).
   const steps = [{ key: 'submitted', label: 'Diajukan', state: 'done' }];
   if (record.documentRequired) steps.push({ key: 'letter', label: 'Surat Dokter', state: letterState });
   steps.push({ key: 'review', label: 'Review HRD', state: reviewState });
 
+  const periodLabel = record.sickStartDate && record.sickEndDate && record.sickStartDate !== record.sickEndDate
+    ? `${formatDateLabel(record.sickStartDate)} – ${formatDateLabel(record.sickEndDate)}`
+    : formatDateLabel(record.sickStartDate || record.attendanceDate);
   return {
     tone,
     eyebrow: isLatest ? 'Pengajuan Izin Sakit Terbaru' : 'Pengajuan Izin Sakit',
-    title: formatDateLabel(record.attendanceDate),
+    title: periodLabel,
     sentLabel: record.recordedAt ? `Dikirim ${formatDateLabel(record.attendanceDate)}, ${record.time}` : '',
     badgeLabel,
     stats: [
-      { label: 'Tanggal', value: formatDateLabel(record.attendanceDate) },
-      { label: 'Lama', value: `${record.leaveDays} Hari`, emphasis: true },
-      { label: 'Surat', value: hasLetter ? 'Terlampir' : 'Belum ada' },
+      { label: 'Periode', value: periodLabel },
+      { label: 'Lama', value: `${record.leaveDays} ${record.sickEndDate ? 'Hari Kalender' : 'Hari Kerja'}`, emphasis: true },
+      { label: 'Surat', value: document.label },
+      ...(document.periodLabel ? [{ label: 'Periode Surat', value: document.periodLabel }] : []),
     ],
     note: { label: 'Keterangan', text: record.note || '-' },
     steps,

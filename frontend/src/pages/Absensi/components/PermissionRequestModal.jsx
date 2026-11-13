@@ -3,7 +3,7 @@
 // [BARU] Popup "Pengajuan Izin / Surat Sakit" (dibuka tombol "Ajukan Izin / Sakit").
 // Menggantikan alur Sakit lama yang memakai kamera + GPS (AttendanceCameraModal).
 //
-//  - Izin Sakit      : lama izin (HARI KERJA, Sabtu & Minggu tidak dihitung) +
+//  - Izin Sakit      : lama izin (HARI KALENDER, termasuk akhir pekan/libur) +
 //                      keterangan + surat dokter. Surat boleh MENYUSUL -- tetap
 //                      wajib, diunggah belakangan lewat kolom "Keterangan / Catatan"
 //                      di tabel riwayat. Selama surat menyusul, lama izin dikunci 1 hari.
@@ -18,6 +18,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FilePenLine, X } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
+import useSickDates from '../../../hooks/useSickDates';
+import SickDateFields from './SickDateFields';
 import MedicalDocumentDropzone from './MedicalDocumentDropzone';
 import './PermissionRequestModal.css';
 
@@ -27,12 +29,12 @@ const TYPE_OPTIONS = [
   { value: 'TERLAMBAT', label: 'Terlambat' },
 ];
 const NOTE_MAX_LENGTH = 255; // attendances.note VARCHAR(255)
-const MAX_SICK_DAYS = 30; // sama dengan AttendanceService.MAX_SICK_DAYS
 
 export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckout = false }) {
   const submitLockRef = useRef(false); // gerbang sinkron anti double-submit
   const [type, setType] = useState('SAKIT');
-  const [days, setDays] = useState('1');
+  const dates = useSickDates({ earlyCheckout });
+  const { days } = dates;
   const [note, setNote] = useState('');
   const [documentFile, setDocumentFile] = useState(null);
   const [documentLater, setDocumentLater] = useState(false);
@@ -58,7 +60,7 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
     setDocumentLater(event.target.checked);
     if (event.target.checked) {
       setDocumentFile(null);
-      if (!earlyCheckout) setDays('1'); // [BARU] surat menyusul -> lama izin dikunci 1 hari
+      dates.lockToday(); // [BARU] surat menyusul -> lama izin dikunci 1 hari
     }
     setErrorMessage('');
   };
@@ -66,11 +68,8 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
   const validate = () => {
     if (!note.trim()) return 'Keterangan wajib diisi.';
     if (isSick) {
-      const dayCount = Number(days);
-      if (earlyCheckout ? ![0.5, 1].includes(dayCount) : (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_SICK_DAYS)) {
-        if (earlyCheckout) return 'Lama izin sakit harus 0,5 atau 1 hari.';
-        return `Lama izin sakit harus 1 sampai ${MAX_SICK_DAYS} hari.`;
-      }
+      const dateError = dates.validateDates();
+      if (dateError) return dateError;
       if (!documentFile && !documentLater) {
         return 'Unggah surat dokter, atau centang "Surat dokter menyusul".';
       }
@@ -94,6 +93,9 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
         type,
         note: note.trim(),
         days: documentLater && !earlyCheckout ? 1 : Number(days),
+        startDate: isSick ? dates.startDate : null,
+        endDate: isSick ? dates.endDate : null,
+        documentLater,
         documentFile: isSick ? documentFile : null,
       });
     } catch (error) {
@@ -168,33 +170,9 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
                   />
                   Surat dokter menyusul
                 </label>
-                <div className="abs-permission-days">
-                  <label className="abs-permission-days-label" htmlFor="abs-permission-days">Lama Izin Sakit</label>
-                  <input
-                    id="abs-permission-days"
-                    type="number"
-                    min={earlyCheckout ? "0.5" : "1"}
-                    max={earlyCheckout ? 1 : MAX_SICK_DAYS}
-                    step={earlyCheckout ? "0.5" : "1"}
-                    inputMode="decimal"
-                    value={days}
-                    onChange={(event) => setDays(event.target.value)}
-                    disabled={isSubmitting || (documentLater && !earlyCheckout)}
-                  />
-                  <span>hari kerja</span>
-                </div>
               </div>
-              {documentLater && !earlyCheckout && (
-                <p className="abs-permission-hint">
-                  Lama izin dikunci 1 hari selama surat dokter menyusul. Lampirkan surat sekarang
-                  bila izin lebih dari 1 hari.
-                </p>
-              )}
-              <p className="abs-permission-hint">
-                Lama izin dihitung dalam hari kerja (Sabtu &amp; Minggu tidak dihitung). Surat dokter
-                tetap wajib diunggah. Bila menyusul, unggah lewat kolom Keterangan / Catatan
-                pada tabel Jadwal &amp; Log Absensi Bulanan.
-              </p>
+              <SickDateFields dates={dates} documentLater={documentLater} earlyCheckout={earlyCheckout} disabled={isSubmitting} />
+              <p className="abs-permission-hint">Surat dokter tetap wajib diunggah. Jika menyusul, unggah lewat kolom Keterangan / Catatan atau riwayat pengajuan.</p>
             </div>
           )}
 

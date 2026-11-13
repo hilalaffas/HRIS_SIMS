@@ -29,7 +29,7 @@ import {
 
 const IDLE_WINDOW = { status: 'idle', data: null, error: '' }; // status: idle | loading | ready | error
 
-export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubmitted, shiftEndTime, requiredWorkHours }) {
+export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubmitted, shiftEndTime, requiredWorkHours, shiftEndAt }) {
   const early = useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours });
   const { startAttendance: startEarlyAware } = early;
 
@@ -69,13 +69,13 @@ export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubm
   }, []);
 
   const startAttendance = useCallback((action) => {
-    if (action === 'Keluar' && isAfterWorkEnd(new Date(), shiftEndTime)) {
+    if (action === 'Keluar' && isAfterWorkEnd(new Date(), shiftEndTime, shiftEndAt)) {
       setStep('choice');
       loadWindow();
       return;
     }
     startEarlyAware(action); // pulang cepat -> popup peringatan; selain itu -> kamera
-  }, [loadWindow, shiftEndTime, startEarlyAware]);
+  }, [loadWindow, shiftEndTime, shiftEndAt, startEarlyAware]);
 
   const close = useCallback(() => {
     requestRef.current += 1;
@@ -116,6 +116,7 @@ export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubm
     startAttendance,
     // props untuk EarlyCheckoutModal
     early: {
+      requiredWorkHours,
       isPromptOpen: early.isPromptOpen,
       onConfirm: early.confirmEarlyCheckout,
       onCancel: early.cancelEarlyCheckout,
@@ -125,6 +126,7 @@ export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubm
       ? {
         step,
         windowState,
+        workEndLabel: shiftEndTime,
         submitting: isSubmitting,
         onCheckout: checkoutNow,
         onAddOvertime: openForm,

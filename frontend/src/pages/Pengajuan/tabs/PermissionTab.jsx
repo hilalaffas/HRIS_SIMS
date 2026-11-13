@@ -11,10 +11,11 @@
 import React from 'react';
 import { FilePenLine } from 'lucide-react';
 import Dropdown from '../../../components/Dropdown';
+import SickDateFields from '../../Absensi/components/SickDateFields';
 import MedicalDocumentDropzone from '../../Absensi/components/MedicalDocumentDropzone';
 import PengajuanFormCard, { FieldError } from '../components/PengajuanFormCard';
 import PengajuanHistoryTable from '../components/PengajuanHistoryTable';
-import usePermissionForm, { MAX_SICK_DAYS, PERMISSION_NOTE_MAX_LENGTH } from '../hooks/usePermissionForm';
+import usePermissionForm, { PERMISSION_NOTE_MAX_LENGTH } from '../hooks/usePermissionForm';
 import { inputErrorClass } from '../../../utils/validation';
 
 const TYPE_OPTIONS = [
@@ -85,30 +86,9 @@ export default function PermissionTab({ onSubmit, historyItems, loading, onSelec
                 />
                 Surat dokter menyusul
               </label>
-              <div className="pgj-days">
-                <label htmlFor="pgj-permission-days">Lama izin sakit</label>
-                <input
-                  id="pgj-permission-days"
-                  type="number"
-                  min="1"
-                  max={MAX_SICK_DAYS}
-                  step="1"
-                  inputMode="numeric"
-                  value={form.days}
-                  onChange={(event) => form.changeDays(event.target.value)}
-                  disabled={form.isSubmitting || form.documentLater}
-                  className={inputErrorClass(fieldErrors.days, 'form-control')}
-                />
-                <span>hari kerja</span>
-              </div>
             </div>
+            <SickDateFields dates={{ ...form.dates, changeDays: form.changeDays }} documentLater={form.documentLater} disabled={form.isSubmitting} />
             <FieldError message={fieldErrors.days} />
-
-            <p className="pgj-hint">
-              {form.documentLater
-                ? 'Lama izin dikunci 1 hari selama surat menyusul; unggah lewat tombol "Upload Surat" di riwayat.'
-                : 'Dihitung dalam hari kerja (Sabtu & Minggu tidak dihitung).'}
-            </p>
           </div>
         )}
       </PengajuanFormCard>
