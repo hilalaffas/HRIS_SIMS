@@ -6,26 +6,31 @@
 //
 // Contoh pemakaian:
 // <OvertimeTab onSubmit={fn} historyItems={items} loading={false}
-//   onSelectStatus={fn} onAction={fn} />
+//   onSelectStatus={fn} onAction={fn} approvers={approvers}
+//   requiredStages={['LEADER', 'SPV', 'MANAGER']} selfEmployeeId={user.employeeId} />
 import React from 'react';
 import { BriefcaseBusiness } from 'lucide-react';
 import PengajuanFormCard, { FieldError } from '../components/PengajuanFormCard';
 import PengajuanHistoryTable from '../components/PengajuanHistoryTable';
 import useOvertimeForm, { OVERTIME_REASON_MAX_LENGTH } from '../hooks/useOvertimeForm';
-import { inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
-import Dropdown from '../../../components/Dropdown';
+import OvertimeApproverFields from '../components/OvertimeApproverFields';
+import { describeStages } from '../../../constants/overtimeFlow';
+import { inputErrorClass } from '../../../utils/validation';
 import '../../Cuti/applycuti/components/LeaveForm.css';
 
-export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectStatus, onAction, approvers = { HRD: [] } }) {
-  const { form, fieldErrors, ...overtime } = useOvertimeForm(onSubmit);
-  const hrdOptions = approvers.HRD || [];
+// [UBAH] requiredStages: tahap approval sesuai jabatan pemohon (getRequiredStages), bukan lagi selalu HRD.
+export default function OvertimeTab({
+  onSubmit, historyItems, loading, onSelectStatus, onAction,
+  approvers = {}, requiredStages = ['HRD'], selfEmployeeId = null,
+}) {
+  const { form, fieldErrors, ...overtime } = useOvertimeForm(onSubmit, requiredStages);
 
   return (
     <>
       <PengajuanFormCard
         icon={BriefcaseBusiness}
         title="Formulir Pengajuan Lembur"
-        subtitle="Pengajuan lembur diproses oleh HRD."
+        subtitle={`Persetujuan lembur: ${describeStages(requiredStages)}.`}
         onSubmit={overtime.handleSubmit}
         isSubmitting={overtime.isSubmitting}
         errorMessage={overtime.errorMessage}
@@ -80,30 +85,16 @@ export default function OvertimeTab({ onSubmit, historyItems, loading, onSelectS
           Total jam lembur:&nbsp;<strong>{overtime.totalLabel}</strong>
         </div>
 
-        <div className="form-group form-group--approval">
-          <label className="form-label" htmlFor="pgj-overtime-hrd">PILIH APPROVER LEMBUR (HRD) *</label>
-          <div className="approval-row approval-row--single">
-            <div className="approval-col">
-              <span className="badge-approval hrd">HRD</span>
-              <Dropdown
-                id="pgj-overtime-hrd"
-                name="hrdEmployeeId"
-                value={form.hrdEmployeeId}
-                onChange={overtime.updateField}
-                options={hrdOptions.map((person) => ({ value: String(person.employeeId), label: person.fullName }))}
-                placeholder={hrdOptions.length > 0 ? 'Pilih...' : 'Belum ada HRD tersedia'}
-                disabled={hrdOptions.length === 0 || overtime.isSubmitting}
-                className={dropdownErrorClass(Boolean(fieldErrors.hrdEmployeeId))}
-              />
-              <FieldError message={fieldErrors.hrdEmployeeId} />
-            </div>
-            <p className={`approval-hint${hrdOptions.length > 0 ? '' : ' approval-hint--warning'}`}>
-              {hrdOptions.length > 0
-                ? 'Pengajuan lembur hanya dapat disetujui oleh rekan ber-role HRD.'
-                : 'Belum ada HRD lain yang dapat dipilih. Hubungi Super Admin.'}
-            </p>
-          </div>
-        </div>
+        <OvertimeApproverFields
+          stages={requiredStages}
+          values={form}
+          errors={fieldErrors}
+          approvers={approvers}
+          selfEmployeeId={selfEmployeeId}
+          disabled={overtime.isSubmitting}
+          idPrefix="pgj-overtime"
+          onChange={overtime.updateField}
+        />
 
         <div className="form-group">
           <label className="form-label" htmlFor="pgj-overtime-reason">ALASAN / PEKERJAAN LEMBUR *</label>

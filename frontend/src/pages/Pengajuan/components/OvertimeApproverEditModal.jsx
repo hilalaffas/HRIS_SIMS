@@ -1,30 +1,42 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import Dropdown from '../../../components/Dropdown';
+import OvertimeApproverFields from './OvertimeApproverFields';
+import { buildApproverPayload } from '../../../services/overtimeService';
+import { describeStages, STAGE_FIELD, STAGE_META } from '../../../constants/overtimeFlow';
 import './OvertimeApproverEditModal.css';
 
-// Melengkapi nama approver HRD untuk pengajuan lembur yang belum punya approver
-// (mis. lembur tambahan saat check-out). Hanya satu nama HRD yang dibutuhkan.
-export default function OvertimeApproverEditModal({ record, approvers = { HRD: [] }, onClose, onSubmit }) {
-  const [hrdEmployeeId, setHrdEmployeeId] = useState('');
+// Melengkapi nama approver untuk pengajuan lembur yang belum punya approver
+// (mis. lembur tambahan saat check-out). [UBAH] Tahap yang diisi mengikuti jabatan pemohon
+// (requiredStages), sama seperti formulir Lembur -- bukan lagi hanya satu nama HRD.
+export default function OvertimeApproverEditModal({
+  record, approvers = {}, requiredStages = ['HRD'], selfEmployeeId = null, onClose, onSubmit,
+}) {
+  const [values, setValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const hrdOptions = (approvers.HRD || []).map((person) => ({
-    value: String(person.employeeId),
-    label: person.fullName,
-  }));
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setValues((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => ({ ...current, [name]: undefined }));
+    setError('');
+  };
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!hrdEmployeeId) {
-      setError('Nama approver HRD wajib dipilih.');
+    const errors = {};
+    requiredStages.forEach((stage) => {
+      if (!values[STAGE_FIELD[stage]]) errors[STAGE_FIELD[stage]] = `Approver ${STAGE_META[stage].label} perlu diisi.`;
+    });
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
     setSaving(true);
     setError('');
     try {
-      await onSubmit({ hrdEmployeeId: Number(hrdEmployeeId) });
+      await onSubmit(buildApproverPayload(requiredStages, values));
     } catch (err) {
       setError(err?.message || 'Gagal menyimpan nama approval.');
       setSaving(false);
@@ -37,20 +49,21 @@ export default function OvertimeApproverEditModal({ record, approvers = { HRD: [
         <header className="overtime-approver-modal__header">
           <div>
             <h2 id="overtime-approver-title">Lengkapi Nama Approval</h2>
-            <p>Pengajuan lembur {record?.date || ''} belum memiliki nama approver.</p>
+            <p>Pengajuan lembur {record?.date || ''} belum memiliki nama approver. Alur: {describeStages(requiredStages)}.</p>
           </div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="Tutup"><X /></button>
         </header>
 
         <div className="overtime-approver-field">
-          <label>Approver HRD *</label>
-          <Dropdown
-            name="hrdEmployeeId"
-            value={hrdEmployeeId}
-            onChange={(event) => { setHrdEmployeeId(event.target.value); setError(''); }}
-            options={hrdOptions}
-            placeholder={hrdOptions.length > 0 ? 'Pilih HRD...' : 'Belum ada HRD tersedia'}
-            disabled={saving || hrdOptions.length === 0}
+          <OvertimeApproverFields
+            stages={requiredStages}
+            values={values}
+            errors={fieldErrors}
+            approvers={approvers}
+            selfEmployeeId={selfEmployeeId}
+            disabled={saving}
+            idPrefix="overtime-approver-edit"
+            onChange={handleChange}
           />
         </div>
 

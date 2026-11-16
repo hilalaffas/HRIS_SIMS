@@ -8,9 +8,11 @@
 // gagal supaya pesannya tampil.
 //
 // Contoh pemakaian:
-// const form = useOvertimeForm(async (values) => { await submitOvertime(values); });
+// const form = useOvertimeForm(async (values) => { await submitOvertime(values); }, ['LEADER', 'SPV', 'MANAGER']);
+// requiredStages = tahap approval sesuai jabatan pemohon (constants/overtimeFlow.js: getRequiredStages).
 import { useRef, useState } from 'react';
-import { formatOvertimeDuration } from '../../../services/overtimeService';
+import { buildApproverPayload, formatOvertimeDuration } from '../../../services/overtimeService';
+import { STAGE_FIELD, STAGE_META } from '../../../constants/overtimeFlow';
 import { validateRequired } from '../../../utils/validation';
 
 export const OVERTIME_REASON_MAX_LENGTH = 500;
@@ -30,9 +32,11 @@ const toMinutes = (time) => {
   return hour * 60 + minute;
 };
 
-const createInitialForm = () => ({ overtimeDate: getTodayKey(), startTime: '', endTime: '', reason: '', hrdEmployeeId: '' });
+const createInitialForm = () => ({ overtimeDate: getTodayKey(), startTime: '', endTime: '', reason: '',
+  leaderEmployeeId: '', spvEmployeeId: '', managerEmployeeId: '', hrdEmployeeId: '',
+});
 
-export default function useOvertimeForm(onSubmit) {
+export default function useOvertimeForm(onSubmit, requiredStages = ['HRD']) {
   const submitLockRef = useRef(false); // gerbang sinkron anti double-submit
   const [form, setForm] = useState(createInitialForm);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -58,7 +62,12 @@ export default function useOvertimeForm(onSubmit) {
       { field: 'startTime', label: 'Jam mulai', value: form.startTime },
       { field: 'endTime', label: 'Jam selesai', value: form.endTime },
       { field: 'reason', label: 'Alasan / pekerjaan lembur', value: form.reason },
-      { field: 'hrdEmployeeId', label: 'Approver HRD', value: form.hrdEmployeeId },
+      // [UBAH] Satu approver wajib untuk SETIAP tahap sesuai jabatan pemohon.
+      ...requiredStages.map((stage) => ({
+        field: STAGE_FIELD[stage],
+        label: `Approver ${STAGE_META[stage].label}`,
+        value: form[STAGE_FIELD[stage]],
+      })),
     ]);
     if (!errors.overtimeDate && form.overtimeDate > getTodayKey()) {
       errors.overtimeDate = 'Tanggal lembur tidak boleh melebihi hari ini.';
@@ -86,7 +95,7 @@ export default function useOvertimeForm(onSubmit) {
       await onSubmit({
         ...form,
         reason: form.reason.trim(),
-        hrdEmployeeId: Number(form.hrdEmployeeId),
+        ...buildApproverPayload(requiredStages, form),
       });
       setForm(createInitialForm());
       setFieldErrors({});

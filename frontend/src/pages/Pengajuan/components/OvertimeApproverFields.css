@@ -1,0 +1,26 @@
+/* Tata letak dropdown approver lembur. Kelas dasar (.approval-row, .approval-col, .badge-approval)
+   berasal dari LeaveForm.css; berkas ini hanya menambah varian jumlah tahap. */
+.approval-row--count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.approval-row--count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* Keterangan alur selalu satu baris penuh di bawah dropdown (varian 2 & 3 tahap). */
+.approval-row--count-2 .approval-hint,
+.approval-row--count-3 .approval-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+.approval-row--count-2 .approval-hint--warning,
+.approval-row--count-3 .approval-hint--warning { color: var(--color-danger, #e11d48); font-weight: 600; }
+
+@media (max-width: 768px) {
+  .approval-row--count-2,
+  .approval-row--count-3 { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}
+
+/* Di dalam popup (lebar terbatas) dropdown selalu bertumpuk. */
+.overtime-approver-field .approval-row--count-2,
+.overtime-approver-field .approval-row--count-3,
+.overtime-approver-field .approval-row--single { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.overtime-approver-field .approval-row .approval-hint { grid-column: auto; margin: 0; }

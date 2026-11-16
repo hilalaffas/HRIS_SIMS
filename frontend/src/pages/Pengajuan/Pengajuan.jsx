@@ -53,6 +53,7 @@ import {
 } from './utils/pengajuanItems';
 import { formatDateLabel, submitPermissionRequest, toDisplayRecord, uploadMedicalDocument } from '../../services/attendanceService';
 import { submitOvertime, updateOvertimeApprovers } from '../../services/overtimeService';
+import { getRequiredStages } from '../../constants/overtimeFlow'; // [BARU]
 import { isMyDivisionShifting } from '../../services/divisiService';
 import './Pengajuan.css';
 
@@ -75,6 +76,7 @@ export default function Pengajuan({ user }) {
   const showErrorToast = useCallback((message) => showToast(message, 'error'), [showToast]);
 
   // ===================== DATA =====================
+  const overtimeStages = useMemo(() => getRequiredStages(user), [user]); // [BARU] tahap approval lembur sesuai jabatan
   const leave = useLeaveApplication(user, { notify: showToast, formTopRef: leaveFormTopRef }); // [UBAH] tidak ada popup form yang perlu ditutup
   const isSupervisorRequester = leave.formProps.isSupervisor;
   const { overtimeRecords, attendanceRecords, loading, reload, upsertAttendance } = usePengajuanData(showErrorToast);
@@ -274,6 +276,8 @@ export default function Pengajuan({ user }) {
           onSelectStatus={handleSelectStatus}
           onAction={handleRowAction}
           approvers={leave.formProps.approvers}
+          requiredStages={overtimeStages}
+          selfEmployeeId={user?.employeeId}
         />
       </PengajuanTabPanel>
 
@@ -346,6 +350,8 @@ export default function Pengajuan({ user }) {
         <OvertimeApproverEditModal
           record={overtimeApproverTarget}
           approvers={leave.formProps.approvers}
+          requiredStages={overtimeStages}
+          selfEmployeeId={user?.employeeId}
           onClose={() => setOvertimeApproverTarget(null)}
           onSubmit={handleOvertimeApproverUpdate}
         />

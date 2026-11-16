@@ -5,6 +5,7 @@
 // (pages/Absensi/utils/monthlyAttendance.js). Pola sama dengan
 // attendanceService.js: data MENTAH dari backend, diformat di sini.
 import { api } from './api';
+import { STAGE_FIELD } from '../constants/overtimeFlow';
 
 // [UBAH] + config opsional ({ silent }) -- pemuatan ulang di latar belakang
 // (mis. setelah Tambah Lembur saat check-out) tidak perlu memicu LoadingScreen global.
@@ -12,10 +13,27 @@ export async function getMyOvertime(config = {}) {
   return api.get('/api/lembur/me', { silent: config.silent });
 }
 
+// [BARU] Susun field approver untuk payload: hanya tahap yang diperlukan pemohon yang diisi
+// (Number), sisanya null. Server tetap memvalidasi ulang (ApprovalChainPolicy).
+// stages: ['LEADER','SPV','MANAGER'] | ['SPV','MANAGER'] | ['MANAGER'] | ['HRD']
+export function buildApproverPayload(stages, selected = {}) {
+  return Object.fromEntries(Object.entries(STAGE_FIELD).map(([stage, field]) => [
+    field,
+    stages.includes(stage) && selected[field] ? Number(selected[field]) : null,
+  ]));
+}
+
 // POST pengajuan lembur. Total jam & status dihitung backend, jadi tidak dikirim.
-// [UBAH] Satu approver HRD (hrdEmployeeId) menggantikan leader/spv/manager.
-export async function submitOvertime({ overtimeDate, startTime, endTime, reason, hrdEmployeeId }) {
-  return api.post('/api/lembur/me', { overtimeDate, startTime, endTime, reason, hrdEmployeeId });
+// [UBAH] Approver berjenjang sesuai jabatan pemohon (leader/spv/manager/hrd EmployeeId),
+// bukan lagi satu approver HRD untuk semua.
+export async function submitOvertime({
+  overtimeDate, startTime, endTime, reason,
+  leaderEmployeeId = null, spvEmployeeId = null, managerEmployeeId = null, hrdEmployeeId = null,
+}) {
+  return api.post('/api/lembur/me', {
+    overtimeDate, startTime, endTime, reason,
+    leaderEmployeeId, spvEmployeeId, managerEmployeeId, hrdEmployeeId,
+  });
 }
 
 // [BARU] Tambah Lembur saat check-out (setelah 17:00).
@@ -41,8 +59,9 @@ export async function getOvertimeApprovals() {
   return api.get('/api/lembur/approvals');
 }
 
-export async function decideOvertimeApproval(overtimeId, status) {
-  return api.put(`/api/lembur/${overtimeId}/approval`, { status });
+// [UBAH] + note (opsional) disimpan pada tahap yang diproses.
+export async function decideOvertimeApproval(overtimeId, status, note = '') {
+  return api.put(`/api/lembur/${overtimeId}/approval`, { status, note });
 }
 
 export const OVERTIME_STATUS = {
