@@ -115,7 +115,10 @@ export async function submitCuti(payload) {
     // memvalidasi & mengabaikan nilai ini untuk jenis cuti selain
     // setengah hari.
     session: payload.session || null,
-    // [UBAH] Pengajuan baru hanya memakai satu approver HRD (leader/spv/manager tidak dikirim lagi).
+    leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
+    spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
+    managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
+    // Khusus pemohon ber-role HRD (satu approver HRD).
     hrdEmployeeId: payload.hrdEmployeeId ? Number(payload.hrdEmployeeId) : null,
   };
   return api.post('/api/cuti', body);
@@ -147,7 +150,9 @@ export const resubmitCuti = (id, payload) => api.put(`/api/cuti/${id}/resubmit`,
   coveredBy: payload.coveredBy || payload.coverOleh,
   // [BARU] Sesi Cuti setengah hari, sama seperti submitCuti().
   session: payload.session || null,
-  // [UBAH] Satu approver HRD (leader/spv/manager tidak dikirim lagi).
+  leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
+  spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
+  managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
   hrdEmployeeId: payload.hrdEmployeeId ? Number(payload.hrdEmployeeId) : null,
 });
 

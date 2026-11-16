@@ -55,8 +55,8 @@ public class LeaveService {
     private static final String ROLE_LEADER = "LEADER";
     private static final String ROLE_SPV = "SPV";
     private static final String ROLE_MANAGER = "MANAGER";
-    // [BARU] Pengajuan baru hanya punya SATU tahap: HRD. LEADER/SPV/MANAGER di atas tetap
-    // dikenali supaya pengajuan lama yang masih PENDING bisa diselesaikan dengan alur lamanya.
+    // [UBAH] Tahap HRD hanya dipakai untuk pengajuan yang dibuat oleh role HRD; pemohon Member/Leader/SPV/Manager
+    // memakai alur Leader/SPV/Manager.
     private static final String ROLE_HRD = HrdApproverPolicy.STAGE_ROLE;
     private static final List<String> APPROVAL_STAGE_ROLES = List.of(ROLE_LEADER, ROLE_SPV, ROLE_MANAGER, ROLE_HRD);
     // [BARU] Batas Cuti Melahirkan: Laki-laki (cuti pendamping) maksimal 2
@@ -947,11 +947,37 @@ public class LeaveService {
                         cuti.getLeaveRequestId(), params));
     }
 
-    // [UBAH] Semua pengajuan baru -- siapa pun jabatan pemohonnya -- punya SATU tahap approval: HRD.
-    // Server hanya memakai hrdEmployeeId; leader/spv/manager dari klien diabaikan.
+    // [UBAH] Alur approval ditentukan jabatan pemohon:
+    //  - Pemohon HRD (HRD_ADMIN / HRD_KARYAWAN) -> SATU tahap "HRD" (hrdEmployeeId).
+    //  - Pemohon Leader/SPV/Manager             -> hanya tahap Manager (tanpa Leader & SPV).
+    //  - Pemohon Member (lainnya)               -> Leader -> SPV -> Manager (alur asli BRD 4.4).
     private void createApprovalSteps(LeaveRequest cuti, Employee requester) {
-        Employee hrd = hrdApproverPolicy.requireSelectableApprover(cuti.getHrdEmployeeId(), requester);
-        approvalRepository.save(buildApproval(cuti, ROLE_HRD, hrd));
+        if (HrdApproverPolicy.isHrd(requester)) {
+            Employee hrd = hrdApproverPolicy.requireSelectableApprover(cuti.getHrdEmployeeId(), requester);
+            approvalRepository.save(buildApproval(cuti, ROLE_HRD, hrd));
+            return;
+        }
+
+        List<LeaveRequestApproval> approvals = new ArrayList<>();
+        String requesterRole = normalizeApproverRole(requester.getUser().getRoleId().getRoleName());
+
+        if (REQUIRED_APPROVER_ROLES.contains(requesterRole)) {
+            if (hasValue(cuti.getLeaderEmployeeId()) || hasValue(cuti.getSpvEmployeeId())) {
+                throw new RuntimeException("Cuti Leader/SPV/Manager hanya boleh memilih approver Manager");
+            }
+
+            Employee manager = getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, requester);
+            if (manager.getEmployeeId().equals(requester.getEmployeeId())) {
+                throw new RuntimeException("Manager tidak boleh approve cuti miliknya sendiri");
+            }
+            approvals.add(buildApproval(cuti, ROLE_MANAGER, manager));
+        } else {
+            approvals.add(buildApproval(cuti, ROLE_LEADER, getSelectedApprover(cuti.getLeaderEmployeeId(), ROLE_LEADER, requester)));
+            approvals.add(buildApproval(cuti, ROLE_SPV, getSelectedApprover(cuti.getSpvEmployeeId(), ROLE_SPV, requester)));
+            approvals.add(buildApproval(cuti, ROLE_MANAGER, getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, requester)));
+        }
+
+        approvalRepository.saveAll(approvals);
     }
 
     private boolean isAllApprovalsApproved(Long leaveRequestId) {
@@ -1296,6 +1322,38 @@ public class LeaveService {
 
     private String normalizeApproverRole(String roleName) {
         return roleName == null ? "" : roleName.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private boolean hasValue(Long value) {
+        return value != null && value > 0;
+    }
+
+    private Employee getSelectedApprover(Long employeeId, String expectedRole, Employee requester) {
+        if (!hasValue(employeeId)) {
+            throw new RuntimeException("Approver " + expectedRole + " wajib dipilih");
+        }
+
+        Employee employee = karyawanRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Approver " + expectedRole + " tidak ditemukan"));
+        String role = normalizeApproverRole(employee.getUser().getRoleId().getRoleName());
+
+        if (!expectedRole.equals(role)) {
+            throw new RuntimeException("Approver yang dipilih harus memiliki role " + expectedRole);
+        }
+
+        if (!Boolean.TRUE.equals(employee.getIsActive())) {
+            throw new RuntimeException("Approver " + expectedRole + " sudah tidak aktif");
+        }
+
+        if (requester.getDivisi() == null) {
+            throw new RuntimeException("Divisi pemohon belum ditentukan");
+        }
+        if (employee.getDivisi() == null
+                || !requester.getDivisi().getId().equals(employee.getDivisi().getId())) {
+            throw new RuntimeException("Approver " + expectedRole + " harus berasal dari divisi yang sama dengan pemohon");
+        }
+
+        return employee;
     }
 
     private void validateCoveredBy(String coveredBy, Employee requester) {
