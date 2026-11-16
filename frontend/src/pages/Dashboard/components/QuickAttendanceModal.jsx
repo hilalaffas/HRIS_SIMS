@@ -8,15 +8,12 @@
 // Sengaja TIDAK ada: tombol Sakit/Izin (diajukan lewat Absensi Saya) dan
 // unggah foto dari galeri (bukti harus selfie langsung dari kamera).
 //
-// [UBAH] Dipakai juga oleh halaman Absensi Saya. Di sana kamera yang terblokir
-// punya jalur cadangan "Unggah foto" (prop opsional onUploadFallback); di Dashboard
-// prop itu tidak diisi, jadi tetap hanya selfie langsung + tautan ke Absensi Saya.
+// [UBAH] Dipakai juga oleh halaman Absensi Saya. Kamera tidak terdeteksi -> hanya tampil
+// pesan + tombol "Coba Lagi" (tidak ada jalur unggah foto di Dashboard maupun Absensi Saya).
 //
 // Contoh pemakaian:
 // <QuickAttendanceModal capture={capture} shiftHours="08:00 - 17:00" />
-// <QuickAttendanceModal capture={capture} shiftHours="08:00 - 17:00" onUploadFallback={capture.handleUploadFallback} />
 import React, { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Camera,
@@ -39,14 +36,13 @@ function gpsBadgeText(locationStatus, coords) {
   return 'GPS: Mencari sinyal...';
 }
 
-export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 'Shift Normal', shiftOvernight = false, onUploadFallback }) { // [UBAH] + onUploadFallback (opsional)
+export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 'Shift Normal', shiftOvernight = false }) { // [UBAH] prop onUploadFallback dihapus
   const {
-    action, note, captured, cameraError, submitError, coords, locationType, setLocationType,
+    action, reason, note, captured, cameraError, submitError, coords, locationType, setLocationType,
     locationStatus, locationError, locationName, isLocationNameLoading, isSubmitting,
-    attachVideo, close, takePhoto, retake, submit, refreshLocation, setNote,
+    attachVideo, open, close, takePhoto, retake, submit, refreshLocation, setNote,
   } = capture;
 
-  const navigate = useNavigate();
   const clock = useLiveClock();
   const dialogRef = useRef(null);
 
@@ -73,10 +69,8 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
   const canSubmit = (isCheckout || Boolean(captured)) && hasLocation && !isSubmitting;
   const isLowAccuracy = hasLocation && coords.accuracy > LOW_ACCURACY_METERS;
 
-  const handleOpenAbsensiPage = () => {
-    close();
-    navigate('/absensi');
-  };
+  // [UBAH] Kamera tidak terdeteksi: hanya bisa mencoba mengaktifkan kamera lagi (tanpa unggah foto).
+  const handleRetryCamera = () => open(action, reason, note);
 
   return (
     <div className="quickAtt__backdrop" role="presentation" onClick={close}>
@@ -117,21 +111,13 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
         <div className="quickAtt__body">
           {/* ---------- Kamera ---------- */}
           <div className={isCheckout ? 'quickAtt__gpsOnly' : `quickAtt__camera ${captured ? 'is-captured' : ''}`}>
-            {/* [UBAH] Foto hasil unggah (cadangan) tetap tampil walau kamera error */}
             {!isCheckout && (cameraError && !captured ? (
               <div className="quickAtt__cameraError" role="alert">
                 <Camera size={28} aria-hidden="true" />
                 <p>{cameraError}</p>
-                {onUploadFallback ? (
-                  <label className="quickAtt__link">
-                    Unggah foto
-                    <input type="file" accept="image/*" onChange={onUploadFallback} hidden />
-                  </label>
-                ) : (
-                  <button type="button" className="quickAtt__link" onClick={handleOpenAbsensiPage}>
-                    Buka Absensi Saya
-                  </button>
-                )}
+                <button type="button" className="quickAtt__link" onClick={handleRetryCamera}>
+                  Coba Lagi
+                </button>
               </div>
             ) : (
               <>

@@ -242,13 +242,6 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     setSubmitError('');
   }, []);
 
-  // Hanya dipakai halaman Absensi Saya (cadangan bila kamera tidak bisa diakses).
-  // Popup Dashboard sengaja TIDAK menyediakan unggah foto: bukti harus selfie langsung.
-  const handleUploadFallback = useCallback((event) => {
-    const file = event.target.files?.[0];
-    if (file) setCaptured(URL.createObjectURL(file));
-  }, []);
-
   const submit = useCallback(async () => {
     const trimmedNote = note.trim();
     const noteRequired = reason !== 'Absen';
@@ -308,6 +301,5 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     refreshLocation: requestLocation,
     setNote,
     setReason,
-    handleUploadFallback,
   };
 }

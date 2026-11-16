@@ -37,6 +37,8 @@ const captionFor = (state, actedAt) => {
 
 export function buildLeaveProgressSteps(detail) {
   if (!detail) return [];
+  // [BARU] Detail approver belum selesai dimuat: jangan menebak alur (dulu otomatis tampil "HRD").
+  if (detail.isApprovalLoading) return [];
   const overall = OVERALL_BY_KEY[String(detail.statusBerkas || detail.globalStatus || 'PROSES').toUpperCase()] || 'PENDING';
   const chain = detail.approvalChain || {};
 
@@ -46,9 +48,14 @@ export function buildLeaveProgressSteps(detail) {
     const assigned = ROLE_ORDER
       .map((role) => ({ role, name: chain[role.toLowerCase()], action: overall === 'APPROVED' ? 'APPROVED' : 'PENDING', actedAt: null }))
       .filter((step) => step.name && step.name !== '-');
+    // [UBAH] Fallback tahap HRD hanya untuk berkas yang sudah final disetujui tanpa log approver
+    // (mis. cuti susulan yang diinput HR). Berkas yang masih berjalan TIDAK boleh ditebak sebagai
+    // alur HRD -- alur asli (Leader/SPV/Manager atau HRD) selalu datang dari log backend.
     source = assigned.length > 0
       ? assigned
-      : ['HRD'].map((role) => ({ role, name: '', action: overall === 'APPROVED' ? 'APPROVED' : 'PENDING', actedAt: null }));
+      : overall === 'APPROVED'
+        ? [{ role: 'HRD', name: '', action: 'APPROVED', actedAt: null }]
+        : [];
   }
 
   // Berkas ditolak/dikembalikan tetapi log belum memuatnya: tandai tahap pertama yang belum ACC.
