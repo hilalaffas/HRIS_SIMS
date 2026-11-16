@@ -76,6 +76,7 @@ export default function Pengajuan({ user }) {
 
   // ===================== DATA =====================
   const leave = useLeaveApplication(user, { notify: showToast, formTopRef: leaveFormTopRef }); // [UBAH] tidak ada popup form yang perlu ditutup
+  const isSupervisorRequester = leave.formProps.isSupervisor;
   const { overtimeRecords, attendanceRecords, loading, reload, upsertAttendance } = usePengajuanData(showErrorToast);
   const shiftSwap = useShiftSwapRequests(); // [BARU] data tukar shift lokal (belum ada backend)
 
@@ -96,7 +97,8 @@ export default function Pengajuan({ user }) {
     overtimeRecords,
     attendanceRecords,
     shiftSwapRequests: shiftSwap.requests, // [BARU]
-  }), [leave.history, overtimeRecords, attendanceRecords, shiftSwap.requests]);
+    isSupervisorRequester,
+  }), [leave.history, overtimeRecords, attendanceRecords, shiftSwap.requests, isSupervisorRequester]);
 
   const latestCardKey = getCardItems(baseItems)[0]?.key ?? null;
   const activeKey = selectedKey ?? latestCardKey;
@@ -120,7 +122,8 @@ export default function Pengajuan({ user }) {
     overtimeRecords,
     attendanceRecords,
     shiftSwapRequests: shiftSwap.requests, // [BARU]
-  }), [leave.history, leaveDetails, overtimeRecords, attendanceRecords, shiftSwap.requests]);
+    isSupervisorRequester,
+  }), [leave.history, leaveDetails, overtimeRecords, attendanceRecords, shiftSwap.requests, isSupervisorRequester]);
 
   const visibleItems = useMemo(() => filterPengajuanItems(items, filters), [items, filters]);
 
@@ -142,12 +145,13 @@ export default function Pengajuan({ user }) {
   const cardModel = buildCardModelForItem(activeItem, {
     leaveDetails,
     isLatest: activeKey === latestCardKey,
+    isSupervisorRequester,
   });
 
   // ===================== POPUP KARTU ALUR PERSETUJUAN (semua tab) =====================
   // [BARU] Model kartu bergaris untuk pengajuan yang tombol statusnya diklik.
   const statusItem = items.find((item) => item.key === statusKey) || null;
-  const statusModel = buildCardModelForItem(statusItem, { leaveDetails });
+  const statusModel = buildCardModelForItem(statusItem, { leaveDetails, isSupervisorRequester });
 
   // [BARU] Permintaan tukar shift yang menunggu persetujuan rekan pengganti
   const incomingShiftRequests = useMemo(() => shiftSwap.requests.filter((request) => (
@@ -157,7 +161,7 @@ export default function Pengajuan({ user }) {
   // ===================== POPUP DETAIL (lembur / sakit / terlambat / tukar shift) =====================
   const detailItem = items.find((item) => item.key === detailKey) || null;
   const detail = detailItem
-    ? buildRequestDetail(detailItem, buildCardModelForItem(detailItem))
+    ? buildRequestDetail(detailItem, buildCardModelForItem(detailItem, { isSupervisorRequester }))
     : null;
 
   const letterTarget = attendanceRecords.find((record) => record.id === letterTargetId);
