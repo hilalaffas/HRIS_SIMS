@@ -11,12 +11,15 @@ import './ActionReasonModal.css';
  * Pemeriksaan Berjenjang").
  *
  * Props:
- *  - request: { item, action } | null
- *      item   -> data permohonan cuti (lihat bentuknya di mockData.js)
- *      action -> 'acc' | 'revisi' | 'tolak'
+ *  - request: { item, action, subject?, copy? } | null
+ *      item    -> data permohonan (cuti: lihat mockData.js; lembur: baris useOvertimeApprovals, cukup punya `id`)
+ *      action  -> 'acc' | 'revisi' | 'tolak'
+ *      subject -> [BARU] { name, meta } ringkasan di atas kolom alasan. Default: data cuti (karyawan.nama, jenisCuti, durasi)
+ *      copy    -> [BARU] teks pengganti sebagian (modalTitle, modalSubtitle, placeholder, helperText) untuk jenis pengajuan lain
  *    Modal tidak dirender (return null) kalau request bernilai null.
  *  - onCancel: () => void
  *  - onSubmit: (id, action, alasan) => void
+ *  - isSubmitting: [BARU] true = tombol kirim dinonaktifkan selama permintaan ke server berjalan
  * ------------------------------------------------------------------
  */
 
@@ -56,14 +59,17 @@ export const ACTION_CONFIG = {
 
 const MIN_ALASAN_LENGTH = 5;
 
-const ActionReasonModal = ({ request, onCancel, onSubmit }) => {
+const ActionReasonModal = ({ request, onCancel, onSubmit, isSubmitting = false }) => {
   const [alasan, setAlasan] = useState('');
   const [touched, setTouched] = useState(false);
   const textareaRef = useRef(null);
 
   const action = request?.action;
   const item = request?.item;
-  const config = action ? ACTION_CONFIG[action] : null;
+  // [UBAH] Teks bisa ditimpa per jenis pengajuan lewat request.copy (cuti tidak mengirim copy -> tampilan lama).
+  const config = action && ACTION_CONFIG[action] ? { ...ACTION_CONFIG[action], ...request.copy } : null;
+  // [BARU] Ringkasan pemohon: lembur mengirim request.subject, cuti memakai data bawaan.
+  const subject = request?.subject || (item?.karyawan ? { name: item.karyawan.nama, meta: `${item.jenisCuti} \u00b7 ${item.durasi}` } : null);
 
   // Reset isi form & fokus ke textarea setiap kali modal dibuka untuk
   // permohonan/aksi yang berbeda.
@@ -95,7 +101,7 @@ const ActionReasonModal = ({ request, onCancel, onSubmit }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setTouched(true);
-    if (!isValid) return;
+    if (!isValid || isSubmitting) return;
     onSubmit(item.id, action, trimmedAlasan);
   };
 
@@ -128,10 +134,8 @@ const ActionReasonModal = ({ request, onCancel, onSubmit }) => {
         <form onSubmit={handleSubmit}>
           <div className="action-reason__body">
             <div className="action-reason__context">
-              <span className="action-reason__contextName">{item.karyawan.nama}</span>
-              <span className="action-reason__contextMeta">
-                {item.jenisCuti} &middot; {item.durasi}
-              </span>
+              <span className="action-reason__contextName">{subject?.name}</span>
+              <span className="action-reason__contextMeta">{subject?.meta}</span>
             </div>
 
             <label className="action-reason__label" htmlFor="action-reason-textarea">
@@ -164,7 +168,7 @@ const ActionReasonModal = ({ request, onCancel, onSubmit }) => {
             <button
               type="submit"
               className={`action-reason__btnSubmit action-reason__btnSubmit--${config.accent}`}
-              disabled={!isValid}
+              disabled={!isValid || isSubmitting}
             >
               {config.submitLabel}
             </button>

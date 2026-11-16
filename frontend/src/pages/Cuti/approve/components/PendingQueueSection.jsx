@@ -2,7 +2,8 @@
 //
 // [BARU] Isi tab "Perlu Diproses" di Pusat Persetujuan. SEMUA aksi ACC dipusatkan di sini:
 //   - Cuti             -> ApproveSection (ACC / Revisi / Tolak + alasan, tidak berubah)
-//   - Lembur           -> ApprovalTable (Setujui / Tolak), detail = OvertimeDetailModal
+//   - Lembur           -> ApprovalTable (Setujui / Tolak), detail = OvertimeDetailModal;
+//                         Tolak membuka ActionReasonModal (alasan wajib), Setujui langsung diproses
 //   - Koreksi Absensi  -> ApprovalTable (Setujui / Tolak), detail = AttendanceCorrectionDetailModal
 //   - Sakit & Izin     -> PersetujuanIzin (verifikasi surat + bukti, ACC massal) -- hanya HRD
 // Props `overtime` / `corrections` / `permission` bernilai null untuk role yang tidak berhak,
@@ -18,9 +19,12 @@
 //   onOpenOvertimeDetail={fn} onOpenCorrectionDetail={fn} />
 import React, { useMemo, useState } from 'react';
 import ApproveSection from './ApproveSection';
+import ActionReasonModal from './ActionReasonModal'; // [BARU] alasan wajib saat menolak lembur
 import ApprovalTable from '../../../../components/ApprovalTable';
 import PersetujuanIzin from '../../../PersetujuanIzin/PersetujuanIzin'; // [BARU] isi pilihan "Sakit & Izin"
 import Toast from '../../../../components/Toast';
+import { OVERTIME_REJECT_COPY } from '../../../../constants/overtimeFlow'; // [BARU]
+import { formatDateLabel } from '../../../../services/attendanceService'; // [BARU]
 import './PendingQueueSection.css';
 
 const QUEUE = { LEAVE: 'cuti', OVERTIME: 'lembur', CORRECTION: 'koreksi', PERMISSION: 'sakit' };
@@ -40,6 +44,32 @@ export default function PendingQueueSection({
   initialQueue = QUEUE.LEAVE, // [BARU] pilihan awal (mis. dari ?queue=sakit)
 }) {
   const [activeQueue, setActiveQueue] = useState(() => (initialQueue === QUEUE.PERMISSION && !permission ? QUEUE.LEAVE : initialQueue));
+  // [BARU] Penolakan lembur: baris yang sedang menunggu alasan dari approver (null = popup tertutup).
+  const [overtimeRejectRow, setOvertimeRejectRow] = useState(null);
+
+  // [BARU] Wajib di-memo: ActionReasonModal mereset isian setiap `request` berganti referensi,
+  // jadi objek baru di tiap render akan menghapus alasan yang sedang diketik.
+  const overtimeRejectRequest = useMemo(() => (overtimeRejectRow ? {
+    item: overtimeRejectRow,
+    action: 'tolak',
+    subject: { name: overtimeRejectRow.employeeName, meta: `${formatDateLabel(overtimeRejectRow.date)} \u00b7 ${overtimeRejectRow.subDetail}` },
+    copy: OVERTIME_REJECT_COPY,
+  } : null), [overtimeRejectRow]);
+
+  // [BARU] Setujui = langsung proses. Tolak = buka popup alasan dulu (wajib diisi).
+  const handleOvertimeDecision = (row, status) => {
+    if (status === 'REJECTED') {
+      setOvertimeRejectRow(row);
+      return;
+    }
+    overtime.handleDecision(row, status);
+  };
+
+  // [BARU] Popup ditutup hanya jika server menerima penolakan; bila gagal, isian alasan tetap ada.
+  const submitOvertimeRejection = async (rowId, action, reason) => {
+    const success = await overtime.handleDecision(overtimeRejectRow, 'REJECTED', reason);
+    if (success) setOvertimeRejectRow(null);
+  };
 
   // Pilihan jenis hanya tampil kalau role punya lebih dari satu antrean.
   const queues = useMemo(
@@ -88,8 +118,14 @@ export default function PendingQueueSection({
             loading={overtime.loading}
             processingKey={overtime.processingKey}
             emptyMessage="Tidak ada pengajuan lembur yang perlu Anda proses saat ini."
-            onDecision={overtime.handleDecision}
+            onDecision={handleOvertimeDecision}
             onOpenDetail={onOpenOvertimeDetail}
+          />
+          <ActionReasonModal
+            request={overtimeRejectRequest}
+            isSubmitting={Boolean(overtime.processingKey)}
+            onCancel={() => setOvertimeRejectRow(null)}
+            onSubmit={submitOvertimeRejection}
           />
           <Toast show={!!overtime.toast} message={overtime.toast?.message} type={overtime.toast?.type} />
         </div>

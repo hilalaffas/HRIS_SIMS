@@ -13,16 +13,16 @@
 //
 // Contoh pemakaian:
 // {detailRow && <OvertimeDetailModal row={detailRow} onClose={() => setDetailRow(null)} />}
-import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, X } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { X } from 'lucide-react';
 import ApprovalProgressStepper from './ApprovalProgressStepper';
+import ApprovalLogAccordion from './ApprovalLogAccordion'; // [BARU] accordion log dipakai bersama popup pemohon
 import useModalExit from '../hooks/useModalExit';
-import { buildLeaveProgressSteps, formatActedAt } from '../utils/approvalProgress';
+import { buildLeaveProgressSteps } from '../utils/approvalProgress';
+import { buildOvertimeLogs, toActedAtText } from '../utils/overtimeLog'; // [BARU] susunan log dipakai bersama popup pemohon
 import { formatDateLabel } from '../services/attendanceService';
 import { formatOvertimeDuration } from '../services/overtimeService';
 import '../pages/Cuti/approve/components/Form.css'; // gaya popup dipakai bersama dengan detail berkas cuti
-
-const ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager', HRD: 'HRD' }; // [UBAH] + HRD
 
 // Status keseluruhan pengajuan -> kode berkas yang dipahami buildLeaveProgressSteps()
 const BERKAS_BY_STATUS = { PENDING: 'PROSES', APPROVED: 'DISETUJUI', REJECTED: 'DITOLAK' };
@@ -32,18 +32,8 @@ const STATUS_VIEW = {
   REJECTED: { label: 'Ditolak', tone: 'danger' },
 };
 
-// "2026-10-24T09:05:11" -> "2026-10-24 09:05" (format yang dibaca formatActedAt)
-const toActedAtText = (value) => (value ? String(value).replace('T', ' ').slice(0, 16) : '');
-
-const getLogTone = (badge = '') => {
-  if (badge === 'DISETUJUI') return 'success';
-  if (badge === 'DITOLAK') return 'danger';
-  return 'neutral';
-};
-
 export default function OvertimeDetailModal({ row, onClose }) {
   const { closing, close } = useModalExit();
-  const [isLogOpen, setIsLogOpen] = useState(false);
   const requestClose = () => close(onClose);
 
   useEffect(() => {
@@ -68,22 +58,11 @@ export default function OvertimeDetailModal({ row, onClose }) {
     });
   }, [row, approvals]);
 
-  // Riwayat log: pengajuan dikirim + keputusan tiap approver yang sudah bertindak.
-  const logs = useMemo(() => {
-    if (!row) return [];
-    const submitted = row.createdAt
-      ? [{ statusBadge: 'DIAJUKAN', nama: row.employeeName, waktu: formatActedAt(toActedAtText(row.createdAt)), catatan: '' }]
-      : [];
-    const decisions = approvals
-      .filter((step) => step.action === 'APPROVED' || step.action === 'REJECTED')
-      .map((step) => ({
-        statusBadge: step.action === 'APPROVED' ? 'DISETUJUI' : 'DITOLAK',
-        nama: `${step.employeeName || '-'} (${ROLE_LABEL[String(step.role).toUpperCase()] || step.role})`,
-        waktu: formatActedAt(toActedAtText(step.actedAt)),
-        catatan: step.note || '',
-      }));
-    return [...submitted, ...decisions];
-  }, [row, approvals]);
+  // [UBAH] Susunan log dipindah ke utils/overtimeLog.js (dipakai juga popup pemohon).
+  const logs = useMemo(
+    () => (row ? buildOvertimeLogs({ employeeName: row.employeeName, createdAt: row.createdAt, approvals }) : []),
+    [row, approvals],
+  );
 
   if (!row) return null;
 
@@ -129,35 +108,7 @@ export default function OvertimeDetailModal({ row, onClose }) {
             <div className="form-cuti__box">{row.detail || '-'}</div>
           </section>
 
-          <section className={`form-cuti__log${isLogOpen ? ' is-open' : ''}`}>
-            <button
-              type="button"
-              className="form-cuti__log-toggle"
-              aria-expanded={isLogOpen}
-              aria-controls="overtime-detail-log-panel"
-              onClick={() => setIsLogOpen((open) => !open)}
-            >
-              <span className="form-cuti__label">Riwayat Log Pemeriksaan</span>
-              <span className="form-cuti__log-count">{logs.length}</span>
-              <ChevronDown className="form-cuti__log-chevron" aria-hidden="true" />
-            </button>
-            <div id="overtime-detail-log-panel" className="form-cuti__log-panel" role="region" aria-label="Riwayat log pemeriksaan">
-              <div className="form-cuti__log-inner">
-                {logs.length ? (
-                  <ul className="form-cuti__log-list">
-                    {logs.map((log, index) => (
-                      <li className="form-cuti__log-item" key={`${log.nama}-${log.statusBadge}-${index}`}>
-                        <span className={`form-cuti__log-badge form-cuti__log-badge--${getLogTone(log.statusBadge)}`}>{log.statusBadge}</span>
-                        <strong className="form-cuti__log-name">{log.nama}</strong>
-                        <time className="form-cuti__log-time">{log.waktu}</time>
-                        {log.catatan && <span className="form-cuti__log-note">{log.catatan}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : <div className="form-cuti__log-empty">Belum ada riwayat pemeriksaan berkas.</div>}
-              </div>
-            </div>
-          </section>
+          <ApprovalLogAccordion logs={logs} /> {/* [UBAH] sebelumnya accordion ditulis langsung di sini */}
         </div>
 
         <footer className="form-cuti__footer">

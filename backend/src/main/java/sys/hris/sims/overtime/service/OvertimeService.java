@@ -45,6 +45,8 @@ import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 public class OvertimeService {
 
     private static final int MAX_REASON_LENGTH = 500;
+    // [BARU] Alasan penolakan wajib diisi (sama dengan batas di popup ActionReasonModal frontend).
+    private static final int MIN_REJECT_NOTE_LENGTH = 5;
 
     // Jam kerja reguler berakhir 17:00 WIB; divisi shift memakai jam akhir
     // jadwal karyawan yang dipublikasikan.
@@ -114,7 +116,7 @@ public class OvertimeService {
     //  - hanya pengajuan berstatus PENDING yang bisa diproses (dulu tidak dicek);
     //  - role approver harus sama dengan tahap yang ditugaskan (Leader -> tahap LEADER, HRD -> tahap HRD, dst.);
     //  - giliran dicek berdasarkan URUTAN TAHAP (Leader -> SPV -> Manager), bukan urutan insert baris;
-    //  - catatan (opsional) disimpan pada tahap yang diproses;
+    //  - catatan disimpan pada tahap yang diproses (opsional saat setuju, WAJIB saat tolak);
     //  - satu penolakan langsung mengakhiri pengajuan.
     @Transactional
     public OvertimeResponse decide(Long overtimeId, String decision, String note, Authentication authentication) {
@@ -124,6 +126,9 @@ public class OvertimeService {
         String cleanNote = note == null ? "" : note.trim();
         if (cleanNote.length() > MAX_REASON_LENGTH)
             throw new IllegalArgumentException("Catatan maksimal " + MAX_REASON_LENGTH + " karakter.");
+        // [BARU] Menolak lembur WAJIB disertai alasan. Dicek di server juga, bukan hanya di popup frontend.
+        if (status.equals(STATUS_REJECTED) && cleanNote.length() < MIN_REJECT_NOTE_LENGTH)
+            throw new IllegalArgumentException("Alasan penolakan wajib diisi (minimal " + MIN_REJECT_NOTE_LENGTH + " karakter).");
 
         Employee actor = resolveEmployee(authentication.getName());
         OvertimeRequest overtime = overtimeRepository.findById(overtimeId)

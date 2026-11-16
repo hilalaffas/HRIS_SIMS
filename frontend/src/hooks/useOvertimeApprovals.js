@@ -100,8 +100,10 @@ export default function useOvertimeApprovals(enabled = true) {
     [rows],
   );
 
-  const handleDecision = useCallback(async (row, status) => {
-    if (processingLock.current) return;
+  // [UBAH] + note (alasan approver, wajib saat REJECTED -- dicek di popup & di backend) dan
+  // mengembalikan true/false supaya popup alasan hanya ditutup bila berhasil (isian tidak hilang saat gagal).
+  const handleDecision = useCallback(async (row, status, note = '') => {
+    if (processingLock.current) return false;
     processingLock.current = true;
     setProcessingKey(row.rowKey);
     try {
@@ -109,7 +111,7 @@ export default function useOvertimeApprovals(enabled = true) {
       // ditandai APPROVED / "Sudah Di-ACC" padahal ACC berjenjang (Leader -> SPV -> Manager)
       // baru selesai setelah SEMUA tahap setuju -- jadi satu klik ACC Leader terlihat
       // seolah pengajuan sudah final.
-      const updated = await decideOvertimeApproval(row.id, status);
+      const updated = await decideOvertimeApproval(row.id, status, note);
       // Baris diganti data terbaru; canAct dari server null -> false, jadi pengajuan
       // otomatis keluar dari antrean "Perlu Diproses" approver ini.
       setRows((current) => current
@@ -121,8 +123,10 @@ export default function useOvertimeApprovals(enabled = true) {
           : isFinalApproved ? 'Pengajuan disetujui.'
             : 'Disetujui pada tahap Anda. Pengajuan diteruskan ke approver berikutnya.',
       );
+      return true;
     } catch (error) {
       showToast(error?.message || 'Gagal memproses pengajuan.', 'error');
+      return false;
     } finally {
       processingLock.current = false;
       setProcessingKey('');
