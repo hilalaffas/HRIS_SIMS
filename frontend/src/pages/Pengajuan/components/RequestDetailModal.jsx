@@ -8,11 +8,15 @@
 // [UBAH] Compact (lebih sedikit scroll) dan alur persetujuan memakai <ApprovalProgressStepper>
 // yang sama dengan popup detail cuti.
 //
+// [BARU] Bila `detail.logs` ada (saat ini: lembur), popup menampilkan accordion "Riwayat Log Pemeriksaan"
+// yang sama dengan popup detail berkas di sisi approver.
+//
 // Contoh pemakaian:
 // <RequestDetailModal detail={detail} onClose={fn} />
 import React, { useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 import ApprovalProgressStepper from '../../../components/ApprovalProgressStepper';
+import ApprovalLogAccordion from '../../../components/ApprovalLogAccordion'; // [BARU]
 import useModalExit from '../../../hooks/useModalExit';
 import './RequestDetailModal.css';
 
@@ -99,6 +103,9 @@ export default function RequestDetailModal({ detail, onClose }) {
               ))}
             </div>
           )}
+
+          {/* [BARU] Riwayat log pemeriksaan (hanya jika detail menyertakan logs) */}
+          {detail.logs && <ApprovalLogAccordion logs={detail.logs} />}
         </div>
 
         <footer className="pgj-detail-footer">

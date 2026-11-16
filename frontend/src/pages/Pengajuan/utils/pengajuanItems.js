@@ -15,6 +15,7 @@ import {
   buildShiftSwapCardModel, // [BARU]
   buildSickCardModel,
 } from '../../../utils/approvalCardModels';
+import { buildOvertimeLogs } from '../../../utils/overtimeLog'; // [BARU] log pemeriksaan lembur
 
 export const REQUEST_KIND = {
   LEAVE: 'LEAVE',
@@ -277,6 +278,8 @@ export function buildRequestDetail(item, cardModel) {
         { label: 'Alasan / Pekerjaan Lembur', value: record.reason },
         { label: 'Waktu Pengajuan', value: cardModel?.sentLabel?.replace('Dikirim ', '') || '-' },
       ],
+      // [BARU] Riwayat log pemeriksaan (accordion di RequestDetailModal), sama dengan popup approver.
+      logs: buildOvertimeLogs({ employeeName: record.employeeName, createdAt: record.createdAt, approvals: record.approvals }),
     };
   }
 

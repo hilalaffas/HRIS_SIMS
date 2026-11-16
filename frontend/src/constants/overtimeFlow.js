@@ -125,3 +125,12 @@ export function resolveFlowState(record) {
   const status = flowStatusByCode[record.statusCode] ?? 'pending';
   return { status, levelIndex, levels };
 }
+
+// [BARU] Teks popup ActionReasonModal saat approver MENOLAK lembur (alasan wajib diisi).
+// Cuti memakai teks bawaan modal; lembur menimpanya lewat request.copy.
+export const OVERTIME_REJECT_COPY = {
+  modalTitle: 'Tolak Pengajuan Lembur',
+  modalSubtitle: 'Berikan alasan penolakan yang jelas untuk pemohon.',
+  placeholder: 'Contoh: Pekerjaan bisa diselesaikan di jam kerja, mohon ajukan ulang bila memang mendesak.',
+  helperText: 'Alasan penolakan wajib diisi dan akan tercatat di riwayat log yang dilihat pemohon.',
+};
