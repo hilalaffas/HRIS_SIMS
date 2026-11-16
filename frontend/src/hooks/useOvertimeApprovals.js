@@ -10,17 +10,27 @@ import {
   formatOvertimeDuration,
   getOvertimeApprovals,
 } from '../services/overtimeService';
+import { STAGE_META } from '../constants/overtimeFlow';
 
 const clockLabel = (time) => (time ? String(time).slice(0, 5) : '-');
 
-// Bentuk baris untuk tabel persetujuan.
+// [UBAH] Label tahap diambil dari konstanta alur lembur (STAGE_META).
+const roleLabel = (role) => STAGE_META[role]?.label || role;
+
+// Teks status di tabel persetujuan.
+// [UBAH] Status akhir (Sudah Di-ACC / Ditolak) dicek DULU. Sebelumnya pengajuan yang sudah ditolak masih
+// tampil "Menunggu Persetujuan ..." karena tahap sesudah penolakan memang tetap PENDING di database.
 const getProgressStatus = (item) => {
   const approvals = item.approvals || [];
+  const status = String(item.status).toUpperCase();
+  if (status === 'APPROVED') return 'Sudah Di-ACC';
+  if (status === 'REJECTED') {
+    const rejectedBy = approvals.find((step) => step.action === 'REJECTED');
+    return rejectedBy ? `Ditolak ${roleLabel(rejectedBy.role)}` : 'Ditolak';
+  }
   const pending = approvals.find((step) => step.action === 'PENDING');
-  if (pending) return `Menunggu Persetujuan ${pending.role}`;
-  if (String(item.status).toUpperCase() === 'APPROVED') return 'Sudah Di-ACC';
-  if (String(item.status).toUpperCase() === 'REJECTED') return 'Ditolak';
-  return approvals.length ? 'Dalam Proses Persetujuan' : 'Menunggu tahap sebelumnya / nama approval';
+  if (pending) return `Menunggu Persetujuan ${roleLabel(pending.role)}`;
+  return approvals.length ? 'Dalam Proses Persetujuan' : 'Menunggu nama approval';
 };
 
 const toOvertimeRow = (item) => ({

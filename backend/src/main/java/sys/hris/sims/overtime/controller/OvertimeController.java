@@ -52,14 +52,14 @@ public class OvertimeController {
         return ResponseEntity.ok(overtimeService.getAllForApproval(authentication));
     }
 
-    // [BARU] PUT setujui/tolak lembur -- body: { "status": "APPROVED" | "REJECTED" }
+    // [BARU] PUT setujui/tolak lembur -- body: { "status": "APPROVED" | "REJECTED", "note": "opsional" }
     @PutMapping("/{overtimeId}/approval")
     public ResponseEntity<OvertimeResponse> decideOvertime(
             @PathVariable Long overtimeId,
             @RequestBody ApprovalDecisionRequest request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
-        OvertimeResponse response = overtimeService.decide(overtimeId, request.getStatus(), authentication);
+        OvertimeResponse response = overtimeService.decide(overtimeId, request.getStatus(), request.getNote(), authentication);
 
         activityLogService.log(
                 authentication.getName(),

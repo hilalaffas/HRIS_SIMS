@@ -1,22 +1,50 @@
-// Approval flow for overtime requests: a single HRD stage (HRD_Admin / HRD_Karyawan).
-// Change this array if the approval chain changes; the timeline adapts automatically.
-export const approvalLevels = [
-  { key: 'hrd', label: 'HRD', stepLabel: 'ACC HRD' },
-];
+import { getUserRole, isHrd, ROLES } from '../utils/roles';
 
-// Old requests that are still pending keep their Leader -> Supervisor -> Manager chain.
-export const legacyApprovalLevels = [
-  { key: 'leader', label: 'Leader', stepLabel: 'Review Leader' },
-  { key: 'supervisor', label: 'Supervisor', stepLabel: 'Review Supervisor' },
-  { key: 'manager', label: 'Manager', stepLabel: 'ACC Manager' },
-];
+// Approval stages for overtime requests (same tiers as the leave workflow and the
+// backend ApprovalChainPolicy). The chain depends on the REQUESTER's position:
+//   HRD -> HRD | Member -> Leader, SPV, Manager | Leader -> SPV, Manager
+//   SPV -> Manager | Manager -> another Manager
+// Keep this table in sync with ApprovalChainPolicy.requiredStages() in the backend.
+export const STAGE_META = {
+  LEADER: { key: 'leader', label: 'Leader', stepLabel: 'Review Leader' },
+  SPV: { key: 'spv', label: 'SPV', stepLabel: 'Review SPV' },
+  MANAGER: { key: 'manager', label: 'Manager', stepLabel: 'ACC Manager' },
+  HRD: { key: 'hrd', label: 'HRD', stepLabel: 'ACC HRD' },
+};
+
+const STAGE_ORDER = ['LEADER', 'SPV', 'MANAGER', 'HRD'];
+
+// Payload field name used by the backend (OvertimeSubmitRequest) for each stage.
+export const STAGE_FIELD = {
+  LEADER: 'leaderEmployeeId',
+  SPV: 'spvEmployeeId',
+  MANAGER: 'managerEmployeeId',
+  HRD: 'hrdEmployeeId',
+};
+
+// Stages the given user must pass when submitting an overtime request.
+export function getRequiredStages(user) {
+  if (isHrd(user)) return ['HRD'];
+  switch (getUserRole(user)) {
+    case ROLES.LEADER: return ['SPV', 'MANAGER'];
+    case ROLES.SPV: return ['MANAGER'];
+    case ROLES.MANAGER: return ['MANAGER'];
+    default: return ['LEADER', 'SPV', 'MANAGER'];
+  }
+}
+
+// ['LEADER', 'SPV', 'MANAGER'] -> "Leader → SPV → Manager"
+export const describeStages = (stages) => stages.map((stage) => STAGE_META[stage]?.label || stage).join(' → ');
+
+// Fallback level for a request that has no approver yet (name not completed).
+const pendingNamingLevel = { key: 'approval', label: 'Approver', stepLabel: 'Menunggu Approver' };
 
 // request.status      : 'pending' | 'approved' | 'rejected' | 'cancelled'
-// request.levelIndex  : index in request.levels (defaults to approvalLevels) where the
+// request.levelIndex  : index in request.levels where the
 //                       request is waiting (pending), was rejected, or was cancelled.
-// request.levels      : optional; resolveFlowState() sets it to legacyApprovalLevels for old requests.
+// request.levels      : set by resolveFlowState() from the request's own approval steps.
 export function getStatusMeta(request) {
-  const levels = request.levels ?? approvalLevels;
+  const levels = request.levels ?? [pendingNamingLevel];
   const level = levels[request.levelIndex] ?? levels[0];
 
   switch (request.status) {
@@ -47,12 +75,12 @@ export function getStatusMeta(request) {
   }
 }
 
-// Returns 4 steps: Diajukan + one step per approval level.
+// Returns Diajukan + one step per approval level.
 // state: 'done' | 'current' | 'rejected' | 'cancelled' | 'upcoming'
 export function buildTimeline(request) {
   const steps = [
     { key: 'submitted', label: 'Diajukan' },
-    ...(request.levels ?? approvalLevels).map((level) => ({
+    ...(request.levels ?? [pendingNamingLevel]).map((level) => ({
       key: level.key,
       label: level.stepLabel,
     })),
@@ -82,16 +110,18 @@ const flowStatusByCode = {
 };
 
 export function resolveFlowState(record) {
-  const approvals = Array.isArray(record.approvals) ? record.approvals : [];
-  // Pengajuan lama (ada tahap LEADER/SPV/MANAGER) memakai alur lamanya; pengajuan baru satu tahap HRD.
-  const isLegacy = approvals.some((step) => step.role !== 'HRD');
-  const levels = isLegacy ? legacyApprovalLevels : approvalLevels;
-  const order = isLegacy ? ['LEADER', 'SPV', 'MANAGER'] : ['HRD'];
+  // [UBAH] Level diambil dari tahap approval milik pengajuan itu sendiri (berjenjang sesuai jabatan
+  // pemohon), diurutkan Leader -> SPV -> Manager -> HRD. Tidak ada lagi alur "lama" vs "baru".
+  const approvals = (Array.isArray(record.approvals) ? record.approvals : [])
+    .slice()
+    .sort((a, b) => STAGE_ORDER.indexOf(a.role) - STAGE_ORDER.indexOf(b.role));
+  const levels = approvals.length > 0
+    ? approvals.map((step) => STAGE_META[step.role] || { key: String(step.role).toLowerCase(), label: step.role, stepLabel: step.role })
+    : [pendingNamingLevel];
   const currentIndex = approvals.findIndex((step) => step.action === 'PENDING');
   const rejectedIndex = approvals.findIndex((step) => step.action === 'REJECTED');
-  let levelIndex = currentIndex >= 0 ? order.indexOf(approvals[currentIndex].role) : 0;
-  if (rejectedIndex >= 0) levelIndex = order.indexOf(approvals[rejectedIndex].role);
-  if (levelIndex < 0) levelIndex = 0;
+  let levelIndex = currentIndex >= 0 ? currentIndex : 0;
+  if (rejectedIndex >= 0) levelIndex = rejectedIndex;
   const status = flowStatusByCode[record.statusCode] ?? 'pending';
   return { status, levelIndex, levels };
 }

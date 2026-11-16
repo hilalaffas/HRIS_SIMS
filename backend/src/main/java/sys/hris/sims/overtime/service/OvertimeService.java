@@ -9,8 +9,13 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.DayOfWeek;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -18,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.attendance.repository.AttendanceRepository;
+import sys.hris.sims.common.service.ApprovalChainPolicy;
 import sys.hris.sims.common.service.ApprovalScopeService;
 import sys.hris.sims.common.service.ApprovalScopeService.ApprovalScope;
 import sys.hris.sims.common.service.HrdApproverPolicy;
@@ -44,7 +50,12 @@ public class OvertimeService {
     // jadwal karyawan yang dipublikasikan.
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Jakarta");
     private static final LocalTime WORK_END_TIME = LocalTime.of(17, 0);
-    private static final List<String> ACTIVE_STATUSES = List.of("PENDING", "APPROVED");
+    // [BARU] Status pengajuan & tindakan per tahap (dulu berupa string literal tersebar).
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_APPROVED = "APPROVED";
+    private static final String STATUS_REJECTED = "REJECTED";
+    private static final int ID_BATCH_SIZE = 500; // batas isi klausa IN per query
+    private static final List<String> ACTIVE_STATUSES = List.of(STATUS_PENDING, STATUS_APPROVED);
     // Awalan alasan supaya approver/HR mengenali lembur yang bukan dari
     // pengajuan awal (pola sama dengan awalan "Pulang cepat: " di absensi).
     private static final String EXTENSION_REASON_PREFIX = "Tambahan saat check-out: ";
@@ -59,80 +70,132 @@ public class OvertimeService {
     private final ApprovalScopeService approvalScopeService;
     private final WorkScheduleRepository workScheduleRepository;
     private final HrdApproverPolicy hrdApproverPolicy; // [BARU] aturan approver HRD
+    private final ApprovalChainPolicy approvalChainPolicy; // [BARU] jenjang approval per jabatan pemohon
 
+    // [UBAH] Semua tahap dimuat sekali (batch), bukan 1 query per pengajuan.
     public List<OvertimeResponse> getMyOvertime(String username) {
         Employee employee = resolveEmployee(username);
-        return overtimeRepository
-                .findByEmployee_EmployeeIdOrderByOvertimeDateDescOvertimeIdDesc(employee.getEmployeeId())
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return toResponses(overtimeRepository
+                .findByEmployee_EmployeeIdOrderByOvertimeDateDescOvertimeIdDesc(employee.getEmployeeId()));
     }
 
     // [UBAH] Super Admin / DEV tetap melihat semua pengajuan (hanya lihat, tidak bisa
-    // memutuskan). Leader/SPV/Manager hanya melihat pengajuan yang menugaskan mereka
+    // memutuskan). HRD / Leader / SPV / Manager hanya melihat pengajuan yang menugaskan mereka
     // sebagai approver. Akun DEV (sys_dev) tidak punya profil karyawan, jadi
     // tidak boleh memanggil resolveEmployee() di jalur Super Admin.
+    // [UBAH] Pengajuan milik approver diambil langsung dari tabel tahap (tidak lagi memuat SEMUA pengajuan
+    // lalu menyaring di memori). canAct hanya true untuk approver yang gilirannya SEKARANG.
     public List<OvertimeResponse> getAllForApproval(Authentication authentication) {
         ApprovalScope scope = approvalScopeService.resolve(authentication);
-        Long actorId = scope.all() ? null : scope.approverId();
+        if (scope.all()) {
+            return toResponses(overtimeRepository.findAllByOrderByOvertimeDateDescOvertimeIdDesc());
+        }
 
-        return overtimeRepository.findAllByOrderByOvertimeDateDescOvertimeIdDesc().stream()
-                .map(this::toResponse)
-                .filter(response -> scope.all() || isAssignedApprover(response, actorId))
-                .map(response -> {
-                    boolean isMyTurn = !scope.all()
-                            && actorId.equals(response.getCurrentApproverEmployeeId())
-                            && "PENDING".equals(response.getStatus());
-                    response.setCanAct(isMyTurn);
-                    return response;
-                })
-                .toList();
+        Long actorId = scope.approverId();
+        List<Long> assignedIds = approvalRepository.findOvertimeIdsByApproverEmployeeId(actorId);
+        if (assignedIds.isEmpty()) {
+            return List.of();
+        }
+        List<OvertimeRequest> requests = new ArrayList<>();
+        for (int from = 0; from < assignedIds.size(); from += ID_BATCH_SIZE) {
+            List<Long> batch = assignedIds.subList(from, Math.min(from + ID_BATCH_SIZE, assignedIds.size()));
+            requests.addAll(overtimeRepository.findAllByOvertimeIdInOrderByOvertimeDateDescOvertimeIdDesc(batch));
+        }
+        requests.sort(Comparator.comparing(OvertimeRequest::getOvertimeDate).reversed()
+                .thenComparing(Comparator.comparing(OvertimeRequest::getOvertimeId).reversed()));
+
+        List<OvertimeResponse> responses = toResponses(requests);
+        responses.forEach(response -> response.setCanAct(
+                actorId.equals(response.getCurrentApproverEmployeeId()) && STATUS_PENDING.equals(response.getStatus())));
+        return responses;
     }
 
-    private boolean isAssignedApprover(OvertimeResponse response, Long actorId) {
-        return response.getApprovals().stream()
-                .anyMatch(step -> actorId.equals(step.getEmployeeId()));
-    }
-
+    // [UBAH] Proses review (setujui / tolak) disamakan dengan alur Cuti:
+    //  - hanya pengajuan berstatus PENDING yang bisa diproses (dulu tidak dicek);
+    //  - role approver harus sama dengan tahap yang ditugaskan (Leader -> tahap LEADER, HRD -> tahap HRD, dst.);
+    //  - giliran dicek berdasarkan URUTAN TAHAP (Leader -> SPV -> Manager), bukan urutan insert baris;
+    //  - catatan (opsional) disimpan pada tahap yang diproses;
+    //  - satu penolakan langsung mengakhiri pengajuan.
     @Transactional
-    public OvertimeResponse decide(Long overtimeId, String decision, Authentication authentication) {
+    public OvertimeResponse decide(Long overtimeId, String decision, String note, Authentication authentication) {
         String status = decision == null ? "" : decision.trim().toUpperCase(Locale.ROOT);
-        if (!status.equals("APPROVED") && !status.equals("REJECTED"))
+        if (!status.equals(STATUS_APPROVED) && !status.equals(STATUS_REJECTED))
             throw new IllegalArgumentException("Keputusan tidak valid. Gunakan APPROVED atau REJECTED.");
+        String cleanNote = note == null ? "" : note.trim();
+        if (cleanNote.length() > MAX_REASON_LENGTH)
+            throw new IllegalArgumentException("Catatan maksimal " + MAX_REASON_LENGTH + " karakter.");
+
         Employee actor = resolveEmployee(authentication.getName());
-        OvertimeRequest target = overtimeRepository.findById(overtimeId)
+        OvertimeRequest overtime = overtimeRepository.findById(overtimeId)
                 .orElseThrow(() -> new IllegalArgumentException("Pengajuan lembur tidak ditemukan."));
         // [BARU] Pemohon tidak boleh memproses lemburnya sendiri.
-        hrdApproverPolicy.assertNotOwnRequest(actor, target.getEmployee());
-        List<OvertimeApproval> steps = approvalRepository.findByOvertime_OvertimeIdOrderByApprovalIdAsc(overtimeId);
+        hrdApproverPolicy.assertNotOwnRequest(actor, overtime.getEmployee());
+        if (!STATUS_PENDING.equals(overtime.getStatus()))
+            throw new IllegalStateException("Pengajuan lembur ini sudah tidak dalam status menunggu persetujuan.");
+
+        List<OvertimeApproval> steps = loadSortedSteps(overtimeId);
         if (steps.isEmpty()) throw new IllegalStateException("Nama approval belum dilengkapi. Pemohon harus mengedit pengajuan terlebih dahulu.");
-        OvertimeApproval mine = steps.stream().filter(a -> a.getApproverEmployee().getEmployeeId().equals(actor.getEmployeeId()))
-                .findFirst().orElseThrow(() -> new IllegalStateException("Anda bukan approver pengajuan ini."));
-        if (!"PENDING".equals(mine.getAction())) throw new IllegalStateException("Tahap persetujuan ini sudah diproses.");
+
+        Long actorId = actor.getEmployeeId();
+        OvertimeApproval mine = steps.stream()
+                .filter(step -> actorId.equals(step.getApproverEmployee().getEmployeeId()))
+                .filter(step -> STATUS_PENDING.equals(step.getAction()))
+                .findFirst()
+                .orElseThrow(() -> steps.stream().anyMatch(step -> actorId.equals(step.getApproverEmployee().getEmployeeId()))
+                        ? new IllegalStateException("Tahap persetujuan ini sudah diproses.")
+                        : new IllegalStateException("Anda bukan approver pengajuan ini."));
+        if (!mine.getApproverRole().equalsIgnoreCase(ApprovalChainPolicy.stageOf(actor)))
+            throw new IllegalStateException("Role Anda tidak sesuai dengan tahap persetujuan yang ditugaskan.");
+
         int mineIndex = steps.indexOf(mine);
-        if (steps.subList(0, mineIndex).stream().anyMatch(a -> !"APPROVED".equals(a.getAction())))
-            throw new IllegalStateException("Menunggu persetujuan tahap sebelumnya.");
+        steps.subList(0, mineIndex).stream()
+                .filter(step -> !STATUS_APPROVED.equals(step.getAction()))
+                .findFirst()
+                .ifPresent(step -> { throw new IllegalStateException(
+                        "Persetujuan harus berurutan. Menunggu persetujuan " + step.getApproverRole() + " terlebih dahulu."); });
+
         mine.setAction(status);
-        mine.setActedAt(java.time.LocalDateTime.now());
-        OvertimeRequest overtime = mine.getOvertime();
-        if ("REJECTED".equals(status)) overtime.setStatus("REJECTED");
-        else if (steps.stream().allMatch(a -> "APPROVED".equals(a.getAction()))) overtime.setStatus("APPROVED");
+        mine.setNote(cleanNote.isEmpty() ? null : cleanNote);
+        mine.setActedAt(LocalDateTime.now());
+        if (STATUS_REJECTED.equals(status)) {
+            overtime.setStatus(STATUS_REJECTED);
+        } else if (steps.stream().allMatch(step -> STATUS_APPROVED.equals(step.getAction()))) {
+            overtime.setStatus(STATUS_APPROVED);
+        }
         approvalRepository.save(mine);
         overtimeRepository.save(overtime);
-        return toResponse(overtime);
+        return toResponse(overtime, steps);
     }
 
-    // [UBAH] Pengajuan lembur baru punya SATU tahap approval: HRD (HRD_ADMIN / HRD_KARYAWAN).
-    // Server hanya memakai hrdEmployeeId; leader/spv/manager dari klien diabaikan.
+    // [UBAH] Jenjang approval mengikuti jabatan pemohon (ApprovalChainPolicy):
+    //   HRD -> HRD | Member -> Leader, SPV, Manager | Leader -> SPV, Manager | SPV -> Manager | Manager -> Manager lain.
+    // Server memvalidasi SEMUA pilihan (role, aktif, satu divisi, bukan diri sendiri); id untuk tahap
+    // yang tidak diperlukan pemohon diabaikan.
     private void createApprovalSteps(OvertimeRequest overtime, Employee requester, OvertimeSubmitRequest request) {
-        Employee hrd = hrdApproverPolicy.requireSelectableApprover(request.getHrdEmployeeId(), requester);
-        approvalRepository.save(OvertimeApproval.builder()
-                .overtime(overtime)
-                .approverRole(HrdApproverPolicy.STAGE_ROLE)
-                .approverEmployee(hrd)
-                .action("PENDING")
-                .build());
+        Map<String, Employee> approvers = approvalChainPolicy.resolveApprovers(
+                requester, stage -> selectedApproverId(request, stage));
+        saveApprovalSteps(overtime, approvers);
+    }
+
+    private void saveApprovalSteps(OvertimeRequest overtime, Map<String, Employee> approversByStage) {
+        // LinkedHashMap berurutan sesuai tahap, jadi approval_id naik mengikuti urutan giliran.
+        approvalRepository.saveAll(approversByStage.entrySet().stream()
+                .map(entry -> OvertimeApproval.builder()
+                        .overtime(overtime)
+                        .approverRole(entry.getKey())
+                        .approverEmployee(entry.getValue())
+                        .action(STATUS_PENDING)
+                        .build())
+                .toList());
+    }
+
+    private static Long selectedApproverId(OvertimeSubmitRequest request, String stage) {
+        return switch (stage) {
+            case ApprovalChainPolicy.STAGE_LEADER -> request.getLeaderEmployeeId();
+            case ApprovalChainPolicy.STAGE_SPV -> request.getSpvEmployeeId();
+            case ApprovalChainPolicy.STAGE_MANAGER -> request.getManagerEmployeeId();
+            default -> request.getHrdEmployeeId();
+        };
     }
 
     @Transactional
@@ -271,26 +334,45 @@ public class OvertimeService {
                 .reason(EXTENSION_REASON_PREFIX + reason)
                 .status("PENDING")
                 .build());
-        List<OvertimeApproval> previousSteps = overtimeRepository
-                .findByEmployee_EmployeeIdOrderByOvertimeDateDescOvertimeIdDesc(employeeId).stream()
-                .filter(item -> !item.getOvertimeId().equals(saved.getOvertimeId()))
-                .map(item -> approvalRepository.findByOvertime_OvertimeIdOrderByApprovalIdAsc(item.getOvertimeId()))
-                // [UBAH] Hanya salin approver dari pengajuan sebelumnya bila itu approver HRD yang masih
-                // aktif dan bukan pemohon sendiri. Pengajuan lama berjenjang Leader/SPV/Manager TIDAK
-                // disalin: pemohon melengkapi nama approver HRD lewat "Lengkapi Nama Approval".
-                .filter(items -> !items.isEmpty() && items.stream().allMatch(a ->
-                        HrdApproverPolicy.STAGE_ROLE.equals(a.getApproverRole())
-                                && HrdApproverPolicy.isHrd(a.getApproverEmployee())
-                                && Boolean.TRUE.equals(a.getApproverEmployee().getIsActive())
-                                && !a.getApproverEmployee().getEmployeeId().equals(employeeId)))
-                .findFirst().orElse(List.of());
-        if (!previousSteps.isEmpty()) {
-            approvalRepository.saveAll(previousSteps.stream().map(a -> OvertimeApproval.builder()
-                    .overtime(saved).approverRole(a.getApproverRole()).approverEmployee(a.getApproverEmployee())
-                    .action("PENDING").build()).toList());
+        // [UBAH] Approver disalin dari pengajuan sebelumnya HANYA bila rantainya masih sah untuk jabatan
+        // pemohon sekarang (tahap sama persis, approver aktif, satu divisi, bukan diri sendiri). Jika tidak,
+        // pemohon melengkapi nama approver lewat "Lengkapi Nama Approval".
+        Map<String, Employee> reusableChain = findReusableChain(employee, saved.getOvertimeId());
+        if (!reusableChain.isEmpty()) {
+            saveApprovalSteps(saved, reusableChain);
         }
 
         return toResponse(saved);
+    }
+
+    // [BARU] Cari rantai approver dari (maks.) 10 pengajuan terakhir yang masih valid untuk pemohon.
+    private Map<String, Employee> findReusableChain(Employee requester, Long currentOvertimeId) {
+        List<String> requiredStages = ApprovalChainPolicy.requiredStages(requester);
+        return overtimeRepository.findByEmployee_EmployeeIdOrderByOvertimeDateDescOvertimeIdDesc(requester.getEmployeeId())
+                .stream()
+                .filter(item -> !item.getOvertimeId().equals(currentOvertimeId))
+                .limit(10)
+                .map(item -> loadSortedSteps(item.getOvertimeId()))
+                .filter(steps -> steps.size() == requiredStages.size())
+                .map(steps -> revalidateChain(requester, requiredStages, steps))
+                .filter(chain -> !chain.isEmpty())
+                .findFirst()
+                .orElse(Map.of());
+    }
+
+    private Map<String, Employee> revalidateChain(Employee requester, List<String> requiredStages, List<OvertimeApproval> steps) {
+        Map<String, Long> approverIdByStage = new HashMap<>();
+        for (OvertimeApproval step : steps) {
+            approverIdByStage.put(step.getApproverRole().toUpperCase(Locale.ROOT), step.getApproverEmployee().getEmployeeId());
+        }
+        if (!approverIdByStage.keySet().equals(new java.util.HashSet<>(requiredStages))) {
+            return Map.of();
+        }
+        try {
+            return approvalChainPolicy.resolveApprovers(requester, approverIdByStage::get);
+        } catch (IllegalArgumentException invalidChain) {
+            return Map.of();
+        }
     }
 
     private OvertimeExtensionWindowResponse buildExtensionWindow(Employee employee, ZonedDateTime now, ScheduleContext context) {
@@ -379,8 +461,42 @@ public class OvertimeService {
     }
 
     private OvertimeResponse toResponse(OvertimeRequest overtime) {
-        List<OvertimeApproval> steps = approvalRepository
-                .findByOvertime_OvertimeIdOrderByApprovalIdAsc(overtime.getOvertimeId());
+        return toResponse(overtime, loadSortedSteps(overtime.getOvertimeId()));
+    }
+
+    // [BARU] Tahap selalu diurutkan menurut jenjang (Leader -> SPV -> Manager -> HRD), lalu id.
+    private List<OvertimeApproval> loadSortedSteps(Long overtimeId) {
+        return sortSteps(approvalRepository.findByOvertime_OvertimeIdOrderByApprovalIdAsc(overtimeId));
+    }
+
+    private static List<OvertimeApproval> sortSteps(List<OvertimeApproval> steps) {
+        List<OvertimeApproval> sorted = new ArrayList<>(steps);
+        sorted.sort(Comparator.comparingInt((OvertimeApproval step) -> ApprovalChainPolicy.stageRank(step.getApproverRole()))
+                .thenComparing(OvertimeApproval::getApprovalId));
+        return sorted;
+    }
+
+    // [BARU] Banyak pengajuan sekaligus: seluruh tahap dimuat per batch lalu dikelompokkan per pengajuan.
+    private List<OvertimeResponse> toResponses(List<OvertimeRequest> requests) {
+        Map<Long, List<OvertimeApproval>> stepsByOvertime = new HashMap<>();
+        List<Long> ids = requests.stream().map(OvertimeRequest::getOvertimeId).toList();
+        for (int from = 0; from < ids.size(); from += ID_BATCH_SIZE) {
+            List<Long> batch = ids.subList(from, Math.min(from + ID_BATCH_SIZE, ids.size()));
+            approvalRepository.findByOvertime_OvertimeIdInOrderByApprovalIdAsc(batch).forEach(step ->
+                    stepsByOvertime.computeIfAbsent(step.getOvertime().getOvertimeId(), key -> new ArrayList<>()).add(step));
+        }
+        return requests.stream()
+                .map(request -> toResponse(request, sortSteps(stepsByOvertime.getOrDefault(request.getOvertimeId(), List.of()))))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    // [UBAH] currentApproverEmployeeId hanya terisi bila pengajuan masih PENDING. Dulu pengajuan yang sudah
+    // DITOLAK tetap menunjuk approver tahap berikutnya (tahap itu memang masih PENDING di database).
+    private OvertimeResponse toResponse(OvertimeRequest overtime, List<OvertimeApproval> steps) {
+        Long currentApproverId = !STATUS_PENDING.equals(overtime.getStatus()) ? null : steps.stream()
+                .filter(step -> STATUS_PENDING.equals(step.getAction()))
+                .map(step -> step.getApproverEmployee().getEmployeeId())
+                .findFirst().orElse(null);
         return OvertimeResponse.builder()
                 .overtimeId(overtime.getOvertimeId())
                 .employeeId(overtime.getEmployee().getEmployeeId())
@@ -393,10 +509,11 @@ public class OvertimeService {
                 .status(overtime.getStatus())
                 .createdAt(overtime.getCreatedAt())
                 .approvals(steps.stream()
-                        .map(a -> new OvertimeResponse.OvertimeApprovalStep(a.getApproverRole(), a.getApproverEmployee().getEmployeeId(),
-                                a.getApproverEmployee().getFullName(), a.getAction(), a.getActedAt(), a.getNote())).toList())
-                .currentApproverEmployeeId(steps.stream()
-                        .filter(a -> "PENDING".equals(a.getAction())).map(a -> a.getApproverEmployee().getEmployeeId()).findFirst().orElse(null))
+                        .map(step -> new OvertimeResponse.OvertimeApprovalStep(step.getApproverRole(),
+                                step.getApproverEmployee().getEmployeeId(), step.getApproverEmployee().getFullName(),
+                                step.getAction(), step.getActedAt(), step.getNote()))
+                        .toList())
+                .currentApproverEmployeeId(currentApproverId)
                 .build();
     }
 }

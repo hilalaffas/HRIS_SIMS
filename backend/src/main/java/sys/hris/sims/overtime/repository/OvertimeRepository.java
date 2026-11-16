@@ -1,8 +1,10 @@
 package sys.hris.sims.overtime.repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,7 +19,13 @@ public interface OvertimeRepository extends JpaRepository<OvertimeRequest, Long>
     List<OvertimeRequest> findByEmployee_EmployeeIdOrderByOvertimeDateDescOvertimeIdDesc(Long employeeId);
 
     // [BARU] Semua pengajuan lembur semua karyawan -- halaman Persetujuan (SuperAdmin).
+    // [UBAH] employee ikut dimuat (nama pemohon dipakai di response) -- tanpa N+1.
+    @EntityGraph(attributePaths = "employee")
     List<OvertimeRequest> findAllByOrderByOvertimeDateDescOvertimeIdDesc();
+
+    // [BARU] Pengajuan tertentu saja -- antrean approver (Leader/SPV/Manager/HRD) hanya memuat miliknya.
+    @EntityGraph(attributePaths = "employee")
+    List<OvertimeRequest> findAllByOvertimeIdInOrderByOvertimeDateDescOvertimeIdDesc(Collection<Long> overtimeIds);
 
     // Dipakai OvertimeService.submit(): satu tanggal hanya boleh punya satu
     // pengajuan yang masih aktif (PENDING/APPROVED); yang REJECTED boleh diajukan ulang.
