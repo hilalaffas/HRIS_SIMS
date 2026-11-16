@@ -99,7 +99,10 @@ const FormCuti = ({ data, onClose, onEdit = null, editForm = null, extraAction =
                 </div>
               </div>
 
-              <ApprovalProgressStepper steps={steps} />
+              {/* [UBAH] Selama detail approver dimuat tampil placeholder, bukan stepper tebakan */}
+              {data.isApprovalLoading
+                ? <div className="form-cuti__stepper-loading" role="status">Memuat alur persetujuan...</div>
+                : <ApprovalProgressStepper steps={steps} />}
 
               <DetailSection label="Alasan Keterangan" value={data.keterangan} />
               <div className="form-cuti__pair">

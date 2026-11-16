@@ -216,6 +216,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
   // isSubmitting baru berubah di render berikutnya, jadi dua klik cepat bisa
   // sama-sama lolos kalau hanya mengandalkan state.
   const isSubmittingRef = useRef(false);
+  const detailRequestRef = useRef(0); // [BARU] penanda permintaan detail terbaru (cegah balapan data antar popup)
   // [BARU] Snapshot pengajuan yang menunggu konfirmasi user di
   // LeaveConfirmModal: { payload, summary, resubmitId }. null = popup
   // konfirmasi tidak tampil.
@@ -595,14 +596,24 @@ export default function useLeaveApplication(user, { notify = (message) => window
   };
 
   const handleOpenDetail = async (item) => {
+    const requestId = ++detailRequestRef.current; // [BARU]
+    // [UBAH] Data sementara (sebelum detail approver dari server tiba) ditandai isApprovalLoading,
+    // sehingga stepper approval tidak menampilkan alur tebakan (dulu otomatis "HRD").
     setSelectedDetail({
       id: item.id, karyawan: { nama: item.userName || 'Pemohon' }, jenisCuti: item.jenisCuti,
       durasi: `${item.stringTanggal} (${item.totalHari})`, keterangan: item.rawDetail?.reason || '-',
       pendingWork: item.rawDetail?.pendingWork || '-', coveredBy: item.rawDetail?.coveredBy || '-',
       statusBerkas: item.status === 'Dikembalikan' ? 'DIKEMBALIKAN' : item.status === 'Disetujui (ACC)' ? 'DISETUJUI' : item.status === 'Ditolak' ? 'DITOLAK' : 'PROSES', approvalChain: {}, riwayatLog: [],
+      isApprovalLoading: true, // [BARU]
     });
-    try { setSelectedDetail(mapApproval(await getMyLeaveDetail(item.id), employeeLookup)); }
-    catch (err) { setError(err.message || 'Gagal memuat detail cuti.'); }
+    try {
+      const detail = mapApproval(await getMyLeaveDetail(item.id), employeeLookup);
+      if (requestId === detailRequestRef.current) setSelectedDetail(detail); // [UBAH] abaikan respons usang
+    } catch (err) {
+      if (requestId !== detailRequestRef.current) return;
+      setSelectedDetail((current) => (current ? { ...current, isApprovalLoading: false } : current)); // [BARU] hentikan status memuat
+      setError(err.message || 'Gagal memuat detail cuti.');
+    }
   };
 
   // [UBAH] Sekarang menerima parameter opsional ke-2 `{ scrollToForm,

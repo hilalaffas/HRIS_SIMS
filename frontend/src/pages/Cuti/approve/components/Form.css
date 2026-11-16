@@ -63,6 +63,10 @@
 .form-cuti__box--info { border-color: var(--dk-border-blue, #b8d8ff); background: var(--dk-tint-blue, #eff6ff); font-weight: 700; }
 .form-cuti__box--italic { font-style: italic; }
 
+/* [BARU] Placeholder stepper saat detail approver masih dimuat */
+.form-cuti__stepper-loading { padding: 18px 12px; text-align: center; font-size: 0.82rem; font-weight: 600; color: var(--dk-text-muted, #64748b); border: 1px dashed var(--dk-border, #e2e8f0); border-radius: 12px; animation: formCutiPulse 1.2s ease-in-out infinite; }
+@keyframes formCutiPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
 /* ---------- Riwayat log (accordion, tanpa scroll sendiri) ---------- */
 .form-cuti__log { border: 1px solid var(--dk-border, #e2e8f0); border-radius: 10px; background: var(--dk-bg-subtle, #f8fafc); }
 .form-cuti__log-toggle { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; font: inherit; text-align: left; background: transparent; border: 0; border-radius: 10px; cursor: pointer; }
@@ -106,5 +110,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .form-cuti__log-panel, .form-cuti__log-chevron { transition: none; }
+  .form-cuti__stepper-loading { animation: none; }
   .form-cuti__overlay.is-closing, .form-cuti__overlay.is-closing .form-cuti__modal { animation: none; }
 }

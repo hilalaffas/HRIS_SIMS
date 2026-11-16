@@ -231,14 +231,13 @@ export default function Absensi() {
 
       {/* [UBAH] Satu Suspense untuk semua popup (kosong saat memuat; chunk sudah di-preload saat idle) */}
       <Suspense fallback={null}>
-        {/* Masuk/Keluar: popup yang sama dengan Dashboard. Kamera terblokir -> unggah foto (cadangan). */}
+        {/* Masuk/Keluar: popup yang sama dengan Dashboard. Bukti wajib selfie langsung dari kamera (tanpa unggah foto). */}
         {capture.isOpen && (
           <QuickAttendanceModal
             capture={capture}
             shiftHours={shiftContext.hoursLabel}
             shiftName={shiftContext.shiftName}
             shiftOvernight={shiftContext.overnight}
-            onUploadFallback={capture.handleUploadFallback}
           />
         )}
 
