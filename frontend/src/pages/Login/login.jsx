@@ -65,12 +65,12 @@ const Login = ({ onLoginSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-primary)] flex items-center justify-center p-4 font-sans">
+    <div className="login3d min-h-screen bg-[var(--color-primary)] flex items-center justify-center p-4 font-sans"> {/* [UBAH] + class login3d (efek 3D, lihat Login.css) */}
       <LanguageSwitcher variant="floating" />
       <div className="sims-auth-card bg-white rounded-[24px] w-full max-w-[400px] p-8 shadow-2xl relative">
         
         {/* Logo area */}
-        <div className="w-26 h-19 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center mb-5 shadow-sm overflow-hidden">
+        <div className="login3d__logo w-26 h-19 bg-gray-100 rounded-2xl mx-auto flex items-center justify-center mb-5 shadow-sm overflow-hidden"> {/* [UBAH] + class login3d__logo */}
           <span className="text-[#009A66] font-black text-2xl tracking-tighter flex">
             <img src={logoImage} alt={t('login.logoAlt')} width="100" />
           </span>
