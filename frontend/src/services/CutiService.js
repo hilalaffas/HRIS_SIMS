@@ -79,7 +79,7 @@ export const getLeaveBalanceByEmployeeId = (employeeId) => api.get(`/api/cuti/ba
 export const getAllLeaveBalances = (config = {}) => api.get('/api/cuti/balance/all', config);
 
 // [BARU] Ringkasan cuti global SEMUA karyawan sejak tanggal masuk sampai hari ini (khusus admin),
-// dipakai tab "Ringkasan Cuti" di halaman Karyawan (components/LeaveSummaryTable.jsx).
+// dipakai tab "Ringkasan Cuti" di halaman Laporan (pages/Laporan/components/LeaveSummaryTable.jsx).
 export const getAllLeaveSummaries = () => api.get('/api/cuti/summary/all');
 
 // [UBAH] Tambah employeeId opsional -- dipakai form Cuti Susulan (HR pilih

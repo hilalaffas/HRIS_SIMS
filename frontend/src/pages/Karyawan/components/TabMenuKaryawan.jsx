@@ -3,9 +3,8 @@ import './TabMenuKaryawan.css';
 import { isSuperAdmin, isHrAdmin } from '../../../utils/roles';
 
 const TabMenuKaryawan = ({ activeTab, setActiveTab, user }) => {
-  const tabs = isSuperAdmin(user)
-    ? ['List Karyawan', 'Cuti Karyawan', 'Ringkasan Cuti', 'Histori Cuti', 'Log Sistem'] // [UBAH] + Ringkasan Cuti, Histori Cuti
-    : isHrAdmin(user) ? ['List Karyawan', 'Cuti Karyawan', 'Ringkasan Cuti', 'Histori Cuti', 'Log Sistem'] : [];
+  // [UBAH] Ringkasan Cuti & Histori Cuti pindah ke halaman Laporan, Log Sistem ke halaman sendiri.
+  const tabs = isSuperAdmin(user) || isHrAdmin(user) ? ['List Karyawan', 'Cuti Karyawan'] : [];
 
   return (
     <div className="tab-menu-container">

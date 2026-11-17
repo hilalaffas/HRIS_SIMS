@@ -1,18 +1,21 @@
 // src/pages/Laporan/Laporan.jsx
 //
-// [BARU] Halaman Laporan -- khusus role HRD_ADMIN (dijaga di routes/AppRoutes.jsx
-// dan di backend: GET /api/absensi/laporan). Berisi tab menu; tab pertama:
-// "Laporan Absen". Tab baru: tambahkan ke config/laporanConfig.js (REPORT_TABS)
-// lalu render panelnya di bawah.
-import React, { useState } from 'react';
+// [BARU] Halaman Laporan -- dibuka untuk HRD_ADMIN & SUPER_ADMIN (dijaga di routes/AppRoutes.jsx
+// dan di backend). Tab yang tampil mengikuti role (lihat getVisibleReportTabs di
+// config/laporanConfig.js): Laporan Absen (HRD_ADMIN saja), Ringkasan Cuti, Histori Cuti.
+// Tab baru: tambahkan ke config/laporanConfig.js (REPORT_TABS) lalu render panelnya di bawah.
+import React, { useMemo, useState } from 'react';
 import { ClipboardList } from 'lucide-react';
 import LaporanTabMenu, { LaporanTabPanel } from './components/LaporanTabMenu';
-import { DEFAULT_REPORT_TAB, REPORT_TABS } from './config/laporanConfig';
+import { getVisibleReportTabs } from './config/laporanConfig';
 import AttendanceReportTab from './tabs/AttendanceReportTab';
+import LeaveLedgerReportTab from './tabs/LeaveLedgerReportTab';
+import LeaveSummaryReportTab from './tabs/LeaveSummaryReportTab';
 import './Laporan.css';
 
-export default function Laporan() {
-  const [activeTab, setActiveTab] = useState(DEFAULT_REPORT_TAB);
+export default function Laporan({ user }) {
+  const visibleTabs = useMemo(() => getVisibleReportTabs(user), [user]);
+  const [activeTab, setActiveTab] = useState(() => visibleTabs[0]?.key);
 
   return (
     <div className="lpr-page">
@@ -24,10 +27,18 @@ export default function Laporan() {
         </div>
       </header>
 
-      <LaporanTabMenu tabs={REPORT_TABS} activeKey={activeTab} onChange={setActiveTab} />
+      <LaporanTabMenu tabs={visibleTabs} activeKey={activeTab} onChange={setActiveTab} />
 
+      {/* Panel hanya dirender untuk tab yang boleh dilihat role ini (LaporanTabPanel menampilkan
+          panel hanya bila tabKey sama dengan activeKey, dan activeKey selalu dari visibleTabs). */}
       <LaporanTabPanel tabKey="ATTENDANCE" activeKey={activeTab}>
         <AttendanceReportTab />
+      </LaporanTabPanel>
+      <LaporanTabPanel tabKey="LEAVE_SUMMARY" activeKey={activeTab}>
+        <LeaveSummaryReportTab />
+      </LaporanTabPanel>
+      <LaporanTabPanel tabKey="LEAVE_LEDGER" activeKey={activeTab}>
+        <LeaveLedgerReportTab />
       </LaporanTabPanel>
     </div>
   );

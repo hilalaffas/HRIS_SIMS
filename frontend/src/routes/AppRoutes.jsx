@@ -39,6 +39,8 @@ const Persetujuan = lazyPage(() => import('../pages/Persetujuan/Persetujuan'));
 const Pengajuan = lazyPage(() => import('../pages/Pengajuan/Pengajuan'));
 // [BARU] Halaman Laporan (khusus HRD_ADMIN) -- tab pertama: Laporan Absen
 const Laporan = lazyPage(() => import('../pages/Laporan/Laporan'));
+// [BARU] Halaman Log Sistem (HRD_ADMIN & SUPER_ADMIN) -- sebelumnya tab di halaman Karyawan
+const LogSistem = lazyPage(() => import('../pages/LogSistem/LogSistem'));
 // [BARU] Halaman Persetujuan Sakit & Izin (khusus HRD_ADMIN)
 import { isSuperAdmin, isHrAdmin, isHrd, isApprover } from '../utils/roles';
 import KelolaDivisiShift from '../pages/Karyawan/KelolaDivisiShift';
@@ -116,8 +118,11 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
           <Route path="/karyawan" element={<Karyawan user={user} />} />
           <Route path="/kelola-divisi-shift" element={(isHrAdmin(user) || isSuperAdmin(user)) ? <KelolaDivisiShift standalone /> : <Navigate to="/dashboard" replace />} />
 
-          {/* [BARU] Laporan -- hanya HRD_ADMIN (backend juga membatasi: 403 untuk role lain) */}
-          <Route path="/laporan" element={isHrAdmin(user) ? <Laporan /> : <Navigate to="/dashboard" replace />} />
+          {/* [UBAH] Laporan -- HRD_ADMIN & SUPER_ADMIN (backend juga membatasi: 403 untuk role lain).
+              Tab yang tampil per role diatur di pages/Laporan/config/laporanConfig.js. */}
+          <Route path="/laporan" element={(isHrAdmin(user) || isSuperAdmin(user)) ? <Laporan user={user} /> : <Navigate to="/dashboard" replace />} />
+          {/* [BARU] Log Sistem -- HRD_ADMIN & SUPER_ADMIN (backend: /api/admin/** = ADMIN_ROLES) */}
+          <Route path="/log-sistem" element={(isHrAdmin(user) || isSuperAdmin(user)) ? <LogSistem /> : <Navigate to="/dashboard" replace />} />
 
           <Route path={DEV_ACCESS_PATH} element={<DevSettings />} />
 

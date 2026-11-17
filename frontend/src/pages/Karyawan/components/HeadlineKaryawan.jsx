@@ -4,7 +4,6 @@ import './HeadlineKaryawan.css';
 const FORMAT_LABEL = {
   csv: 'Unduh CSV',
   pdf: 'Unduh PDF',
-  xlsx: 'Unduh Excel', // [BARU] tab Histori Cuti
 };
 
 // Komponen ini murni tampilan. Logika ekspor ada di Karyawan.jsx
@@ -55,7 +54,7 @@ const HeadlineKaryawan = ({
     <div className="headline-container">
       <div className="headline-text">
         <h2>Manajemen Sistem & Karyawan</h2>
-        <p>Kelola data direktori karyawan, input cuti backdate, dan pantau log aktivitas.</p>
+        <p>Kelola data direktori karyawan dan input cuti backdate.</p>
       </div>
 
       <div className="export-wrapper" ref={menuRef}>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
-import './LogSistem.css';
+import './LogTable.css'; // [UBAH] sebelumnya LogSistem.css
 
 // [BARU] Opsi jumlah data per halaman untuk dropdown filter (pengganti
 // <select> native -- lihat komentar di komponen Dropdown).
@@ -10,7 +10,9 @@ const LOG_PAGE_SIZE_OPTIONS = [
   { value: 100, label: '100' },
 ];
 
-const LogSistem = ({ logList = [] }) => {
+// [UBAH] Komponen ini sebelumnya bernama LogSistem (tab di halaman Karyawan);
+// sekarang dipakai halaman sendiri pages/LogSistem/LogSistem.jsx.
+const LogTable = ({ logList = [] }) => {
   // State untuk Pagination
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -108,4 +110,4 @@ const LogSistem = ({ logList = [] }) => {
   );
 };
 
-export default LogSistem;
+export default LogTable;
