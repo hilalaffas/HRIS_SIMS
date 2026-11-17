@@ -1,12 +1,24 @@
 // src/pages/Laporan/config/laporanConfig.js
 //
-// [BARU] Konfigurasi halaman Laporan (khusus HRD_ADMIN). Tab baru cukup
-// ditambahkan di REPORT_TABS lalu dirender di Laporan.jsx.
+// [BARU] Konfigurasi halaman Laporan. Tab baru cukup ditambahkan di REPORT_TABS lalu dirender
+// di Laporan.jsx.
+// [UBAH] Tiap tab punya daftar `roles` yang boleh melihatnya (halaman Laporan sendiri dibuka untuk
+// HRD_ADMIN & SUPER_ADMIN). Laporan Absen tetap khusus HRD_ADMIN; Ringkasan Cuti & Histori Cuti
+// pindahan dari halaman Manajemen Karyawan dan sama-sama boleh dilihat SUPER_ADMIN seperti
+// sebelumnya. Penjaga sebenarnya ada di backend (SecurityConfig), ini hanya mengatur tampilan.
+import { ROLES, getUserRole } from '../../../utils/roles';
+
 export const REPORT_TABS = [
-  { key: 'ATTENDANCE', label: 'Laporan Absen' },
+  { key: 'ATTENDANCE', label: 'Laporan Absen', roles: [ROLES.HR_ADMIN] },
+  { key: 'LEAVE_SUMMARY', label: 'Ringkasan Cuti', roles: [ROLES.HR_ADMIN, ROLES.SUPER_ADMIN] },
+  { key: 'LEAVE_LEDGER', label: 'Histori Cuti', roles: [ROLES.HR_ADMIN, ROLES.SUPER_ADMIN] },
 ];
 
-export const DEFAULT_REPORT_TAB = 'ATTENDANCE';
+// Tab yang boleh dilihat user; urutan pertama = tab awal saat halaman dibuka.
+export const getVisibleReportTabs = (user) => {
+  const role = getUserRole(user);
+  return REPORT_TABS.filter((tab) => tab.roles.includes(role));
+};
 
 // [BARU] Mode rentang laporan: per periode tutup buku (21 s/d 20), hari ini saja,
 // atau tanggal bebas pilihan HRD (Dari - Sampai).

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'; // [UBAH] + useRef, useCallback
+import React, { useMemo, useState, useEffect, useRef } from 'react'; // [UBAH] + useRef
 import { useSearchParams } from 'react-router-dom'; // [BARU] baca query param dari notifikasi reset sandi
 import './Karyawan.css';
 import HeadlineKaryawan from './components/HeadlineKaryawan';
@@ -10,11 +10,8 @@ import ConfirmDeleteModal from './components/ConfirmDeleteModal';
 import { isSuperAdmin, isHrAdmin, isReportEmployee } from '../../utils/roles';
 import { buildLeaveBalanceTimeline } from '../../utils/leaveBalanceTimeline'; // [BARU] sisa cuti per baris riwayat
 import DataDivisi from './components/DataDivisi';
-import LogSistem from './components/LogSistem';
 import LeaveFormHr from './components/LeaveFormHr';
 import LeaveListHr from './components/LeaveListHr';
-import LeaveSummaryTable from './components/LeaveSummaryTable'; // [BARU] tab Ringkasan Cuti
-import LeaveLedgerTable from './components/LeaveLedgerTable'; // [BARU] tab Histori Cuti (format ledger)
 // [BARU] Toast sukses/gagal untuk aksi HR di halaman ini (mis. Cuti Susulan),
 // pola sama seperti FormKaryawan.jsx.
 import Toast from '../../components/Toast';
@@ -29,18 +26,13 @@ import { getAllLeaveRequestsForHr, getAllLeaveBalances } from '../../services/Cu
 const KARYAWAN_POLL_INTERVAL_MS = 60000;
 import FormCuti from '../Cuti/approve/components/Form';
 import { getKaryawanList, deleteKaryawan } from '../../services/karyawanService';
-import { getSystemLogs } from '../../services/logService'; 
 import KelolaDivisiShift from './KelolaDivisiShift';
 // [BARU] Ekspor CSV per tab menu
 import { downloadCsv } from '../../utils/csvExport';
-import { downloadBlobFile } from '../../utils/csvFile'; // [BARU] unduh file Excel (Blob)
 import { KARYAWAN_EXPORT_CONFIG, getExportFormats } from '../../config/karyawanExportConfig';
 
 
 const Karyawan = ({ user }) => {
-
-    // 2. Tambahkan state untuk Log
-    const [logList, setLogList] = useState([]);
 
   // State untuk menyimpan data cuti yang sedang diklik tombol "Rincian"-nya
 const [detailCutiTarget, setDetailCutiTarget] = useState(null);
@@ -51,21 +43,6 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   const triggerToast = (message, type = 'success', action = null) => {
     setToast({ message, type, action });
     setTimeout(() => setToast(null), 3000);
-  };
-
-  // 3. Buat Fungsi Pencatat Aktivitas
-  const addLogActivity = (aktor, aksi, type = 'normal') =>  {
-    const now = new Date();
-    const newLog = {
-      id: `LOG-${Date.now()}`,
-      tanggal: 'Hari Ini,', // Idealnya pakai library date-fns, tapi ini untuk contoh
-      jam: now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      aktor: aktor,
-      aksi: aksi,
-      type: type
-    };
-    // Masukkan log baru di urutan paling atas
-    setLogList((prevLogs) => [newLog, ...prevLogs]);
   };
 
 
@@ -88,17 +65,6 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
 
   // [BARU] Mencegah klik ganda tombol Ekspor CSV selama data diproses
   const [isExporting, setIsExporting] = useState(false);
-
-  // [BARU] Data ekspor tab Ringkasan Cuti & Histori Cuti dimuat oleh komponen tabnya sendiri.
-  // Komponen itu melaporkan baris/filter yang sedang tampil ke sini (ref, bukan state, supaya
-  // tidak memicu render ulang) dan dibaca handleExport saat tombol "Ekspor Data" diklik.
-  const exportSnapshotRef = useRef({ summaryRows: [], ledgerParams: {} });
-  const handleSummaryRowsChange = useCallback((rows) => {
-    exportSnapshotRef.current.summaryRows = rows;
-  }, []);
-  const handleLedgerParamsChange = useCallback((params) => {
-    exportSnapshotRef.current.ledgerParams = params;
-  }, []);
 
   // [UBAH] Memisahkan state Form Tambah dan Modal Edit agar sesuai dengan UI design
   const [showAddForm, setShowAddForm] = useState(false); 
@@ -202,44 +168,6 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   };
 
 
-  // [BARU] Fungsi fetch untuk Log Sistem dari Backend
-  const fetchLogs = async () => {
-  try {
-    const response = await getSystemLogs();
-    const logsData = response.data || response || [];
-    
-    // [BARU] Tampilkan hanya aksi yang mengubah data (tambah, ubah, hapus,
-    // ajukan/setujui cuti, dst). Aksi "GET_..." (sekadar melihat menu/data)
-    // dibuang. Ini pengaman tambahan bila backend belum menyaring.
-    // [UBAH] Sync libur nasional otomatis oleh "System" juga dibuang.
-    const activityLogs = logsData.filter((log) => {
-      const action = String(log.action || '').toUpperCase();
-      const isViewOnly = action.startsWith('GET_');
-      const isAutoHolidaySync = log.username === 'System' && action === 'SYNC_HOLIDAY';
-      return !isViewOnly && !isAutoHolidaySync;
-    });
-
-    // Melakukan mapping data dari backend ke format yang dimengerti LogSistem
-    const formattedLogs = activityLogs.map(log => {
-      // Memisahkan tanggal dan jam dari createdAt (LocalDateTime)
-      const dateObj = new Date(log.createdAt);
-      
-      return {
-        id: log.logId,
-        tanggal: dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-        jam: dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-        aktor: log.username,
-        aksi: log.description || log.action, // Menggunakan description atau action dari backend
-        type: 'normal' // Sesuaikan jika ada field type di backend
-      };
-    });
-    
-    setLogList(formattedLogs);
-  } catch (error) {
-    console.error("Gagal menarik data log dari server:", error);
-  }
-};
-
   useEffect(() => {
     fetchKaryawan();
 
@@ -301,22 +229,15 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [karyawanList]);
 
-  // [BARU] Efek ini hanya akan memanggil API Log jika tab Log Sistem diklik
-  useEffect(() => {
-    if (activeTab === 'Log Sistem') {
-      fetchLogs();
-    }
-  }, [activeTab]);
-
-  // [BARU] Sama seperti Log Sistem: fetch data cuti hanya saat tab
-  // "Cuti Karyawan" dibuka, supaya tidak ada API call yang sia-sia.
+  // [BARU] Fetch data cuti hanya saat tab "Cuti Karyawan" dibuka,
+  // supaya tidak ada API call yang sia-sia.
   useEffect(() => {
     if (activeTab === 'Cuti Karyawan') {
       fetchRiwayatCuti();
     }
   }, [activeTab]);
 
-  const handleSubmitAddForm = async (formData) => {
+  const handleSubmitAddForm = async () => {
     // Catatan: registrasi ke backend (termasuk upload foto) SUDAH dilakukan
     // di dalam FormKaryawan.jsx. Di sini kita TIDAK perlu panggil registerKaryawan lagi
     // (sebelumnya ini menyebabkan data terkirim dobel ke backend).
@@ -325,38 +246,32 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     try {
       await fetchKaryawan();
       setShowAddForm(false);
-      addLogActivity(user?.name, `menambahkan karyawan baru: ${formData.fullName}`);
     } catch (error) {
       console.error("Gagal me-refresh daftar karyawan:", error);
     }
   };
 
-  // [UBAH] Sebelumnya toast baru dipicu SETELAH await fetchKaryawan() +
-  // addLogActivity() selesai -- kalau ada apapun yang lambat/gagal di
+  // [UBAH] Sebelumnya toast baru dipicu SETELAH await fetchKaryawan() selesai -- kalau ada apapun yang lambat/gagal di
   // rangkaian itu (network lelet, race dengan polling live tabel setiap 15
   // detik, dll), triggerToast() di ujung rangkaian itu bisa jadi telat atau
   // tidak sempat kepanggil sama sekali, padahal modal sudah keburu tertutup
   // duluan (onClose() di ModalDetailKaryawan.jsx dipanggil sinkron). Jadinya
   // user cuma lihat modal close tanpa notifikasi apapun.
   // Sekarang toast dipicu LANGSUNG (sinkron, tidak nunggu apapun) begitu
-  // handleSubmitEditModal ini dipanggil -- refetch tabel & log activity
+  // handleSubmitEditModal ini dipanggil -- refetch tabel
   // tetap jalan, tapi di background dan tidak lagi jadi syarat toast muncul.
   const handleSubmitEditModal = (formData, successMessage) => {
     triggerToast(successMessage || `Data profil akun ${formData.namaLengkap} berhasil diperbarui.`, 'success');
     setEditTarget(null);
     setPendingResetRequestId(null); // [BARU]
 
-    fetchKaryawan()
-      .then(() => {
-        addLogActivity(user?.name || 'Admin HR', `mengupdate profil "${formData.namaLengkap}".`);
-      })
-      .catch((error) => {
-        // Data karyawan SUDAH tersimpan di backend (itu terjadi di dalam
-        // ModalDetailKaryawan.jsx sebelum onSave ini dipanggil) -- yang
-        // gagal di sini cuma refetch tabelnya, jadi toast sukses di atas
-        // tetap valid. Polling live (setiap 15 detik) akan coba lagi.
-        console.error("Gagal me-refresh daftar karyawan:", error);
-      });
+    fetchKaryawan().catch((error) => {
+      // Data karyawan SUDAH tersimpan di backend (itu terjadi di dalam
+      // ModalDetailKaryawan.jsx sebelum onSave ini dipanggil) -- yang
+      // gagal di sini cuma refetch tabelnya, jadi toast sukses di atas
+      // tetap valid. Polling live (setiap 15 detik) akan coba lagi.
+      console.error("Gagal me-refresh daftar karyawan:", error);
+    });
   };
 
   const handleRequestDelete = (item) => {
@@ -366,14 +281,8 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   const handleCancelDelete = () => setDeleteTarget(null);
 
   const handleConfirmDelete = async (id) => {
-    // Cari nama karyawan sebelum dihapus untuk ditulis di log
-    const deletedKaryawan = karyawanList.find((k) => (k.employeeId ?? k.id) === id);
-
     try {
       await deleteKaryawan(id);
-      if (deletedKaryawan) {
-        addLogActivity(user?.name || 'Admin HR', `menghapus data karyawan "${deletedKaryawan.fullName}".`);
-      }
       await fetchKaryawan();
     } catch (error) {
       console.error("Gagal menghapus karyawan:", error);
@@ -400,7 +309,6 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   const handleSubmitCutiSusulan = async (info) => {
     try {
       const freshList = await fetchRiwayatCuti();
-      addLogActivity(user?.name || 'Admin HR', `menginput cuti susulan (Auto-ACC) untuk "${info?.karyawanNama || 'karyawan'}".`);
 
       const createdItem = freshList.find((item) => item.id === info?.leaveRequestId);
       triggerToast(
@@ -420,17 +328,11 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
   // ini dibuka ulang atau halaman di-refresh. Ini scope terpisah dari Cuti
   // Susulan — belum digarap di iterasi ini.
   const handleRevokeCuti = (cutiId) => {
-    const targetCuti = riwayatCuti.find(item => item.id === cutiId);
-
-    if (targetCuti) {
-      addLogActivity(user?.name || 'Admin HR', `memulihkan (revoke) status cuti "${targetCuti.karyawan?.nama}" kembali ke Proses. (belum tersimpan ke backend)`);
-
-      setRiwayatCuti((prev) =>
-        prev.map(item =>
-          item.id === cutiId ? { ...item, statusBerkas: 'PROSES' } : item
-        )
-      );
-    }
+    setRiwayatCuti((prev) =>
+      prev.map(item =>
+        item.id === cutiId ? { ...item, statusBerkas: 'PROSES' } : item
+      )
+    );
   };
 
   // [BARU] Ekspor CSV mengikuti tab yang sedang aktif. Definisi kolom & isi
@@ -451,18 +353,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
         karyawanList: karyawanList.filter(isReportEmployee),
         riwayatCuti: riwayatCuti.filter((item) => !excludedEmployeeIds.has(item.employeeId)),
         balanceAfterByLeaveId,
-        logList,
-        summaryRows: exportSnapshotRef.current.summaryRows, // [BARU] tab Ringkasan Cuti
-        ledgerParams: exportSnapshotRef.current.ledgerParams, // [BARU] tab Histori Cuti
       };
-
-      // [BARU] Format Excel (.xlsx): file dibuat backend, frontend hanya mengunduh Blob-nya.
-      if (format === 'xlsx' && exportConfig.xlsx) {
-        const { xlsx } = exportConfig;
-        const blob = await xlsx.buildBlob(exportContext);
-        downloadBlobFile(xlsx.buildFileName(exportContext), blob);
-        return;
-      }
 
       if (format === 'pdf' && exportConfig.pdf) {
         const { pdf } = exportConfig;
@@ -583,15 +474,10 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
             />
           </div>
         )}
-        {/* [BARU] TAB RINGKASAN CUTI: total/terpakai/tersedia sejak tanggal masuk. Mengambil datanya sendiri. */}
-        {activeTab === 'Ringkasan Cuti' && <LeaveSummaryTable onExportRowsChange={handleSummaryRowsChange} />}
-        {/* [BARU] TAB HISTORI CUTI: tabel format ledger Excel + export. Mengambil datanya sendiri. */}
-        {activeTab === 'Histori Cuti' && <LeaveLedgerTable onExportParamsChange={handleLedgerParamsChange} />}
+        {/* [UBAH] Tab Ringkasan Cuti & Histori Cuti pindah ke halaman Laporan (pages/Laporan),
+            tab Log Sistem jadi halaman sendiri (pages/LogSistem). */}
         {activeTab === 'Data Divisi' && isSuperAdmin(user) && <DataDivisi karyawanList={karyawanList} />}
         {activeTab === 'Data Divisi' && isHrAdmin(user) && <KelolaDivisiShift karyawanList={karyawanList} />}
-        {activeTab === 'Log Sistem' && (
-          <LogSistem logList={logList} />
-        )}
       </div>
 
       {/* [BARU] Modal Detail Karyawan untuk fitur Edit */}

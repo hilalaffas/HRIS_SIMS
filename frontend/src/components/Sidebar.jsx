@@ -65,14 +65,20 @@ export default function Sidebar({ user, onLogout, notificationCounts, onNavigate
   const hrMenuItems = [
     { path: '/karyawan', name: t('sidebar.manageEmployees'), icon: 'fa-solid fa-users' },
     { path: '/kelola-divisi-shift', name: t('sidebar.manageDivisionShift'), icon: 'fa-solid fa-layer-group' },
-    // [BARU] Menu Laporan hanya untuk role HRD_ADMIN (bukan role "admin" lain)
-    ...(userRole === 'hrd_admin' ? [{ path: '/laporan', name: t('sidebar.reports'), icon: 'fa-solid fa-file-lines' }] : []),
+    // [BARU] Menu Laporan & Log Sistem hanya untuk role HRD_ADMIN (bukan role "admin" lain)
+    ...(userRole === 'hrd_admin' ? [
+      { path: '/laporan', name: t('sidebar.reports'), icon: 'fa-solid fa-file-lines' },
+      { path: '/log-sistem', name: t('sidebar.systemLog'), icon: 'fa-solid fa-clock-rotate-left' }, // [BARU]
+    ] : []),
   ];
 
   // Menu Khusus Super Admin (Gambar 4)
   const superAdminMenuItems = [
     { path: '/karyawan', name: t('sidebar.accountSettings'), icon: 'fa-solid fa-gear' },
     { path: '/kelola-divisi-shift', name: t('sidebar.manageDivisionShift'), icon: 'fa-solid fa-layer-group' },
+    // [BARU] Ringkasan Cuti & Histori Cuti (kini di halaman Laporan) dan Log Sistem tetap bisa diakses Super Admin
+    { path: '/laporan', name: t('sidebar.reports'), icon: 'fa-solid fa-file-lines' },
+    { path: '/log-sistem', name: t('sidebar.systemLog'), icon: 'fa-solid fa-clock-rotate-left' },
   ];
 
   // LOGIKA HELPER INDIVIDU

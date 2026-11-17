@@ -1,5 +1,5 @@
 // [BARU] Menghitung jumlah KARYAWAN YANG CUTI pada rentang tanggal -- sumber data chart di tab
-// "Ringkasan Cuti" (pages/Karyawan/components/LeaveHeadcountChart.jsx).
+// "Ringkasan Cuti" (pages/Laporan/components/LeaveHeadcountChart.jsx).
 //
 // Aturan:
 //   - Hanya cuti berstatus DISETUJUI; catatan "Cuti hangus" bukan hari cuti sehingga diabaikan.

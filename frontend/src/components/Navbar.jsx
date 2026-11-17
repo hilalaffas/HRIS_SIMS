@@ -227,6 +227,7 @@ export default function Navbar({ toggleSidebar, user }) {
       case '/history-cuti': return t('navbar.subtitle.leaveHistory');
       case '/absensi': return t('navbar.subtitle.attendance');
       case '/karyawan': return t('navbar.subtitle.employees');
+      case '/log-sistem': return t('navbar.subtitle.systemLog'); // [BARU]
       case '/approval-cuti': return t('navbar.subtitle.approvalList');
       case '/reject-cuti': return t('navbar.subtitle.rejectList');
       case '/return-cuti': return t('navbar.subtitle.returnList');
