@@ -38,9 +38,9 @@ function gpsBadgeText(locationStatus, coords) {
 
 export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 'Shift Normal', shiftOvernight = false }) { // [UBAH] prop onUploadFallback dihapus
   const {
-    action, reason, note, captured, cameraError, submitError, coords, locationType, setLocationType,
+    action, reason, note, captured, cameraError, cameraErrorType, isCameraRetrying, submitError, coords, locationType, setLocationType,
     locationStatus, locationError, locationName, isLocationNameLoading, isSubmitting,
-    attachVideo, open, close, takePhoto, retake, submit, refreshLocation, setNote,
+    attachVideo, retryCamera, close, takePhoto, retake, submit, refreshLocation, setNote,
   } = capture;
 
   const clock = useLiveClock();
@@ -68,9 +68,6 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
   const hasLocation = Boolean(coords);
   const canSubmit = (isCheckout || Boolean(captured)) && hasLocation && !isSubmitting;
   const isLowAccuracy = hasLocation && coords.accuracy > LOW_ACCURACY_METERS;
-
-  // [UBAH] Kamera tidak terdeteksi: hanya bisa mencoba mengaktifkan kamera lagi (tanpa unggah foto).
-  const handleRetryCamera = () => open(action, reason, note);
 
   return (
     <div className="quickAtt__backdrop" role="presentation" onClick={close}>
@@ -115,8 +112,17 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
               <div className="quickAtt__cameraError" role="alert">
                 <Camera size={28} aria-hidden="true" />
                 <p>{cameraError}</p>
-                <button type="button" className="quickAtt__link" onClick={handleRetryCamera}>
-                  Coba Lagi
+                {/* [BARU] Browser tidak bisa memunculkan ulang dialog izin yang sudah diblokir,
+                    jadi pengguna dipandu mengaktifkannya lewat ikon gembok. */}
+                {cameraErrorType === 'denied' && (
+                  <ol className="quickAtt__cameraSteps">
+                    <li>Klik ikon gembok di sebelah alamat situs.</li>
+                    <li>Aktifkan <strong>Kamera</strong> (atau pilih <strong>Reset izin</strong>).</li>
+                    <li>Kamera akan menyala otomatis, atau klik <strong>Coba Lagi</strong>.</li>
+                  </ol>
+                )}
+                <button type="button" className="quickAtt__link" onClick={retryCamera} disabled={isCameraRetrying}>
+                  {isCameraRetrying ? 'Menyalakan kamera...' : 'Coba Lagi'}
                 </button>
               </div>
             ) : (

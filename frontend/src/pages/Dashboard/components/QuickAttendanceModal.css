@@ -223,6 +223,19 @@
 
 .quickAtt__cameraError p { margin: 0; font-size: 0.78rem; line-height: 1.45; }
 
+/* [BARU] Panduan mengaktifkan kamera saat izin diblokir */
+.quickAtt__cameraSteps {
+  margin: 0;
+  padding: 0 0 0 18px;
+  max-width: 280px;
+  text-align: left;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.quickAtt__link:disabled { opacity: 0.6; cursor: progress; text-decoration: none; }
+
 .quickAtt__link {
   border: 0;
   background: none;

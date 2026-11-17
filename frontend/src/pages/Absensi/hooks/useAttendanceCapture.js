@@ -28,6 +28,35 @@ const GEOLOCATION_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumA
 const CAMERA_ERROR_MESSAGE =
   'Kamera tidak dapat diakses. Pastikan izin kamera telah diberikan di browser Anda.';
 
+// [BARU] Pesan per jenis kegagalan kamera, supaya pengguna tahu langkah yang tepat.
+const CAMERA_ERROR_MESSAGES = {
+  denied: 'Izin kamera diblokir di browser Anda.',
+  notFound: 'Kamera tidak ditemukan di perangkat ini.',
+  inUse: 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi tersebut lalu coba lagi.',
+  unsupported: 'Browser ini tidak mendukung kamera. Gunakan browser terbaru dan buka lewat HTTPS.',
+  unknown: CAMERA_ERROR_MESSAGE,
+};
+
+// [BARU] Ubah error getUserMedia menjadi jenis yang mudah ditangani.
+function resolveCameraErrorType(error) {
+  switch (error?.name) {
+    case 'NotAllowedError':
+    case 'PermissionDeniedError':
+    case 'SecurityError':
+      return 'denied';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+    case 'OverconstrainedError':
+      return 'notFound';
+    case 'NotReadableError':
+    case 'TrackStartError':
+    case 'AbortError':
+      return 'inUse';
+    default:
+      return 'unknown';
+  }
+}
+
 function resolveGeolocationError(error) {
   if (error?.code === 1) return 'Izin lokasi ditolak. Aktifkan izin lokasi di browser untuk melanjutkan absensi.';
   if (error?.code === 3) return 'Pengambilan lokasi terlalu lama. Pastikan GPS aktif lalu coba lagi.';
@@ -42,6 +71,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const sessionRef = useRef(0);
   // Gerbang sinkron anti double-submit (state saja tidak cukup untuk klik beruntun).
   const submitLockRef = useRef(false);
+  const cameraRetryLockRef = useRef(false); // [BARU] anti klik "Coba Lagi" beruntun
 
   const [isOpen, setIsOpen] = useState(false);
   const [action, setAction] = useState('Masuk');
@@ -50,6 +80,8 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const [captured, setCaptured] = useState('');
   const [locationType, setLocationType] = useState('KANTOR');
   const [cameraError, setCameraError] = useState('');
+  const [cameraErrorType, setCameraErrorType] = useState(''); // [BARU] denied | notFound | inUse | unsupported | unknown
+  const [isCameraRetrying, setIsCameraRetrying] = useState(false); // [BARU]
   const [submitError, setSubmitError] = useState('');
   const [coords, setCoords] = useState(null); // { lat, lng, accuracy }
   const [locationStatus, setLocationStatus] = useState('idle'); // idle | loading | ready | error
@@ -129,25 +161,16 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     );
   }, [requestLocationName]);
 
-  const open = useCallback(async (nextAction, presetReason = 'Absen', presetNote = '') => { // [UBAH] + presetNote
-    stopCamera();
-    sessionRef.current += 1;
-    const session = sessionRef.current;
-
-    setAction(nextAction);
-    setReason(presetReason);
-    setNote(presetNote); // [UBAH] sebelumnya selalu ''
-    setCaptured('');
-    setLocationType('KANTOR');
-    setCameraError('');
-    setSubmitError('');
-    setIsOpen(true);
-    requestLocation();
-
-    if (nextAction === 'Keluar') return;
+  // [BARU] Satu-satunya tempat meminta kamera. Dipakai open() dan retryCamera().
+  const startCamera = useCallback(async (session) => {
+    const showCameraError = (type) => {
+      if (session !== sessionRef.current) return;
+      setCameraErrorType(type);
+      setCameraError(CAMERA_ERROR_MESSAGES[type]);
+    };
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError(CAMERA_ERROR_MESSAGE);
+      showCameraError('unsupported');
       return;
     }
 
@@ -160,10 +183,78 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
       }
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch {
-      if (session === sessionRef.current) setCameraError(CAMERA_ERROR_MESSAGE);
+      setCameraError('');
+      setCameraErrorType('');
+    } catch (error) {
+      showCameraError(resolveCameraErrorType(error));
     }
-  }, [requestLocation, stopCamera]);
+  }, []);
+
+  const open = useCallback(async (nextAction, presetReason = 'Absen', presetNote = '') => { // [UBAH] + presetNote
+    stopCamera();
+    sessionRef.current += 1;
+    const session = sessionRef.current;
+
+    setAction(nextAction);
+    setReason(presetReason);
+    setNote(presetNote); // [UBAH] sebelumnya selalu ''
+    setCaptured('');
+    setLocationType('KANTOR');
+    setCameraError('');
+    setCameraErrorType(''); // [BARU]
+    setSubmitError('');
+    setIsOpen(true);
+    requestLocation();
+
+    if (nextAction === 'Keluar') return;
+
+    await startCamera(session); // [UBAH] sebelumnya blok getUserMedia ditulis langsung di sini
+  }, [requestLocation, startCamera, stopCamera]);
+
+  // [BARU] "Coba Lagi": hanya meminta ulang kamera. Tab lokasi (Kantor/WFH), catatan,
+  // dan GPS TIDAK di-reset (sebelumnya memanggil open() lagi sehingga semuanya ikut reset).
+  const retryCamera = useCallback(async () => {
+    if (action === 'Keluar' || captured || cameraRetryLockRef.current) return;
+
+    cameraRetryLockRef.current = true;
+    setIsCameraRetrying(true);
+    stopCamera();
+    try {
+      await startCamera(sessionRef.current);
+    } finally {
+      cameraRetryLockRef.current = false;
+      setIsCameraRetrying(false);
+    }
+  }, [action, captured, startCamera, stopCamera]);
+
+  // [BARU] Saat kamera diblokir, pengguna mengubah izin lewat ikon gembok di address bar.
+  // Begitu izin berubah menjadi "granted", kamera dinyalakan otomatis tanpa perlu klik lagi.
+  useEffect(() => {
+    if (!isOpen || action === 'Keluar' || !cameraError) return undefined;
+    if (!navigator.permissions?.query) return undefined; // Safari/Firefox lama: andalkan tombol "Coba Lagi"
+
+    let permissionStatus = null;
+    let isCancelled = false;
+    const handlePermissionChange = () => {
+      if (permissionStatus?.state === 'granted') retryCamera();
+    };
+
+    navigator.permissions
+      .query({ name: 'camera' })
+      .then((status) => {
+        if (isCancelled) return;
+        permissionStatus = status;
+        permissionStatus.addEventListener('change', handlePermissionChange);
+      })
+      .catch(() => {
+        // Browser tidak mengenal permission "camera" -> abaikan.
+      });
+
+    return () => {
+      isCancelled = true;
+      permissionStatus?.removeEventListener('change', handlePermissionChange);
+    };
+  }, [action, cameraError, isOpen, retryCamera]);
 
   const close = useCallback(() => {
     if (submitLockRef.current) return; // jangan bisa ditutup di tengah proses kirim
@@ -171,6 +262,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     setIsOpen(false);
     setCaptured('');
     setCameraError('');
+    setCameraErrorType(''); // [BARU]
     setSubmitError('');
   }, [teardown]);
 
@@ -284,6 +376,8 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     locationType,
     setLocationType,
     cameraError,
+    cameraErrorType, // [BARU]
+    isCameraRetrying, // [BARU]
     submitError,
     coords,
     locationStatus,
@@ -294,6 +388,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     // handler
     attachVideo,
     open,
+    retryCamera, // [BARU]
     close,
     takePhoto,
     retake,
