@@ -90,11 +90,18 @@ function OvertimeCell({ overtime }) {
   );
 }
 
+// [BARU] Pilihan baris per halaman di mode "Lihat semua". WEEKLY_MODE = navigasi mingguan (perilaku sebelumnya).
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 31];
+const WEEKLY_MODE = 'week';
+const DEFAULT_PAGE_SIZE = 5;
+
 export default function AttendanceHistoryTable({ records, overtimeRecords = [], corrections = {}, onUploadDocument, onRequestCorrection }) { // [UBAH] + corrections, onRequestCorrection
   const currentPeriod = useMemo(() => getCurrentPeriod(new Date()), []);
   const [period, setPeriod] = useState(currentPeriod);
   const [expanded, setExpanded] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(null);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE); // [BARU] baris per halaman, atau WEEKLY_MODE
+  const [pageIndex, setPageIndex] = useState(0); // [BARU] halaman aktif (mulai 0) pada mode baris
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' });
   const [exporting, setExporting] = useState(false);
   const [schedules, setSchedules] = useState([]);
@@ -193,6 +200,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   }, [dailyRows, sort]);
 
   const toggleSort = (key) => {
+    setPageIndex(0); // [BARU] urutan berubah -> kembali ke halaman pertama
     setSort((current) => (
       current.key === key
         ? { key, dir: current.dir === 'asc' ? 'desc' : 'asc' }
@@ -206,7 +214,15 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
     ? Math.min(Math.max(0, selectedWeek), weeks.length - 1)
     : defaultWeek;
   const activeWeek = weeks[weekIndex];
-  const visibleRows = sortedRows.filter((row) => row.date >= activeWeek.from && row.date <= activeWeek.to);
+  // [UBAH] Mode baris (Lihat semua + pilihan 5/10/20/31): halaman = potongan baris dari urutan layar.
+  // Mode ringkas dan "Per minggu" tetap menampilkan satu minggu Senin-Minggu.
+  const rowMode = expanded && pageSize !== WEEKLY_MODE;
+  const totalPages = rowMode ? Math.max(1, Math.ceil(sortedRows.length / pageSize)) : 1;
+  const currentPage = Math.min(pageIndex, totalPages - 1);
+  const visibleRows = rowMode
+    ? sortedRows.slice(currentPage * pageSize, (currentPage + 1) * pageSize)
+    : sortedRows.filter((row) => row.date >= activeWeek.from && row.date <= activeWeek.to);
+  const firstRowNumber = visibleRows.length ? currentPage * pageSize + 1 : 0;
   const formatWeekDate = (key) => new Date(`${key}T00:00:00`).toLocaleDateString('id-ID', {
     day: 'numeric', month: 'short', year: 'numeric',
   });
@@ -214,6 +230,15 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
 
   const toggleExpanded = () => {
     setExpanded((current) => !current);
+    setSelectedWeek(null);
+    setPageIndex(0); // [BARU]
+  };
+
+  // [BARU] Ganti jumlah baris per halaman -> kembali ke halaman pertama.
+  const handlePageSizeChange = (event) => {
+    const { value } = event.target;
+    setPageSize(value === WEEKLY_MODE ? WEEKLY_MODE : Number(value));
+    setPageIndex(0);
     setSelectedWeek(null);
   };
 
@@ -226,6 +251,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
       return { year: target.getFullYear(), month: target.getMonth() };
     });
     setSelectedWeek(null);
+    setPageIndex(0); // [BARU]
   };
 
   const filePrefix = `rekap_absensi_tutup-buku_${period.year}-${String(period.month + 1).padStart(2, '0')}`;
@@ -334,7 +360,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
           </thead>
           {/* key={...} memaksa remount <tbody> supaya animasi baris
               (abs-tbody-page) terpicu ulang tiap ganti halaman/bulan. */}
-          <tbody key={`${period.year}-${period.month}-${sort.key}-${sort.dir}-${weekIndex}-${expanded ? 'expanded' : 'collapsed'}`} className="abs-tbody-page">
+          <tbody key={`${period.year}-${period.month}-${sort.key}-${sort.dir}-${rowMode ? `p${currentPage}-${pageSize}` : weekIndex}-${expanded ? 'expanded' : 'collapsed'}`} className="abs-tbody-page">
             {visibleRows.length === 0 && (
               <tr>
                 <td colSpan={COLUMNS.length} className="abs-empty-row">Belum ada riwayat absensi pada periode ini.</td>
@@ -368,24 +394,45 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
         </table>
       </div>
 
-      <div className="abs-footer-bar" aria-label="Rentang minggu absensi">
-        <span className="abs-page-range" aria-live="polite">
-          {expanded ? `Minggu ${weekIndex + 1} dari ${weeks.length}` : isCurrentPeriod ? 'Minggu berjalan' : 'Minggu terakhir periode'} · {weekLabel}
-        </span>
+      <div className="abs-footer-bar" aria-label="Paginasi riwayat absensi">
+        {/* [UBAH] Mode "Lihat semua": pilihan baris per halaman di kiri; mode ringkas tetap label minggu berjalan. */}
+        {expanded ? (
+          <label className="abs-page-size">
+            Tampilkan
+            <select value={pageSize} onChange={handlePageSizeChange} aria-label="Jumlah baris per halaman">
+              {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size} / halaman</option>)}
+              <option value={WEEKLY_MODE}>Per minggu</option>
+            </select>
+          </label>
+        ) : (
+          <span className="abs-page-range" aria-live="polite">
+            {isCurrentPeriod ? 'Minggu berjalan' : 'Minggu terakhir periode'} · {weekLabel}
+          </span>
+        )}
         {expanded && (
           <div className="abs-pagination">
-            <button type="button" className="abs-page-nav" onClick={() => setSelectedWeek(weekIndex - 1)}
-              disabled={weekIndex === 0} aria-label="Minggu sebelumnya">
+            <button type="button" className="abs-page-nav"
+              onClick={() => (rowMode ? setPageIndex(currentPage - 1) : setSelectedWeek(weekIndex - 1))}
+              disabled={rowMode ? currentPage === 0 : weekIndex === 0}
+              aria-label={rowMode ? 'Halaman sebelumnya' : 'Minggu sebelumnya'}>
               <ChevronLeft aria-hidden="true" />
             </button>
-            <span className="abs-page-indicator">Senin–Minggu</span>
-            <button type="button" className="abs-page-nav" onClick={() => setSelectedWeek(weekIndex + 1)}
-              disabled={weekIndex === weeks.length - 1} aria-label="Minggu berikutnya">
+            <span className="abs-page-indicator">{rowMode ? `Halaman ${currentPage + 1} dari ${totalPages}` : 'Senin–Minggu'}</span>
+            <button type="button" className="abs-page-nav"
+              onClick={() => (rowMode ? setPageIndex(currentPage + 1) : setSelectedWeek(weekIndex + 1))}
+              disabled={rowMode ? currentPage >= totalPages - 1 : weekIndex === weeks.length - 1}
+              aria-label={rowMode ? 'Halaman berikutnya' : 'Minggu berikutnya'}>
               <ChevronRight aria-hidden="true" />
             </button>
           </div>
         )}
-        <span className="abs-page-range">{visibleRows.length} hari</span>
+        <span className="abs-page-range" aria-live="polite">
+          {!expanded || visibleRows.length === 0
+            ? `${visibleRows.length} hari`
+            : rowMode
+              ? `${firstRowNumber}–${firstRowNumber + visibleRows.length - 1} dari ${sortedRows.length} hari`
+              : `Minggu ${weekIndex + 1} dari ${weeks.length} · ${weekLabel}`}
+        </span>
       </div>
     </section>
   );
