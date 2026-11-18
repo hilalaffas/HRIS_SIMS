@@ -2,19 +2,18 @@
 //
 // [BARU] Tabel ringkasan absensi SEMUA karyawan (urut divisi lalu nama) dengan
 // jumlah Hadir / Terlambat / Sakit / Izin / Cuti / Alpha / Lembur (ACC) per
-// karyawan, plus paginasi. Klik baris (atau tombol "Detail") membuka sheet
+// karyawan. [UBAH] Paginasi dipindah ke ReportFilterBar (komponen TablePagination);
+// tabel ini hanya menampilkan baris halaman aktif. Klik baris (atau tombol "Detail") membuka sheet
 // harian karyawan tersebut.
 // [BARU] Bila rentang laporan hanya SATU hari (Hari Ini / satu tanggal pilihan),
 // kolom hitungan diganti Jam Masuk / Jam Pulang / Status / Lembur hari itu.
 //
 // Contoh pemakaian:
-// <AttendanceReportTable rows={pageRows} startIndex={0} isLoading={false} isSingleDay={false}
-//   totalItems={86} page={0} pageSize={20} onPageChange={fn} onPageSizeChange={fn} onSelect={fn} />
+// <AttendanceReportTable rows={pageRows} startIndex={0} isLoading={false} isSingleDay={false} onSelect={fn} />
 import React from 'react';
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import Dropdown from '../../../components/Dropdown';
+import { Eye } from 'lucide-react';
 import Skeleton from '../../../components/Skeleton';
-import { PAGE_SIZE_OPTIONS, STATUS_TONE_CLASS } from '../config/laporanConfig';
+import { STATUS_TONE_CLASS } from '../config/laporanConfig';
 import { formatAccHours } from '../utils/attendanceReportSheets'; // [UBAH] jam lembur ACC sama dengan file ekspor
 import './AttendanceReportTable.css';
 
@@ -49,16 +48,8 @@ export default function AttendanceReportTable({
   startIndex,
   isLoading,
   isSingleDay = false, // [BARU]
-  totalItems,
-  page,
-  pageSize,
-  onPageChange,
-  onPageSizeChange,
   onSelect,
 }) {
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const firstShown = totalItems === 0 ? 0 : page * pageSize + 1;
-  const lastShown = Math.min(totalItems, (page + 1) * pageSize);
   const columnCount = isSingleDay ? SINGLE_DAY_COLUMN_COUNT : SUMMARY_COLUMN_COUNT; // [BARU]
 
   return (
@@ -160,28 +151,6 @@ export default function AttendanceReportTable({
           </tbody>
         </table>
       </div>
-
-      <footer className="lpr-pagination">
-        <span className="lpr-pagination-info">
-          {isLoading ? 'Memuat data...' : `Menampilkan ${firstShown}-${lastShown} dari ${totalItems} karyawan`}
-        </span>
-        <div className="lpr-pagination-controls">
-          <Dropdown
-            value={String(pageSize)}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
-            options={PAGE_SIZE_OPTIONS}
-            variant="pill"
-            ariaLabel="Jumlah baris per halaman"
-          />
-          <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 0} aria-label="Halaman sebelumnya">
-            <ChevronLeft />
-          </button>
-          <span className="lpr-page-indicator">{page + 1} / {totalPages}</span>
-          <button type="button" onClick={() => onPageChange(page + 1)} disabled={page + 1 >= totalPages} aria-label="Halaman berikutnya">
-            <ChevronRight />
-          </button>
-        </div>
-      </footer>
     </section>
   );
 }

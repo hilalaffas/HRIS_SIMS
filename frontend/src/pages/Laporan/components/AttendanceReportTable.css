@@ -96,33 +96,6 @@
 
 .lpr-empty { padding: 40px 16px !important; text-align: center; color: var(--color-text-secondary); }
 
-.lpr-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border);
-}
-.lpr-pagination-info { font-size: 12px; color: var(--color-text-secondary); }
-.lpr-pagination-controls { display: flex; align-items: center; gap: 8px; }
-.lpr-pagination-controls > button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  color: var(--color-text-secondary);
-  background: var(--dk-bg-subtle, #f8fafc);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-}
-.lpr-pagination-controls > button:hover:not(:disabled) { color: var(--color-primary); border-color: var(--color-primary-soft); }
-.lpr-pagination-controls > button:disabled { opacity: 0.4; cursor: not-allowed; }
-.lpr-pagination-controls svg { width: 16px; height: 16px; }
-.lpr-page-indicator { min-width: 48px; font-size: 12px; font-weight: 700; text-align: center; color: var(--color-text); }
-
 .sr-only {
   position: absolute;
   width: 1px;

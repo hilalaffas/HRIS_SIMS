@@ -11,6 +11,7 @@
 // buku, Hari Ini, atau tanggal pilihan (Dari - Sampai).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { DropdownPortalContext } from '../../../components/DropdownPortalContext'; // [BARU]
 import Toast from '../../../components/Toast';
 import { getAllDivisi } from '../../../services/divisiService';
 import { downloadCsv } from '../../../utils/csvExport';
@@ -20,6 +21,7 @@ import EmployeeReportDetail from '../components/EmployeeReportModal';
 import ReportFilterBar from '../components/ReportFilterBar';
 import ReportRangeControl from '../components/ReportRangeControl'; // [BARU]
 import ReportStatCards from '../components/ReportStatCards';
+import TablePagination from '../components/TablePagination'; // [BARU]
 import {
   ALL_DIVISIONS_LABEL,
   ALL_DIVISIONS_VALUE,
@@ -28,6 +30,7 @@ import {
 } from '../config/laporanConfig';
 import useAttendanceReport from '../hooks/useAttendanceReport';
 import { summarizeAll } from '../utils/attendanceReportBuilder';
+import { resolvePagination } from '../utils/pagination'; // [BARU]
 import { buildExportSheets, buildFlatCsvTable, toFileSlug } from '../utils/attendanceReportSheets';
 import { applyCustomFrom, createDefaultCustomRange, resolveReportRange } from '../utils/reportRange'; // [BARU]
 import './AttendanceReportTab.css';
@@ -42,7 +45,7 @@ export default function AttendanceReportTab() {
   const [divisions, setDivisions] = useState([]);
   const [searchValue, setSearchValue] = useState('');
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE); // [UBAH] angka atau 'all' (Semua)
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedEmployeeId = searchParams.get('employee');
   const setSelectedEmployeeId = (id) => {
@@ -108,9 +111,9 @@ export default function AttendanceReportTab() {
 
   const totals = useMemo(() => summarizeAll(reports), [reports]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredReports.length / pageSize));
-  const safePage = Math.min(page, totalPages - 1);
-  const pageRows = filteredReports.slice(safePage * pageSize, (safePage + 1) * pageSize);
+  // [UBAH] Perhitungan halaman lewat resolvePagination (mendukung pageSize 'all').
+  const { safePage, start, end } = resolvePagination({ page, pageSize, totalItems: filteredReports.length });
+  const pageRows = filteredReports.slice(start, end);
   const selectedReport = reports.find((report) => String(report.employeeId) === selectedEmployeeId) || null;
 
   // ---------- handler filter (semua mengembalikan tabel ke halaman pertama) ----------
@@ -145,6 +148,12 @@ export default function AttendanceReportTab() {
 
   const handleSearchChange = (value) => {
     setSearchValue(value);
+    setPage(0);
+  };
+
+  // [BARU] Ganti jumlah baris per halaman (angka atau 'all') -> kembali ke halaman pertama.
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
     setPage(0);
   };
 
@@ -237,16 +246,28 @@ export default function AttendanceReportTab() {
       ) : (
         <AttendanceReportTable
           rows={pageRows}
-          startIndex={safePage * pageSize}
+          startIndex={start} // [UBAH] sebelumnya safePage * pageSize
           isLoading={isLoading}
           isSingleDay={range.isSingleDay}
-          totalItems={filteredReports.length}
-          page={safePage}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
           onSelect={setSelectedEmployeeId}
         />
+      )}
+
+      {/* [BARU] Info "Menampilkan x-y dari N" + dropdown Tampilkan + tombol halaman, di akhir halaman, rata kanan.
+          Mode portal: daftar pilihan Tampilkan digambar fixed & otomatis membuka ke ATAS di dasar layar. */}
+      {!error && (
+        <DropdownPortalContext.Provider value>
+          <TablePagination
+            className="lpr-pager-end"
+            page={safePage}
+            pageSize={pageSize}
+            totalItems={filteredReports.length}
+            itemLabel="karyawan"
+            isLoading={isLoading}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        </DropdownPortalContext.Provider>
       )}
 
 

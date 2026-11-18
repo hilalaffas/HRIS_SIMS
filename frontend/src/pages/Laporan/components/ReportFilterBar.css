@@ -9,12 +9,14 @@
 
 .lpr-filter-row {
   display: grid;
-  grid-template-columns: minmax(200px, 280px) minmax(200px, 1fr);
+  /* [UBAH] Divisi | Cari Karyawan (diperkecil) | tombol Ekspor (rata kanan) */
+  grid-template-columns: minmax(180px, 240px) minmax(200px, 320px) 1fr;
   gap: 16px;
   align-items: end;
 }
 
 .lpr-filter-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lpr-filter-field--export { justify-self: end; } /* [BARU] tombol ekspor menempel di kanan baris filter */
 .lpr-filter-field--range { grid-column: 1 / -1; } /* rentang laporan satu baris penuh di atas divisi & pencarian */
 .lpr-filter-label {
   font-size: 11px;
@@ -87,6 +89,7 @@
 
 @media (max-width: 900px) {
   .lpr-filter-row { grid-template-columns: 1fr; }
+  .lpr-filter-field--export { justify-self: stretch; }
   .lpr-export-row { align-items: stretch; flex-direction: column; }
   .lpr-export-actions .lpr-export-btn { flex: 1; justify-content: center; }
 }
