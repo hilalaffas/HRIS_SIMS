@@ -423,15 +423,18 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
           tapi saya biarkan jika Anda masih membutuhkannya di dalam komponennya */}
       {/* [UBAH] Tidak lagi menerima data={karyawanList}; ekspor ditangani
           handleExportCsv sesuai tab aktif */}
-      <HeadlineKaryawan
-        onExport={handleExport}
-        exportFormats={getExportFormats(activeTab)}
-        exportTitle={`Ekspor ${activeTab}`}
-        isExporting={isExporting}
-      />
-
-      {/* [BARU] Render Tab Menu */}
-      <TabMenuKaryawan activeTab={activeTab} setActiveTab={setActiveTab} user={user} />
+      {/* [UBAH] Header halaman dihapus. Tab menu (kiri) + tombol Ekspor Data (kanan) satu baris,
+          konten kartu langsung di bawahnya. */}
+      <div className="karyawan-toolbar">
+        {/* [BARU] Render Tab Menu */}
+        <TabMenuKaryawan activeTab={activeTab} setActiveTab={setActiveTab} user={user} />
+        <HeadlineKaryawan
+          onExport={handleExport}
+          exportFormats={getExportFormats(activeTab)}
+          exportTitle={`Ekspor ${activeTab}`}
+          isExporting={isExporting}
+        />
+      </div>
 
       <div className="karyawan-page__body">
         {/* [BARU] Render Konten Berdasarkan Tab yang Aktif */}

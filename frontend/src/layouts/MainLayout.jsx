@@ -25,6 +25,7 @@ import '@fortawesome/fontawesome-free/css/fontawesome.min.css';
 import '@fortawesome/fontawesome-free/css/solid.min.css';
 import '@fortawesome/fontawesome-free/css/regular.min.css';
 import './MainLayout.css'; 
+import '../styles/sticky.css'; // [BARU] tab menu & nama kolom tabel menempel saat scroll
 
 export default function MainLayout({ onLogout, user }) {
   // 1. Tambahkan state untuk kontrol sidebar di mobile

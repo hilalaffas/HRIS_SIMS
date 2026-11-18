@@ -4,8 +4,7 @@
  * ------------------------------------------------------------------
  * Design tokens (CSS variables) untuk seluruh modul Persetujuan Cuti.
  * Didefinisikan di sini pada scope `.approve-leaving-page` supaya
- * otomatis "diwarisi" oleh semua komponen anak (HeadlineApproval,
- * TabMenu, PerluDiprosesSection, ListCutiSection, FormCuti, dst)
+ * otomatis "diwarisi" oleh semua komponen anak (TabMenu, PerluDiprosesSection, ListCutiSection, FormCuti, dst)
  * selama mereka dirender di dalam wrapper ini.
  * ------------------------------------------------------------------
  */
@@ -75,7 +74,7 @@
   border-radius: var(--alv-radius-lg);
   box-shadow: var(--alv-shadow-card);
   border: 1px solid var(--alv-border);
-  overflow: hidden;
+  overflow: clip; /* [UBAH] sebelumnya hidden: hidden membuat kartu jadi area scroll dan memutus sticky tab menu */
 }
 
 /* Aksesibilitas: fokus keyboard yang terlihat jelas di seluruh modul */

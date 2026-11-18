@@ -3,15 +3,14 @@
 // [BARU] Konfigurasi halaman Laporan. Tab baru cukup ditambahkan di REPORT_TABS lalu dirender
 // di Laporan.jsx.
 // [UBAH] Tiap tab punya daftar `roles` yang boleh melihatnya (halaman Laporan sendiri dibuka untuk
-// HRD_ADMIN & SUPER_ADMIN). Laporan Absen tetap khusus HRD_ADMIN; Ringkasan Cuti & Histori Cuti
-// pindahan dari halaman Manajemen Karyawan dan sama-sama boleh dilihat SUPER_ADMIN seperti
-// sebelumnya. Penjaga sebenarnya ada di backend (SecurityConfig), ini hanya mengatur tampilan.
+// HRD_ADMIN & SUPER_ADMIN). Laporan Absen tetap khusus HRD_ADMIN; Ringkasan Cuti
+// pindahan dari halaman Manajemen Karyawan dan boleh dilihat SUPER_ADMIN seperti sebelumnya.
+// [UBAH] Tab Histori Cuti dihapus (ekspor Excel ledger-nya pindah ke Ringkasan Cuti). Penjaga sebenarnya ada di backend (SecurityConfig), ini hanya mengatur tampilan.
 import { ROLES, getUserRole } from '../../../utils/roles';
 
 export const REPORT_TABS = [
   { key: 'ATTENDANCE', label: 'Laporan Absen', roles: [ROLES.HR_ADMIN] },
   { key: 'LEAVE_SUMMARY', label: 'Ringkasan Cuti', roles: [ROLES.HR_ADMIN, ROLES.SUPER_ADMIN] },
-  { key: 'LEAVE_LEDGER', label: 'Histori Cuti', roles: [ROLES.HR_ADMIN, ROLES.SUPER_ADMIN] },
 ];
 
 // Tab yang boleh dilihat user; urutan pertama = tab awal saat halaman dibuka.

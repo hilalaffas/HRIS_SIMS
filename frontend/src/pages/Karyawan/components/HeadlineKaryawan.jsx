@@ -6,6 +6,8 @@ const FORMAT_LABEL = {
   pdf: 'Unduh PDF',
 };
 
+// [UBAH] Judul "Manajemen Sistem & Karyawan" + deskripsi dihapus; komponen kini hanya tombol
+// ekspor (diletakkan sejajar dengan tab menu oleh Karyawan.jsx).
 // Komponen ini murni tampilan. Logika ekspor ada di Karyawan.jsx
 // (handleExport) + config/karyawanExportConfig.js.
 // - exportFormats berisi 1 format  -> tombol langsung mengekspor
@@ -52,11 +54,6 @@ const HeadlineKaryawan = ({
 
   return (
     <div className="headline-container">
-      <div className="headline-text">
-        <h2>Manajemen Sistem & Karyawan</h2>
-        <p>Kelola data direktori karyawan dan input cuti backdate.</p>
-      </div>
-
       <div className="export-wrapper" ref={menuRef}>
         <button
           type="button"

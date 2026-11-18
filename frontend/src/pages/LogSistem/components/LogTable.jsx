@@ -12,7 +12,8 @@ const LOG_PAGE_SIZE_OPTIONS = [
 
 // [UBAH] Komponen ini sebelumnya bernama LogSistem (tab di halaman Karyawan);
 // sekarang dipakai halaman sendiri pages/LogSistem/LogSistem.jsx.
-const LogTable = ({ logList = [] }) => {
+// [UBAH] + headerActions: tombol ekspor dari halaman, ditaruh di header kartu (sebelah "Tampilkan").
+const LogTable = ({ logList = [], headerActions = null }) => {
   // State untuk Pagination
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,6 +48,8 @@ const LogTable = ({ logList = [] }) => {
           <h3>Log Sistem HR Khusus (Read-Only)</h3>
         </div>
         
+        <div className="header-right_log_sistem">
+        {headerActions}
         {/* Kontrol Filter Jumlah Data */}
         <div className="filter-wrapper_log_sistem">
           <label htmlFor="log-filter">Tampilkan:</label>
@@ -58,6 +61,7 @@ const LogTable = ({ logList = [] }) => {
             variant="pill"
             className="select-filter_log_sistem"
           />
+        </div>
         </div>
       </div>
       

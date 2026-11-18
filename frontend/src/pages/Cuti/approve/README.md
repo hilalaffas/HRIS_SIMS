@@ -11,7 +11,6 @@ Cuti/approve/
 ├── mockData.js                     → data dummy + daftar role yang boleh akses halaman ini
 ├── README.md                       → file ini
 └── components/
-    ├── HeadlineApproval.jsx/css    → judul + deskripsi + tombol "Akses Manager"
     ├── TabMenu.jsx/css             → tab "Perlu Diproses" & "List Cuti"
     ├── PerluDiprosesSection.jsx/css→ tabel bagianApproval (ACC/Revisi/Tolak + info sisa cuti)
     ├── ListCutiSection.jsx/css     → tabel riwayat cuti + filter status

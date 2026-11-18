@@ -86,3 +86,20 @@
   outline: 2px solid var(--kry-primary);
   outline-offset: 2px;
 }
+
+/* [BARU] Baris tab menu + tombol Ekspor Data (menggantikan header halaman "Manajemen Sistem & Karyawan").
+   Garis bawah ada di baris ini; garis hijau tab aktif (bottom: -1px) menimpanya seperti sebelumnya. */
+.karyawan-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--dk-border, #e2e8f0);
+}
+.karyawan-toolbar .tab-menu-container {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+.karyawan-toolbar .headline-container { padding-bottom: 8px; }

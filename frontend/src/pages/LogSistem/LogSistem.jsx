@@ -5,12 +5,11 @@
 // di backend: /api/admin/** = ADMIN_ROLES). Log diambil sekali saat halaman dibuka, lalu bisa
 // diunduh sebagai CSV.
 import React, { useEffect, useState } from 'react';
-import { History } from 'lucide-react';
 import Toast from '../../components/Toast';
 import { SYSTEM_LOG_EXPORT } from '../../config/leaveReportExportConfig';
 import useExportAction from '../../hooks/useExportAction';
 import { getSystemLogs } from '../../services/logService';
-import ReportExportBar from '../Laporan/components/ReportExportBar';
+import ReportExportButtons from '../Laporan/components/ReportExportButtons'; // [UBAH] sebelumnya ReportExportBar (kartu terpisah)
 import LogTable from './components/LogTable';
 import { formatSystemLogs } from './utils/formatSystemLogs';
 import './LogSistem.css';
@@ -44,24 +43,21 @@ export default function LogSistem() {
     <div className="lgs-page">
       <Toast show={!!toast} message={toast?.message} type={toast?.type} />
 
-      <header className="lgs-header">
-        <span className="lgs-header-icon" aria-hidden="true"><History /></span>
-        <div>
-          <h1>Log Sistem</h1>
-          <p>Pantau aktivitas yang mengubah data di sistem. Tampilan hanya-baca.</p>
-        </div>
-      </header>
-
-      <ReportExportBar
-        caption={`${logList.length} aktivitas tercatat. Unduhan CSV memuat seluruh log di bawah.`}
-        formats={SYSTEM_LOG_EXPORT.formats}
-        exportingKey={exportingKey}
-        isDisabled={isLoading}
-        onExport={handleExport}
-      />
-
+      {/* [UBAH] Header halaman (ikon + judul + deskripsi) dan kartu ekspor terpisah dihapus;
+          tombol ekspor sekarang ada di header kartu log (prop headerActions). */}
       {errorMessage && <p className="lgs-error" role="alert">{errorMessage}</p>}
-      {isLoading ? <p className="lgs-loading">Memuat log sistem...</p> : <LogTable logList={logList} />}
+      {isLoading ? <p className="lgs-loading">Memuat log sistem...</p> : (
+        <LogTable
+          logList={logList}
+          headerActions={(
+            <ReportExportButtons
+              formats={SYSTEM_LOG_EXPORT.formats}
+              exportingKey={exportingKey}
+              onExport={handleExport}
+            />
+          )}
+        />
+      )}
     </div>
   );
 }

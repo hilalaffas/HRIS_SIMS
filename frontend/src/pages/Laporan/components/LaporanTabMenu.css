@@ -3,7 +3,7 @@
 .lpr-tab-menu {
   display: flex;
   gap: 32px;
-  margin-top: 20px;
+  margin-top: 0; /* [UBAH] sebelumnya 20px (jarak dari header halaman yang sudah dihapus) */
   border-bottom: 1px solid var(--dk-border, #e2e8f0);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

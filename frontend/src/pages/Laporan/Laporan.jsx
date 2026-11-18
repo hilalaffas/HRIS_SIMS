@@ -2,14 +2,13 @@
 //
 // [BARU] Halaman Laporan -- dibuka untuk HRD_ADMIN & SUPER_ADMIN (dijaga di routes/AppRoutes.jsx
 // dan di backend). Tab yang tampil mengikuti role (lihat getVisibleReportTabs di
-// config/laporanConfig.js): Laporan Absen (HRD_ADMIN saja), Ringkasan Cuti, Histori Cuti.
+// config/laporanConfig.js): Laporan Absen (HRD_ADMIN saja) dan Ringkasan Cuti.
+// [UBAH] Tab Histori Cuti dihapus; ekspor Excel format ledger pindah ke tab Ringkasan Cuti.
 // Tab baru: tambahkan ke config/laporanConfig.js (REPORT_TABS) lalu render panelnya di bawah.
 import React, { useMemo, useState } from 'react';
-import { ClipboardList } from 'lucide-react';
 import LaporanTabMenu, { LaporanTabPanel } from './components/LaporanTabMenu';
 import { getVisibleReportTabs } from './config/laporanConfig';
 import AttendanceReportTab from './tabs/AttendanceReportTab';
-import LeaveLedgerReportTab from './tabs/LeaveLedgerReportTab';
 import LeaveSummaryReportTab from './tabs/LeaveSummaryReportTab';
 import './Laporan.css';
 
@@ -19,14 +18,7 @@ export default function Laporan({ user }) {
 
   return (
     <div className="lpr-page">
-      <header className="lpr-header">
-        <span className="lpr-header-icon" aria-hidden="true"><ClipboardList /></span>
-        <div>
-          <h1>Laporan</h1>
-          <p>Rekap data SDM untuk kebutuhan HRD. Pilih jenis laporan pada tab di bawah.</p>
-        </div>
-      </header>
-
+      {/* [UBAH] Header halaman (ikon + judul "Laporan" + deskripsi) dihapus: tab menu langsung di atas. */}
       <LaporanTabMenu tabs={visibleTabs} activeKey={activeTab} onChange={setActiveTab} />
 
       {/* Panel hanya dirender untuk tab yang boleh dilihat role ini (LaporanTabPanel menampilkan
@@ -36,9 +28,6 @@ export default function Laporan({ user }) {
       </LaporanTabPanel>
       <LaporanTabPanel tabKey="LEAVE_SUMMARY" activeKey={activeTab}>
         <LeaveSummaryReportTab />
-      </LaporanTabPanel>
-      <LaporanTabPanel tabKey="LEAVE_LEDGER" activeKey={activeTab}>
-        <LeaveLedgerReportTab />
       </LaporanTabPanel>
     </div>
   );

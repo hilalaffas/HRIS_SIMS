@@ -8,7 +8,6 @@
 // Data ada di hooks/useOvertimeApprovals.js, tampilan di components/OvertimeListSection.jsx.
 import React from 'react';
 import useOvertimeApprovals from '../../hooks/useOvertimeApprovals';
-import HeadlineApproval from '../Cuti/approve/components/HeadlineApproval';
 import OvertimeListSection from './components/OvertimeListSection';
 import '../Cuti/approve/ApproveLeave.css'; // variabel --alv-* + kartu .approve-leaving-page__body
 import './Persetujuan.css';
@@ -19,10 +18,7 @@ export default function Persetujuan() {
   return (
     // .approve-leaving-page = sumber variabel --alv-* yang dipakai gaya List Cuti / List Lembur
     <div className="persetujuan-page approve-leaving-page">
-      <HeadlineApproval
-        title="List Lembur"
-        description="Daftar pengajuan lembur karyawan beserta posisi persetujuannya."
-      />
+      {/* [UBAH] Header halaman "List Lembur" dihapus (konsisten dengan halaman lain). */}
       <div className="approve-leaving-page__body">
         <OvertimeListSection rows={overtime.rows} loading={overtime.loading} toast={overtime.toast} />
       </div>

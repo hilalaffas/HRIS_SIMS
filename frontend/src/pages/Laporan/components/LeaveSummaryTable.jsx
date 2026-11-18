@@ -5,6 +5,8 @@ import { compareByNik } from '../../../utils/sortByNik';
 import { buildLeaveHeadcount, resolveRange } from '../../../utils/leaveHeadcount';
 import { SORT_DIRECTION, sortRows } from '../../../utils/tableSort';
 import LeaveHeadcountChart from './LeaveHeadcountChart';
+import TablePagination from './TablePagination'; // [BARU] paginasi tabel
+import { resolvePagination } from '../utils/pagination'; // [BARU]
 import Skeleton from '../../../components/Skeleton'; // [BARU] loading skeleton
 import SkeletonGroup from '../../../components/SkeletonGroup'; // [BARU]
 import './LeaveSummaryTable.css';
@@ -21,6 +23,7 @@ import './LeaveSummaryTable.css';
 // [BARU] Semua kolom bisa disortir naik/turun. Urutan awal: NIK kecil ke besar.
 
 const DEFAULT_SORT = { key: 'nik', direction: SORT_DIRECTION.asc };
+const DEFAULT_PAGE_SIZE = 5; // [BARU] tampil awal 5 karyawan; pilihan sampai 'Semua' (lihat TablePagination)
 
 const COLUMNS = [
   { key: 'totalOverallLeave', label: 'Total Keseluruhan' },
@@ -103,7 +106,9 @@ function LeaveSummarySkeleton() {
   );
 }
 
-function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsChange
+// [UBAH] + exportActions: tombol ekspor dari tab, ditaruh di baris filter kartu ini (bukan kartu terpisah).
+// [UBAH] + onExportParamsChange: melaporkan { from, to, q } untuk ekspor Excel ledger (tombol "Unduh XLSX").
+function LeaveSummaryTable({ onExportRowsChange, onExportParamsChange, exportActions }) { // [UBAH] + onExportRowsChange
   const [rows, setRows] = useState([]);
   const [leaves, setLeaves] = useState(null); // null = belum ada / gagal dimuat (chart menampilkan pesan)
   const [isLoading, setIsLoading] = useState(true);
@@ -113,6 +118,8 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
   const [dateTo, setDateTo] = useState('');
   const [sortConfig, setSortConfig] = useState(DEFAULT_SORT);
   const [reloadKey, setReloadKey] = useState(0);
+  const [page, setPage] = useState(0); // [BARU] halaman aktif (berbasis 0)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE); // [BARU] angka atau 'all'
 
   useEffect(() => {
     let isCancelled = false;
@@ -137,6 +144,7 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
   };
 
   const handleSort = (key) => {
+    setPage(0); // [BARU] urutan berubah -> kembali ke halaman 1
     setSortConfig((current) => ({
       key,
       direction: current.key === key && current.direction === SORT_DIRECTION.asc ? SORT_DIRECTION.desc : SORT_DIRECTION.asc,
@@ -146,6 +154,7 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
   const hasDateFilter = dateFrom !== '' || dateTo !== '';
   const hasActiveFilter = hasDateFilter || keyword !== '' || sortConfig.key !== DEFAULT_SORT.key;
   const handleReset = () => {
+    setPage(0); // [BARU]
     setKeyword('');
     setDateFrom('');
     setDateTo('');
@@ -181,6 +190,24 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
     onExportRowsChange?.(visibleRows);
   }, [visibleRows, onExportRowsChange]);
 
+  // [BARU] Laporkan periode (Dari-Sampai) & kata kunci yang sedang aktif -- dipakai ekspor Excel ledger
+  // (dibuat backend). Kosong semua = seluruh riwayat.
+  useEffect(() => {
+    onExportParamsChange?.({ from: dateFrom, to: dateTo, q: keyword.trim() });
+  }, [dateFrom, dateTo, keyword, onExportParamsChange]);
+
+  // [BARU] Paginasi: tabel hanya menampilkan baris halaman aktif. Ekspor tetap memakai SEMUA
+  // baris hasil filter (visibleRows), bukan hanya halaman yang tampil.
+  const pagination = resolvePagination({ page, pageSize, totalItems: visibleRows.length });
+  const pageRows = useMemo(
+    () => visibleRows.slice(pagination.start, pagination.end),
+    [visibleRows, pagination.start, pagination.end],
+  );
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setPage(0);
+  };
+
   const animateKey = `${dateFrom}|${dateTo}|${reloadKey}`;
 
   return (
@@ -199,22 +226,24 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
             className="leaveSummary__input leaveSummary__search"
             placeholder="Cari nama, NIK, atau divisi"
             value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
+            onChange={(event) => { setKeyword(event.target.value); setPage(0); }} // [UBAH] + reset halaman
             aria-label="Cari karyawan"
           />
           <label className="leaveSummary__dateField">
             <span>Dari</span>
             <input type="date" className="leaveSummary__input" value={dateFrom} max={dateTo || undefined}
-              onChange={(event) => setDateFrom(event.target.value)} />
+              onChange={(event) => { setDateFrom(event.target.value); setPage(0); }} /> {/* [UBAH] + reset halaman */}
           </label>
           <label className="leaveSummary__dateField">
             <span>Sampai</span>
             <input type="date" className="leaveSummary__input" value={dateTo} min={dateFrom || undefined}
-              onChange={(event) => setDateTo(event.target.value)} />
+              onChange={(event) => { setDateTo(event.target.value); setPage(0); }} /> {/* [UBAH] + reset halaman */}
           </label>
           {hasActiveFilter && (
             <button type="button" className="leaveSummary__reset" onClick={handleReset}>Reset</button>
           )}
+          {/* [BARU] Tombol ekspor pindah ke sini (sebelumnya kartu ekspor terpisah di atas kartu ini) */}
+          {exportActions && <div className="leaveSummary__actions">{exportActions}</div>}
         </div>
       </div>
 
@@ -242,7 +271,7 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
       )}
 
       {!isLoading && !errorMessage && visibleRows.length > 0 && (
-        <div className="leaveSummary__scroll content-reveal">
+        <div key={`${pagination.safePage}-${pageSize}`} className="leaveSummary__scroll content-reveal"> {/* [UBAH] key = animasi muncul ulang saat ganti halaman */}
           <table className="leaveSummary__table">
             <thead>
               <tr>
@@ -255,7 +284,7 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row) => (
+              {pageRows.map((row) => ( // [UBAH] visibleRows -> pageRows
                 <tr key={row.employeeId}>
                   <td>
                     <div className="leaveSummary__name">{row.employeeName}</div>
@@ -291,6 +320,18 @@ function LeaveSummaryTable({ onExportRowsChange }) { // [UBAH] + onExportRowsCha
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* [BARU] Paginasi: awal 5 data per halaman, bisa diubah sampai 'Semua' */}
+      {!isLoading && !errorMessage && visibleRows.length > 0 && (
+        <TablePagination
+          page={pagination.safePage}
+          pageSize={pageSize}
+          totalItems={visibleRows.length}
+          itemLabel="karyawan"
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
       )}
     </section>
   );
