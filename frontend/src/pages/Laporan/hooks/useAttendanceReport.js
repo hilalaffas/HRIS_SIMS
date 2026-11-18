@@ -7,9 +7,8 @@
 // dalam effect): hasil fetch menyimpan key request-nya; selama key hasil
 // belum sama dengan key sekarang, hook melaporkan isLoading = true.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { getAttendanceReport } from '../../../services/attendanceReportService';
-import { getHolidaysByMonth } from '../../../services/holidayService';
+import { loadHolidayMap as loadHolidayMapByMonths } from '../../../utils/holidayMap'; // [UBAH] API jadi sumber utama
 import { parseLocalDate } from '../../../services/attendanceService';
 import { buildEmployeeReport } from '../utils/attendanceReportBuilder';
 
@@ -28,20 +27,9 @@ function listMonthsInRange(from, to) {
   return months;
 }
 
-async function loadHolidayMap(from, to) {
-  const months = listMonthsInRange(from, to);
-
-  const results = await Promise.all(
-    months.map(({ year, month }) => getHolidaysByMonth(year, month, { silent: true }).catch(() => [])),
-  );
-
-  const holidayMap = { ...LOCAL_HOLIDAYS_2026 };
-  results.forEach((result) => {
-    (result?.data || result || []).forEach((holiday) => {
-      if (holiday?.date) holidayMap[holiday.date] = holiday.name || holiday.nama || 'Libur Nasional';
-    });
-  });
-  return holidayMap;
+// [UBAH] Data libur dari API; data lokal hanya menggantikan bulan yang gagal dimuat (utils/holidayMap.js).
+function loadHolidayMap(from, to) {
+  return loadHolidayMapByMonths(listMonthsInRange(from, to));
 }
 
 // [UBAH] Menerima `from` & `to` ('YYYY-MM-DD') menggantikan `period`.

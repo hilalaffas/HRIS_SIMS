@@ -1,0 +1,30 @@
+/* [BARU] Editor jam kerja divisi Regular. Warna memakai token --dk-* dengan fallback hijau SIMS. */
+.rse{display:flex;flex-direction:column;gap:16px}
+.rse-block{display:flex;flex-direction:column;gap:10px}
+.rse h4{margin:0;font-size:13px;display:flex;align-items:center;gap:6px;color:var(--dk-text,#10251f)}
+.rse h4 small{font-weight:500;color:var(--dk-text-3,#718096);font-size:11px}
+.rse-help{margin:0;font-size:12px;color:var(--dk-text-3,#64748b)}
+.rse-presets,.rse-days{display:flex;flex-wrap:wrap;gap:8px}
+.rse-presets button,.rse-days button{border:1px solid var(--dk-border-strong,#cbd5e1);background:var(--dk-bg-card,#fff);color:var(--dk-text-2,#344154);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:background-color .18s ease,border-color .18s ease,color .18s ease,transform .12s ease}
+.rse-presets button:hover,.rse-days button:hover:not(:disabled){border-color:#34d399;transform:translateY(-1px)}
+.rse-presets button.active,.rse-days button.active{background:var(--dk-tint-green-strong,#e6f8f0);border-color:#059669;color:var(--dk-text-green,#065f46)}
+.rse-days button.all{border-style:dashed}
+.rse-days button.all.active{border-style:solid;background:#059669;color:#fff}
+.rse-days button:disabled{opacity:.4;cursor:not-allowed}
+.rse-custom,.rse-times{display:grid;gap:10px;animation:rse-in .2s ease}
+.rse-custom{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rse-times{grid-template-columns:repeat(4,minmax(0,1fr))}
+.rse .rse-custom label,.rse .rse-times label{font-size:11px;font-weight:700;color:var(--dk-text-2,#344154);display:flex;flex-direction:column;gap:5px}
+.rse input[type=time]{width:100%;box-sizing:border-box;border:1px solid var(--dk-border-strong,#cbd5e1);border-radius:7px;padding:8px;background:var(--dk-bg-card,#fff);color:var(--dk-text,#14261f)}
+.rse input[type=time]:focus-visible{outline:2px solid #059669;outline-offset:1px}
+.rse-card{border:1px solid var(--dk-border-green,#a7f3d0);background:var(--dk-tint-green,#f3fcf8);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;animation:rse-in .22s ease}
+.rse-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.rse-remove{border:0;background:none;color:var(--dk-text-red,#dc2626);cursor:pointer;padding:6px;border-radius:6px}
+.rse-remove:hover{background:var(--dk-tint-red,#fee2e2)}
+.rse-net{color:var(--dk-text-3,#526174);font-size:12px}
+.rse-add{align-self:flex-start;border:1px dashed var(--dk-border-strong,#aebed0);background:var(--dk-bg-card,#fff);border-radius:7px;padding:8px 12px;color:var(--dk-text-2,#406082);display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600}
+.rse-add:disabled{opacity:.45;cursor:not-allowed}
+.rse-error{margin:0;padding:9px 12px;border-radius:8px;background:var(--dk-tint-red,#fff0f0);color:var(--dk-text-red,#a61b1b);border:1px solid var(--dk-border-red,#f0a2a2);font-size:12px}
+@keyframes rse-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media(max-width:700px){.rse-times{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.rse *{animation:none!important;transition:none!important}}

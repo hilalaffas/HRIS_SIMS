@@ -14,6 +14,7 @@ import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.schedule.dto.ScheduleEntryResponse;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
+import sys.hris.sims.schedule.workhours.WorkHours;
 import sys.hris.sims.shift.entity.Shift;
 
 @Service
@@ -92,7 +93,7 @@ public class ReportRevisionService {
         var checkIn = dayRecords.stream().filter(a -> "MASUK".equals(a.getAction()) && "ABSEN".equals(a.getReason())).findFirst().orElse(null);
         String status = checkIn == null ? request.date().equals(LocalDate.now(WIB)) ? "BELUM ABSEN" : "TANPA KETERANGAN"
                 : "LATE".equals(checkIn.getStatus()) ? "TERLAMBAT" : "HADIR TEPAT WAKTU";
-        String note = defaultNote(dayRecords, checkIn, request.date());
+        String note = defaultNote(dayRecords, checkIn, request.date(), plannedStart(report, request.date())); // [UBAH]
         if (protectedStatus) {
             var sick = report.attendances().stream().filter(a -> "SAKIT".equals(a.getReason()) && coversPermission(a, request.date())).findFirst();
             var leave = report.leaves().stream().filter(l -> !request.date().isBefore(l.startDate()) && !request.date().isAfter(l.endDate())).findFirst();
@@ -107,7 +108,8 @@ public class ReportRevisionService {
         if (Objects.equals(beforeStatus, afterStatus) && Objects.equals(beforeNote, request.note().trim()))
             throw new IllegalArgumentException("Tidak ada perubahan untuk disimpan.");
         var schedule = report.schedules().stream().filter(s -> s.date().equals(request.date())).findFirst().orElse(null);
-        String label = shiftLabel(schedule, "SHIFTING".equalsIgnoreCase(report.divisionType()));
+        boolean shiftingReport = "SHIFTING".equalsIgnoreCase(report.divisionType());
+        String label = shiftingReport ? shiftLabel(schedule, true) : regularLabel(report, request.date()); // [UBAH]
         revision.setBeforeShift(label); revision.setAfterShift(label);
         revision.setBeforeStatus(beforeStatus); revision.setAfterStatus(afterStatus);
         revision.setBeforeNote(beforeNote); revision.setAfterNote(request.note().trim());
@@ -128,14 +130,30 @@ public class ReportRevisionService {
         for (int counted = 1; counted < days;) { end = end.plusDays(1); if (end.getDayOfWeek().getValue() < 6) counted++; }
         return !date.isBefore(start) && !date.isAfter(end) && (date.equals(start) || date.getDayOfWeek().getValue() < 6);
     }
+    // [BARU] Label jam kerja Regular pada tanggal itu -- formatnya SAMA dengan label di frontend
+    // (monthlyAttendance.js -> getScheduleLabel) supaya riwayat revisi terbaca konsisten.
+    private String regularLabel(EmployeeReport report, LocalDate date) {
+        WorkHours hours = report.regularSchedule() == null ? WorkHours.defaultRegular() : report.regularSchedule().workHoursOn(date);
+        return "Shift Normal (" + hours.start() + " - " + hours.end() + ")";
+    }
+    // [BARU] Jam masuk terjadwal pada tanggal itu (shift terpasang, jadwal khusus hari, atau jam dasar).
+    // Sebelumnya semua divisi dibandingkan ke 08:00, sehingga menit terlambat salah untuk shift / jam non-08:00.
+    private LocalTime plannedStart(EmployeeReport report, LocalDate date) {
+        if ("SHIFTING".equalsIgnoreCase(report.divisionType())) {
+            return report.schedules().stream()
+                    .filter(s -> date.equals(s.date()) && s.startTime() != null)
+                    .map(ScheduleEntryResponse::startTime).findFirst().orElse(WorkHours.DEFAULT_START);
+        }
+        return report.regularSchedule() == null ? WorkHours.DEFAULT_START : report.regularSchedule().workHoursOn(date).start();
+    }
     private String shiftLabel(ScheduleEntryResponse s, boolean shifting) {
         if (!shifting) return "Shift Normal (08:00 - 17:00)";
         return s == null ? "Belum dipublikasikan" : s.shiftName() == null ? "Libur" : s.shiftName() + " (" + s.startTime() + " - " + s.endTime() + ")";
     }
-    private String defaultNote(List<AttendanceResponse> records, AttendanceResponse checkIn, LocalDate date) {
+    private String defaultNote(List<AttendanceResponse> records, AttendanceResponse checkIn, LocalDate date, LocalTime plannedStart) {
         String note = date.equals(LocalDate.now(WIB)) ? "Menunggu Absen Masuk" : "Tanpa Keterangan (Alpha)";
         if (checkIn != null) {
-            long late = Math.max(0, ChronoUnit.MINUTES.between(date.atTime(8, 0), checkIn.getRecordedAt()));
+            long late = Math.max(0, ChronoUnit.MINUTES.between(date.atTime(plannedStart), checkIn.getRecordedAt()));
             note = "LATE".equals(checkIn.getStatus()) ? late > 0 ? "Terlambat " + late + " Menit" : "Terlambat" : "Bekerja Normal";
             var checkout = records.stream().filter(a -> "KELUAR".equals(a.getAction())).findFirst();
             if (checkout.isEmpty()) note += date.equals(LocalDate.now(WIB)) ? " (Sedang Bekerja)" : " (Tidak Absen Pulang)";

@@ -16,6 +16,7 @@ import { isSickDocumentExpired } from '../../../utils/sickDocumentDeadline';
 import { shiftBounds } from './activeWorkShift';
 import { normalWorkMinutes } from './normalWorkDuration';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
+import { breakMinutesOf, formatRegularLabel, resolveRegularDay } from '../../../utils/regularSchedule'; // [BARU]
 import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus';
 import { formatDateLabel, parseLocalDate } from '../../../services/attendanceService'; // [UBAH] + parseLocalDate
 import { formatOvertimeDuration, getOvertimeStatus } from '../../../services/overtimeService'; // [UBAH] + formatOvertimeDuration
@@ -216,19 +217,21 @@ function blankRow(key) {
     document: null, // [BARU]
     lateMinutes: 0, // [BARU]
     noteDetail: '', // [BARU]
+    plannedBreakMinutes: null, // [BARU]
   };
 }
 
-function getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate = LOCAL_HOLIDAYS_2026) {
+function getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate = LOCAL_HOLIDAYS_2026, regularSchedule = null) { // [UBAH] + regularSchedule
   const schedule = String(divisionType).toUpperCase() === 'SHIFTING' ? schedulesByDate[key] : null;
   if (schedule) return schedule.shiftName
     ? `${schedule.shiftName} (${schedule.startTime?.slice(0, 5) || '--:--'} - ${schedule.endTime?.slice(0, 5) || '--:--'})`
     : 'Libur';
   if (String(divisionType || '').toUpperCase() === 'SHIFTING') return 'Belum dipublikasikan';
-  return isWeekend(parseLocalDate(key)) || holidaysByDate[key] ? 'Libur' : SHIFT_LABEL;
+  // [UBAH] Jam hari kerja Regular mengikuti jadwal divisi (jam dasar / jadwal khusus hari itu), bukan 08:00 - 17:00 tetap.
+  return isWeekend(parseLocalDate(key)) || holidaysByDate[key] ? 'Libur' : formatRegularLabel(resolveRegularDay(regularSchedule, key));
 }
 
-function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026) {
+function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026, regularSchedule = null) { // [UBAH] + regularSchedule
   const { checkIn, checkOut, lateNotice, rejectedSick, sickNotice } = entry;
   const isToday = key === todayKey;
   // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
@@ -237,8 +240,10 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   const lateSuffix = lateDescription ? ` · ${lateDescription}` : '';
   const rejectionText = rejectedSick ? `Izin sakit ditolak${rejectedSick.reviewNote ? ` · Alasan Penolakan HRD: ${rejectedSick.reviewNote}` : ''}` : '';
   const noticeSuffix = `${lateSuffix}${rejectionText ? ` · ${rejectionText}` : ''}`;
-  const scheduleLabel = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
-  const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: scheduleLabel, lateMinutes: 0, noteDetail: '' }; // [UBAH] + lateMinutes, noteDetail (jadwal shift dari teman)
+  const scheduleLabel = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate, regularSchedule);
+  // [BARU] Jam kerja Regular hari ini; plannedBreakMinutes terisi hanya bila jadwal khusus punya istirahat eksplisit.
+  const regularDay = String(divisionType).toUpperCase() === 'SHIFTING' ? null : resolveRegularDay(regularSchedule, key);
+  const base = { date: key, dateLabel: formatDateLabel(key), isToday, shift: scheduleLabel, lateMinutes: 0, noteDetail: '', plannedBreakMinutes: regularDay ? breakMinutesOf(regularDay) : null }; // [UBAH] + lateMinutes, noteDetail (jadwal shift dari teman)
   const documentRecord = sickNotice || rejectedSick;
   const sickDocument = documentRecord?.documentRequired
     ? { recordId: documentRecord.id, url: documentRecord.documentUrl, expired: documentRecord.documentDeadlineExpired,
@@ -300,7 +305,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
 
   const publishedShift = schedulesByDate[key];
   const shifting = String(divisionType).toUpperCase() === 'SHIFTING';
-  const bounds = shiftBounds(key, shifting ? publishedShift?.startTime : '08:00', shifting ? publishedShift?.endTime : '17:00');
+  const bounds = shiftBounds(key, shifting ? publishedShift?.startTime : regularDay.startTime, shifting ? publishedShift?.endTime : regularDay.endTime); // [UBAH] jam jadwal hari itu
   const lateMinutes = checkIn?.recordedAt && bounds ? Math.max(0, Math.floor((checkIn.recordedAt - bounds.startsAt) / 60000)) : 0;
   const isLate = Boolean(checkIn?.isLate);
 
@@ -328,7 +333,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   ].filter(Boolean).join(' · ');
 
   const minutesWorked = shifting && !bounds ? null : normalWorkMinutes(
-    checkIn?.recordedAt, checkOut?.recordedAt, key, shifting ? publishedShift : null,
+    checkIn?.recordedAt, checkOut?.recordedAt, key, shifting ? publishedShift : regularDay, // [UBAH] + istirahat & jam hari itu
   );
 
   return {
@@ -354,7 +359,8 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   };
 }
 
-export function buildMonthlyRows(records, year, month, now = new Date(), schedules = [], divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026) {
+// [UBAH] + regularSchedule (jam kerja divisi Regular dari /api/jadwal/me atau data laporan; null = 08:00 - 17:00).
+export function buildMonthlyRows(records, year, month, now = new Date(), schedules = [], divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026, regularSchedule = null) {
   const byDate = groupByDate(records.map((record) => ({ ...record, documentDeadlineExpired: isSickDocumentExpired(record, now) })));
   const schedulesByDate = Object.fromEntries((schedules || []).map((item) => [item.date, item]));
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -383,7 +389,7 @@ export function buildMonthlyRows(records, year, month, now = new Date(), schedul
     if (date > today && !entry) {
       const future = blankRow(key);
       const schedule = schedulesByDate[key];
-      future.shift = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
+      future.shift = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate, regularSchedule);
       const isRegularWorkday = String(divisionType || '').toUpperCase() !== 'SHIFTING'
         && !isWeekend(date) && !holidaysByDate[key];
       const isShiftWorkday = String(divisionType || '').toUpperCase() === 'SHIFTING'
@@ -410,12 +416,12 @@ export function buildMonthlyRows(records, year, month, now = new Date(), schedul
       const isEvaluable = isToday || (firstRecordKey && key >= firstRecordKey) || isScheduledWorkday;
       if (!(isScheduledWorkday && isEvaluable)) {
         const blank = blankRow(key);
-        blank.shift = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
+        blank.shift = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate, regularSchedule);
         rows.push(blank);
         continue;
       }
     }
-    const row = resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey, schedulesByDate, divisionType, holidaysByDate);
+    const row = resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey, schedulesByDate, divisionType, holidaysByDate, regularSchedule);
     // An early-checkout sick notice is subject to the same certificate obligation;
     // retain recorded timestamps and duration as evidence while changing its status.
     if (entry?.sickNotice?.documentDeadlineExpired && date <= today) {

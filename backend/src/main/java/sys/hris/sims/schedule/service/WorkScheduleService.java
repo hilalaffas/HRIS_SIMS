@@ -21,6 +21,7 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.schedule.dto.ScheduleEntryRequest;
 import sys.hris.sims.schedule.dto.ScheduleEntryResponse;
 import sys.hris.sims.schedule.dto.MyWorkScheduleResponse;
+import sys.hris.sims.schedule.dto.RegularScheduleResponse;
 import sys.hris.sims.schedule.dto.SchedulePublishRequest;
 import sys.hris.sims.schedule.dto.SchedulePublishResult;
 import sys.hris.sims.schedule.dto.ScheduleResetRequest;
@@ -68,7 +69,8 @@ public class WorkScheduleService {
                 .stream().map(ScheduleEntryResponse::from).toList();
         String divisionType = employee.getDivisi() == null ? "REGULAR" : employee.getDivisi().getTipeDivisi();
         String divisionName = employee.getDivisi() == null ? null : employee.getDivisi().getNamaDivisi();
-        return new MyWorkScheduleResponse(divisionType, divisionName, schedules);
+        return new MyWorkScheduleResponse(divisionType, divisionName, schedules,
+                RegularScheduleResponse.from(employee.getDivisi())); // [BARU]
     }
 
     // Upsert: entri yang sudah ada (karyawan + tanggal sama) ditimpa.

@@ -1,3 +1,4 @@
+import { resolveRegularDay } from '../../../utils/regularSchedule.js'; // [BARU]
 // Attendance timestamps are naive WIB wall-clock dates, matching parseLocalDate.
 // [UBAH] Formatter dibuat SEKALI (membuat Intl.DateTimeFormat itu mahal; sebelumnya dibuat di setiap pemanggilan).
 const WIB_FORMATTER = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
@@ -42,8 +43,10 @@ export function resolveActiveWorkShift(scheduleData, records = [], now = new Dat
   const checkOut = checkOutFor(workDate) || null;
   if (shifting && !schedule) return { ...blocked('Jadwal belum dipublikasikan', workDate), checkIn, checkOut };
   if (shifting && !schedule.shiftId && !schedule.shiftName) return { ...blocked('Libur / OFF', workDate), checkIn, checkOut };
-  const startTime = shifting ? schedule.startTime : '08:00';
-  const endTime = shifting ? schedule.endTime : '17:00';
+  // [UBAH] Divisi Regular: jam dasar divisi atau jadwal khusus hari itu (mis. Jumat 08:00 - 17:30).
+  const regularDay = shifting ? null : resolveRegularDay(scheduleData.regularSchedule, workDate);
+  const startTime = shifting ? schedule.startTime : regularDay.startTime;
+  const endTime = shifting ? schedule.endTime : regularDay.endTime;
   const bounds = shiftBounds(workDate, startTime, endTime);
   if (!bounds) return { ...blocked('Jadwal tidak valid', workDate), checkIn, checkOut };
   const hoursLabel = `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`;
@@ -51,7 +54,9 @@ export function resolveActiveWorkShift(scheduleData, records = [], now = new Dat
     workDate, checkIn, checkOut, ...bounds,
     hoursLabel, shiftName: shifting ? schedule.shiftName : 'Shift Normal',
     label: `${shifting ? schedule.shiftName : 'Shift Normal'} (${hoursLabel} WIB)${bounds.overnight ? ' · selesai hari berikutnya' : ''}`,
-    requiredWorkHours: shifting ? (bounds.endsAt - bounds.startsAt) / 3600000 : 8,
+    requiredWorkHours: shifting ? (bounds.endsAt - bounds.startsAt) / 3600000 : regularDay.requiredMinutes / 60, // [UBAH] sudah dikurangi istirahat
+    breakStartTime: regularDay?.breakStartTime || null, // [BARU]
+    breakEndTime: regularDay?.breakEndTime || null,
     canCheckIn: !shifting || wall >= bounds.startsAt,
     blockedLabel: shifting && wall < bounds.startsAt ? `Absen Dibuka ${startTime.slice(0, 5)}` : '',
   };

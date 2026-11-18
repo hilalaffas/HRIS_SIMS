@@ -39,6 +39,8 @@ import sys.hris.sims.overtime.repository.OvertimeApprovalRepository;
 import sys.hris.sims.overtime.repository.OvertimeRepository;
 import sys.hris.sims.schedule.entity.WorkSchedule;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
+import sys.hris.sims.schedule.workhours.WorkHours;
+import sys.hris.sims.schedule.workhours.WorkHoursResolver;
 
 @Service
 @RequiredArgsConstructor
@@ -48,10 +50,9 @@ public class OvertimeService {
     // [BARU] Alasan penolakan wajib diisi (sama dengan batas di popup ActionReasonModal frontend).
     private static final int MIN_REJECT_NOTE_LENGTH = 5;
 
-    // Jam kerja reguler berakhir 17:00 WIB; divisi shift memakai jam akhir
-    // jadwal karyawan yang dipublikasikan.
+    // [UBAH] Jam pulang TIDAK lagi konstanta 17:00: diambil dari WorkHoursResolver (jam dasar divisi
+    // Regular, jadwal khusus hari itu, atau shift karyawan), jadi lembur dihitung dari jam pulang yang benar.
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Jakarta");
-    private static final LocalTime WORK_END_TIME = LocalTime.of(17, 0);
     // [BARU] Status pengajuan & tindakan per tahap (dulu berupa string literal tersebar).
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_APPROVED = "APPROVED";
@@ -387,8 +388,7 @@ public class OvertimeService {
                         employee.getEmployeeId(), workDate, ACTIVE_STATUSES);
 
         // Mulai dari jam pulang, lalu geser ke akhir lembur aktif yang paling akhir.
-        LocalTime workEnd = context.schedule() != null && context.schedule().getShift() != null
-                ? context.schedule().getShift().getEndTime() : WORK_END_TIME;
+        LocalTime workEnd = WorkHoursResolver.resolve(employee, workDate, context.schedule()).end(); // [UBAH]
         LocalTime start = workEnd;
         for (OvertimeRequest overtime : active) {
             if (overtime.getEndTime().isAfter(start)) {
@@ -398,7 +398,7 @@ public class OvertimeService {
         // Lembur susulan = pekerjaan yang SUDAH terjadi, jadi paling jauh sampai menit ini.
         LocalTime maxEnd = now.toLocalTime().truncatedTo(ChronoUnit.MINUTES);
 
-        boolean afterWorkEnd = hasPassedWorkEnd(context, now);
+        boolean afterWorkEnd = hasPassedWorkEnd(employee, context, now); // [UBAH] + employee
         return OvertimeExtensionWindowResponse.builder()
                 .overtimeDate(workDate)
                 .workEndTime(workEnd)
@@ -415,15 +415,10 @@ public class OvertimeService {
         return new ScheduleContext(context.workDate(), context.schedule());
     }
 
-    private boolean hasPassedWorkEnd(ScheduleContext context, ZonedDateTime now) {
-        LocalTime end = context.schedule() != null && context.schedule().getShift() != null
-                ? context.schedule().getShift().getEndTime() : WORK_END_TIME;
-        LocalDate endDate = context.workDate();
-        if (context.schedule() != null && context.schedule().getShift() != null
-                && end.isBefore(context.schedule().getShift().getStartTime())) {
-            endDate = endDate.plusDays(1);
-        }
-        return !now.toLocalDateTime().isBefore(LocalDateTime.of(endDate, end));
+    // [UBAH] Memakai WorkHours.endAt(): sudah menangani shift malam (pulang di hari berikutnya).
+    private boolean hasPassedWorkEnd(Employee employee, ScheduleContext context, ZonedDateTime now) {
+        WorkHours workHours = WorkHoursResolver.resolve(employee, context.workDate(), context.schedule());
+        return !now.toLocalDateTime().isBefore(workHours.endAt(context.workDate()));
     }
 
     private WorkSchedule findSchedule(Long employeeId, LocalDate date) {

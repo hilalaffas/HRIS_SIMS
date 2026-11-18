@@ -17,12 +17,20 @@ export const getAllDivisi = async () => {
 
 // [UBAH] Tambah parameter tipeDivisi: 'REGULAR' | 'SHIFTING' (default REGULAR).
 // GET /api/divisi sekarang mengembalikan [{ id, namaDivisi, tipeDivisi }].
-export const createDivisi = async (namaDivisi, tipeDivisi = 'REGULAR', shifts = []) => {
-  return api.post('/api/divisi', { namaDivisi, tipeDivisi, shifts });
+// [BARU] regularSchedule ({ startTime, endTime, dayRules }) hanya dikirim untuk divisi Regular dari form
+// Kelola Divisi. Bila undefined (mis. edit nama di DataDivisi), jam kerja yang sudah tersimpan TIDAK diubah.
+const regularScheduleBody = (regularSchedule) => (regularSchedule ? {
+  regularStartTime: regularSchedule.startTime,
+  regularEndTime: regularSchedule.endTime,
+  daySchedules: regularSchedule.dayRules,
+} : {});
+
+export const createDivisi = async (namaDivisi, tipeDivisi = 'REGULAR', shifts = [], regularSchedule = undefined) => {
+  return api.post('/api/divisi', { namaDivisi, tipeDivisi, shifts, ...regularScheduleBody(regularSchedule) });
 };
 
-export const updateDivisi = async (id, namaDivisi, tipeDivisi = 'REGULAR', shifts = undefined) => {
-  return api.put(`/api/divisi/${id}`, { namaDivisi, tipeDivisi, ...(shifts === undefined ? {} : { shifts }) });
+export const updateDivisi = async (id, namaDivisi, tipeDivisi = 'REGULAR', shifts = undefined, regularSchedule = undefined) => {
+  return api.put(`/api/divisi/${id}`, { namaDivisi, tipeDivisi, ...(shifts === undefined ? {} : { shifts }), ...regularScheduleBody(regularSchedule) });
 };
 
 export const deleteDivisi = async (id) => {

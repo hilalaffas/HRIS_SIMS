@@ -85,7 +85,7 @@ async function loadSummary() {
 
     const now = wall;
     const records = (history || []).map(toDisplayRecord);
-    const rows = buildMonthlyRows(records, year, month, now, scheduleData?.schedules || [], scheduleData?.divisionType || 'REGULAR');
+    const rows = buildMonthlyRows(records, year, month, now, scheduleData?.schedules || [], scheduleData?.divisionType || 'REGULAR', undefined, scheduleData?.regularSchedule || null); // [UBAH] jam kerja Regular -> hitungan terlambat benar
     const periodEnd = new Date(year, month, 1);
 
     return {

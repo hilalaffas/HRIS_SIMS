@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.DayOfWeek;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +34,8 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.storage.CloudinaryService;
 import sys.hris.sims.schedule.entity.WorkSchedule;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
+import sys.hris.sims.schedule.workhours.WorkHours;
+import sys.hris.sims.schedule.workhours.WorkHoursResolver;
 import sys.hris.sims.holiday.repository.HolidayRepository;
 import sys.hris.sims.notification.service.NotificationService;
 
@@ -42,9 +43,8 @@ import sys.hris.sims.notification.service.NotificationService;
 @RequiredArgsConstructor
 public class AttendanceService {
 
-    // [BARU] Jam batas dianggap "Tepat waktu" untuk check-in Masuk.
-    // Sesuaikan kalau kebijakan jam masuk kantor berubah.
-    private static final LocalTime ON_TIME_CUTOFF = LocalTime.of(8, 0);
+    // [UBAH] Batas "Tepat waktu" dan jam pulang TIDAK lagi konstanta 08:00 / 17:00: keduanya
+    // diambil dari WorkHoursResolver (jam dasar divisi Regular, jadwal khusus per hari, atau shift).
     private static final ZoneId APP_ZONE = ZoneId.of("Asia/Jakarta");
 
     // [BARU] Pool kecil untuk pekerjaan I/O jaringan saat absen (pencarian nama lokasi). Thread daemon,
@@ -55,10 +55,6 @@ public class AttendanceService {
                 thread.setDaemon(true);
                 return thread;
             });
-
-    // [BARU] Durasi kerja minimum sebelum boleh check-out TANPA alasan. Di bawah
-    // ini, keterangan (alasan pulang cepat) wajib diisi.
-    private static final Duration MIN_WORK_DURATION = Duration.ofHours(8);
 
     // [UBAH] Batas lama izin sakit dalam satu pengajuan (HARI KERJA, Sabtu & Minggu tidak dihitung).
     private static final int MAX_SICK_DAYS = 30;
@@ -168,6 +164,8 @@ public class AttendanceService {
         LocalDate workDate = workday.workDate();
         WorkSchedule schedule = workday.schedule();
         boolean shifting = employee.getDivisi() != null && "SHIFTING".equalsIgnoreCase(employee.getDivisi().getTipeDivisi());
+        // [BARU] Jam kerja efektif pada tanggal kerja ini (reguler / jadwal khusus hari / shift).
+        WorkHours workHours = WorkHoursResolver.resolve(employee, workDate, schedule);
         if (reason.equals("ABSEN") && shifting && (schedule == null || schedule.getShift() == null)) {
             throw new IllegalStateException(schedule == null ? "Jadwal shift Anda belum dipublikasikan untuk tanggal kerja ini." : "Jadwal Anda hari ini libur. Absensi tidak diperlukan.");
         }
@@ -219,17 +217,16 @@ public class AttendanceService {
         // [UBAH] Aturan alasan hanya berlaku SEBELUM jam pulang jadwal. Setelah jam pulang, check-out dianggap
         // normal walau karyawan datang terlambat (durasi kerja < 8 jam), sejalan dengan useCheckoutFlow.js.
         if (action.equals("KELUAR") && !leaveToday.isHalfDay()
-                && nowDateTime.isBefore(getScheduledCheckoutTime(workDate, schedule)) // [BARU]
+                && nowDateTime.isBefore(workHours.endAt(workDate)) // [UBAH] jam pulang terjadwal hari itu
                 && (request.getNote() == null || request.getNote().isBlank())) {
-            WorkSchedule scheduleForCheckout = schedule;
             attendanceRepository
                     .findActiveByAction(employee.getEmployeeId(), workDate, "MASUK")
                     .ifPresent(checkIn -> {
                         Duration worked = Duration.between(checkIn.getRecordedAt(), LocalDateTime.now(APP_ZONE));
-                        Duration required = getRequiredShiftDuration(scheduleForCheckout);
+                        Duration required = workHours.requiredWork(); // [UBAH] sudah memperhitungkan istirahat
                         if (worked.compareTo(required) < 0) {
                             throw new IllegalArgumentException(
-                                    "Durasi kerja belum memenuhi " + required.toHours() + " jam. Alasan pulang cepat wajib diisi.");
+                                    "Durasi kerja belum memenuhi " + formatDuration(required) + ". Alasan pulang cepat wajib diisi.");
                         }
                     });
         }
@@ -260,7 +257,7 @@ public class AttendanceService {
                 .employee(employee)
                 .action(action)
                 .reason(reason)
-                .status(resolveStatus(action, reason, schedule, workDate, leaveToday))
+                .status(resolveStatus(action, reason, workHours, workDate, leaveToday)) // [UBAH]
                 .note(request.getNote())
                 .approvalStatus(reason.equals("SAKIT") ? "PENDING" : "NOT_REQUIRED")
                 .photoUrl(photoUrl)
@@ -724,7 +721,7 @@ public class AttendanceService {
         return attendance;
     }
 
-    private String resolveStatus(String action, String reason, WorkSchedule schedule, LocalDate workDate,
+    private String resolveStatus(String action, String reason, WorkHours workHours, LocalDate workDate,
                                  LeaveAttendancePolicy.LeaveToday leaveToday) {
         if (reason.equals("SAKIT")) return "SICK";
         if (reason.equals("IZIN")) return "IZIN";
@@ -735,9 +732,7 @@ public class AttendanceService {
         // (kalau tidak, karyawan yang absen jam 12:00 langsung tercatat terlambat).
         LocalDateTime cutoff = leaveToday.mode() == LeaveAttendancePolicy.Mode.HALF_MORNING
                 ? leaveToday.boundary()
-                : LocalDateTime.of(workDate,
-                        schedule != null && schedule.getShift() != null
-                                ? schedule.getShift().getStartTime() : ON_TIME_CUTOFF);
+                : workHours.startAt(workDate); // [UBAH] jam masuk hari itu (Jumat bisa berbeda dari hari lain)
         return LocalDateTime.now(APP_ZONE).isAfter(cutoff) ? "LATE" : "ON_TIME";
     }
 
@@ -757,24 +752,11 @@ public class AttendanceService {
                 .stream().findFirst().orElse(null);
     }
 
-    // [BARU] Waktu pulang terjadwal (shift malam: selesai di hari berikutnya). Tanpa jadwal -> 08:00-17:00.
-    private LocalDateTime getScheduledCheckoutTime(LocalDate workDate, WorkSchedule schedule) {
-        LocalTime start = LocalTime.of(8, 0);
-        LocalTime end = LocalTime.of(17, 0);
-        if (schedule != null && schedule.getShift() != null) {
-            start = schedule.getShift().getStartTime();
-            end = schedule.getShift().getEndTime();
-        }
-        LocalDate endDate = !end.isAfter(start) ? workDate.plusDays(1) : workDate;
-        return LocalDateTime.of(endDate, end);
-    }
-
-    private Duration getRequiredShiftDuration(WorkSchedule schedule) {
-        if (schedule == null || schedule.getShift() == null) return MIN_WORK_DURATION;
-        LocalTime start = schedule.getShift().getStartTime();
-        LocalTime end = schedule.getShift().getEndTime();
-        long minutes = (end.toSecondOfDay() - start.toSecondOfDay() + 24L * 60 * 60) % (24L * 60 * 60) / 60;
-        return Duration.ofMinutes(minutes == 0 ? 8 * 60 : minutes);
+    // [BARU] "8 jam" / "7 jam 30 menit" -- lama kerja wajib bisa bukan jam bulat (Jumat dengan istirahat panjang).
+    private static String formatDuration(Duration duration) {
+        long hours = duration.toHours();
+        long minutes = duration.toMinutesPart();
+        return minutes == 0 ? hours + " jam" : hours + " jam " + minutes + " menit";
     }
 
     private Employee resolveEmployee(String username) {

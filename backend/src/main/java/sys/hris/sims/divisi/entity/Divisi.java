@@ -34,4 +34,19 @@ public class Divisi {
     @OrderBy("displayOrder ASC")
     @JsonManagedReference
     private List<DivisiShift> shifts = new ArrayList<>();
+
+    // [BARU] Jam kerja dasar divisi REGULAR ("HH:mm"). Sengaja TANPA nilai awal di Java: request
+    // lama (mis. DataDivisi yang hanya mengirim nama & tipe) tidak boleh menimpa jam yang sudah
+    // diatur. DivisiService.create() mengisi 08:00 - 17:00 bila kosong.
+    @Column(name = "regular_start_time", nullable = false, length = 5)
+    private String regularStartTime;
+
+    @Column(name = "regular_end_time", nullable = false, length = 5)
+    private String regularEndTime;
+
+    // [BARU] Jadwal khusus per hari (menimpa jam dasar pada hari tersebut).
+    @OneToMany(mappedBy = "divisi", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("dayOfWeek ASC")
+    @JsonManagedReference("daySchedules")
+    private List<DivisiDaySchedule> daySchedules = new ArrayList<>();
 }
