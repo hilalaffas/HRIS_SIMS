@@ -5,6 +5,8 @@
 //     tanggal pilihan -- lihat ReportRangeControl
 //   - pilihan divisi (Semua Divisi / satu divisi) = CAKUPAN tabel DAN ekspor
 //   - pencarian nama / NIK (hanya menyaring tampilan tabel, bukan isi ekspor)
+//   - [UBAH] tombol Unduh XLSX / CSV / PDF sejajar dengan Divisi & pencarian; keterangan cakupan ekspor di baris bawahnya
+//     (paginasi TIDAK di sini: ada di akhir halaman, lihat AttendanceReportTab)
 //   - tombol Unduh XLSX / CSV / PDF (XLSX: satu karyawan = satu file; PDF: satu karyawan = satu sheet)
 //
 // Contoh pemakaian:
@@ -63,29 +65,28 @@ export default function ReportFilterBar({
             />
           </span>
         </label>
-      </div>
 
-      <div className="lpr-export-row">
-        <p className="lpr-export-caption">
-          Ekspor: <strong>{scopeLabel}</strong> · {employeeCount} karyawan · XLSX satu file per karyawan (ZIP bila lebih dari satu), PDF satu karyawan per sheet, CSV satu tabel
-        </p>
-        <div className="lpr-export-actions">
-          {EXPORT_FORMATS.map((format) => {
-            const Icon = EXPORT_ICONS[format.icon];
-            return (
-              <button
-                key={format.key}
-                type="button"
-                className={`lpr-export-btn lpr-export-btn--${format.key}`}
-                onClick={() => onExport(format.key)}
-                disabled={isExportDisabled || Boolean(exportingKind)}
-                title={format.hint}
-              >
-                <Icon aria-hidden="true" />
-                {exportingKind === format.key ? 'Menyiapkan...' : `Unduh ${format.label}`}
-              </button>
-            );
-          })}
+        {/* [UBAH] Tombol ekspor dipindah ke baris filter (sebelumnya di baris ekspor di bawah). */}
+        <div className="lpr-filter-field lpr-filter-field--export">
+          <span className="lpr-filter-label">Ekspor</span>
+          <div className="lpr-export-actions">
+            {EXPORT_FORMATS.map((format) => {
+              const Icon = EXPORT_ICONS[format.icon];
+              return (
+                <button
+                  key={format.key}
+                  type="button"
+                  className={`lpr-export-btn lpr-export-btn--${format.key}`}
+                  onClick={() => onExport(format.key)}
+                  disabled={isExportDisabled || Boolean(exportingKind)}
+                  title={format.hint}
+                >
+                  <Icon aria-hidden="true" />
+                  {exportingKind === format.key ? 'Menyiapkan...' : `Unduh ${format.label}`}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

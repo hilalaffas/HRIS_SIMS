@@ -5,8 +5,11 @@
 // - page berbasis 0 (sama dengan AttendanceReportTable)
 // Komponen ini murni tampilan: pemotongan data (slice) dilakukan oleh pemanggil.
 //
+// [UBAH] Prop opsional `isLoading`: teks info jadi "Memuat data..." selama data dimuat.
+// [UBAH] Prop opsional `className`: dipakai pemanggil untuk mengatur posisi (mis. rata kanan di akhir halaman).
+//
 // Contoh pemakaian:
-// <TablePagination page={0} pageSize={5} totalItems={20} itemLabel="karyawan"
+// <TablePagination page={0} pageSize={5} totalItems={20} itemLabel="karyawan" isLoading={false}
 //   onPageChange={setPage} onPageSizeChange={setPageSize} />
 import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
@@ -19,6 +22,8 @@ export default function TablePagination({
   pageSize,
   totalItems,
   itemLabel = 'data',
+  isLoading = false, // [BARU]
+  className = '', // [BARU]
   sizeOptions = DEFAULT_SIZE_OPTIONS,
   onPageChange,
   onPageSizeChange,
@@ -33,9 +38,11 @@ export default function TablePagination({
   };
 
   return (
-    <div className="tblPager" role="navigation" aria-label="Paginasi tabel">
+    <div className={`tblPager ${className}`.trim()} role="navigation" aria-label="Paginasi tabel">
       <p className="tblPager__info" aria-live="polite">
-        Menampilkan <strong>{totalItems === 0 ? 0 : start + 1}-{end}</strong> dari <strong>{totalItems}</strong> {itemLabel}
+        {isLoading ? 'Memuat data...' : (
+          <>Menampilkan <strong>{totalItems === 0 ? 0 : start + 1}-{end}</strong> dari <strong>{totalItems}</strong> {itemLabel}</>
+        )}
       </p>
 
       <div className="tblPager__controls">

@@ -1,6 +1,10 @@
 /* src/pages/Laporan/tabs/AttendanceReportTab.css */
 .lpr-attendance-tab { display: flex; flex-direction: column; gap: 16px; padding-top: 18px; }
 
+/* [BARU] Info + tombol halaman di akhir halaman: menempel rata kanan (margin atas sudah dari gap tab). */
+.lpr-pager-end { justify-content: flex-end; margin-top: 0; }
+.lpr-pager-end .tblPager__controls { gap: 12px; }
+
 .lpr-error-card {
   display: flex;
   align-items: center;
