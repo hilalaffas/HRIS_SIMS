@@ -15,6 +15,14 @@ import { EARLY_REASON_MAX_LENGTH, MIN_WORK_HOURS } from '../utils/earlyCheckout'
 import EarlyCheckoutRequest from './EarlyCheckoutRequest';
 import './EarlyCheckoutModal.css';
 
+// [BARU] 8 -> "8 jam", 9.5 -> "9 jam 30 menit" (lama hadir bisa bukan jam bulat pada jadwal khusus).
+const formatRequiredHours = (hours) => {
+  const totalMinutes = Math.round(Number(hours) * 60);
+  const wholeHours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes ? `${wholeHours} jam ${minutes} menit` : `${wholeHours} jam`;
+};
+
 export default function EarlyCheckoutModal({ onConfirm, onCancel, requiredWorkHours = MIN_WORK_HOURS }) {
   const [category, setCategory] = useState('');
   const [requestOpen, setRequestOpen] = useState(false);
@@ -79,7 +87,7 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel, requiredWorkHo
           <AlertTriangle className="earlyOut__icon" size={26} aria-hidden="true" />
           <div>
             <h2 id="earlyOutTitle">Peringatan Pulang Cepat</h2>
-            <p>Durasi kerja Anda belum memenuhi {requiredWorkHours} jam kerja sesuai jadwal.</p>
+            <p>Durasi kerja Anda belum memenuhi {formatRequiredHours(requiredWorkHours)} sesuai jadwal.</p>
           </div>
         </header>
 

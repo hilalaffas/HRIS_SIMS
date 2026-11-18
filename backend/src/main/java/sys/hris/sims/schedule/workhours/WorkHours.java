@@ -56,6 +56,13 @@ public record WorkHours(LocalTime start, LocalTime end, LocalTime breakStart, Lo
         return breakStart != null && breakEnd != null;
     }
 
+    // [BARU] Lama HADIR minimum (jam pulang dikurangi jam masuk, istirahat ikut terhitung) sebelum boleh
+    // check-out tanpa alasan. Hari dengan jadwal khusus (ada istirahat): lama kerja wajib + istirahat,
+    // jadi istirahat tidak bisa dipakai untuk pulang lebih awal. Tanpa istirahat: sama dengan requiredWork().
+    public Duration requiredAttendance() {
+        return hasBreak() ? requiredWork.plus(span(breakStart, breakEnd)) : requiredWork;
+    }
+
     private static Duration span(LocalTime from, LocalTime to) {
         long seconds = (to.toSecondOfDay() - from.toSecondOfDay() + SECONDS_PER_DAY) % SECONDS_PER_DAY;
         return Duration.ofSeconds(seconds);
