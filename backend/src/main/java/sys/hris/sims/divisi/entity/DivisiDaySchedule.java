@@ -14,6 +14,8 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 // [BARU] Jadwal KHUSUS satu hari kerja (1 = Senin ... 5 = Jumat) pada divisi REGULAR.
 // Menimpa jam dasar divisi pada hari tersebut, termasuk jam istirahat.
@@ -28,6 +30,7 @@ public class DivisiDaySchedule {
     private Long id;
 
     // ISO: 1 = Senin ... 5 = Jumat (Sabtu & Minggu tetap libur pada divisi Regular).
+    @JdbcTypeCode(SqlTypes.SMALLINT) // [BARU] samakan dengan kolom SMALLINT di migration V75
     @Column(name = "day_of_week", nullable = false)
     private Integer dayOfWeek;
 
