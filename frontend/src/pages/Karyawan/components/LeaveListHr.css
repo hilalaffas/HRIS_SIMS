@@ -32,11 +32,12 @@
 .leaveList__code_leaveListHr, .leaveList__duration_leaveListHr { font-size: 13px; color: var(--dk-text-3, #6b7280); margin-top: 4px; }
 .leaveList__type_leaveListHr { font-size: 14px; color: var(--dk-text, #374151); font-weight: 500; }
 .leaveList__quota_leaveListHr { font-size: 14px; color: var(--dk-text, #111827); }
-.statusBadge_leaveListHr { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-block; }
-.statusBadge--blue_leaveListHr { background: var(--dk-tint-blue-strong, #dbeafe); color: var(--dk-text-blue, #1d4ed8); }
-.statusBadge--green_leaveListHr { background: var(--dk-tint-green-strong, #d1fae5); color: var(--dk-text-green, #047857); }
-.statusBadge--amber_leaveListHr { background: var(--dk-tint-amber-strong, #fef3c7); color: var(--dk-text-amber, #b45309); }
-.statusBadge--rose_leaveListHr { background: var(--dk-tint-red, #ffe4e6); color: var(--dk-text-red, #be123c); }
+/* [UBAH] Status berkas = teks berwarna saja (tanpa latar/pil) agar beda dari tombol "Rincian". */
+.statusBadge_leaveListHr { font-size: 13px; font-weight: 700; line-height: 1.4; display: inline-block; }
+.statusBadge--blue_leaveListHr { color: var(--dk-text-blue, #1d4ed8); }
+.statusBadge--green_leaveListHr { color: var(--dk-text-green, #047857); }
+.statusBadge--amber_leaveListHr { color: var(--dk-text-amber, #b45309); }
+.statusBadge--rose_leaveListHr { color: var(--dk-text-red, #be123c); }
 /* Mengatur wadah tombol dan judul kolom */
 .leaveList__colLog_leaveListHr { 
   display: flex; 

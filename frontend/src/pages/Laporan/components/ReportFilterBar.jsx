@@ -5,7 +5,7 @@
 //     tanggal pilihan -- lihat ReportRangeControl
 //   - pilihan divisi (Semua Divisi / satu divisi) = CAKUPAN tabel DAN ekspor
 //   - pencarian nama / NIK (hanya menyaring tampilan tabel, bukan isi ekspor)
-//   - tombol Unduh XLSX / CSV / PDF (satu karyawan = satu sheet)
+//   - tombol Unduh XLSX / CSV / PDF (XLSX: satu karyawan = satu file; PDF: satu karyawan = satu sheet)
 //
 // Contoh pemakaian:
 // <ReportFilterBar rangeControl={<ReportRangeControl ... />} divisionOptions={options} ... onExport={handleExport} />
@@ -67,7 +67,7 @@ export default function ReportFilterBar({
 
       <div className="lpr-export-row">
         <p className="lpr-export-caption">
-          Ekspor: <strong>{scopeLabel}</strong> · {employeeCount} karyawan · XLSX/PDF satu karyawan per sheet, CSV satu tabel
+          Ekspor: <strong>{scopeLabel}</strong> · {employeeCount} karyawan · XLSX satu file per karyawan (ZIP bila lebih dari satu), PDF satu karyawan per sheet, CSV satu tabel
         </p>
         <div className="lpr-export-actions">
           {EXPORT_FORMATS.map((format) => {

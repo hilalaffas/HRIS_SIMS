@@ -6,7 +6,9 @@ import './TableKaryawan.css';
 import { compareByNik } from '../../../utils/sortByNik'; // [BARU] urut NIK
 
 // [BARU] Opsi jumlah data per halaman untuk pagination Direktori Karyawan.
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+// [UBAH] Ditambah opsi 5; default tampilan awal = 5.
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 5;
 
 // [BARU] Opsi filter jabatan (pengganti <select> native -- lihat komentar
 // di komponen Dropdown untuk alasan blue-highlight fix).
@@ -27,7 +29,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
   const [filterJabatan, setFilterJabatan] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   // [BARU] State pagination.
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [currentPage, setCurrentPage] = useState(1);
 
   // 1. Ambil daftar jabatan yang unik dari database/props 'data' untuk dropdown dinamis

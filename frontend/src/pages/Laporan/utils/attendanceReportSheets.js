@@ -8,6 +8,7 @@
 //     karyawan per hari, kolom identitas karyawan di depan. Berlaku sama untuk
 //     semua divisi maupun satu divisi.
 import { parseLocalDate } from '../../../services/attendanceService';
+import { toExcelDate, toExcelDuration, toExcelTime } from '../../../utils/excelValueConverters'; // [BARU]
 
 export const SUMMARY_HEADERS = [
   'No', 'NIK', 'Nama Karyawan', 'Jabatan', 'Divisi',
@@ -102,12 +103,13 @@ function buildPlannedWork(shiftLabel, isRegular) {
   return [start, end, `${Math.floor(breakMinutes / 60)}:${String(breakMinutes % 60).padStart(2, '0')}`];
 }
 
-export function buildDailyRows(report) {
+// [UBAH] Dipisah dari buildDailyRows supaya dipakai juga oleh baris bertipe asli untuk XLSX.
+// Jadwal terencana di-cache per label shift: satu periode hanya punya beberapa label berbeda,
+// jadi regex & hitung istirahat tidak diulang per baris.
+function createPlannedWorkResolver(report) {
   const knownDivisionType = report.divisionType ? String(report.divisionType).toUpperCase() : '';
-  // [UBAH] Jadwal terencana di-cache per label shift: satu periode hanya punya
-  // beberapa label berbeda, jadi regex & hitung istirahat tidak diulang per baris.
   const plannedCache = new Map();
-  const plannedWorkFor = (shiftLabel) => {
+  return (shiftLabel) => {
     const isRegular = knownDivisionType
       ? knownDivisionType !== 'SHIFTING'
       : !/^Shift\b/i.test(String(shiftLabel || ''));
@@ -115,6 +117,10 @@ export function buildDailyRows(report) {
     if (!plannedCache.has(cacheKey)) plannedCache.set(cacheKey, buildPlannedWork(shiftLabel, isRegular));
     return plannedCache.get(cacheKey);
   };
+}
+
+export function buildDailyRows(report) {
+  const plannedWorkFor = createPlannedWorkResolver(report); // [UBAH]
 
   return report.rows.map((row) => {
     const [plannedStart, plannedEnd, plannedBreak] = plannedWorkFor(row.shift);
@@ -175,7 +181,8 @@ export const toFileSlug = (text) => String(text || 'laporan')
   .replace(/^-+|-+$/g, '') || 'laporan';
 
 // Nama sheet <= 31 karakter, tanpa karakter terlarang Excel (: \ / ? * [ ]).
-const toSheetName = (index, fullName) => `${index + 1}. ${fullName}`.replace(/[:\\/?*[\]]/g, ' ').slice(0, 31);
+const sanitizeSheetName = (text) => String(text || 'Laporan').replace(/[:\\/?*[\]]/g, ' ').slice(0, 31); // [UBAH] dipisah supaya dipakai juga XLSX per karyawan
+const toSheetName = (index, fullName) => sanitizeSheetName(`${index + 1}. ${fullName}`);
 
 // [{ key, name, title, subtitle, headers, rows, footer, statusColumn }]
 export function buildExportSheets(reports, { periodLabel, scopeLabel }) {
@@ -209,3 +216,90 @@ export function buildExportSheets(reports, { periodLabel, scopeLabel }) {
 
   return sheets;
 }
+
+// ---------------------------------------------------------------------------
+// [BARU] XLSX: SATU karyawan = SATU file, dengan nilai bertipe asli Excel.
+// Baris di bawah berisi nilai MENTAH (Date / pecahan hari / angka / teks / null), bukan
+// teks hasil format -- tampilan diatur lewat `kinds` (lihat utils/attendanceReportXlsx.js).
+// ---------------------------------------------------------------------------
+
+// Sama dengan DAILY_HEADERS + kolom "Status Lembur" (ACC / MENUNGGU / Ditolak) karena
+// kolom "Total Lembur" kini angka durasi, bukan teks "2 Jam (ACC)".
+export const XLSX_DAILY_HEADERS = [
+  'Tanggal', 'Hari', 'Jadwal Shift', 'Cuti', 'Sakit', 'Jam Masuk', 'Jam Pulang', 'Durasi',
+  'Masuk', 'Pulang', 'Istirahat', 'Status',
+  'Jam Mulai Lembur', 'Jam Selesai Lembur', 'Total Lembur', 'Status Lembur', 'Keterangan',
+];
+
+// Jenis data tiap kolom, urutannya sama dengan XLSX_DAILY_HEADERS.
+export const XLSX_DAILY_KINDS = [
+  'date', 'text', 'text', 'integer', 'integer', 'timeSeconds', 'timeSeconds', 'duration',
+  'time', 'time', 'duration', 'text',
+  'time', 'time', 'duration', 'text', 'text',
+];
+
+export function buildTypedDailyRows(report) {
+  const plannedWorkFor = createPlannedWorkResolver(report);
+
+  return report.rows.map((row) => {
+    const [plannedStart, plannedEnd, plannedBreak] = plannedWorkFor(row.shift);
+    const { overtime } = row;
+    const isOvertimeRejected = overtime?.tone === 'rejected';
+    return [
+      toExcelDate(row.date),
+      formatDayName(row.date),
+      row.shift,
+      row.tone === 'leave' ? 1 : null,
+      row.tone === 'sakit' ? 1 : null,
+      toExcelTime(row.checkIn),
+      toExcelTime(row.checkOut),
+      toExcelDuration(row.durationMinutes),
+      toExcelTime(plannedStart),
+      toExcelTime(plannedEnd),
+      toExcelTime(plannedBreak),
+      row.status,
+      toExcelTime(overtime?.startTime),
+      toExcelTime(overtime?.endTime),
+      isOvertimeRejected ? null : toExcelDuration(overtime?.minutes),
+      overtime ? (isOvertimeRejected ? 'Ditolak' : overtime.statusLabel) : null,
+      row.note,
+    ];
+  });
+}
+
+// Rekap di bawah tabel: [label, nilai, jenis].
+const buildTypedRecap = ({ summary }) => [
+  ['Rekap:', null, 'text'],
+  ['Hadir', summary.present, 'integer'],
+  ['Terlambat', summary.late, 'integer'],
+  ['Sakit', summary.sick, 'integer'],
+  ['Izin', summary.izin, 'integer'],
+  ['Cuti', summary.leave || 0, 'decimal'],
+  ['Alpha', summary.absent, 'integer'],
+  ['Lembur ACC', Number(((summary.overtimeAccMinutes || 0) / 60).toFixed(2)), 'hours'],
+];
+
+// Satu sheet milik satu karyawan (tanpa nomor urut di nama sheet, karena satu file = satu sheet).
+export function buildEmployeeXlsxSheet(report, { periodLabel }) {
+  return {
+    name: sanitizeSheetName(report.fullName),
+    title: `LAPORAN ABSENSI - ${report.fullName.toUpperCase()}`,
+    // [UBAH] Satu baris per item (vertikal), bukan satu kalimat panjang dengan pemisah "|".
+    infoLines: [
+      `NIK: ${report.nik}`,
+      `Jabatan: ${report.position}`,
+      `Divisi: ${report.divisionName}`,
+      `Periode: ${periodLabel}`,
+    ],
+    headers: XLSX_DAILY_HEADERS,
+    kinds: XLSX_DAILY_KINDS,
+    rows: buildTypedDailyRows(report),
+    footer: buildTypedRecap(report),
+    statusColumn: DAILY_STATUS_COLUMN,
+  };
+}
+
+// Nama dasar file per karyawan: "<nik>_<nama>". NIK unik, jadi nama kembar tidak bertabrakan.
+export const buildEmployeeFileBaseName = (report) => (
+  `${toFileSlug(report.nik)}_${toFileSlug(report.fullName)}`
+);

@@ -35,7 +35,9 @@ import { isHrAdmin, isManagerOrSpv, isSuperAdmin } from '../../utils/roles';
 // Auto-refresh setiap 15 detik. Ganti angka ini kalau butuh lebih/kurang cepat.
 const POLL_INTERVAL_MS = 15000;
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+// [UBAH] Ditambah opsi 5; default tampilan awal = 5.
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 5;
 
 const STATUS_TABS = [
   { key: 'ALL', label: 'Semua' },
@@ -115,7 +117,7 @@ export default function RiwayatCuti({ user }) {
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchHistory = useCallback(async ({ silent = false } = {}) => {

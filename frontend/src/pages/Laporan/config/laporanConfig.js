@@ -45,12 +45,14 @@ export const EXPORT_FORMATS = [
   { key: 'pdf', label: 'PDF', icon: 'pdf', hint: 'Cetak, satu halaman per karyawan' },
 ];
 
+// [UBAH] Ditambah opsi 5; default tampilan awal = 5 (DEFAULT_PAGE_SIZE).
 export const PAGE_SIZE_OPTIONS = [
+  { value: '5', label: '5 / halaman' },
   { value: '10', label: '10 / halaman' },
   { value: '20', label: '20 / halaman' },
   { value: '50', label: '50 / halaman' },
 ];
-export const DEFAULT_PAGE_SIZE = 20;
+export const DEFAULT_PAGE_SIZE = 5; // [UBAH] sebelumnya 20
 
 // Label & tone badge status harian (kunci = row.tone dari attendanceReportBuilder).
 export const STATUS_TONE_CLASS = {
