@@ -19,6 +19,7 @@ import { hariLiburNasional, hitungBatasMinTanggal } from '../../../../utils/date
 import { getAllHolidays } from '../../../../services/holidayService';
 import { isEmpty } from '../../../../utils/validation';
 import { isHrd } from '../../../../utils/roles';
+import { approvalRolesFor } from '../../../../utils/approvalHierarchy';
 
 // [BARU] Interval polling live-sync riwayat cuti (lihat useEffect di bawah).
 const HISTORY_POLL_INTERVAL_MS = 15000;
@@ -158,6 +159,9 @@ export default function useLeaveApplication(user, { notify = (message) => window
   const [searchParams, setSearchParams] = useSearchParams(); // [BARU] baca query param dari notifikasi cuti disetujui
   const userRole = user?.role || user?.jabatan || 'Karyawan';
   const atasan = isSupervisor(userRole);
+  const approvalRoles = approvalRolesFor(userRole);
+  const needsLeader = approvalRoles.includes('LEADER');
+  const needsSpv = approvalRoles.includes('SPV');
   // [BARU] Pemohon ber-role HRD memilih approver HRD; role lain tetap alur Leader/SPV/Manager.
   const isHrdRequester = isHrd(user);
   // [BARU] Dipakai buat batasan Cuti Melahirkan (lihat isFemaleUser di atas).
@@ -275,7 +279,12 @@ export default function useLeaveApplication(user, { notify = (message) => window
         getAllHolidays(), getMyCoverageReminders(),
       ]);
       setTypes(leaveTypes); setJenisCuti(current => current || leaveTypes[0]?.name || '');
-      setApprovers({ LEADER: leader || [], SPV: spv || [], MANAGER: manager || [], HRD: hrdList || [] });
+      setApprovers({
+        LEADER: (leader || []).filter(person => Number(person.employeeId) !== Number(user?.employeeId)),
+        SPV: (spv || []).filter(person => Number(person.employeeId) !== Number(user?.employeeId)),
+        MANAGER: (manager || []).filter(person => Number(person.employeeId) !== Number(user?.employeeId)),
+        HRD: hrdList || [],
+      });
       setCoverOptions(covers || []);
       setCoverageReminders(coverageDuties || []);
       // [UBAH] Sebelumnya ada koreksi "legacyHalfDayCorrection" di sini untuk
@@ -288,7 +297,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
       setBalance(leaveBalance);
       setHistory(records); setHolidayDates(new Set(holidays.map((holiday) => holiday.date))); setError('');
     } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
-  }, []);
+  }, [isHrdRequester, user?.employeeId]);
 
   useEffect(() => {
     const initData = async () => {
@@ -475,12 +484,12 @@ export default function useLeaveApplication(user, { notify = (message) => window
         return false;
       }
     } else {
-      if (!atasan && !leaderEmployeeId) {
+      if (needsLeader && !leaderEmployeeId) {
         setError('Approver Leader perlu dipilih.');
         setInvalidField('leaderEmployeeId');
         return false;
       }
-      if (!atasan && !spvEmployeeId) {
+      if (needsSpv && !spvEmployeeId) {
         setError('Approver SPV perlu dipilih.');
         setInvalidField('spvEmployeeId');
         return false;
@@ -514,8 +523,8 @@ export default function useLeaveApplication(user, { notify = (message) => window
       session: isActualHalfDayType
         ? (SESSION_CODE_BY_LABEL[durasiSesi] || 'PAGI')
         : (isHalfDayLeave ? URGENT_HALF_DAY_SESSION_CODE : null),
-      leaderEmployeeId: isHrdRequester || atasan || !leaderEmployeeId ? null : Number(leaderEmployeeId),
-      spvEmployeeId: isHrdRequester || atasan || !spvEmployeeId ? null : Number(spvEmployeeId),
+      leaderEmployeeId: isHrdRequester || !needsLeader || !leaderEmployeeId ? null : Number(leaderEmployeeId),
+      spvEmployeeId: isHrdRequester || !needsSpv || !spvEmployeeId ? null : Number(spvEmployeeId),
       managerEmployeeId: isHrdRequester || !managerEmployeeId ? null : Number(managerEmployeeId),
       hrdEmployeeId: isHrdRequester && hrdEmployeeId ? Number(hrdEmployeeId) : null
     };
@@ -532,10 +541,8 @@ export default function useLeaveApplication(user, { notify = (message) => window
       approvers: isHrdRequester
         ? [{ role: 'HRD', name: employeeLookup[hrdEmployeeId] || '-' }]
         : [
-            ...(atasan ? [] : [
-              { role: 'Leader', name: employeeLookup[leaderEmployeeId] || '-' },
-              { role: 'SPV', name: employeeLookup[spvEmployeeId] || '-' },
-            ]),
+            ...(needsLeader ? [{ role: 'Leader', name: employeeLookup[leaderEmployeeId] || '-' }] : []),
+            ...(needsSpv ? [{ role: 'SPV', name: employeeLookup[spvEmployeeId] || '-' }] : []),
             { role: 'Manager', name: employeeLookup[managerEmployeeId] || '-' },
           ],
       reason,
@@ -595,7 +602,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
     }
   };
 
-  const handleOpenDetail = async (item) => {
+  async function handleOpenDetail(item) {
     const requestId = ++detailRequestRef.current; // [BARU]
     // [UBAH] Data sementara (sebelum detail approver dari server tiba) ditandai isApprovalLoading,
     // sehingga stepper approval tidak menampilkan alur tebakan (dulu otomatis "HRD").
@@ -614,7 +621,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
       setSelectedDetail((current) => (current ? { ...current, isApprovalLoading: false } : current)); // [BARU] hentikan status memuat
       setError(err.message || 'Gagal memuat detail cuti.');
     }
-  };
+  }
 
   // [UBAH] Sekarang menerima parameter opsional ke-2 `{ scrollToForm,
   // showReminder }`, default keduanya TRUE -- artinya dipanggil tanpa opsi
@@ -681,7 +688,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
       setManagerEmployeeId(detail.managerEmployeeId ? String(detail.managerEmployeeId) : '');
       setHrdEmployeeId(detail.hrdEmployeeId ? String(detail.hrdEmployeeId) : '');
       if (showReminder) setError('Data pengajuan sebelumnya sudah dimuat ulang (termasuk approver). Periksa kembali, lalu simpan perbaikan cuti Anda.');
-    } catch (err) {
+    } catch {
       // Fallback kalau fetch detail gagal (mis. koneksi terputus) -- approver
       // tetap kosong (memang tidak tersedia dari sumber lain) & reminder
       // dikembalikan ke pesan lama supaya user tahu harus memilih manual.
@@ -746,7 +753,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
     pendingWork, setPendingWork, coveredBy, setCoveredBy, coverOptions,
     handleSubmit, isSubmitting, todayStr, jumlahHariCuti,
     isEditing: Boolean(editingId), onCancelEdit: cancelEdit, invalidField,
-    leaveTypes: earlyCheckout ? types.filter(type => type.name === 'Cuti Urgent') : types, approvers, isSupervisor: atasan, isHrdRequester, isFemale,
+    leaveTypes: earlyCheckout ? types.filter(type => type.name === 'Cuti Urgent') : types, approvers, approvalRoles, isSupervisor: atasan, isHrdRequester, isFemale,
     holidayDates, bookedDates, coverageReminders, canApplyCuti: true,
   };
   const editFormProps = {

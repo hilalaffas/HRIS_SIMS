@@ -7,7 +7,7 @@
 //                      keterangan + surat dokter. Surat boleh MENYUSUL -- tetap
 //                      wajib, diunggah belakangan lewat kolom "Keterangan / Catatan"
 //                      di tabel riwayat. Selama surat menyusul, lama izin dikunci 1 hari.
-//  - Izin Terlambat  : cukup keterangan.
+//  - Izin Terlambat  : keterangan dan bukti wajib, diperiksa HRD.
 //
 // Komponen ini mengelola form-nya sendiri; pengiriman ke backend dilakukan
 // parent lewat `onSubmit` (harus melempar error bila gagal supaya pesannya
@@ -21,6 +21,7 @@ import Dropdown from '../../../components/Dropdown';
 import useSickDates from '../../../hooks/useSickDates';
 import SickDateFields from './SickDateFields';
 import MedicalDocumentDropzone from './MedicalDocumentDropzone';
+import LateEvidenceField from './LateEvidenceField';
 import './PermissionRequestModal.css';
 
 // [UBAH] Label dropdown dipersingkat: "Sakit" dan "Terlambat" (nilai value tetap SAKIT / TERLAMBAT)
@@ -53,6 +54,8 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
 
   const handleTypeChange = (event) => {
     setType(event.target.value);
+    setDocumentFile(null);
+    setDocumentLater(false);
     setErrorMessage('');
   };
 
@@ -74,6 +77,7 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
         return 'Unggah surat dokter, atau centang "Surat dokter menyusul".';
       }
     }
+    if (!isSick && !documentFile) return 'Unggah atau foto bukti terlambat terlebih dahulu.';
     return '';
   };
 
@@ -96,7 +100,7 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
         startDate: isSick ? dates.startDate : null,
         endDate: isSick ? dates.endDate : null,
         documentLater,
-        documentFile: isSick ? documentFile : null,
+        documentFile,
       });
     } catch (error) {
       // Popup tetap terbuka supaya pesan backend terbaca & isian tidak hilang.
@@ -176,6 +180,10 @@ export default function PermissionRequestModal({ onSubmit, onClose, earlyCheckou
             </div>
           )}
 
+          {!isSick && <div className="abs-permission-field">
+            <span className="abs-permission-label">Unggah / Foto Bukti Terlambat *</span>
+            <LateEvidenceField file={documentFile} onChange={setDocumentFile} onError={setErrorMessage} disabled={isSubmitting} />
+          </div>}
           {errorMessage && <p className="abs-permission-error" role="alert">{errorMessage}</p>}
         </div>
 

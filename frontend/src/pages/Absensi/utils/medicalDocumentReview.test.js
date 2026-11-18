@@ -9,13 +9,13 @@ import { buildRequestDetail, buildPengajuanItems } from '../../Pengajuan/utils/p
 import { toPermissionRow } from '../../PersetujuanIzin/utils/permissionRequest';
 
 globalThis.window = { location: { origin: 'https://example.com' } };
-const base = { attendanceId: 1, attendanceDate: '2026-11-13', sickStartDate: '2026-11-13', sickEndDate: '2026-11-13', leaveDays: 1, recordedAt: '2026-11-13T09:00:00', action: 'MASUK', reason: 'SAKIT', approvalStatus: 'APPROVED', documentRequired: true, documentUrl: 'https://example.com/doctor.pdf' };
+const base = { attendanceId: 1, attendanceDate: '2026-11-13', sickStartDate: '2026-11-13', sickEndDate: '2026-11-13', leaveDays: 1, recordedAt: '2026-11-13T09:00:00', action: 'MASUK', reason: 'SAKIT', approvalStatus: 'APPROVED', documentUploadDeadline: '2099-11-20', documentRequired: true, documentUrl: 'https://example.com/doctor.pdf' };
 const rowFor = (raw) => buildMonthlyRows([toDisplayRecord(raw)], 2026, 10, new Date('2026-11-13T12:00:00'), [], 'REGULAR', {}).find((row) => row.date === base.attendanceDate);
 
 test('pending follow-up is separate from approved leave on employee and HRD screens', () => {
   const raw = { ...base, documentReviewStatus: 'PENDING' };
   const record = toDisplayRecord(raw);
-  assert.equal(buildSickCardModel(record).badgeLabel, 'Disetujui');
+  assert.equal(buildSickCardModel(record).badgeLabel, 'Verifikasi Surat');
   const item = buildPengajuanItems({ attendanceRecords: [record] })[0];
   assert.equal(item.statusCode, 'APPROVED'); assert.equal(item.documentStatus.code, 'PENDING');
   assert.equal(item.needsLetter, false);
@@ -28,7 +28,7 @@ test('rejected letter preserves sick attendance and offers reupload with HRD rea
   const raw = { ...base, documentReviewStatus: 'REJECTED', documentReviewNote: 'Cap dokter tidak jelas' };
   const record = toDisplayRecord(raw);
   const item = buildPengajuanItems({ attendanceRecords: [record] })[0];
-  assert.equal(item.statusLabel, 'Disetujui'); assert.equal(item.needsLetter, true);
+  assert.equal(item.statusLabel, 'Revisi Surat'); assert.equal(item.needsLetter, true);
   assert.equal(item.documentStatus.note, raw.documentReviewNote);
   const meta = resolveNoteMeta(rowFor(raw));
   assert.equal(meta.badge.label, 'SAKIT');

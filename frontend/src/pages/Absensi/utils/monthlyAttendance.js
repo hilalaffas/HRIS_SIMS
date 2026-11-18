@@ -16,6 +16,7 @@ import { isSickDocumentExpired } from '../../../utils/sickDocumentDeadline';
 import { shiftBounds } from './activeWorkShift';
 import { normalWorkMinutes } from './normalWorkDuration';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
+import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus';
 import { formatDateLabel, parseLocalDate } from '../../../services/attendanceService'; // [UBAH] + parseLocalDate
 import { formatOvertimeDuration, getOvertimeStatus } from '../../../services/overtimeService'; // [UBAH] + formatOvertimeDuration
 
@@ -231,7 +232,9 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   const { checkIn, checkOut, lateNotice, rejectedSick, sickNotice } = entry;
   const isToday = key === todayKey;
   // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
-  const lateSuffix = lateNotice ? ` · Izin terlambat: ${lateNotice.note}` : '';
+  const lateLabel = { PENDING: 'Menunggu ACC', APPROVED: 'Disetujui', REJECTED: 'Ditolak', NOT_REQUIRED: 'Tercatat' }[lateNotice?.approvalStatus] || 'Menunggu ACC';
+  const lateDescription = lateNotice ? `Izin terlambat (${lateLabel}): ${lateNotice.note}${lateNotice.reviewNote ? ` · Catatan HRD: ${lateNotice.reviewNote}` : ''}` : '';
+  const lateSuffix = lateDescription ? ` · ${lateDescription}` : '';
   const rejectionText = rejectedSick ? `Izin sakit ditolak${rejectedSick.reviewNote ? ` · Alasan Penolakan HRD: ${rejectedSick.reviewNote}` : ''}` : '';
   const noticeSuffix = `${lateSuffix}${rejectionText ? ` · ${rejectionText}` : ''}`;
   const scheduleLabel = getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate);
@@ -320,7 +323,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     officeDistanceNotice,
     !checkOut ? (isToday ? 'Sedang bekerja' : 'Tidak absen pulang') : '',
     checkOut?.note || '',
-    lateNotice ? `Izin terlambat: ${lateNotice.note}` : '',
+    lateDescription,
     rejectionText,
   ].filter(Boolean).join(' · ');
 
@@ -334,7 +337,8 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     checkOut: formatClock(checkOut?.recordedAt),
     duration: formatDuration(minutesWorked),
     durationMinutes: minutesWorked, // angka mentah, dipakai untuk sort kolom Durasi
-    status: isLate ? 'TERLAMBAT' : 'HADIR TEPAT WAKTU',
+    status: isLate ? lateAttendanceStatus(lateNotice?.approvalStatus) : 'HADIR TEPAT WAKTU',
+    lateApprovalStatus: lateNotice?.approvalStatus || null,
     tone: isLate ? 'telat' : 'hadir',
     lateMinutes: isLate ? lateMinutes : 0, // [BARU]
     document: sickDocument,
@@ -372,6 +376,7 @@ export function buildMonthlyRows(records, year, month, now = new Date(), schedul
       if (entry.checkIn?.reasonCode === 'SAKIT') entry.checkIn = null;
       entry.sickNotice = null;
       entry.rejectedSick = null;
+      entry.lateNotice = null;
       if (!entry.checkIn && !entry.checkOut && !entry.lateNotice) entry = null;
     }
 

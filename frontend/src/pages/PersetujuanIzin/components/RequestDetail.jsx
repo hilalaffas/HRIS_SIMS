@@ -1,31 +1,30 @@
 // src/pages/PersetujuanIzin/components/RequestDetail.jsx
 //
 // [BARU] Panel detail (kanan) untuk satu pengajuan. Dirender dengan `key={row.id}`
-// oleh halaman, jadi checklist & catatan otomatis kosong lagi saat pindah
+// oleh halaman, jadi catatan otomatis kosong lagi saat pindah
 // pengajuan dan animasi masuk diputar ulang.
 import React, { useState } from 'react';
-import { CircleCheck, CircleX } from 'lucide-react';
+import { CircleCheck, CircleX, Hourglass } from 'lucide-react';
 import AttachmentPreview from './AttachmentPreview';
-import VerificationChecklist from './VerificationChecklist';
 import DecisionPanel from './DecisionPanel';
 import {
   MIN_REJECT_NOTE_LENGTH,
-  VERIFICATION_ITEMS,
   formatPeriod,
   formatSubmittedAt,
 } from '../utils/permissionRequest';
+import ApprovalLogAccordion from '../../../components/ApprovalLogAccordion';
+import { buildPermissionLogs, permissionFileStatus } from '../../../utils/permissionReviewLog';
 import './RequestDetail.css';
 
-const EMPTY_CHECKS = Object.fromEntries(VERIFICATION_ITEMS.map((item) => [item.key, false]));
-
 function DecidedBanner({ row }) {
-  const approved = row.status === 'APPROVED';
-  const Icon = approved ? CircleCheck : CircleX;
+  const status = permissionFileStatus(row);
+  const Icon = status.statusTone === 'success' ? CircleCheck : status.statusTone === 'danger' ? CircleX : Hourglass;
+  const bannerTone = { success: 'approved', danger: 'rejected' }[status.statusTone] || status.statusTone;
   return (
-    <div className={`pzn-decided pzn-decided--${approved ? 'approved' : 'rejected'}`}>
+    <div className={`pzn-decided pzn-decided--${bannerTone}`}>
       <Icon aria-hidden="true" />
       <div>
-        <strong>{approved ? 'Pengajuan disetujui' : 'Pengajuan ditolak'}</strong>
+        <strong>{status.label}</strong>
         {row.reviewedAt && <span>{formatSubmittedAt(row.reviewedAt)}</span>}
         {row.reviewNote && <p>{row.reviewNote}</p>}
       </div>
@@ -34,17 +33,13 @@ function DecidedBanner({ row }) {
 }
 
 function RequestDetail({ row, processing, onApprove, onReject }) {
-  const [checks, setChecks] = useState(EMPTY_CHECKS);
   const [note, setNote] = useState('');
   const [noteError, setNoteError] = useState('');
 
+  const fileStatus = permissionFileStatus(row);
   const isPending = row.status === 'PENDING';
   const isDocumentReview = row.documentReviewPending;
-  const needsChecklist = (isPending || isDocumentReview) && !!row.attachment;
-  const checklistDone = VERIFICATION_ITEMS.every((item) => checks[item.key]);
-  const canApprove = row.document.code !== 'EXPIRED' && (!needsChecklist || checklistDone);
-
-  const toggleCheck = (key) => setChecks((current) => ({ ...current, [key]: !current[key] }));
+  const canApprove = row.document.code !== 'EXPIRED';
 
   const handleNoteChange = (value) => {
     setNote(value);
@@ -73,6 +68,7 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
         </div>
       </header>
 
+      <div><span className={`pgj-detail-status pgj-detail-status--${fileStatus.statusTone}`}>{fileStatus.label}</span></div>
       <dl className="pzn-detail__info">
         <div>
           <dt>Jenis</dt>
@@ -93,11 +89,11 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
       </dl>
 
       <section className="pzn-detail__section">
-        <h3 className="pzn-section-label">Bukti Lampiran</h3>
+        <h3 className="pzn-section-label">{row.type === 'SAKIT' ? 'Bukti Lampiran' : 'Bukti Terlambat'}</h3>
         <AttachmentPreview attachment={row.attachment} />
       </section>
 
-      <section className="pzn-detail__section">
+      {row.type === 'SAKIT' && <section className="pzn-detail__section">
         <h3 className="pzn-section-label">Status Surat Dokter</h3>
         <p>{row.document.label}</p>
         {row.document.deadline && <p className="pzn-detail__reason">Batas upload: {row.document.deadline.split('-').reverse().join('/')} pukul 23.59 WIB.</p>}
@@ -105,15 +101,10 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
         {isDocumentReview && row.document.periodLabel && <p className="pzn-detail__reason">Periode izin saat ini: {formatPeriod(row.startDate, row.endDate)}. Validasi surat juga menyetujui periode pada surat di atas.</p>}
         {row.document.note && <p className="pzn-detail__reason">Catatan HRD: {row.document.note}</p>}
         {row.documentReviewedAt && <small>{formatSubmittedAt(row.documentReviewedAt)}</small>}
-      </section>
+      </section>}
       {isDocumentReview && <section className="pzn-detail__section"><DecidedBanner row={row} /></section>}
       {isPending || isDocumentReview ? (
         <>
-          {needsChecklist && (
-            <section className="pzn-detail__section">
-              <VerificationChecklist checked={checks} disabled={processing} onToggle={toggleCheck} />
-            </section>
-          )}
           <section className="pzn-detail__section">
             <DecisionPanel
               approveLabel={isDocumentReview ? "Validasi Surat" : "Setujui Izin"}
@@ -121,7 +112,7 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
               note={note}
               noteError={noteError}
               canApprove={canApprove}
-              approveHint="Centang semua poin verifikasi surat terlebih dahulu."
+              approveHint="Batas upload surat dokter sudah terlewati."
               processing={processing}
               onNoteChange={handleNoteChange}
               onApprove={handleApprove}
@@ -134,6 +125,7 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
           <DecidedBanner row={row} />
         </section>
       )}
+      <ApprovalLogAccordion logs={buildPermissionLogs(row.source)} />
     </article>
   );
 }

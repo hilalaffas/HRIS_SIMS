@@ -18,8 +18,8 @@ const ROLE_LABEL = { LEADER: 'Leader', SPV: 'SPV', MANAGER: 'Manager', HRD: 'HRD
 export const toActedAtText = (value) => (value ? String(value).replace('T', ' ').slice(0, 16) : '');
 
 export const getLogTone = (badge = '') => {
-  if (badge === 'DISETUJUI') return 'success';
-  if (badge === 'DITOLAK') return 'danger';
+  if (['DISETUJUI', 'IZIN DISETUJUI', 'SURAT VALID', 'DISETUJUI LENGKAP'].includes(badge)) return 'success';
+  if (['DITOLAK', 'IZIN DITOLAK', 'SURAT DITOLAK'].includes(badge)) return 'danger';
   return 'neutral';
 };
 

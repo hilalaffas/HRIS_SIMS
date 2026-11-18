@@ -849,7 +849,7 @@ public class LeaveService {
             LeaveRequestApproval step = approvalSteps.stream()
                     .filter(a -> requiredRole.equalsIgnoreCase(a.getApproverRole()))
                     .findFirst().orElse(null);
-            if (step == null) continue; // misalnya cuti milik Leader/SPV/Manager hanya perlu Manager
+            if (step == null) continue; // tahap yang tidak diperlukan oleh jenjang pemohon dilewati
             if (step.getApprovalId().equals(approval.getApprovalId())) break;
             if (!ACTION_APPROVED.equalsIgnoreCase(step.getAction())) {
                 throw new RuntimeException("Persetujuan harus berurutan. Menunggu persetujuan "
@@ -949,7 +949,7 @@ public class LeaveService {
 
     // [UBAH] Alur approval ditentukan jabatan pemohon:
     //  - Pemohon HRD (HRD_ADMIN / HRD_KARYAWAN) -> SATU tahap "HRD" (hrdEmployeeId).
-    //  - Pemohon Leader/SPV/Manager             -> hanya tahap Manager (tanpa Leader & SPV).
+    //  - Leader -> SPV -> Manager; SPV -> Manager; Manager -> Manager lain.
     //  - Pemohon Member (lainnya)               -> Leader -> SPV -> Manager (alur asli BRD 4.4).
     private void createApprovalSteps(LeaveRequest cuti, Employee requester) {
         if (HrdApproverPolicy.isHrd(requester)) {
@@ -959,22 +959,17 @@ public class LeaveService {
         }
 
         List<LeaveRequestApproval> approvals = new ArrayList<>();
-        String requesterRole = normalizeApproverRole(requester.getUser().getRoleId().getRoleName());
-
-        if (REQUIRED_APPROVER_ROLES.contains(requesterRole)) {
-            if (hasValue(cuti.getLeaderEmployeeId()) || hasValue(cuti.getSpvEmployeeId())) {
-                throw new RuntimeException("Cuti Leader/SPV/Manager hanya boleh memilih approver Manager");
-            }
-
-            Employee manager = getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, requester);
-            if (manager.getEmployeeId().equals(requester.getEmployeeId())) {
-                throw new RuntimeException("Manager tidak boleh approve cuti miliknya sendiri");
-            }
-            approvals.add(buildApproval(cuti, ROLE_MANAGER, manager));
-        } else {
-            approvals.add(buildApproval(cuti, ROLE_LEADER, getSelectedApprover(cuti.getLeaderEmployeeId(), ROLE_LEADER, requester)));
-            approvals.add(buildApproval(cuti, ROLE_SPV, getSelectedApprover(cuti.getSpvEmployeeId(), ROLE_SPV, requester)));
-            approvals.add(buildApproval(cuti, ROLE_MANAGER, getSelectedApprover(cuti.getManagerEmployeeId(), ROLE_MANAGER, requester)));
+        List<String> roles = sys.hris.sims.common.service.ApprovalHierarchy.forRole(requester.getUser().getRoleId().getRoleName());
+        if ((!roles.contains(ROLE_LEADER) && hasValue(cuti.getLeaderEmployeeId()))
+                || (!roles.contains(ROLE_SPV) && hasValue(cuti.getSpvEmployeeId())))
+            throw new RuntimeException("Pilih approver cuti sesuai jenjang: " + String.join(" → ", roles));
+        for (String stage : roles) {
+            Long id = switch (stage) {
+                case ROLE_LEADER -> cuti.getLeaderEmployeeId();
+                case ROLE_SPV -> cuti.getSpvEmployeeId();
+                default -> cuti.getManagerEmployeeId();
+            };
+            approvals.add(buildApproval(cuti, stage, getSelectedApprover(id, stage, requester)));
         }
 
         approvalRepository.saveAll(approvals);
@@ -1353,6 +1348,8 @@ public class LeaveService {
             throw new RuntimeException("Approver " + expectedRole + " harus berasal dari divisi yang sama dengan pemohon");
         }
 
+        if (employee.getEmployeeId().equals(requester.getEmployeeId()))
+            throw new RuntimeException("Anda tidak dapat memilih diri sendiri sebagai approver cuti.");
         return employee;
     }
 

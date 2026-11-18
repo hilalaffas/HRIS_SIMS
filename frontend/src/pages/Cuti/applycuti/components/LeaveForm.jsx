@@ -37,6 +37,7 @@ const LeaveForm = ({
   leaveTypes = [],
   approvers = { LEADER: [], SPV: [], MANAGER: [], HRD: [] },
   isSupervisor = false,
+  approvalRoles,
   isHrdRequester = false,
   isFemale = false,
   isEditing,
@@ -98,6 +99,7 @@ const LeaveForm = ({
           managerEmployeeId={managerEmployeeId} setManagerEmployeeId={setManagerEmployeeId}
           approvers={approvers}
           isSupervisor={isSupervisor}
+          approvalRoles={approvalRoles}
           invalidField={invalidField}
         />
 

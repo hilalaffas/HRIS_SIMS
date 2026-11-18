@@ -117,13 +117,14 @@ const getAvatarTone = (name) => {
 export function toPermissionRow(item) {
   const type = resolveType(item);
   const start = parseLocalDate(item.sickStartDate || item.attendanceDate);
-  const workDays = item.leaveDays || 1;
-  const end = item.sickEndDate ? parseLocalDate(item.sickEndDate) : start ? getLastWorkDay(start, workDays) : null;
+  const workDays = type === 'SAKIT' ? item.leaveDays || 1 : 1;
+  const end = type !== 'SAKIT' ? start : item.sickEndDate ? parseLocalDate(item.sickEndDate) : start ? getLastWorkDay(start, workDays) : null;
   const attachment = describeAttachment(item.documentUrl || item.photoUrl);
   const employeeName = item.employeeName || '-';
 
   return {
     id: item.attendanceId,
+    source: item,
     employeeName,
     division: item.divisionName || '-',
     initials: getInitials(employeeName),
@@ -139,7 +140,7 @@ export function toPermissionRow(item) {
     startDate: start,
     endDate: end,
     workDays,
-    durationUnit: item.sickEndDate ? 'hari kalender' : 'hari kerja',
+    durationUnit: type !== 'SAKIT' ? 'hari' : item.sickEndDate ? 'hari kalender' : 'hari kerja',
     reason: item.note || '-',
     attachment,
     reviewNote: item.reviewNote || '',

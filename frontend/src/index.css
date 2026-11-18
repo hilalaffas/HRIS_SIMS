@@ -1,6 +1,7 @@
 /* STREAMING_CHUNK: Menerapkan directive Tailwind CSS utama */
 @import "tailwindcss";
 @import "./styles/tokens.css";
+@import "./styles/approval-status-text.css";
 @import "./styles/motion.css"; /* [BARU] token & aturan gerak global (animasi transisi) */
 @import "./styles/tailwind-dark.css"; /* [BARU] tema gelap untuk class utilitas Tailwind di JSX */
 

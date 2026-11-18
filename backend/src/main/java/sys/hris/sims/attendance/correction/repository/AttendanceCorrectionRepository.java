@@ -6,6 +6,10 @@ import org.springframework.data.jpa.repository.Query;
 import sys.hris.sims.attendance.correction.entity.AttendanceCorrection;
 
 public interface AttendanceCorrectionRepository extends JpaRepository<AttendanceCorrection, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from AttendanceCorrection c where c.correctionId = :id")
+    java.util.Optional<AttendanceCorrection> findForDecision(@org.springframework.data.repository.query.Param("id") Long id);
+
     List<AttendanceCorrection> findByEmployee_EmployeeIdOrderByCreatedAtDesc(Long employeeId);
     boolean existsByAttendance_AttendanceId(Long attendanceId);
 

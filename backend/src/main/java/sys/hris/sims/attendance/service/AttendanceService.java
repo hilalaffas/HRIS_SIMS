@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
@@ -26,6 +27,7 @@ import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
 import sys.hris.sims.attendance.dto.LeaveTodayResponse;
 import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
 import sys.hris.sims.attendance.entity.Attendance;
+import sys.hris.sims.attendance.entity.PermissionReviewEvent;
 import sys.hris.sims.attendance.repository.AttendanceRepository;
 import sys.hris.sims.common.service.HrdApproverPolicy;
 import sys.hris.sims.employee.entity.Employee;
@@ -282,7 +284,7 @@ public class AttendanceService {
     // supaya pengajuan miliknya sendiri bisa dikecualikan.
     private Employee requireHrdApprover(Authentication authentication) {
         if (!HrdApproverPolicy.hasHrdAuthority(authentication)) {
-            throw new IllegalStateException("Hanya HRD yang berwenang memproses pengajuan sakit.");
+            throw new IllegalStateException("Hanya HRD yang berwenang memproses pengajuan sakit dan izin.");
         }
         return resolveEmployee(authentication.getName());
     }
@@ -291,8 +293,9 @@ public class AttendanceService {
     // semua divisi, kecuali pengajuan milik HRD yang sedang login.
     public List<AttendanceResponse> getSickApprovals(Authentication authentication) {
         Long approverId = requireHrdApprover(authentication).getEmployeeId();
-        return attendanceRepository.findByReasonOrderByRecordedAtDesc("SAKIT")
+        return attendanceRepository.findByReasonInOrderByRecordedAtDesc(List.of("SAKIT", "IZIN"))
                 .stream()
+                .filter(attendance -> !"IZIN".equals(attendance.getReason()) || "IZIN".equals(attendance.getAction()))
                 .filter(attendance -> !approverId.equals(attendance.getEmployee().getEmployeeId()))
                 .map(this::toResponse)
                 .toList();
@@ -304,8 +307,7 @@ public class AttendanceService {
     //                jadi alur persetujuan Leader/SPV/Manager tidak berubah), plus lama
     //                izin (hari) dan surat dokter yang BOLEH menyusul (document_url null).
     //  - TERLAMBAT : pemberitahuan terlambat, disimpan sebagai action IZIN supaya tidak
-    //                bentrok dengan absen Masuk yang tetap harus dilakukan; tidak perlu
-    //                persetujuan.
+    //                bentrok dengan absen Masuk. Bukti wajib dan keputusan dilakukan HRD.
     @Transactional
     public AttendanceResponse submitPermission(String username, PermissionSubmitRequest request) {
         Employee employee = resolveEmployee(username);
@@ -336,6 +338,7 @@ public class AttendanceService {
         // juga ditegakkan di sini -- bukan cuma di popup -- supaya request langsung ke API
         // tidak bisa mengajukan banyak hari tanpa bukti.
         boolean hasDocument = request.getDocument() != null && !request.getDocument().isEmpty();
+        if (!isSick && !hasDocument) throw new IllegalArgumentException("Bukti terlambat wajib dilampirkan.");
         boolean earlyCheckout = request.isEarlyCheckout();
         if (earlyCheckout && (!isSick || !attendanceRepository.existsActiveByActionAndReasonIn(
                 employeeId, permissionDate, "MASUK", List.of("ABSEN"))
@@ -360,8 +363,8 @@ public class AttendanceService {
             }
             if (!earlyCheckout && attendanceRepository.existsActiveByAction(employeeId, today, "MASUK"))
                 throw new IllegalStateException("Sudah ada absensi masuk pada tanggal mulai sakit.");
-        } else if (attendanceRepository.existsActiveByAction(employeeId, today, "MASUK")) {
-            throw new IllegalStateException("Anda sudah tercatat check-in hari ini, pengajuan izin tidak bisa dibuat.");
+        } else if (hasActiveSick(employeeId, today)) {
+            throw new IllegalStateException("Anda tercatat sakit pada tanggal ini, izin terlambat tidak diperlukan.");
         }
         if (!isSick && attendanceRepository.existsByEmployee_EmployeeIdAndAttendanceDateAndAction(employeeId, today, "IZIN")) {
             throw new IllegalStateException("Anda sudah mengajukan izin terlambat hari ini.");
@@ -370,8 +373,8 @@ public class AttendanceService {
         // Surat dokter opsional saat pengajuan (boleh menyusul lewat uploadMedicalDocument).
         String documentUrl = null;
         MultipartFile document = request.getDocument();
-        if (isSick && document != null && !document.isEmpty()) {
-            documentUrl = storeMedicalDocument(employeeId, document);
+        if (document != null && !document.isEmpty()) {
+            documentUrl = isSick ? storeMedicalDocument(employeeId, document) : storeLateEvidence(employeeId, document);
         }
 
         Attendance attendance = Attendance.builder()
@@ -380,7 +383,7 @@ public class AttendanceService {
                 .reason(isSick ? "SAKIT" : "IZIN")
                 .status(isSick ? "SICK" : "IZIN")
                 .note(note)
-                .approvalStatus(isSick ? "PENDING" : "NOT_REQUIRED")
+                .approvalStatus("PENDING")
                 .leaveDays(days)
                 .attendanceDate(today)
                 .sickStartDate(isSick ? period.start() : null)
@@ -391,6 +394,9 @@ public class AttendanceService {
                 .documentReviewStatus(isSick ? (documentUrl == null ? "NOT_UPLOADED" : "PENDING") : "NOT_REQUIRED")
                 .build();
 
+        logPermission(attendance, "SUBMITTED", employee, note, null, null);
+        if (documentUrl != null) logPermission(attendance, isSick ? "DOCUMENT_UPLOADED" : "EVIDENCE_UPLOADED", employee,
+                isSick ? "Surat dokter dilampirkan pada pengajuan awal." : "Bukti terlambat dilampirkan untuk tanggal " + today + ".", null, null);
         return toResponse(attendanceRepository.save(attendance));
     }
 
@@ -428,6 +434,10 @@ public class AttendanceService {
         if (deadline != null && LocalDate.now(APP_ZONE).isAfter(deadline))
             throw new IllegalStateException("Batas upload surat dokter terlewati (" + deadline + ", 23.59 WIB).");
 
+        ensurePermissionHistory(attendance);
+        boolean resubmission = "REJECTED".equals(attendance.getApprovalStatus());
+        boolean replacement = attendance.getDocumentUrl() != null && !attendance.getDocumentUrl().isBlank();
+        SickPeriod oldPeriod = effectivePermissionPeriod(attendance);
         SickPeriod proposed = documentPeriod(attendance, startDate, endDate);
         validateDocumentPeriod(attendance, proposed);
         attendance.setDocumentUrl(storeMedicalDocument(employee.getEmployeeId(), document));
@@ -441,6 +451,10 @@ public class AttendanceService {
         attendance.setDocumentReviewStatus("PENDING");
         attendance.setDocumentReviewNote(null);
         attendance.setDocumentReviewedAt(null);
+        logPermission(attendance, replacement ? "DOCUMENT_REUPLOADED" : "DOCUMENT_UPLOADED", employee,
+                "Surat dan periode yang diusulkan dikirim untuk diperiksa HRD.", oldPeriod.start(), oldPeriod.end());
+        if (resubmission) logPermission(attendance, "RESUBMITTED", employee,
+                "Pengajuan yang ditolak diajukan kembali; menunggu persetujuan HRD.", oldPeriod.start(), oldPeriod.end());
         return toResponse(attendanceRepository.save(attendance));
     }
 
@@ -453,12 +467,21 @@ public class AttendanceService {
         }
     }
 
+    private String storeLateEvidence(Long employeeId, MultipartFile document) {
+        try {
+            String publicId = "late-evidence-" + employeeId + "-" + LocalDate.now(APP_ZONE) + "-" + UUID.randomUUID();
+            return cloudinaryService.uploadLateEvidence(document, publicId);
+        } catch (IOException e) {
+            throw new IllegalStateException("Gagal mengunggah bukti terlambat. Silakan coba lagi.", e);
+        }
+    }
+
     private boolean hasActiveSick(Long employeeId, LocalDate date) {
         return attendanceRepository.findByEmployee_EmployeeIdAndReasonAndActionOrderByRecordedAtDesc(employeeId, "SAKIT", "MASUK")
                 .stream().anyMatch(record -> !SickDocumentDeadline.expired(record, LocalDate.now(APP_ZONE)) && SickPeriod.covers(record, date));
     }
 
-    // [BARU] Setujui / tolak pengajuan Sakit. Hanya yang masih PENDING yang
+    // Setujui / tolak pengajuan Sakit atau Izin Terlambat. Hanya yang masih PENDING yang
     // bisa diputuskan, supaya keputusan tidak bolak-balik tanpa jejak.
     @Transactional
     public AttendanceResponse decideSick(Long attendanceId, String decision, String note, Authentication authentication, String documentUrl) {
@@ -469,13 +492,15 @@ public class AttendanceService {
 
         Attendance attendance = attendanceRepository.findForDocumentUpdate(attendanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Data absensi tidak ditemukan."));
-        if (!"SAKIT".equals(attendance.getReason())) {
-            throw new IllegalArgumentException("Hanya pengajuan Sakit yang bisa diputuskan.");
-        }
+        boolean isSick = "SAKIT".equals(attendance.getReason());
+        boolean isLate = "IZIN".equals(attendance.getReason()) && "IZIN".equals(attendance.getAction());
+        if (!isSick && !isLate) throw new IllegalArgumentException("Hanya pengajuan sakit atau izin terlambat yang bisa diproses.");
+        if (isLate && (attendance.getDocumentUrl() == null || attendance.getDocumentUrl().isBlank()))
+            throw new IllegalStateException("Bukti terlambat belum dilampirkan.");
         // [UBAH] Hanya HRD, dan tidak boleh memutuskan pengajuan sakit miliknya sendiri.
         Employee approver = requireHrdApprover(authentication);
         if (approver.getEmployeeId().equals(attendance.getEmployee().getEmployeeId())) {
-            throw new IllegalStateException("Anda tidak dapat memproses pengajuan sakit milik sendiri.");
+            throw new IllegalStateException("Anda tidak dapat memproses pengajuan milik sendiri.");
         }
         if (!"PENDING".equals(attendance.getApprovalStatus())) {
             throw new IllegalStateException("Pengajuan ini sudah diproses.");
@@ -493,15 +518,17 @@ public class AttendanceService {
         if ("APPROVED".equals(status) && SickDocumentDeadline.expired(attendance, LocalDate.now(APP_ZONE)))
             throw new IllegalStateException("Batas upload surat dokter terlewati. Absensi dihitung tanpa keterangan.");
 
+        ensurePermissionHistory(attendance);
+        SickPeriod oldPeriod = effectivePermissionPeriod(attendance);
         // Approving an attached initial request also verifies the letter shown to HRD.
-        if ("APPROVED".equals(status) && attendance.getDocumentUrl() != null
+        if (isSick && "APPROVED".equals(status) && attendance.getDocumentUrl() != null
                 && attendance.getDocumentUrl().equals(documentUrl)) {
             applyDocumentPeriod(attendance);
             attendance.setDocumentReviewStatus("VALID");
             attendance.setDocumentReviewNote(reviewNote.isEmpty() ? null : reviewNote);
             attendance.setDocumentReviewedAt(LocalDateTime.now(APP_ZONE));
         }
-        if ("REJECTED".equals(status) && attendance.getDocumentUrl() != null && !attendance.getDocumentUrl().isBlank()) {
+        if (isSick && "REJECTED".equals(status) && attendance.getDocumentUrl() != null && !attendance.getDocumentUrl().isBlank()) {
             attendance.setDocumentReviewStatus("REJECTED");
             attendance.setDocumentReviewNote(reviewNote);
             attendance.setDocumentReviewedAt(LocalDateTime.now(APP_ZONE));
@@ -509,11 +536,17 @@ public class AttendanceService {
         attendance.setApprovalStatus(status);
         attendance.setReviewNote(reviewNote.isEmpty() ? null : reviewNote);
         attendance.setReviewedAt(LocalDateTime.now());
+        logPermission(attendance, "APPROVED".equals(status) ? "PERMISSION_APPROVED" : "PERMISSION_REJECTED",
+                approver, reviewNote, oldPeriod.start(), oldPeriod.end());
+        if ("APPROVED".equals(status) && (!isSick || "VALID".equals(attendance.getDocumentReviewStatus()))) {
+            if (isSick) logPermission(attendance, "DOCUMENT_VALID", approver, "Surat yang diperiksa bersama pengajuan dinyatakan valid.", oldPeriod.start(), oldPeriod.end());
+            logPermission(attendance, "COMPLETED", approver, isSick ? "Izin dan surat dokter sudah disetujui lengkap." : "Izin terlambat dan bukti untuk tanggal " + attendance.getAttendanceDate() + " sudah disetujui.", oldPeriod.start(), oldPeriod.end());
+        }
         Attendance decided = attendanceRepository.save(attendance);
 
         // [BARU] Kabari karyawan pemohon. Keputusan sudah tersimpan, jadi kegagalan
         // membuat notifikasi tidak boleh membatalkannya.
-        try {
+        if (isSick) try {
             Map<String, Object> params = new LinkedHashMap<>();
             params.put("attendanceId", decided.getAttendanceId());
             params.put("attendanceDate", String.valueOf(decided.getAttendanceDate()));
@@ -550,11 +583,48 @@ public class AttendanceService {
         String reviewNote = note == null ? "" : note.trim();
         if (("REJECTED".equals(status) && reviewNote.length() < 3) || reviewNote.length() > 500)
             throw new IllegalArgumentException("Catatan penolakan wajib 3–500 karakter, catatan lainnya maksimal 500 karakter.");
+        ensurePermissionHistory(attendance);
+        SickPeriod oldPeriod = effectivePermissionPeriod(attendance);
         if ("VALID".equals(status)) applyDocumentPeriod(attendance);
         attendance.setDocumentReviewStatus(status);
         attendance.setDocumentReviewNote(reviewNote.isEmpty() ? null : reviewNote);
         attendance.setDocumentReviewedAt(LocalDateTime.now(APP_ZONE));
+        logPermission(attendance, "VALID".equals(status) ? "DOCUMENT_VALID" : "DOCUMENT_REJECTED", approver,
+                reviewNote, oldPeriod.start(), oldPeriod.end());
+        if ("VALID".equals(status)) logPermission(attendance, "COMPLETED", approver,
+                "Izin dan surat dokter sudah disetujui lengkap.", oldPeriod.start(), oldPeriod.end());
         return toResponse(attendanceRepository.save(attendance));
+    }
+
+    private void ensurePermissionHistory(Attendance attendance) {
+        if (attendance.getReviewEvents().isEmpty()) logPermission(attendance, "LEGACY_SNAPSHOT", null,
+                "Data lama: riwayat sebelumnya tidak lengkap. Catatan izin: " + Objects.toString(attendance.getReviewNote(), "-")
+                    + "; Catatan surat: " + Objects.toString(attendance.getDocumentReviewNote(), "-"), null, null);
+    }
+
+    private void logPermission(Attendance attendance, String type, Employee actor, String note, LocalDate beforeStart, LocalDate beforeEnd) {
+        boolean upload = type.equals("DOCUMENT_UPLOADED") || type.equals("DOCUMENT_REUPLOADED") || type.equals("RESUBMITTED") || type.equals("DOCUMENT_REJECTED");
+        String role = actor == null ? "SYSTEM" : actor.getUser() == null || actor.getUser().getRoleId() == null
+                ? "KARYAWAN" : actor.getUser().getRoleId().getRoleName();
+        SickPeriod effective = effectivePermissionPeriod(attendance);
+        attendance.getReviewEvents().add(PermissionReviewEvent.builder()
+                .eventType(type).eventAt(LocalDateTime.now(APP_ZONE))
+                .actorName(actor == null ? "Data lama" : actor.getFullName()).actorRole(role).note(note)
+                .beforeStartDate(beforeStart).beforeEndDate(beforeEnd)
+                .afterStartDate(upload && attendance.getDocumentStartDate() != null ? attendance.getDocumentStartDate()
+                    : effective.start())
+                .afterEndDate(upload && attendance.getDocumentEndDate() != null ? attendance.getDocumentEndDate()
+                    : effective.end())
+                .documentUrl(attendance.getDocumentUrl()).approvalStatus(attendance.getApprovalStatus())
+                .documentStatus(attendance.getDocumentReviewStatus()).build());
+    }
+
+    private SickPeriod effectivePermissionPeriod(Attendance attendance) {
+        LocalDate start = attendance.getSickStartDate() == null ? attendance.getAttendanceDate() : attendance.getSickStartDate();
+        LocalDate end = attendance.getSickEndDate() != null ? attendance.getSickEndDate()
+                : !"SAKIT".equals(attendance.getReason()) || "SAKIT".equals(attendance.getAction()) ? start
+                : SickPeriod.legacyEnd(start, attendance.getLeaveDays());
+        return new SickPeriod(start, end, attendance.getLeaveDays() == null ? 1 : attendance.getLeaveDays());
     }
 
     private SickPeriod documentPeriod(Attendance attendance, LocalDate start, LocalDate end) {
@@ -716,6 +786,11 @@ public class AttendanceService {
         return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
     }
 
+    // Riwayat pemeriksaan hanya relevan untuk Sakit/Izin; absensi biasa tidak menyentuh koleksi lazy.
+    private static boolean isPermissionRecord(Attendance attendance) {
+        return "SAKIT".equals(attendance.getReason()) || "IZIN".equals(attendance.getReason());
+    }
+
     // [UBAH] private -> package-private: dipakai juga AttendanceReportService
     // (satu sumber pemetaan entity -> response, tidak diduplikasi).
     AttendanceResponse toResponse(Attendance attendance) {
@@ -734,6 +809,7 @@ public class AttendanceService {
                 .recordedAt(attendance.getRecordedAt())
                 .attendanceDate(attendance.getAttendanceDate())
                 .approvalStatus(attendance.getApprovalStatus())
+                .reviewEvents(isPermissionRecord(attendance) ? List.copyOf(attendance.getReviewEvents()) : List.of())
                 .locationName(attendance.getLocationName())
                 .locationType(attendance.getLocationType())
                 .officeDistanceMeters(attendance.getOfficeDistanceMeters())

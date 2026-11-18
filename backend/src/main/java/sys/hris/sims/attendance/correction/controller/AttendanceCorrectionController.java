@@ -25,6 +25,11 @@ public class AttendanceCorrectionController {
         return ResponseEntity.ok(service.getMine(authentication.getName()));
     }
 
+    @GetMapping("/approvers")
+    public ResponseEntity<CorrectionApproverOptions> approverOptions(Authentication authentication) {
+        return ResponseEntity.ok(service.getApproverOptions(authentication.getName()));
+    }
+
     @GetMapping("/approvals")
     public ResponseEntity<List<AttendanceCorrectionResponse>> approvals(Authentication authentication) {
         return ResponseEntity.ok(service.getApprovals(authentication));

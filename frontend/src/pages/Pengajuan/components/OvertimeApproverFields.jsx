@@ -26,6 +26,7 @@ export default function OvertimeApproverFields({
   selfEmployeeId = null,
   disabled = false,
   idPrefix = 'overtime-approver',
+  title = 'PILIH ALUR APPROVAL LEMBUR *',
   onChange,
 }) {
   const isSingle = stages.length === 1;
@@ -41,7 +42,7 @@ export default function OvertimeApproverFields({
 
   return (
     <div className="form-group form-group--approval">
-      <label className="form-label">PILIH ALUR APPROVAL LEMBUR *</label>
+      <label className="form-label">{title}</label>
       <div className={`approval-row approval-row--${isSingle ? 'single' : `count-${stages.length}`}`}>
         {stages.map((stage) => {
           const field = STAGE_FIELD[stage];

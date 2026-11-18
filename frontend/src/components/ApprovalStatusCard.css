@@ -518,3 +518,6 @@
     animation: none;
   }
 }
+.approvalCard--purple { --apAccent: #9333ea; background: linear-gradient(135deg, var(--dk-bg-card, #fff), var(--dk-tint-purple, #faf5ff)); border-color: #d8b4fe; }
+.approvalBadge--purple { background: #9333ea; }
+.approvalCard--compact.approvalCard--purple { --apRing: var(--dk-tint-purple, #faf5ff); background: var(--dk-tint-purple, #faf5ff); }

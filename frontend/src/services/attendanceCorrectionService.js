@@ -5,3 +5,5 @@ export const getMyCorrectionRequests = () => api.get('/api/absensi/corrections/m
 export const getCorrectionApprovals = () => api.get('/api/absensi/corrections/approvals');
 export const decideCorrectionApproval = (id, status, note = '') =>
   api.put(`/api/absensi/corrections/${id}/approval`, { status, note });
+
+export const getCorrectionApproverOptions = () => api.get('/api/absensi/corrections/approvers');

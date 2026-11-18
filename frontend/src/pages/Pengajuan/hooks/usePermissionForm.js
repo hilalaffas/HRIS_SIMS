@@ -4,7 +4,7 @@
 // sama dengan PermissionRequestModal di halaman Absensi:
 //  - Izin Sakit     : keterangan + lama izin (hari kalender, maks 30) + surat dokter
 //                     (boleh menyusul; selama menyusul lama izin dikunci 1 hari).
-//  - Izin Terlambat : cukup keterangan.
+//  - Izin Terlambat : keterangan dan bukti wajib untuk persetujuan HRD.
 // Validasi di sini hanya untuk UX -- aturan sebenarnya ditegakkan backend.
 // `onSubmit` milik parent HARUS melempar error bila gagal supaya pesannya tampil.
 //
@@ -40,6 +40,8 @@ export default function usePermissionForm(onSubmit) {
 
   const changeType = (nextType) => {
     setType(nextType);
+    setDocumentFile(null);
+    setDocumentLater(false);
     setFieldErrors({});
     setErrorMessage('');
   };
@@ -78,6 +80,7 @@ export default function usePermissionForm(onSubmit) {
         errors.documentFile = 'Surat dokter perlu diunggah, atau centang "Surat dokter menyusul".';
       }
     }
+    if (!isSick && !documentFile) errors.documentFile = 'Unggah atau foto bukti terlambat terlebih dahulu.';
     return errors;
   };
 
@@ -111,7 +114,7 @@ export default function usePermissionForm(onSubmit) {
         startDate: isSick ? dates.startDate : null,
         endDate: isSick ? dates.endDate : null,
         documentLater,
-        documentFile: isSick ? documentFile : null,
+        documentFile,
       });
       resetForm();
     } catch (error) {

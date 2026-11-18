@@ -191,6 +191,8 @@ export function toDisplayRecord(item) {
     officeLocationStatus: String(item.officeLocationStatus || '').toUpperCase(),
     attendanceDate: item.attendanceDate,
     approvalStatus: String(item.approvalStatus || '').toUpperCase(),
+    reviewEvents: item.reviewEvents || [],
+    employeeName: item.employeeName || '',
     reviewNote: item.reviewNote || '',
     reviewedAt: parseNaiveDateTime(item.reviewedAt),
     sickStartDate: item.sickStartDate || null,

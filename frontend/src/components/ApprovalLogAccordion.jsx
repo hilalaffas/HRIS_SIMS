@@ -11,6 +11,7 @@
 import React, { useId, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { getLogTone } from '../utils/overtimeLog';
+import { toSafeHttpUrl } from '../utils/safeUrl';
 import '../pages/Cuti/approve/components/Form.css'; // gaya accordion dipakai bersama dengan detail berkas cuti
 
 export default function ApprovalLogAccordion({ logs = [], title = 'Riwayat Log Pemeriksaan' }) {
@@ -40,6 +41,7 @@ export default function ApprovalLogAccordion({ logs = [], title = 'Riwayat Log P
                   <strong className="form-cuti__log-name">{log.nama}</strong>
                   <time className="form-cuti__log-time">{log.waktu}</time>
                   {log.catatan && <span className="form-cuti__log-note">{log.catatan}</span>}
+                  {toSafeHttpUrl(log.documentUrl) && <a className="form-cuti__log-note" href={toSafeHttpUrl(log.documentUrl)} target="_blank" rel="noopener noreferrer">Lihat surat pada tahap ini</a>}
                 </li>
               ))}
             </ul>

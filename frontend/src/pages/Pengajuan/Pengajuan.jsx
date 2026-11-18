@@ -188,7 +188,7 @@ export default function Pengajuan({ user }) {
     upsertAttendance(toDisplayRecord(saved));
     setSelectedKey(null);
     showToast(
-      payload.type === 'SAKIT' ? 'Pengajuan izin sakit berhasil dikirim.' : 'Izin terlambat berhasil dicatat.',
+      payload.type === 'SAKIT' ? 'Pengajuan izin sakit berhasil dikirim.' : 'Pengajuan izin terlambat dikirim, menunggu persetujuan HRD.',
     );
   };
 

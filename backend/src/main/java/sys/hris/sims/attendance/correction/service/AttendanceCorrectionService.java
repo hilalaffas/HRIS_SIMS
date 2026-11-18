@@ -31,11 +31,77 @@ public class AttendanceCorrectionService {
             .orElseThrow(() -> new IllegalStateException("Data karyawan tidak ditemukan."));
     }
 
-    // [UBAH] Koreksi terlambat baru punya SATU tahap approval: HRD (HRD_ADMIN / HRD_KARYAWAN).
-    // Server hanya memakai hrdEmployeeId; leader/spv/manager dari klien diabaikan.
+    private String role(Employee employee) {
+        return employee.getUser().getRoleId().getRoleName().trim().toUpperCase(Locale.ROOT).replace("ROLE_", "");
+    }
+
+    // Same hierarchy as leave: Member -> Leader -> SPV -> Manager;
+    // Leader -> SPV -> Manager; SPV/Manager -> Manager. HRD retains its peer flow.
+    private List<String> requiredRoles(Employee requester) {
+        return sys.hris.sims.common.service.ApprovalHierarchy.forRole(role(requester));
+    }
+
+    private String field(String role) {
+        return switch (role) {
+            case "LEADER" -> "leaderEmployeeId";
+            case "SPV" -> "spvEmployeeId";
+            case "MANAGER" -> "managerEmployeeId";
+            default -> "hrdEmployeeId";
+        };
+    }
+
+    private boolean sameDivision(Employee requester, Employee approver) {
+        return requester.getDivisi() != null && approver.getDivisi() != null
+                && Objects.equals(requester.getDivisi().getId(), approver.getDivisi().getId());
+    }
+
+    @Transactional(readOnly = true)
+    public CorrectionApproverOptions getApproverOptions(String username) {
+        Employee requester = employee(username);
+        var stages = requiredRoles(requester).stream().map(stage -> {
+            List<Employee> people = stage.equals(HrdApproverPolicy.STAGE_ROLE)
+                    ? hrdApproverPolicy.findSelectableApprovers(requester)
+                    : employeeRepository.findActiveByRoleNamesUpper(Set.of(stage)).stream()
+                        .filter(person -> sameDivision(requester, person))
+                        .filter(person -> !Objects.equals(person.getEmployeeId(), requester.getEmployeeId())).toList();
+            return new CorrectionApproverOptions.Stage(stage, field(stage), people.stream()
+                    .map(person -> new CorrectionApproverOptions.Person(person.getEmployeeId(), person.getFullName())).toList());
+        }).toList();
+        return new CorrectionApproverOptions(stages);
+    }
+
+    private Employee selectedApprover(Long id, String expectedRole, Employee requester) {
+        if (id == null || id <= 0) throw new IllegalArgumentException("Approver " + expectedRole + " wajib dipilih.");
+        Employee approver = employeeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Approver " + expectedRole + " tidak ditemukan."));
+        if (!role(approver).equals(expectedRole) || !Boolean.TRUE.equals(approver.getIsActive()))
+            throw new IllegalArgumentException("Pilih approver " + expectedRole + " yang masih aktif.");
+        if (Objects.equals(approver.getEmployeeId(), requester.getEmployeeId()))
+            throw new IllegalArgumentException("Anda tidak dapat memilih diri sendiri sebagai approver.");
+        if (!sameDivision(requester, approver)) throw new IllegalArgumentException("Approver harus dari divisi yang sama dengan pemohon.");
+        return approver;
+    }
+
     private void createSteps(AttendanceCorrection correction, Employee requester, AttendanceCorrectionRequest request) {
-        Employee hrd = hrdApproverPolicy.requireSelectableApprover(request.getHrdEmployeeId(), requester);
-        approvalRepository.save(step(correction, HrdApproverPolicy.STAGE_ROLE, hrd));
+        List<String> roles = requiredRoles(requester);
+        if (roles.equals(List.of(HrdApproverPolicy.STAGE_ROLE))) {
+            approvalRepository.save(step(correction, HrdApproverPolicy.STAGE_ROLE,
+                    hrdApproverPolicy.requireSelectableApprover(request.getHrdEmployeeId(), requester)));
+            return;
+        }
+        if ((!roles.contains("LEADER") && request.getLeaderEmployeeId() != null)
+                || (!roles.contains("SPV") && request.getSpvEmployeeId() != null))
+            throw new IllegalArgumentException("Pilih approver sesuai jenjang: " + String.join(" → ", roles) + ".");
+        List<AttendanceCorrectionApproval> steps = new ArrayList<>();
+        for (String stage : roles) {
+            Long id = switch (stage) {
+                case "LEADER" -> request.getLeaderEmployeeId();
+                case "SPV" -> request.getSpvEmployeeId();
+                default -> request.getManagerEmployeeId();
+            };
+            steps.add(step(correction, stage, selectedApprover(id, stage, requester)));
+        }
+        approvalRepository.saveAll(steps);
     }
 
     private AttendanceCorrectionApproval step(AttendanceCorrection correction, String role, Employee approver) {
@@ -101,7 +167,7 @@ public class AttendanceCorrectionService {
         if (!List.of("APPROVED", "REJECTED").contains(status))
             throw new IllegalArgumentException("Keputusan tidak valid.");
         Employee actor = employee(authentication.getName());
-        AttendanceCorrection correction = correctionRepository.findById(id)
+        AttendanceCorrection correction = correctionRepository.findForDecision(id)
             .orElseThrow(() -> new IllegalArgumentException("Pengajuan koreksi tidak ditemukan."));
         // [BARU] Pemohon tidak boleh memproses koreksinya sendiri.
         hrdApproverPolicy.assertNotOwnRequest(actor, correction.getEmployee());
@@ -110,6 +176,9 @@ public class AttendanceCorrectionService {
         AttendanceCorrectionApproval mine = steps.stream()
             .filter(a -> actor.getEmployeeId().equals(a.getApproverEmployee().getEmployeeId())).findFirst()
             .orElseThrow(() -> new IllegalStateException("Anda bukan approver pengajuan ini."));
+        String expectedRole = mine.getApproverRole();
+        boolean validRole = HrdApproverPolicy.STAGE_ROLE.equals(expectedRole) ? HrdApproverPolicy.isHrd(actor) : role(actor).equals(expectedRole);
+        if (!validRole || !Boolean.TRUE.equals(actor.getIsActive())) throw new IllegalStateException("Role approver sudah tidak sesuai atau akun tidak aktif.");
         if (!"PENDING".equals(mine.getAction())) throw new IllegalStateException("Tahap persetujuan ini sudah diproses.");
         int index = steps.indexOf(mine);
         if (steps.subList(0, index).stream().anyMatch(a -> !"APPROVED".equals(a.getAction())))
@@ -140,6 +209,7 @@ public class AttendanceCorrectionService {
 
     // [BARU] Versi dengan tahap approval yang sudah dimuat (tanpa query).
     private Long currentApprover(List<AttendanceCorrectionApproval> steps) {
+        if (steps.stream().anyMatch(a -> "REJECTED".equals(a.getAction()))) return null;
         return steps.stream()
             .filter(a -> "PENDING".equals(a.getAction())).map(a -> a.getApproverEmployee().getEmployeeId()).findFirst().orElse(null);
     }
@@ -156,9 +226,8 @@ public class AttendanceCorrectionService {
             .employeeId(item.getEmployee().getEmployeeId()).employeeName(item.getEmployee().getFullName())
             .attendanceDate(item.getAttendanceDate()).reason(item.getReason()).status(item.getStatus())
             .reviewNote(item.getReviewNote()).createdAt(item.getCreatedAt())
-            .currentApproverEmployeeId(steps.stream().filter(a -> "PENDING".equals(a.getAction()))
-                .map(a -> a.getApproverEmployee().getEmployeeId()).findFirst().orElse(null))
-            .canAct(canAct).approvals(steps.stream().map(a -> new AttendanceCorrectionResponse.ApprovalStep(
+            .currentApproverEmployeeId("PENDING".equals(item.getStatus()) ? currentApprover(steps) : null)
+            .canAct(canAct && "PENDING".equals(item.getStatus())).approvals(steps.stream().map(a -> new AttendanceCorrectionResponse.ApprovalStep(
                 a.getApproverRole(), a.getApproverEmployee().getEmployeeId(), a.getApproverEmployee().getFullName(),
                 a.getAction(), a.getActedAt(), a.getNote())).toList())
             .build();

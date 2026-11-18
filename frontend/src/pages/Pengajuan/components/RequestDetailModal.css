@@ -126,3 +126,5 @@
 @media (prefers-reduced-motion: reduce) {
   .pgj-detail-overlay, .pgj-detail-modal { animation: none; }
 }
+
+.pgj-detail-status--purple { background: #9333ea; }
