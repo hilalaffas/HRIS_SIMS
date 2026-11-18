@@ -5,6 +5,7 @@ import './LogTable.css'; // [UBAH] sebelumnya LogSistem.css
 // [BARU] Opsi jumlah data per halaman untuk dropdown filter (pengganti
 // <select> native -- lihat komentar di komponen Dropdown).
 const LOG_PAGE_SIZE_OPTIONS = [
+  { value: 5, label: '5' }, // [BARU]
   { value: 10, label: '10' },
   { value: 50, label: '50' },
   { value: 100, label: '100' },
@@ -15,7 +16,7 @@ const LOG_PAGE_SIZE_OPTIONS = [
 // [UBAH] + headerActions: tombol ekspor dari halaman, ditaruh di header kartu (sebelah "Tampilkan").
 const LogTable = ({ logList = [], headerActions = null }) => {
   // State untuk Pagination
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // [UBAH] default tampilan awal 5 (sebelumnya 10)
   const [currentPage, setCurrentPage] = useState(1);
 
   // Kalkulasi Pagination

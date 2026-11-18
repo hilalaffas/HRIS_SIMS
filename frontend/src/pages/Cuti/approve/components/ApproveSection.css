@@ -109,18 +109,14 @@
   max-width: 100%;
   white-space: normal;
   line-height: 1.4;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  border-radius: var(--alv-radius-full);
-  padding: 5px 10px;
-  border: 1px solid transparent;
 }
-.approvalSection__status.statusBadge--blue { background: var(--alv-blue-bg); color: var(--dk-text-blue, var(--alv-blue)); border-color: var(--alv-blue-border); }
-.approvalSection__status.statusBadge--green { background: var(--alv-green-bg); color: var(--dk-text-green, var(--alv-green)); border-color: var(--alv-green-border); }
-.approvalSection__status.statusBadge--amber { background: var(--alv-amber-bg); color: var(--dk-text-amber, var(--alv-amber)); border-color: var(--alv-amber-border); }
-.approvalSection__status.statusBadge--rose { background: var(--alv-rose-bg); color: var(--dk-text-red, var(--alv-rose)); border-color: var(--alv-rose-border); }
+/* [UBAH] Teks berwarna saja: latar, bingkai, dan huruf kapital dihapus; warna tetap. */
+.approvalSection__status.statusBadge--blue { color: var(--dk-text-blue, var(--alv-blue)); }
+.approvalSection__status.statusBadge--green { color: var(--dk-text-green, var(--alv-green)); }
+.approvalSection__status.statusBadge--amber { color: var(--dk-text-amber, var(--alv-amber)); }
+.approvalSection__status.statusBadge--rose { color: var(--dk-text-red, var(--alv-rose)); }
 .alvBtnPill:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.4); }
 
 /* Aksi approver yang belum mendapat giliran harus terlihat nonaktif. */

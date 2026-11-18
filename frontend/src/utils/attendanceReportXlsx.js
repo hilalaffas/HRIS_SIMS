@@ -1,14 +1,16 @@
 // File: src/utils/attendanceReportXlsx.js
-// [BARU] Render "sheet" laporan absensi (lihat
-// pages/Laporan/utils/attendanceReportSheets.js) menjadi file Excel (.xlsx)
-// dengan SHEET SUNGGUHAN: satu karyawan = satu sheet, ditambah sheet "Ringkasan".
-// Di-import dinamis (lazy) dari tab Laporan Absen supaya library Excel hanya
-// diunduh browser saat user benar-benar klik "Unduh XLSX".
+// [UBAH] Render SATU "sheet" laporan absensi (lihat pages/Laporan/utils/attendanceReportSheets.js,
+// buildEmployeeXlsxSheet) menjadi SATU file Excel (.xlsx) milik satu karyawan.
+// Sebelumnya: satu file berisi banyak sheet (satu sheet per karyawan) + sheet "Ringkasan",
+// dan seluruh sel ditulis sebagai teks.
+// Sekarang  : satu file = satu karyawan, dan tiap sel memakai TIPE ASLI Excel
+//             (tanggal, jam, durasi, angka) dengan format tampilan lewat `kinds`.
 //
-// Keamanan: semua teks ditulis sebagai tipe String (format "@" = Teks), bukan
-// formula, jadi isi seperti "=HYPERLINK(...)" pada nama/catatan TIDAK akan
-// dijalankan Excel (tidak perlu awalan apostrof seperti di CSV).
+// Keamanan: sel teks tetap bertipe String (format "@" = Teks), bukan formula, jadi isi seperti
+// "=HYPERLINK(...)" pada nama/catatan TIDAK dijalankan Excel.
+// Di-import dinamis (lazy) supaya library Excel hanya diunduh saat user klik "Unduh XLSX".
 import writeXlsxFile from 'write-excel-file/browser';
+import { EXCEL_FORMATS } from './excelValueConverters';
 
 const COLORS = {
   title: '#1e293b',
@@ -37,33 +39,62 @@ const STATUS_COLORS = {
 
 const MIN_COLUMN_WIDTH = 8;
 const MAX_COLUMN_WIDTH = 46;
-const HEADER_ROW_COUNT = 3; // judul, subjudul, header kolom -> dibekukan (freeze)
+const INFO_COLUMN_SPAN = 4; // baris info (NIK, Jabatan, ...) hanya menggabung 4 kolom pertama -> tidak melebar
 
 const border = { borderColor: COLORS.border, borderStyle: 'thin' };
 
-const toCell = (value, style = {}) => (
-  typeof value === 'number'
-    ? { value, type: Number, align: 'center', ...border, ...style }
-    : { value: String(value ?? '-'), type: String, format: '@', ...border, ...style }
-);
+// Lebar tetap untuk kolom bertipe waktu/angka (karakter); kolom teks mengikuti isi terpanjang.
+const FIXED_KIND_WIDTHS = {
+  date: 12, time: 9, timeSeconds: 11, duration: 10, integer: 8, decimal: 8, hours: 12,
+};
 
-// Lebar kolom (karakter) mengikuti teks terpanjang di header & isi.
+// Format tampilan sel + perataan per jenis data. Nilai tetap ANGKA / TANGGAL asli.
+const KIND_STYLES = {
+  date: { type: Date, format: EXCEL_FORMATS.date, align: 'center' },
+  time: { type: Number, format: EXCEL_FORMATS.time, align: 'center' },
+  timeSeconds: { type: Number, format: EXCEL_FORMATS.timeSeconds, align: 'center' },
+  duration: { type: Number, format: EXCEL_FORMATS.duration, align: 'center' },
+  integer: { type: Number, format: EXCEL_FORMATS.integer, align: 'center' },
+  decimal: { type: Number, format: EXCEL_FORMATS.decimal, align: 'center' },
+  hours: { type: Number, format: EXCEL_FORMATS.hours, align: 'center' },
+  currency: { type: Number, format: EXCEL_FORMATS.currency, align: 'right' },
+};
+
+// Nilai kosong (null) -> sel kosong, bukan teks "-". `style` = gaya tambahan (mis. bingkai).
+const toCell = (value, kind = 'text', style = {}) => {
+  if (value === null || value === undefined || value === '') return { value: null, ...style };
+  if (kind === 'text' || !KIND_STYLES[kind]) {
+    return { value: String(value), type: String, format: EXCEL_FORMATS.text, ...style };
+  }
+  return { value, ...KIND_STYLES[kind], ...style };
+};
+
 const computeColumns = (sheet) => sheet.headers.map((header, index) => {
+  const kind = sheet.kinds[index];
+  if (FIXED_KIND_WIDTHS[kind]) return { width: Math.max(FIXED_KIND_WIDTHS[kind], String(header).length + 2) };
   const longest = Math.max(
     String(header).length,
-    ...sheet.rows.map((row) => String(row[index] ?? '-').length),
+    ...sheet.rows.map((row) => String(row[index] ?? '').length),
   );
   return { width: Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, longest + 2)) };
 });
 
+// [BARU] Baris info di bawah judul: sheet.infoLines (satu baris per item, vertikal);
+// bila tidak ada, jatuh kembali ke sheet.subtitle (satu baris) agar kompatibel.
+const getInfoLines = (sheet) => sheet.infoLines || [sheet.subtitle];
+
 function buildSheetData(sheet) {
   const columnCount = sheet.headers.length;
   const filler = Array(columnCount - 1).fill(null); // sel yang ikut tergabung (columnSpan)
+  const infoSpan = Math.min(INFO_COLUMN_SPAN, columnCount);
+  const infoFiller = Array(infoSpan - 1).fill(null);
   const hasStatusColumn = sheet.statusColumn !== null && sheet.statusColumn !== undefined;
 
   const rows = [
     [{ value: sheet.title, type: String, fontWeight: 'bold', fontSize: 14, textColor: COLORS.title, columnSpan: columnCount }, ...filler],
-    [{ value: sheet.subtitle, type: String, textColor: COLORS.muted, columnSpan: columnCount }, ...filler],
+    ...getInfoLines(sheet).map((line) => (
+      [{ value: String(line), type: String, textColor: COLORS.muted, columnSpan: infoSpan }, ...infoFiller]
+    )),
     sheet.headers.map((header) => ({
       value: String(header),
       type: String,
@@ -78,23 +109,21 @@ function buildSheetData(sheet) {
 
   sheet.rows.forEach((row) => {
     rows.push(row.map((value, columnIndex) => {
+      const kind = sheet.kinds[columnIndex];
       if (hasStatusColumn && columnIndex === sheet.statusColumn && STATUS_COLORS[String(value)]) {
-        return toCell(value, { fontWeight: 'bold', textColor: STATUS_COLORS[String(value)] });
+        return toCell(value, kind, { ...border, fontWeight: 'bold', textColor: STATUS_COLORS[String(value)] });
       }
-      return toCell(value);
+      return toCell(value, kind, border);
     }));
   });
 
   if (sheet.footer) {
     rows.push([]);
-    const footerRows = Array.isArray(sheet.footer) ? sheet.footer : [[sheet.footer, '']];
-    footerRows.forEach(([label, value], index) => {
+    sheet.footer.forEach(([label, value, kind], index) => {
       const footerRow = Array(columnCount).fill(null);
       footerRow[0] = { value: String(label ?? ''), type: String, fontWeight: index === 0 ? 'bold' : 'normal', textColor: COLORS.title };
-      if (columnCount > 1) {
-        footerRow[1] = typeof value === 'number'
-          ? { value, type: Number, align: 'right', textColor: COLORS.title }
-          : { value: String(value ?? ''), type: String, format: '@', textColor: COLORS.title };
+      if (columnCount > 1 && value !== null && value !== undefined) {
+        footerRow[1] = toCell(value, kind, { textColor: COLORS.title });
       }
       rows.push(footerRow);
     });
@@ -102,22 +131,14 @@ function buildSheetData(sheet) {
   return rows;
 }
 
-export const downloadSheetsXlsx = async ({ sheets, fileNamePrefix }) => {
-  const workbook = sheets.map((sheet) => ({
-    data: buildSheetData(sheet),
-    sheet: sheet.name,
-    columns: computeColumns(sheet),
-    stickyRowsCount: HEADER_ROW_COUNT,
-    orientation: 'landscape',
-  }));
+// Judul + baris info + header kolom dibekukan (freeze) agar tetap terlihat saat menggulir.
+const countHeaderRows = (sheet) => 1 + getInfoLines(sheet).length + 1;
 
-  const blob = await writeXlsxFile(workbook).toBlob();
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${fileNamePrefix}_${new Date().toISOString().split('T')[0]}.xlsx`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
+// Satu sheet -> Blob .xlsx (satu file untuk satu karyawan).
+export const buildSheetXlsxBlob = (sheet) => writeXlsxFile([{
+  data: buildSheetData(sheet),
+  sheet: sheet.name,
+  columns: computeColumns(sheet),
+  stickyRowsCount: countHeaderRows(sheet),
+  orientation: 'landscape',
+}]).toBlob();

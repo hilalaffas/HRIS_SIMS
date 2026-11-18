@@ -100,41 +100,20 @@
   display: flex;
 }
 
+/* [UBAH] Status berkas = TEKS BERWARNA saja (tanpa latar, bingkai, atau bentuk pil)
+   supaya tidak terlihat seperti tombol. Warna per status tetap sama. */
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 14px;
-  border-radius: var(--alv-radius-full);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  border: 1px solid transparent;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
-.statusBadge--blue {
-  background: var(--alv-blue-bg);
-  color: var(--dk-text-blue, var(--alv-blue));
-  border-color: var(--alv-blue-border);
-}
-
-.statusBadge--green {
-  background: var(--alv-green-bg);
-  color: var(--dk-text-green, var(--alv-green));
-  border-color: var(--alv-green-border);
-}
-
-.statusBadge--amber {
-  background: var(--alv-amber-bg);
-  color: var(--dk-text-amber, var(--alv-amber));
-  border-color: var(--alv-amber-border);
-}
-
-.statusBadge--rose {
-  background: var(--alv-rose-bg);
-  color: var(--dk-text-red, var(--alv-rose));
-  border-color: var(--alv-rose-border);
-}
+.statusBadge--blue { color: var(--dk-text-blue, var(--alv-blue)); }
+.statusBadge--green { color: var(--dk-text-green, var(--alv-green)); }
+.statusBadge--amber { color: var(--dk-text-amber, var(--alv-amber)); }
+.statusBadge--rose { color: var(--dk-text-red, var(--alv-rose)); }
 
 .leaveList__detailsBtn {
   display: inline-flex;

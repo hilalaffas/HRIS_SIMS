@@ -3,7 +3,7 @@
 // [BARU] Tab "Laporan Absen" (HRD): tabel absensi semua divisi & karyawan per
 // periode tutup buku, bisa diekspor XLSX / CSV / PDF untuk SEMUA divisi atau SATU
 // divisi (pilihan divisi = cakupan tabel sekaligus ekspor). Dalam file hasil
-// ekspor, satu karyawan = satu sheet (lihat utils/attendanceReportSheets.js).
+// ekspor XLSX, satu karyawan = satu file (ZIP bila lebih dari satu; lihat utils/attendanceReportExport.js).
 //
 // Pemuatan data lewat hooks/useAttendanceReport.js (1 request, sudah difilter
 // di backend); komponen ini hanya mengatur filter, paginasi, dan ekspor.
@@ -161,10 +161,15 @@ export default function AttendanceReportTab() {
         const { headers, rows } = buildFlatCsvTable(targetReports);
         downloadCsv({ headers, rows, fileNamePrefix });
       } else if (kind === 'xlsx') {
-        const sheets = buildExportSheets(targetReports, { periodLabel: range.label, scopeLabel });
-        // Library Excel di-load lazy: baru diunduh browser saat tombol XLSX diklik.
-        const { downloadSheetsXlsx } = await import('../../../utils/attendanceReportXlsx');
-        await downloadSheetsXlsx({ sheets, fileNamePrefix });
+        // [UBAH] Satu karyawan = satu file .xlsx. 1 karyawan -> file langsung; lebih dari 1 -> ZIP.
+        // Library Excel & ZIP di-load lazy: baru diunduh browser saat tombol XLSX diklik.
+        const { downloadAttendanceXlsx } = await import('../utils/attendanceReportExport');
+        await downloadAttendanceXlsx({
+          reports: targetReports,
+          periodLabel: range.label,
+          fileKey: range.fileKey,
+          zipFileName: fileNamePrefix,
+        });
       } else {
         const sheets = buildExportSheets(targetReports, { periodLabel: range.label, scopeLabel });
         // jsPDF di-load lazy: baru diunduh browser saat tombol PDF diklik.
@@ -216,10 +221,10 @@ export default function AttendanceReportTab() {
         searchValue={searchValue}
         onSearchChange={handleSearchChange}
         scopeLabel={scopeLabel}
-        employeeCount={reports.length}
+        employeeCount={filteredReports.length} // [UBAH] jumlah yang akan diekspor (hasil filter)
         exportingKind={exportingKind}
-        isExportDisabled={isLoading || reports.length === 0}
-        onExport={(kind) => runExport(kind, reports, scopeLabel)}
+        isExportDisabled={isLoading || filteredReports.length === 0} // [UBAH] mengikuti hasil filter
+        onExport={(kind) => runExport(kind, filteredReports, scopeLabel)} // [UBAH] sebelumnya `reports`
       />
 
       <ReportStatCards totals={totals} isLoading={isLoading} />

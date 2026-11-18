@@ -38,7 +38,9 @@ const SORT_COLUMNS = [
 ];
 
 // [BARU] Pagination: default 20 data per halaman.
-const PAGE_SIZE_OPTIONS = [20, 50, 100];
+// [UBAH] Opsi terkecil 20 -> 5; default tampilan awal = 5.
+const PAGE_SIZE_OPTIONS = [5, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 5;
 
 // [BARU] Default: tanggal cuti terbaru -> terlama.
 const DEFAULT_SORT = { key: "leaveDate", direction: SORT_DIRECTION.desc };
@@ -90,7 +92,7 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [currentPage, setCurrentPage] = useState(1);
 
   // State untuk modal revoke

@@ -301,41 +301,19 @@
   color: var(--rc-text-secondary);
 }
 
+/* [UBAH] Status = teks berwarna saja (tanpa latar, bingkai, pil, atau huruf kapital). */
 .rc-badge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 14px;
-  border-radius: var(--rc-radius-full);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
-  border: 1px solid transparent;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
-.rc-badge--proses {
-  background: var(--rc-amber-bg);
-  color: var(--dk-text-amber, var(--rc-amber));
-  border-color: var(--rc-amber-border);
-}
-
-.rc-badge--disetujui {
-  background: var(--rc-green-bg);
-  color: var(--dk-text-green, var(--rc-green));
-  border-color: var(--rc-green-border);
-}
-
-.rc-badge--dikembalikan {
-  background: var(--rc-orange-bg);
-  color: var(--dk-text-amber, var(--rc-orange));
-  border-color: var(--rc-orange-border);
-}
-
-.rc-badge--ditolak {
-  background: var(--rc-rose-bg);
-  color: var(--dk-text-red, var(--rc-rose));
-  border-color: var(--rc-rose-border);
-}
+.rc-badge--proses { color: var(--dk-text-amber, var(--rc-amber)); }
+.rc-badge--disetujui { color: var(--dk-text-green, var(--rc-green)); }
+.rc-badge--dikembalikan { color: var(--dk-text-amber, var(--rc-orange)); }
+.rc-badge--ditolak { color: var(--dk-text-red, var(--rc-rose)); }
 
 /* ---------- Pagination ---------- */
 .rc-pagination {
