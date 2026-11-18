@@ -89,6 +89,8 @@ const clockToMinutes = (clock) => {
   return hour * 60 + minute;
 };
 
+const formatBreakMinutes = (minutes) => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`; // [BARU]
+
 function buildPlannedWork(shiftLabel, isRegular) {
   const label = String(shiftLabel || '');
   const scheduled = label.match(SCHEDULE_TIMES_PATTERN);
@@ -100,7 +102,7 @@ function buildPlannedWork(shiftLabel, isRegular) {
   let duration = clockToMinutes(end) - clockToMinutes(start);
   if (duration <= 0) duration += MINUTES_PER_DAY;
   const breakMinutes = duration <= SHORT_SHIFT_MINUTES ? 30 : 60;
-  return [start, end, `${Math.floor(breakMinutes / 60)}:${String(breakMinutes % 60).padStart(2, '0')}`];
+  return [start, end, formatBreakMinutes(breakMinutes)];
 }
 
 // [UBAH] Dipisah dari buildDailyRows supaya dipakai juga oleh baris bertipe asli untuk XLSX.
@@ -123,7 +125,9 @@ export function buildDailyRows(report) {
   const plannedWorkFor = createPlannedWorkResolver(report); // [UBAH]
 
   return report.rows.map((row) => {
-    const [plannedStart, plannedEnd, plannedBreak] = plannedWorkFor(row.shift);
+    const [plannedStart, plannedEnd, defaultBreak] = plannedWorkFor(row.shift);
+    // [BARU] Istirahat eksplisit dari jadwal khusus hari (mis. Jumat 11:30-13:00 = 1:30) menggantikan tebakan 30/60 menit.
+    const plannedBreak = row.plannedBreakMinutes != null && plannedStart !== '-' ? formatBreakMinutes(row.plannedBreakMinutes) : defaultBreak;
     return [
       formatExportDate(row.date),
       formatDayName(row.date),

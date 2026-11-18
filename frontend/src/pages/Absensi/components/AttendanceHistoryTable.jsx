@@ -50,6 +50,8 @@ import { IS_NOTE_DEMO_ENABLED, buildDemoNoteRows } from '../utils/dummyAttendanc
 import './AttendanceHistoryTable.css';
 import { getMyWorkSchedule } from '../../../services/attendanceService';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
+import { buildHolidayMap, toHolidayList } from '../../../utils/holidayMap'; // [BARU]
+import { formatRegularHours, resolveRegularDay } from '../../../utils/regularSchedule'; // [BARU]
 import { getHolidaysByMonth } from '../../../services/holidayService';
 import { getRiwayatByUser } from '../../../services/CutiService'; // [BARU] cuti disetujui
 import { attachApprovedLeave, filterApprovedLeaves } from '../utils/approvedLeave'; // [BARU]
@@ -97,6 +99,7 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
   const [exporting, setExporting] = useState(false);
   const [schedules, setSchedules] = useState([]);
   const [divisionType, setDivisionType] = useState('REGULAR');
+  const [regularSchedule, setRegularSchedule] = useState(null); // [BARU] jam kerja divisi Regular
   const [scheduleLoaded, setScheduleLoaded] = useState(false);
   const [holidaysByDate, setHolidaysByDate] = useState(LOCAL_HOLIDAYS_2026);
   const [approvedLeaves, setApprovedLeaves] = useState([]); // [BARU] cuti disetujui milik sendiri
@@ -117,22 +120,22 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
       getMyWorkSchedule(period.year, period.month + 1),
       // [UBAH] Periode tutup buku (21 s/d 20) melewati DUA bulan kalender: libur bulan
       // sebelumnya (tgl 21-akhir bulan) ikut diambil, sebelumnya hanya bulan akhir.
+      // [UBAH] Gagal memuat = null (bukan []) supaya buildHolidayMap tahu kapan memakai data cadangan.
       Promise.all([
-        getHolidaysByMonth(previousMonth.getFullYear(), previousMonth.getMonth() + 1, { silent: true }).catch(() => []),
-        getHolidaysByMonth(period.year, period.month + 1, { silent: true }).catch(() => []),
+        getHolidaysByMonth(previousMonth.getFullYear(), previousMonth.getMonth() + 1, { silent: true }).then(toHolidayList).catch(() => null),
+        getHolidaysByMonth(period.year, period.month + 1, { silent: true }).then(toHolidayList).catch(() => null),
       ]),
     ])
       .then(([result, holidayResults]) => {
         if (!active) return;
         setSchedules(result?.schedules || []);
         setDivisionType(result?.divisionType || 'REGULAR');
-        const holidayMap = { ...LOCAL_HOLIDAYS_2026 };
-        holidayResults.forEach((holidayResult) => {
-          (holidayResult?.data || holidayResult || []).forEach((holiday) => {
-            if (holiday?.date) holidayMap[holiday.date] = holiday.name || holiday.nama || 'Libur Nasional';
-          });
-        });
-        setHolidaysByDate(holidayMap);
+        setRegularSchedule(result?.regularSchedule || null); // [BARU]
+        // [UBAH] API = sumber utama; data lokal hanya untuk bulan yang gagal dimuat.
+        setHolidaysByDate(buildHolidayMap([
+          { year: previousMonth.getFullYear(), month: previousMonth.getMonth() + 1, holidays: holidayResults[0] },
+          { year: period.year, month: period.month + 1, holidays: holidayResults[1] },
+        ]));
         setScheduleLoaded(true);
       })
       .catch(() => { if (active) { setSchedules([]); setScheduleLoaded(true); } });
@@ -154,18 +157,18 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
         return { dateKey, date, label: !scheduleLoaded ? 'Memuat jadwal…' : !published ? 'Belum dipublikasikan' : published.shiftName ? `${published.shiftName} · ${published.startTime?.slice(0, 5)}–${published.endTime?.slice(0, 5)}` : 'Libur', off: Boolean(published && !published.shiftName) };
       }
       const nationalHoliday = holidaysByDate[dateKey];
-      return { dateKey, date, label: weekend ? 'Libur' : nationalHoliday ? `Libur · ${nationalHoliday}` : 'Reguler · 08:00–17:00', off: weekend || Boolean(nationalHoliday) };
+      return { dateKey, date, label: weekend ? 'Libur' : nationalHoliday ? `Libur · ${nationalHoliday}` : `Reguler · ${formatRegularHours(resolveRegularDay(regularSchedule, dateKey)).replace(' - ', '–')}`, off: weekend || Boolean(nationalHoliday) };
     });
-  }, [schedules, divisionType, scheduleLoaded, holidaysByDate]);
+  }, [schedules, divisionType, scheduleLoaded, holidaysByDate, regularSchedule]); // [UBAH] + regularSchedule
 
   const dailyRows = useMemo(
     () => (IS_NOTE_DEMO_ENABLED && isCurrentPeriod
       ? buildDemoNoteRows() // [SEMENTARA] pratinjau desain tanpa backend
       : attachApprovedLeave( // [UBAH] hari cuti disetujui tidak lagi terbaca Alpha
-        attachOvertime(buildMonthlyRows(records, period.year, period.month, new Date(), schedules, divisionType, holidaysByDate), overtimeRecords),
+        attachOvertime(buildMonthlyRows(records, period.year, period.month, new Date(), schedules, divisionType, holidaysByDate, regularSchedule), overtimeRecords),
         approvedLeaves,
       )),
-    [records, overtimeRecords, period.year, period.month, isCurrentPeriod, schedules, divisionType, holidaysByDate, approvedLeaves],
+    [records, overtimeRecords, period.year, period.month, isCurrentPeriod, schedules, divisionType, holidaysByDate, regularSchedule, approvedLeaves],
   );
 
   // Urutan di layar mengikuti sort; ekspor CSV/PDF tetap urut tanggal

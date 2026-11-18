@@ -1,4 +1,5 @@
 import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus.js';
+import { resolveRegularDay } from '../../../utils/regularSchedule.js'; // [BARU]
 const STATUS_TONES = { 'TANPA KETERANGAN': 'alpha', TERLAMBAT: 'telat', 'HADIR TEPAT WAKTU': 'hadir' };
 export const REPORT_STATUS_OPTIONS = [
   { value: 'TANPA KETERANGAN', label: 'Tanpa Keterangan (Alpha)' },
@@ -47,7 +48,8 @@ export function attachReportEdits(rows, employee, now = new Date()) {
         corrected.status = latest.afterStatus === 'TERLAMBAT' ? lateAttendanceStatus(row.lateApprovalStatus) : latest.afterStatus; corrected.tone = STATUS_TONES[latest.afterStatus];
         corrected.lateMinutes = 0;
         if (corrected.tone === 'telat' && row.checkInEvidence?.recordedAt) {
-          const time = schedules.get(row.date)?.startTime || '08:00:00';
+          // [UBAH] Jam masuk terjadwal: shift terpasang, atau jam Regular hari itu (bukan 08:00 tetap).
+          const time = schedules.get(row.date)?.startTime || resolveRegularDay(employee.regularSchedule, row.date).startTime;
           const start = new Date(`${row.date}T${time.length === 5 ? `${time}:00` : time}`);
           corrected.lateMinutes = Math.max(0, Math.floor((row.checkInEvidence.recordedAt - start) / 60000));
         }

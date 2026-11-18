@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import sys.hris.sims.overtime.dto.OvertimeResponse;
+import sys.hris.sims.schedule.dto.RegularScheduleResponse;
 import sys.hris.sims.schedule.dto.ScheduleEntryResponse;
 
 // [BARU] Response Laporan Absensi (HRD). Data dikirim MENTAH per karyawan
@@ -27,7 +28,9 @@ public record AttendanceReportResponse(LocalDate from, LocalDate to, List<Employ
             List<OvertimeResponse> overtimes,
             List<LeaveEntry> leaves,
             List<sys.hris.sims.attendance.report.ReportRevision> revisions,
-            List<ScheduleEntryResponse> shiftOptions) {
+            List<ScheduleEntryResponse> shiftOptions,
+            // [BARU] Jam kerja divisi Regular (dasar + jadwal khusus per hari). null untuk divisi Shifting.
+            RegularScheduleResponse regularSchedule) {
     }
 
     // Cuti yang sudah DISETUJUI (data mentah; sesi hanya terisi untuk cuti setengah hari).

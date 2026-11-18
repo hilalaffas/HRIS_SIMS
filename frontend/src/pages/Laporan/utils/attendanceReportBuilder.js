@@ -178,7 +178,7 @@ export function buildEmployeeReport(
   const baseRows = listPeriodsInRange(range.from, range.to).flatMap((period) => attachOvertime(
     buildMonthlyRows(
       records, period.year, period.month, now,
-      employee.schedules || [], employee.divisionType, holidaysByDate,
+      employee.schedules || [], employee.divisionType, holidaysByDate, employee.regularSchedule || null, // [UBAH] + jam kerja Regular
     ),
     overtimes,
   ));

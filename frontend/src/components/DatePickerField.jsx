@@ -14,6 +14,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LOCAL_HOLIDAYS_2026 } from '../constants/holidays';
+import { replaceMonthHolidays, toHolidayList } from '../utils/holidayMap'; // [BARU]
 import { getHolidaysByMonth } from '../services/holidayService';
 import './DatePickerField.css';
 
@@ -72,14 +73,8 @@ export default function DatePickerField({
     getHolidaysByMonth(view.year, view.month + 1, { silent: true })
       .then((result) => {
         if (cancelled) return;
-        const list = Array.isArray(result) ? result : result?.data || [];
-        setHolidayMap((current) => {
-          const next = { ...current };
-          list.forEach((holiday) => {
-            if (holiday?.date) next[holiday.date] = holiday.name || holiday.nama || 'Hari libur';
-          });
-          return next;
-        });
+        // [UBAH] Isi bulan ini DIGANTI data API (bukan ditambah), supaya tanggal salah di data lokal hilang.
+        setHolidayMap((current) => replaceMonthHolidays(current, view.year, view.month + 1, toHolidayList(result)));
       })
       .catch(() => {});
     return () => { cancelled = true; };

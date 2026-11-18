@@ -24,6 +24,7 @@ import sys.hris.sims.leave.repository.LeaveRepository;
 import sys.hris.sims.overtime.dto.OvertimeResponse;
 import sys.hris.sims.overtime.entity.OvertimeRequest;
 import sys.hris.sims.overtime.repository.OvertimeRepository;
+import sys.hris.sims.schedule.dto.RegularScheduleResponse;
 import sys.hris.sims.schedule.dto.ScheduleEntryResponse;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 
@@ -148,7 +149,8 @@ public class AttendanceReportService {
                 attendances.getOrDefault(employeeId, List.of()),
                 schedules.getOrDefault(employeeId, List.of()),
                 overtimes.getOrDefault(employeeId, List.of()),
-                leaves.getOrDefault(employeeId, List.of()), revisions, shiftOptions);
+                leaves.getOrDefault(employeeId, List.of()), revisions, shiftOptions,
+                RegularScheduleResponse.from(division)); // [BARU] jam kerja Regular untuk baris laporan
     }
 
     // Alasan & catatan cuti (teks bebas) sengaja TIDAK disertakan.
