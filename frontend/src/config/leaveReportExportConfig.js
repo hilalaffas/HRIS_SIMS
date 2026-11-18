@@ -1,8 +1,8 @@
 // File: src/config/leaveReportExportConfig.js
 //
 // [BARU] Konfigurasi ekspor untuk laporan yang dulu menjadi tab di halaman Manajemen Karyawan
-// (Ringkasan Cuti, Histori Cuti, Log Sistem). Sekarang Ringkasan Cuti & Histori Cuti ada di
-// halaman Laporan, dan Log Sistem punya halaman sendiri.
+// (Ringkasan Cuti, Histori Cuti, Log Sistem). Sekarang Ringkasan Cuti ada di halaman Laporan
+// (Histori Cuti dihapus, ekspor Excel ledger-nya ikut di Ringkasan Cuti), dan Log Sistem punya halaman sendiri.
 //
 // Bentuk tiap entri (dipakai hooks/useExportAction.js):
 //   formats        -> kunci format yang tersedia, urutan = urutan tombol ('csv' | 'xlsx')
@@ -28,8 +28,18 @@ const toPlainNumber = (value) => Number(Number(value ?? 0).toFixed(2));
 
 // Mengekspor baris yang SEDANG tampil di tabel (sudah terkena pencarian, filter tanggal, urutan).
 // Baris dilaporkan LeaveSummaryTable lewat context.summaryRows.
+// [UBAH] + format 'xlsx': Excel format ledger (pindahan tab Histori Cuti), dibuat backend sesuai
+// periode & kata kunci yang aktif di tabel (context.ledgerParams, dilaporkan LeaveSummaryTable).
 export const LEAVE_SUMMARY_EXPORT = {
-  formats: ['csv'],
+  formats: ['xlsx', 'csv'],
+  xlsx: {
+    buildBlob: ({ ledgerParams }) => exportLeaveLedgerXlsx(ledgerParams),
+    buildFileName: ({ ledgerParams }) => {
+      const { from, to } = ledgerParams;
+      const period = from || to ? `${from || 'awal'}_${to || 'akhir'}` : getTodayStamp();
+      return `${LEDGER_FILE_BASE}_${period}.xlsx`;
+    },
+  },
   fileNamePrefix: 'Ringkasan_Cuti_Karyawan',
   emptyMessage: 'Tidak ada data ringkasan cuti untuk diekspor.',
   headers: [
@@ -63,21 +73,6 @@ export const LEAVE_SUMMARY_EXPORT = {
         isComparable ? toPlainNumber(row.reconcileDifference) : '-',
       ];
     }),
-};
-
-// File Excel format ledger dibuat backend (GET /api/cuti/ledger/export-xlsx). Periode & kata kunci
-// pencarian diambil dari filter yang sedang aktif di tabel (context.ledgerParams, dilaporkan
-// LeaveLedgerTable).
-export const LEAVE_LEDGER_EXPORT = {
-  formats: ['xlsx'],
-  xlsx: {
-    buildBlob: ({ ledgerParams }) => exportLeaveLedgerXlsx(ledgerParams),
-    buildFileName: ({ ledgerParams }) => {
-      const { from, to } = ledgerParams;
-      const period = from || to ? `${from || 'awal'}_${to || 'akhir'}` : getTodayStamp();
-      return `${LEDGER_FILE_BASE}_${period}.xlsx`;
-    },
-  },
 };
 
 export const SYSTEM_LOG_EXPORT = {

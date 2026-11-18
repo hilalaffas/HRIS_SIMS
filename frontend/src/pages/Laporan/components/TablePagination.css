@@ -1,0 +1,42 @@
+/* src/pages/Laporan/components/TablePagination.css -- paginasi tabel laporan (Ringkasan Cuti) */
+.tblPager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.tblPager__info { margin: 0; font-size: 12px; color: var(--dk-text-3, #6b7280); }
+.tblPager__info strong { color: var(--dk-text, #111827); font-weight: 700; }
+.tblPager__controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.tblPager__size { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dk-text-3, #6b7280); }
+.tblPager__nav { display: flex; align-items: center; gap: 6px; }
+.tblPager__nav > button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--dk-text-3, #6b7280);
+  background: var(--dk-bg-subtle, #f8fafc);
+  border: 1px solid var(--dk-border, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color var(--motion-fast, 150ms) ease, border-color var(--motion-fast, 150ms) ease,
+    transform var(--motion-fast, 150ms) ease;
+}
+.tblPager__nav > button:hover:not(:disabled) { color: var(--color-primary); border-color: var(--color-primary-soft); transform: translateY(-1px); }
+.tblPager__nav > button:active:not(:disabled) { transform: scale(0.94); }
+.tblPager__nav > button:disabled { opacity: 0.4; cursor: not-allowed; }
+.tblPager__nav > button:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
+.tblPager__nav svg { width: 16px; height: 16px; }
+.tblPager__indicator { min-width: 54px; font-size: 12px; font-weight: 700; text-align: center; color: var(--dk-text, #111827); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .tblPager { flex-direction: column; align-items: stretch; }
+  .tblPager__controls { justify-content: space-between; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tblPager__nav > button { transition: none; }
+}

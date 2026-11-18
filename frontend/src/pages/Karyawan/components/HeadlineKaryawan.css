@@ -1,23 +1,10 @@
 /* [UBAH] Tema gelap: warna hardcode -> var(--dk-*, <hex terang asli>). Tampilan terang tidak berubah. Token: styles/tokens.css */
+/* [UBAH] Judul & deskripsi dihapus; wadah ini hanya memuat tombol ekspor di sisi kanan baris tab.
+   Garis pemisah pindah ke .karyawan-toolbar (Karyawan.css). */
 .headline-container {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding-bottom: 10px; /* Jarak dari teks ke garis pemisah */
-  border-bottom: 1px solid var(--dk-border, #e2e8f0); /* Ini garis transparan/tipis pertama */
-  margin-bottom: 10px; /* Jarak dari garis pemisah ke Tab Menu */
-}
-.headline-text h1 {
-  font-size: 20px;
-  color: var(--dk-text, #1a202c);
-  margin: 0 0 4px 0;
-  font-weight: 700;
-}
-
-.headline-text p {
-  font-size: 14px;
-  color: var(--dk-text-3, #718096);
-  margin: 0;
+  flex-shrink: 0;
 }
 
 /* Styling utama tombol */

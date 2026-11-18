@@ -19,7 +19,6 @@
 // Halaman lama (/ApplyCuti, /absensi, /lembur) tetap hidup -- dipakai deep link
 // notifikasi dan tabel Jadwal & Log Absensi.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // [UBAH] + useRef
-import { ClipboardList } from 'lucide-react';
 import Toast from '../../components/Toast';
 import ApprovalStatusCard from '../../components/ApprovalStatusCard';
 import useLeaveApplication from '../Cuti/applycuti/hooks/useLeaveApplication';
@@ -233,16 +232,7 @@ export default function Pengajuan({ user }) {
 
   return (
     <div className="pengajuan-page">
-      <header className="pgj-header">
-        <div>
-          <h1>
-            <ClipboardList aria-hidden="true" />
-            Pusat Pengajuan Karyawan
-          </h1>
-          <p>Ajukan cuti, izin/sakit, lembur, dan tukar shift dari satu tempat terpadu.</p>
-        </div>
-      </header>
-
+      {/* [UBAH] Header halaman "Pusat Pengajuan Karyawan" dihapus: tab menu langsung di atas. */}
       {/* [UBAH] Kartu jenis (PengajuanTypeCards) diganti tab menu bergaya halaman Karyawan */}
       <PengajuanTabMenu tabs={visibleTabs} activeKey={currentTab} onChange={setActiveTab} />
 

@@ -116,7 +116,7 @@ export default function AppRoutes({ user, onLogout, onLoginSuccess }) {
 
           {/* Wadah Halaman Manajemen Karyawan */}
           <Route path="/karyawan" element={<Karyawan user={user} />} />
-          <Route path="/kelola-divisi-shift" element={(isHrAdmin(user) || isSuperAdmin(user)) ? <KelolaDivisiShift standalone /> : <Navigate to="/dashboard" replace />} />
+          <Route path="/kelola-divisi-shift" element={(isHrAdmin(user) || isSuperAdmin(user)) ? <KelolaDivisiShift /> : <Navigate to="/dashboard" replace />} />
 
           {/* [UBAH] Laporan -- HRD_ADMIN & SUPER_ADMIN (backend juga membatasi: 403 untuk role lain).
               Tab yang tampil per role diatur di pages/Laporan/config/laporanConfig.js. */}

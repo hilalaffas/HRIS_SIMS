@@ -96,7 +96,7 @@ const parseScheduleXlsx = async (file) => {
   });
 };
 
-export default function KelolaDivisiShift({ standalone = false, karyawanList: initialEmployees }) {
+export default function KelolaDivisiShift({ karyawanList: initialEmployees }) {
   const [tab, setTab] = useState('divisi');
   const [name, setName] = useState('');
   const [type, setType] = useState('REGULAR');
@@ -532,7 +532,6 @@ export default function KelolaDivisiShift({ standalone = false, karyawanList: in
   };
 
   return <main className="kds-page">
-    {standalone && <header className="kds-heading"><h1>Kelola Divisi &amp; Shift</h1><p>Kelola divisi dan susun jadwal bulanan karyawan.</p></header>}
     <nav className="kds-tabs"><button className={tab === 'divisi' ? 'active' : ''} onClick={() => setTab('divisi')}>Kelola Divisi</button><button className={tab === 'jadwal' ? 'active' : ''} onClick={() => setTab('jadwal')}>Jadwal &amp; Shift Karyawan</button></nav>
     {error && <p className="kds-error">{error}</p>}{toast.message && <button type="button" role={toast.type === 'error' ? 'alert' : 'status'} className={`kds-toast kds-toast--${toast.type}`} onClick={() => setToast((current) => ({ ...current, message: '' }))}>{toast.message} ×</button>}
     {tab === 'divisi' ? <section className="kds-division-layout">

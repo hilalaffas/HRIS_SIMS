@@ -1,9 +1,9 @@
-import { api, getStoredToken, toApiUrl } from './api';
+import { getStoredToken, toApiUrl } from './api';
 
-// [BARU] Tab "Histori Cuti" (HR Admin & Super Admin) -- tabel format ledger + export Excel.
-// GET /api/cuti/ledger?from&to               -> { from, to, employees: [{ nikNumber, nik, name, remaining, usages: [{ date, days, comment, forfeited }] }] }
-// GET /api/cuti/ledger/export-xlsx?from&to&q -> file Excel (biner)
+// [UBAH] Tab "Histori Cuti" dihapus; tinggal ekspor Excel format ledger (tombol "Unduh XLSX" di tab Ringkasan Cuti).
+// GET /api/cuti/ledger/export-xlsx?from&to&q -> file Excel (biner), dibuat penuh oleh backend.
 // from/to boleh diisi salah satu; kosong semua = seluruh riwayat.
+// (Endpoint JSON GET /api/cuti/ledger di backend kini tidak dipakai frontend.)
 
 const buildQuery = (params) => {
   const query = new URLSearchParams();
@@ -13,8 +13,6 @@ const buildQuery = (params) => {
   const text = query.toString();
   return text ? `?${text}` : '';
 };
-
-export const getLeaveLedger = ({ from, to } = {}) => api.get(`/api/cuti/ledger${buildQuery({ from, to })}`);
 
 // Respons biner dibaca lewat fetch langsung (api.get membaca teks) dengan token yang sama. Mengembalikan Blob.
 export const exportLeaveLedgerXlsx = async ({ from, to, q } = {}) => {

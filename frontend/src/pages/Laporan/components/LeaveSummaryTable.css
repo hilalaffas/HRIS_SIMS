@@ -26,3 +26,5 @@
 .leaveSummary__num--negative { color: var(--dk-text-red, #be123c); font-weight: 600; }
 .leaveSummary__name { font-weight: 600; }
 .leaveSummary__meta { margin-top: 2px; font-size: 12px; color: var(--dk-text-3, #6b7280); }
+/* [BARU] Tombol ekspor di baris filter kartu: menempel di sisi kanan */
+.leaveSummary__actions { margin-left: auto; }

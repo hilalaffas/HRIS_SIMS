@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'; // [BARU] baca query param dari notifikasi cuti
 import './ApproveLeave.css';
 
-import HeadlineApproval from './components/HeadlineApproval';
 import TabMenu from './components/TabMenu';
 import ListCutiSection from './components/ListSection';
 import FormCuti from './components/Form';
@@ -222,8 +221,7 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
 
   return (
     <div className="approve-leaving-page">
-      <HeadlineApproval title="Pusat Persetujuan" description="Kelola antrean persetujuan dan tinjau riwayat keputusan Anda."/>
-
+      {/* [UBAH] Header halaman "Pusat Persetujuan" dihapus: kartu + tab menu langsung di atas. */}
       <div className="approve-leaving-page__body">
         {error && <div className="approvalSection__empty">{error}</div>}
         <TabMenu tabs={tabs} activeKey={activeTab} onChange={setActiveTab} />

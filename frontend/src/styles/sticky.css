@@ -1,0 +1,86 @@
+/* src/styles/sticky.css
+ *
+ * [BARU] Tab menu & nama kolom tabel "membeku" (sticky) saat halaman di-scroll ke bawah.
+ * Area scroll halaman = .content-outlet (layouts/MainLayout.css); sticky mengacu ke sana.
+ *
+ * 1) TAB MENU -- Laporan, Pengajuan, Karyawan, Persetujuan.
+ *    Strip tab ditarik naik setinggi padding .content-outlet (margin-top negatif) lalu diberi
+ *    padding-top yang sama, jadi posisi diam tidak bergeser; saat menempel, strip menutup
+ *    celah padding sehingga isi halaman tidak tampak di belakang tab. Tinggi strip dikunci
+ *    (--tabbar-h) supaya offset header tabel di bawahnya pasti pas.
+ *
+ * 2) NAMA KOLOM TABEL -- tabel dibungkus wadah overflow-x (geser kiri-kanan), dan wadah seperti
+ *    itu otomatis jadi area scroll sendiri (sticky tidak "tembus" ke halaman). Karena itu wadah
+ *    diberi tinggi maksimum: baris yang banyak di-scroll DI DALAM wadah, nama kolom menempel di
+ *    atasnya. Tabel pendek (mis. 5 baris) tidak terpengaruh.
+ *
+ * Tabel baru: tambahkan kelas wadah & kelas tabelnya ke dua daftar selektor di bagian 2.
+ */
+
+/* Padding area scroll (harus sama dengan MainLayout.css) + tinggi strip tab */
+.content-outlet {
+  --outlet-pad: var(--space-3, 0.75rem);
+  --tabbar-h: 2.25rem;
+  --table-max-h: max(18rem, calc(100vh - 17rem));
+}
+@media (min-width: 768px) { .content-outlet { --outlet-pad: var(--space-4, 1rem); } }
+@media (min-width: 1024px) { .content-outlet { --outlet-pad: var(--space-5, 1.25rem); } }
+
+/* ---------- 1) Tab menu ---------- */
+.lpr-tab-menu,
+.pgj-tab-menu,
+.karyawan-toolbar {
+  position: sticky;
+  top: calc(-1 * var(--outlet-pad)); /* [UBAH] bukan 0: sticky dihitung dari tepi DALAM padding area scroll, jadi digeser sebesar padding agar strip rapat ke navbar */
+  z-index: 20;
+  box-sizing: content-box;
+  height: var(--tabbar-h);
+  margin-top: calc(-1 * var(--outlet-pad));
+  padding-top: var(--outlet-pad);
+  align-items: flex-end;
+  background-color: var(--color-bg-content, #f4f7f6);
+}
+/* Karyawan: strip memuat juga tombol Ekspor Data (36px + 8px jarak bawah) */
+.karyawan-page { --tabbar-h: 2.75rem; }
+
+/* Persetujuan: tab menu ada di dalam kartu (.approve-leaving-page__body), ikut menempel di tepi atas.
+   overflow: hidden pada kartu diganti clip di ApproveLeave.css supaya sticky tidak terputus. */
+.approve-leaving-page .tab-menu {
+  position: sticky;
+  top: calc(-1 * var(--outlet-pad)); /* [UBAH] sama seperti di atas */
+  z-index: 20;
+  box-sizing: border-box;
+  height: 3.5rem;
+  align-items: flex-end;
+  background-color: var(--alv-bg-card, #fff);
+}
+
+/* ---------- 2) Nama kolom tabel ---------- */
+.content-outlet :is(
+  .apv-table-wrap,        /* components/ApprovalTable (Persetujuan) */
+  .lpr-table-scroll,      /* Laporan Absen */
+  .leaveSummary__scroll,  /* Laporan > Ringkasan Cuti */
+  .lmb-table-wrap,        /* Riwayat Lembur */
+  .pgj-history__scroll,   /* Riwayat Pengajuan */
+  .table-scroll-wrapper,  /* Direktori Karyawan */
+  .abs-table-wrap         /* Absensi */
+) {
+  max-height: var(--table-max-h);
+  overflow: auto;
+}
+
+.content-outlet :is(
+  .apv-table,
+  .lpr-table,
+  .leaveSummary__table,
+  .lmb-table,
+  .pgj-table,
+  .karyawan-table,
+  .abs-log-table
+) thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  /* Pada border-collapse: collapse, garis bawah header ikut "terlepas" saat menempel -> digambar ulang. */
+  box-shadow: inset 0 -1px 0 var(--dk-border, #e2e8f0);
+}
