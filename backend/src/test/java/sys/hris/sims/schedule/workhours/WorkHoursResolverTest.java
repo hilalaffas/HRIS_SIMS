@@ -66,6 +66,7 @@ class WorkHoursResolverTest {
         assertThat(friday.end()).isEqualTo(LocalTime.of(17, 30));
         assertThat(friday.hasBreak()).isTrue();
         assertThat(friday.requiredWork()).isEqualTo(Duration.ofHours(8)); // 9,5 jam - 1,5 jam istirahat
+        assertThat(friday.requiredAttendance()).isEqualTo(Duration.ofMinutes(570)); // [BARU] 8 jam + 1,5 jam istirahat
         assertThat(friday.endAt(FRIDAY)).isEqualTo(LocalDateTime.of(2026, 9, 25, 17, 30));
 
         WorkHours thursday = WorkHoursResolver.resolve(employee, THURSDAY, null);

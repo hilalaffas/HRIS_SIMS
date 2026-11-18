@@ -1,4 +1,4 @@
-import { resolveRegularDay } from '../../../utils/regularSchedule.js'; // [BARU]
+import { breakMinutesOf, resolveRegularDay } from '../../../utils/regularSchedule.js'; // [BARU]
 // Attendance timestamps are naive WIB wall-clock dates, matching parseLocalDate.
 // [UBAH] Formatter dibuat SEKALI (membuat Intl.DateTimeFormat itu mahal; sebelumnya dibuat di setiap pemanggilan).
 const WIB_FORMATTER = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
@@ -55,6 +55,8 @@ export function resolveActiveWorkShift(scheduleData, records = [], now = new Dat
     hoursLabel, shiftName: shifting ? schedule.shiftName : 'Shift Normal',
     label: `${shifting ? schedule.shiftName : 'Shift Normal'} (${hoursLabel} WIB)${bounds.overnight ? ' · selesai hari berikutnya' : ''}`,
     requiredWorkHours: shifting ? (bounds.endsAt - bounds.startsAt) / 3600000 : regularDay.requiredMinutes / 60, // [UBAH] sudah dikurangi istirahat
+    // [BARU] Lama HADIR minimum untuk aturan pulang cepat: kerja bersih + istirahat (hari jadwal khusus).
+    requiredAttendanceHours: shifting ? (bounds.endsAt - bounds.startsAt) / 3600000 : (regularDay.requiredMinutes + (breakMinutesOf(regularDay) || 0)) / 60,
     breakStartTime: regularDay?.breakStartTime || null, // [BARU]
     breakEndTime: regularDay?.breakEndTime || null,
     canCheckIn: !shifting || wall >= bounds.startsAt,

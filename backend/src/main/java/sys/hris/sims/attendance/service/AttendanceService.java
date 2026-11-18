@@ -223,10 +223,13 @@ public class AttendanceService {
                     .findActiveByAction(employee.getEmployeeId(), workDate, "MASUK")
                     .ifPresent(checkIn -> {
                         Duration worked = Duration.between(checkIn.getRecordedAt(), LocalDateTime.now(APP_ZONE));
-                        Duration required = workHours.requiredWork(); // [UBAH] sudah memperhitungkan istirahat
+                        // [UBAH] Jadwal khusus (ada istirahat): lama hadir wajib = kerja bersih + istirahat (ketat).
+                        Duration required = workHours.requiredAttendance();
                         if (worked.compareTo(required) < 0) {
                             throw new IllegalArgumentException(
-                                    "Durasi kerja belum memenuhi " + formatDuration(required) + ". Alasan pulang cepat wajib diisi.");
+                                    "Durasi kerja belum memenuhi " + formatDuration(required)
+                                            + (workHours.hasBreak() ? " (termasuk istirahat)" : "")
+                                            + ". Alasan pulang cepat wajib diisi.");
                         }
                     });
         }

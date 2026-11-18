@@ -160,7 +160,7 @@ export default function Absensi() {
     checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
     shiftEndTime: shiftContext.endsAt ? shiftContext.hoursLabel.split(' - ')[1] : null,
     shiftEndAt: shiftContext.endsAt,
-    requiredWorkHours: shiftContext.requiredWorkHours,
+    requiredWorkHours: shiftContext.requiredAttendanceHours ?? shiftContext.requiredWorkHours, // [UBAH] lama hadir (kerja bersih + istirahat)
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 

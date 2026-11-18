@@ -40,6 +40,9 @@ export async function getMyWorkSchedule(year, month) {
     divisionType: currentData?.divisionType || previousData?.divisionType || 'REGULAR',
     divisionName: currentData?.divisionName || previousData?.divisionName || '',
     schedules: [...(previousData?.schedules || []), ...(currentData?.schedules || [])],
+    // [BARU] Jam kerja divisi Regular (jam dasar + jadwal khusus per hari). Sebelumnya field ini dibuang di sini,
+    // sehingga Absensi, pulang cepat, dan Dashboard selalu jatuh ke 08:00 - 17:00. Null untuk divisi Shifting.
+    regularSchedule: currentData?.regularSchedule || previousData?.regularSchedule || null,
   };
 }
 
