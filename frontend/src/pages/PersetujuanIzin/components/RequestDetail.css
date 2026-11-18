@@ -73,3 +73,7 @@
   .pzn-detail { padding: var(--space-4); }
   .pzn-detail__info { grid-template-columns: 1fr; }
 }
+
+.pzn-decided--info { background: var(--dk-tint-blue, #eff6ff); border-color: #bfdbfe; color: var(--dk-text-blue, #2563eb); }
+.pzn-decided--purple { background: var(--dk-tint-purple, #faf5ff); border-color: #d8b4fe; color: var(--dk-text-purple, #7e22ce); }
+.pzn-decided--warning { background: var(--dk-tint-amber, #fffbeb); border-color: #fde68a; color: #b45309; }

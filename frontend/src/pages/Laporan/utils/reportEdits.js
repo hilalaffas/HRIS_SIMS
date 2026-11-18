@@ -1,3 +1,4 @@
+import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus.js';
 const STATUS_TONES = { 'TANPA KETERANGAN': 'alpha', TERLAMBAT: 'telat', 'HADIR TEPAT WAKTU': 'hadir' };
 export const REPORT_STATUS_OPTIONS = [
   { value: 'TANPA KETERANGAN', label: 'Tanpa Keterangan (Alpha)' },
@@ -43,7 +44,7 @@ export function attachReportEdits(rows, employee, now = new Date()) {
     const corrected = { ...row };
     if (latest && !future) {
       if (!protectedStatus && STATUS_TONES[latest.afterStatus]) {
-        corrected.status = latest.afterStatus; corrected.tone = STATUS_TONES[latest.afterStatus];
+        corrected.status = latest.afterStatus === 'TERLAMBAT' ? lateAttendanceStatus(row.lateApprovalStatus) : latest.afterStatus; corrected.tone = STATUS_TONES[latest.afterStatus];
         corrected.lateMinutes = 0;
         if (corrected.tone === 'telat' && row.checkInEvidence?.recordedAt) {
           const time = schedules.get(row.date)?.startTime || '08:00:00';

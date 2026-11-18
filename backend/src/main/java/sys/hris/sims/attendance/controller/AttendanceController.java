@@ -180,10 +180,10 @@ public class AttendanceController {
         activityLogService.log(
                 authentication.getName(),
                 getCurrentUserId(authentication),
-                "APPROVED".equals(response.getApprovalStatus()) ? "APPROVE_SAKIT" : "REJECT_SAKIT",
+                ("APPROVED".equals(response.getApprovalStatus()) ? "APPROVE_" : "REJECT_") + ("SAKIT".equals(response.getReason()) ? "SAKIT" : "IZIN_TERLAMBAT"),
                 "attendances",
                 response.getAttendanceId(),
-                "Pengajuan sakit " + response.getEmployeeName() + " "
+                "Pengajuan " + ("SAKIT".equals(response.getReason()) ? "sakit " : "izin terlambat ") + response.getEmployeeName() + " "
                         + ("APPROVED".equals(response.getApprovalStatus()) ? "disetujui" : "ditolak"),
                 httpRequest);
 

@@ -15,6 +15,8 @@ import {
   buildShiftSwapCardModel, // [BARU]
   buildSickCardModel,
 } from '../../../utils/approvalCardModels';
+import { sickApprovalStatus } from '../../../utils/sickApprovalStatus';
+import { buildPermissionLogs } from '../../../utils/permissionReviewLog';
 import { buildOvertimeLogs } from '../../../utils/overtimeLog'; // [BARU] log pemeriksaan lembur
 
 export const REQUEST_KIND = {
@@ -177,7 +179,7 @@ function toSickItem(record) {
     sortKey: dateToSortKey(record.recordedAt, record.attendanceDate),
     detailText: withDetail(record.note, `${record.leaveDays} Hari`),
     statusCode: record.approvalStatus || 'PENDING',
-    statusLabel: record.approvalStatus === 'APPROVED' ? 'Disetujui' : model.badgeLabel,
+    statusLabel: model.badgeLabel,
     documentStatus: document,
     statusTone: model.tone,
     statusEmphasis: false, // persetujuan izin dan status surat ditampilkan terpisah
@@ -190,17 +192,18 @@ function toSickItem(record) {
 }
 
 function toLateItem(record) {
+  const status = sickApprovalStatus(record);
   return {
     key: `late-${record.id}`,
     kind: REQUEST_KIND.LATE,
     refId: record.id,
     sortKey: dateToSortKey(record.recordedAt, record.attendanceDate),
     detailText: record.note || '-',
-    statusCode: 'RECORDED',
-    statusLabel: 'Tercatat',
-    statusTone: 'success',
+    statusCode: record.approvalStatus === 'NOT_REQUIRED' ? 'RECORDED' : record.approvalStatus || 'PENDING',
+    statusLabel: status.label,
+    statusTone: status.tone,
     needsLetter: false,
-    requiresApproval: false,
+    requiresApproval: record.approvalStatus !== 'NOT_REQUIRED',
     action: ROW_ACTION.DETAIL,
     source: record,
   };
@@ -287,6 +290,7 @@ export function buildRequestDetail(item, cardModel) {
     return {
       ...base,
       title: 'Detail Pengajuan Izin Sakit',
+      logs: buildPermissionLogs(record),
       subtitle: 'Pantau persetujuan HRD dan kelengkapan surat dokter',
       fields: [
         { label: 'Tanggal Pengajuan', value: record.recordedAt ? record.recordedAt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : formatDateLabel(record.attendanceDate) },
@@ -300,7 +304,7 @@ export function buildRequestDetail(item, cardModel) {
         ...(medicalDocumentStatus(record).periodLabel ? [{ label: 'Periode pada Surat Dokter', value: medicalDocumentStatus(record).periodLabel }] : []),
         { label: 'Waktu Pengajuan', value: record.time },
       ],
-      sections: [{ label: 'Keterangan', value: record.note || '-' }, ...(record.approvalStatus === 'REJECTED' && record.reviewNote ? [{ label: 'Alasan Penolakan HRD', value: record.reviewNote }] : []), ...(record.documentReviewNote ? [{ label: 'Catatan Verifikasi Surat HRD', value: record.documentReviewNote }] : [])],
+      sections: [{ label: 'Keterangan', value: record.note || '-' }, ...(record.reviewNote ? [{ label: record.approvalStatus === 'REJECTED' ? 'Alasan Penolakan HRD' : 'Catatan HRD untuk Karyawan', value: record.reviewNote }] : []), ...(record.documentReviewNote ? [{ label: 'Catatan Verifikasi Surat HRD', value: record.documentReviewNote }] : [])],
     };
   }
 
@@ -325,11 +329,13 @@ export function buildRequestDetail(item, cardModel) {
   return {
     ...base,
     title: 'Detail Izin Terlambat',
-    subtitle: 'Pemberitahuan terlambat tidak memerlukan persetujuan atasan',
+    logs: buildPermissionLogs(record),
+    subtitle: record.approvalStatus === 'NOT_REQUIRED' ? 'Pemberitahuan izin terlambat (data lama)' : 'Pengajuan izin terlambat diperiksa oleh HRD',
     fields: [
       { label: 'Tanggal', value: formatDateLabel(record.attendanceDate) },
       { label: 'Waktu Dicatat', value: record.time },
+      { label: 'Bukti Terlambat', value: record.documentUrl ? 'Lihat bukti terlambat' : 'Belum dilampirkan', href: toSafeHttpUrl(record.documentUrl) },
     ],
-    sections: [{ label: 'Keterangan', value: record.note || '-' }],
+    sections: [{ label: 'Keterangan', value: record.note || '-' }, ...(record.reviewNote ? [{ label: record.approvalStatus === 'REJECTED' ? 'Alasan Penolakan HRD' : 'Catatan HRD untuk Karyawan', value: record.reviewNote }] : [])],
   };
 }

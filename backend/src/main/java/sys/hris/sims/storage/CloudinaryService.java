@@ -253,15 +253,23 @@ public class CloudinaryService {
     }
 
     public String uploadMedicalDocument(MultipartFile file, String publicId) throws IOException {
+        return uploadPermissionDocument(file, publicId, "medical-documents");
+    }
+
+    public String uploadLateEvidence(MultipartFile file, String publicId) throws IOException {
+        return uploadPermissionDocument(file, publicId, "late-evidence");
+    }
+
+    private String uploadPermissionDocument(MultipartFile file, String publicId, String category) throws IOException {
         boolean isPdf = validateMedicalDocument(file);
-        if (isLocalMode()) return saveLocal(file, "medical-documents", publicId, false); // [BARU]
+        if (isLocalMode()) return saveLocal(file, category, publicId, false);
 
         // PDF diunggah sebagai "raw" (ekstensi .pdf harus ikut di public_id) supaya
         // tautannya bisa dibuka langsung; gambar tetap "image".
         Map uploadResult = cloudinary.uploader().upload(
             file.getBytes(),
             ObjectUtils.asMap(
-                "folder", folder("medical-documents"),
+                "folder", folder(category),
                 "public_id", isPdf ? publicId + ".pdf" : publicId,
                 "overwrite", false,
                 "resource_type", isPdf ? "raw" : "image"

@@ -140,7 +140,7 @@ export default function EmployeeReportDetail({ report, periodLabel, exportingKin
           <table className="lpr-daily-table">
             <thead>
               <tr>{DAILY_HEADERS.map((header) => <th key={header}>{header}</th>)}
-                {["Foto Masuk", "Foto Pulang", "GPS Masuk", "GPS Pulang", "Aksi"].map((header) => <th key={header}>{header}</th>)}
+                {["Foto Masuk", "GPS Masuk", "GPS Pulang", "Aksi"].map((header) => <th key={header}>{header}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -158,7 +158,6 @@ export default function EmployeeReportDetail({ report, periodLabel, exportingKin
                       </td>
                     ))}
                     <td><AttendancePhoto record={report.rows[rowIndex].checkInEvidence} label={`Absen Masuk · ${report.rows[rowIndex].dateLabel}`} onPreview={setPreview} /></td>
-                    <td><AttendancePhoto record={report.rows[rowIndex].checkOutEvidence} label={`Absen Pulang · ${report.rows[rowIndex].dateLabel}`} onPreview={setPreview} /></td>
                     <td><AttendanceGps record={report.rows[rowIndex].checkInEvidence} label="masuk" /></td>
                     <td><AttendanceGps record={report.rows[rowIndex].checkOutEvidence} label="pulang" /></td>
                     <td><div className="lpr-edit-actions">

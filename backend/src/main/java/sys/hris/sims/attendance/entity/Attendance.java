@@ -4,20 +4,28 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import sys.hris.sims.employee.entity.Employee;
 
 // [BARU] Entity absensi -- realisasi modul Absensi. Pola mengikuti
@@ -83,6 +91,17 @@ public class Attendance {
     // 'PENDING' -> 'APPROVED' / 'REJECTED' (diputuskan SuperAdmin).
     @Column(name = "approval_status", nullable = false, length = 20)
     private String approvalStatus;
+
+    // Riwayat pemeriksaan Sakit/Izin. LAZY supaya baris absensi biasa (ABSEN) tidak ikut memuat
+    // koleksi ini; batch fetching diatur global (hibernate.default_batch_fetch_size).
+    // Dikecualikan dari equals/hashCode/toString agar koleksi lazy tidak ter-inisialisasi tanpa sengaja.
+    @Builder.Default
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "attendance_permission_events", joinColumns = @JoinColumn(name = "attendance_id"))
+    @OrderColumn(name = "event_index")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private List<PermissionReviewEvent> reviewEvents = new ArrayList<>();
 
     // [BARU] Nama lokasi hasil reverse geocoding (diisi backend, boleh null).
     @Column(name = "location_name", length = 255)

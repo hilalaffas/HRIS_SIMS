@@ -27,6 +27,6 @@ public class PermissionSubmitRequest {
 
     private boolean earlyCheckout;
 
-    // Surat dokter -- opsional (boleh menyusul). Hanya dipakai untuk SAKIT.
+    // Surat dokter boleh menyusul untuk SAKIT. Untuk TERLAMBAT, bukti wajib saat pengajuan.
     private MultipartFile document;
 }

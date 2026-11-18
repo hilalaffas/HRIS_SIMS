@@ -17,6 +17,7 @@ import PengajuanFormCard, { FieldError } from '../components/PengajuanFormCard';
 import PengajuanHistoryTable from '../components/PengajuanHistoryTable';
 import usePermissionForm, { PERMISSION_NOTE_MAX_LENGTH } from '../hooks/usePermissionForm';
 import { inputErrorClass } from '../../../utils/validation';
+import LateEvidenceField from '../../Absensi/components/LateEvidenceField';
 
 const TYPE_OPTIONS = [
   { value: 'SAKIT', label: 'Izin Sakit (Butuh Surat Sakit Dokter)' },
@@ -32,7 +33,7 @@ export default function PermissionTab({ onSubmit, historyItems, loading, onSelec
       <PengajuanFormCard
         icon={FilePenLine}
         title="Formulir Pengajuan Sakit & Izin"
-        subtitle="Laporkan sakit atau keterlambatan Anda; atasan akan memprosesnya secara berjenjang."
+        subtitle="Laporkan sakit atau keterlambatan Anda beserta bukti untuk diperiksa HRD."
         onSubmit={form.handleSubmit}
         isSubmitting={form.isSubmitting}
         errorMessage={form.errorMessage}
@@ -91,6 +92,11 @@ export default function PermissionTab({ onSubmit, historyItems, loading, onSelec
             <FieldError message={fieldErrors.days} />
           </div>
         )}
+        {!form.isSick && <div className="form-group">
+          <span className="form-label">Unggah / Foto Bukti Terlambat *</span>
+          <LateEvidenceField file={form.documentFile} onChange={form.changeDocumentFile} onError={form.setErrorMessage} disabled={form.isSubmitting} />
+          <FieldError message={fieldErrors.documentFile} />
+        </div>}
       </PengajuanFormCard>
 
       <PengajuanHistoryTable

@@ -121,7 +121,8 @@ export default function usePermissionApprovals(enabled = true) {
   const stats = useMemo(() => {
     const pending = rows.filter((row) => row.status === 'PENDING');
     return {
-      pending: pending.length,
+      pending: pending.length + rows.filter((row) => row.documentReviewPending).length,
+      initialPending: pending.length,
       documentPending: rows.filter((row) => row.documentReviewPending).length,
       sick: pending.filter((row) => row.type === 'SAKIT').length,
       other: pending.filter((row) => row.type !== 'SAKIT').length,

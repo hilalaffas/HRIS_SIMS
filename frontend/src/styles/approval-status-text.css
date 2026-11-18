@@ -1,0 +1,53 @@
+/* Shared approval status labels. Important declarations keep lazy-loaded legacy
+   badge styles from restoring backgrounds; action buttons are not targeted. */
+:root {
+  --approval-status-orange: #b45309;
+  --approval-status-blue: #1d4ed8;
+  --approval-status-purple: #7e22ce;
+  --approval-status-red: #b91c1c;
+  --approval-status-green: #047857;
+  --approval-status-muted: #475569;
+}
+[data-theme='dark'] {
+  --approval-status-orange: #fbbf24;
+  --approval-status-blue: #93c5fd;
+  --approval-status-purple: #d8b4fe;
+  --approval-status-red: #fca5a5;
+  --approval-status-green: #6ee7b7;
+  --approval-status-muted: #cbd5e1;
+}
+:is(.statusBadge, .apv-status, .pgj-status, .pgj-detail-status, .approvalBadge,
+    .form-cuti__status, .form-cuti__log-badge, .aps__chip, .pzn-decided) {
+  --approval-status-ink: var(--approval-status-muted);
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  color: var(--approval-status-ink) !important;
+}
+:is(.statusBadge--orange, .statusBadge--amber, .apv-status--amber,
+    .pgj-status--warning, .pgj-detail-status--warning, .approvalBadge--warning,
+    .form-cuti__status--warning, .aps__chip--warning, .pzn-decided--warning) {
+  --approval-status-ink: var(--approval-status-orange);
+}
+:is(.statusBadge--blue, .apv-status--blue, .pgj-status--info, .pgj-detail-status--info,
+    .approvalBadge--info, .form-cuti__status--info, .form-cuti__log-badge--info,
+    .aps__chip--info, .pzn-decided--info) {
+  --approval-status-ink: var(--approval-status-blue);
+}
+:is(.statusBadge--purple, .pgj-status--purple, .pgj-detail-status--purple,
+    .approvalBadge--purple, .pzn-decided--purple) {
+  --approval-status-ink: var(--approval-status-purple);
+}
+:is(.statusBadge--rose, .apv-status--rose, .pgj-status--danger,
+    .pgj-detail-status--danger, .approvalBadge--danger, .form-cuti__status--danger,
+    .form-cuti__log-badge--danger, .aps__chip--danger, .pzn-decided--rejected) {
+  --approval-status-ink: var(--approval-status-red);
+}
+:is(.statusBadge--green, .apv-status--green, .pgj-status--success,
+    .pgj-detail-status--success, .approvalBadge--success, .form-cuti__status--success,
+    .form-cuti__log-badge--success, .aps__chip--success, .pzn-decided--approved) {
+  --approval-status-ink: var(--approval-status-green);
+}
+.pgj-status.is-active { text-decoration: underline; text-underline-offset: 3px; }

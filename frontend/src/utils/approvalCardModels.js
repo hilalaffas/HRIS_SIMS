@@ -6,6 +6,7 @@ import { medicalDocumentStatus } from './medicalDocumentStatus';
 // arti status ini bagi kartu" ada di sini, bukan di komponen tampilan.
 import { formatDateLabel } from '../services/attendanceService';
 import { buildTimeline, getStatusMeta, resolveFlowState } from '../constants/overtimeFlow';
+import { sickApprovalStatus } from './sickApprovalStatus';
 
 // "2026-10-05T20:05:11" -> "05 Okt 2026, 20:05 WIB"
 export function formatSubmittedLabel(createdAt) {
@@ -178,32 +179,11 @@ export function buildSickCardModel(record, { isLatest = false } = {}) {
   else if (hasLetter) letterState = 'current';
   else if (approval === 'APPROVED' && letterMissing) letterState = 'current';
 
-  let tone = 'warning';
-  let badgeLabel = 'Menunggu HRD';
-  let hint = 'Menunggu review dari HRD Admin.';
-  if (approval === 'REJECTED') {
-    tone = 'danger';
-    badgeLabel = 'Ditolak';
-    hint = record.reviewNote ? `Alasan Penolakan HRD: ${record.reviewNote}` : 'Pengajuan izin sakit ditolak oleh HRD.';
-  } else if (approval === 'APPROVED' && letterMissing) {
-    badgeLabel = 'Susul Surat Dokter';
-    hint = 'Pengajuan disetujui. Surat dokter tetap wajib: klik Aksi untuk mengunggah surat susulan.';
-  } else if (approval === 'APPROVED') {
-    tone = 'success';
-    badgeLabel = 'Disetujui';
-    hint = 'Pengajuan izin sakit telah disetujui.';
-  } else if (letterMissing) {
-    hint = 'Menunggu review HRD. Surat dokter masih perlu diunggah (boleh menyusul).';
-  }
-
-  if (approval === 'APPROVED') {
-    tone = 'success'; badgeLabel = 'Disetujui';
-    hint = `Izin sakit disetujui. ${document.label}.${document.note ? ` Catatan HRD: ${document.note}` : ''}`;
-  }
-
-  if (approval !== 'REJECTED' && document.code === 'EXPIRED') {
-    hint = 'Batas upload surat dokter terlewati. Absensi pada hari kerja dihitung Tanpa Keterangan, meskipun izin sebelumnya disetujui.';
-  }
+  const status = sickApprovalStatus(record, document);
+  const tone = status.tone;
+  const badgeLabel = status.label;
+  const reviewNote = approval === 'REJECTED' ? record.reviewNote : document.note || record.reviewNote;
+  const hint = `${status.condition} ${status.nextAction}${reviewNote ? ` ${approval === 'REJECTED' || document.code === 'REJECTED' ? 'Alasan Penolakan HRD' : 'Catatan HRD'}: ${reviewNote}` : ''}`;
 
   // Urutan tampilan: Diajukan -> Surat Dokter -> Review HRD (review di paling akhir).
   const steps = [{ key: 'submitted', label: 'Diajukan', state: 'done' }];

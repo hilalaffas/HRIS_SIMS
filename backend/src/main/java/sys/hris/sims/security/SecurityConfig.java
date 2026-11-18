@@ -430,8 +430,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi/corrections/me")
                         .authenticated()
 
-                        // [UBAH] + HRD_ADMIN & HRD_KARYAWAN (approver pengajuan baru). LEADER/SPV/MANAGER
-                        // dipertahankan untuk pengajuan lama yang masih PENDING.
+                        // Koreksi mengikuti hierarki Leader/SPV/Manager. HRD tetap dapat memproses
+                        // pengajuan rekan HRD dan tahap HRD yang sudah ditugaskan sebelumnya.
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/corrections/approvers")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/api/absensi/corrections/approvals")
                         .hasAnyRole("LEADER", "SPV", "MANAGER", "HRD_ADMIN", "HRD_KARYAWAN", "SUPER_ADMIN", "DEV")
 

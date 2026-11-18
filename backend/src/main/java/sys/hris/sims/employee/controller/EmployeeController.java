@@ -102,7 +102,9 @@ public class EmployeeController {
 
         Long divisiId = divisionSource.getDivisi() == null ? null : divisionSource.getDivisi().getId();
 
+        Long requesterEmployeeId = divisionSource.getEmployeeId();
         List<Map<String, Object>> response = karyawanService.getApproversByRoleAndDivisi(role, divisiId).stream()
+                .filter(person -> !person.getEmployeeId().equals(requesterEmployeeId))
                 .map(employee -> Map.<String, Object>of(
                         "employeeId", employee.getEmployeeId(),
                         "fullName", employee.getFullName(),

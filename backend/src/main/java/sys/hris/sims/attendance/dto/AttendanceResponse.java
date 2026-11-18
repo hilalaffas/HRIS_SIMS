@@ -3,11 +3,13 @@ package sys.hris.sims.attendance.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import sys.hris.sims.attendance.entity.PermissionReviewEvent;
 
 // [BARU] Response absensi -- data dikirim MENTAH (recordedAt ISO,
 // koordinat mentah) dan diformat di frontend (services/attendanceService.js),
@@ -42,6 +44,8 @@ public class AttendanceResponse {
 
     // [BARU] NOT_REQUIRED / PENDING / APPROVED / REJECTED
     private String approvalStatus;
+    // Riwayat pemeriksaan; hanya terisi untuk pengajuan Sakit/Izin.
+    private List<PermissionReviewEvent> reviewEvents;
 
     // [BARU] Nama lokasi dari reverse geocoding backend; null bila tidak tersedia.
     private String locationName;

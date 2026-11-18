@@ -1,0 +1,7 @@
+.permission-process-modal { width: min(900px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); }
+.permission-process-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.permission-process-modal .pzn-detail { animation: none; }
+@media (max-width: 600px) {
+  .permission-process-modal { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .permission-process-modal .pzn-detail { padding: 16px; gap: 16px; }
+}

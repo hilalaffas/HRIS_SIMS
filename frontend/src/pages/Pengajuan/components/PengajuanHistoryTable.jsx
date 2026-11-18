@@ -20,7 +20,7 @@ import './PengajuanHistoryTable.css';
 const PAGE_SIZE = 8;
 const SKELETON_ROWS = 3;
 
-const STATUS_ICON = { warning: Clock3, success: Check, info: RotateCcw };
+const STATUS_ICON = { warning: Clock3, success: Check, info: RotateCcw, purple: Hourglass, danger: XCircle };
 
 // [BARU] Tombol AKSI berbentuk pil, label & warna mengikuti kode status pengajuan.
 const ACTION_PILL = {
@@ -142,7 +142,7 @@ export default function PengajuanHistoryTable({
               const needsOvertimeApprovers = item.kind === 'OVERTIME' && item.statusCode === 'PENDING'
                 && !(item.source?.approvals || []).length;
               const typeLabel = item.typeLabel || kind.label; // [BARU]
-              const pill = isUpload ? { ...UPLOAD_ACTION_PILL, label: item.documentStatus?.code === 'REJECTED' ? 'UPLOAD ULANG' : UPLOAD_ACTION_PILL.label } : (needsOvertimeApprovers ? COMPLETE_APPROVAL_PILL : (ACTION_PILL[item.statusCode] || DEFAULT_ACTION_PILL));
+              const pill = isUpload ? { ...UPLOAD_ACTION_PILL, label: item.documentStatus?.code === 'REJECTED' ? 'UPLOAD ULANG' : UPLOAD_ACTION_PILL.label } : (needsOvertimeApprovers ? COMPLETE_APPROVAL_PILL : (item.kind === 'SICK' ? DEFAULT_ACTION_PILL : (ACTION_PILL[item.statusCode] || DEFAULT_ACTION_PILL)));
               const ActionIcon = pill.Icon;
               const actionLabel = isUpload ? 'Upload surat dokter susulan' : (needsOvertimeApprovers
                 ? 'Lengkapi nama Leader, SPV, dan Manager untuk pengajuan lembur lama'
