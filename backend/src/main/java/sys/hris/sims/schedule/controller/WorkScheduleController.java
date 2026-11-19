@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.schedule.dto.ScheduleEntryResponse;
 import sys.hris.sims.schedule.dto.MyWorkScheduleResponse;
 import sys.hris.sims.schedule.dto.SchedulePublishRequest;
@@ -30,10 +31,13 @@ public class WorkScheduleController {
     private final WorkScheduleService scheduleService;
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
 
     public WorkScheduleController(WorkScheduleService scheduleService,
                                   ActivityLogService activityLogService,
-                                  UserRepository userRepository) {
+                                  UserRepository userRepository,
+                                  HiddenAccountPolicy hiddenAccountPolicy) {
+        this.hiddenAccountPolicy = hiddenAccountPolicy;
         this.scheduleService = scheduleService;
         this.activityLogService = activityLogService;
         this.userRepository = userRepository;
@@ -41,8 +45,10 @@ public class WorkScheduleController {
 
     @GetMapping
     public ResponseEntity<List<ScheduleEntryResponse>> getByMonth(@RequestParam int year,
-                                                                  @RequestParam int month) {
-        return ResponseEntity.ok(scheduleService.getByMonth(year, month));
+                                                                  @RequestParam int month,
+                                                                  Authentication authentication) {
+        return ResponseEntity.ok(hiddenAccountPolicy.excludeHiddenById( // [BARU] jadwal superadmin/dev tidak tampil
+                authentication.getName(), scheduleService.getByMonth(year, month), ScheduleEntryResponse::employeeId));
     }
 
     @GetMapping("/me")

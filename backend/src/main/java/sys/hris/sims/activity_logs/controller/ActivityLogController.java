@@ -3,6 +3,7 @@ package sys.hris.sims.activity_logs.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 
 @RestController
@@ -13,12 +14,12 @@ public class ActivityLogController {
     private final ActivityLogService activityLogService;
 
     @GetMapping
-    public ResponseEntity<?> getAllLogs() {
-        return ResponseEntity.ok(activityLogService.getAllLogs());
+    public ResponseEntity<?> getAllLogs(Authentication authentication) {
+        return ResponseEntity.ok(activityLogService.getAllLogs(authentication.getName()));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getLogsByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(activityLogService.getLogsByUser(userId));
+    public ResponseEntity<?> getLogsByUser(@PathVariable Long userId, Authentication authentication) {
+        return ResponseEntity.ok(activityLogService.getLogsByUser(userId, authentication.getName()));
     }
 }

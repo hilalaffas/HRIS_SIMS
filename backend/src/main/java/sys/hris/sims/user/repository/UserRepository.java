@@ -21,4 +21,10 @@ public interface UserRepository
     @Query("select u from User u where upper(u.roleId.roleName) in :names")
     List<User> findByRoleNamesUpper(@Param("names") Collection<String> names);
 
+    // [BARU] Username semua akun tersembunyi (role DEV/SUPER_ADMIN atau username tertentu, mis. superadmin).
+    // Akun dev yang dikenali lewat env DEV_ACCESS_USERNAME sudah punya role DEV (V53), jadi ikut terambil.
+    @Query("select u.username from User u where upper(u.roleId.roleName) in :roleNames or lower(u.username) in :usernames")
+    List<String> findHiddenUsernames(@Param("roleNames") Collection<String> roleNames,
+                                     @Param("usernames") Collection<String> usernames);
+
 }

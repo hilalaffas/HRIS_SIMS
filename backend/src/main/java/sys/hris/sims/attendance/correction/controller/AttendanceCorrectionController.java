@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.attendance.correction.dto.*;
 import sys.hris.sims.attendance.correction.service.AttendanceCorrectionService;
 
@@ -13,6 +14,7 @@ import sys.hris.sims.attendance.correction.service.AttendanceCorrectionService;
 @RequiredArgsConstructor
 public class AttendanceCorrectionController {
     private final AttendanceCorrectionService service;
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
 
     @PostMapping("/me")
     public ResponseEntity<AttendanceCorrectionResponse> submit(
@@ -32,7 +34,8 @@ public class AttendanceCorrectionController {
 
     @GetMapping("/approvals")
     public ResponseEntity<List<AttendanceCorrectionResponse>> approvals(Authentication authentication) {
-        return ResponseEntity.ok(service.getApprovals(authentication));
+        return ResponseEntity.ok(hiddenAccountPolicy.excludeHiddenById( // [BARU]
+                authentication.getName(), service.getApprovals(authentication), AttendanceCorrectionResponse::getEmployeeId));
     }
 
     @PutMapping("/{id}/approval")

@@ -17,6 +17,11 @@ public class DevAccessService {
         this.devUsername = devUsername == null ? "" : devUsername.trim();
     }
 
+    // [BARU] Dipakai HiddenAccountPolicy untuk menyaring data berbasis username/ID. Jangan dikirim ke client.
+    public String devUsername() {
+        return devUsername;
+    }
+
     public boolean isDevAccount(String username) {
         return !devUsername.isEmpty()
                 && username != null

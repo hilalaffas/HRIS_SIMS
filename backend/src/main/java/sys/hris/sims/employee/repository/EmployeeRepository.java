@@ -30,6 +30,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             """)
     List<Employee> findAllWithRelations();
 
+    // [BARU] Karyawan milik akun tersembunyi (superadmin / dev), user & role ikut dimuat -- 1 query.
+    @Query("""
+            select e from Employee e
+            join fetch e.user u
+            left join fetch u.roleId r
+            where upper(r.roleName) in :roleNames or lower(u.username) in :usernames
+            """)
+    List<Employee> findHiddenEmployees(@Param("roleNames") Collection<String> roleNames,
+                                       @Param("usernames") Collection<String> usernames);
+
     // [BARU] Cek NIK bentrok -- dipakai alat dev (edit NIK manual & import karyawan)
     boolean existsByNikKaryawanAndEmployeeIdNot(String nikKaryawan, Long employeeId);
     boolean existsByNikKaryawan(String nikKaryawan);

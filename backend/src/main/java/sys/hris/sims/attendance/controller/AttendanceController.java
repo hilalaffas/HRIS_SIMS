@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.attendance.dto.AttendanceReportResponse;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
@@ -53,6 +54,7 @@ public class AttendanceController {
     private final UserRepository userRepository;
     // [BARU] Nama lokasi dari koordinat (popup absen Dashboard).
     private final ReverseGeocodingService reverseGeocodingService;
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
 
     private Long getCurrentUserId(Authentication authentication) {
         User user = userRepository.findByUsername(authentication.getName());
@@ -165,7 +167,8 @@ public class AttendanceController {
     // HANYA HRD_ADMIN (dibatasi di SecurityConfig, dicek ulang di AttendanceService).
     @GetMapping("/approvals/sakit")
     public ResponseEntity<List<AttendanceResponse>> getSickApprovals(Authentication authentication) {
-        return ResponseEntity.ok(attendanceService.getSickApprovals(authentication));
+        return ResponseEntity.ok(hiddenAccountPolicy.excludeHiddenById( // [BARU]
+                authentication.getName(), attendanceService.getSickApprovals(authentication), AttendanceResponse::getEmployeeId));
     }
 
     // [BARU] PUT setujui/tolak pengajuan Sakit -- body: { "status": "APPROVED" | "REJECTED" }
@@ -207,7 +210,8 @@ public class AttendanceController {
     @GetMapping
     public ResponseEntity<List<AttendanceResponse>> getAllHistory(Authentication authentication, HttpServletRequest httpRequest) {
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_ALL_ABSENSI", "attendances", null, "Melihat semua data absensi", httpRequest);
-        return ResponseEntity.ok(attendanceService.getAllHistory());
+        return ResponseEntity.ok(hiddenAccountPolicy.excludeHiddenById( // [BARU]
+                authentication.getName(), attendanceService.getAllHistory(), AttendanceResponse::getEmployeeId));
     }
 
     // [BARU] Laporan Absensi (HRD_ADMIN / SUPER_ADMIN -- dibatasi di SecurityConfig).

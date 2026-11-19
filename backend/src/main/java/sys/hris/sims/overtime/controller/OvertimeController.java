@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.common.dto.ApprovalDecisionRequest;
 import sys.hris.sims.overtime.dto.OvertimeExtensionRequest;
@@ -34,6 +35,7 @@ public class OvertimeController {
     private final OvertimeService overtimeService;
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
 
     private Long getCurrentUserId(Authentication authentication) {
         User user = userRepository.findByUsername(authentication.getName());
@@ -54,7 +56,8 @@ public class OvertimeController {
     // SPV, Manager (dibatasi di SecurityConfig; cakupan datanya di OvertimeService).
     @GetMapping("/approvals")
     public ResponseEntity<List<OvertimeResponse>> getAllForApproval(Authentication authentication) {
-        return ResponseEntity.ok(overtimeService.getAllForApproval(authentication));
+        return ResponseEntity.ok(hiddenAccountPolicy.excludeHiddenById( // [BARU]
+                authentication.getName(), overtimeService.getAllForApproval(authentication), OvertimeResponse::getEmployeeId));
     }
 
     // [BARU] PUT setujui/tolak lembur -- body: { "status": "APPROVED" | "REJECTED", "note": "opsional" }

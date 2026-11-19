@@ -13,9 +13,9 @@ import java.util.List;
 public class EmployeeService {
     private final EmployeeRepository karyawanRepository;
     private final UserRepository userRepository;
-    private final ReportScopeService reportScopeService; // [BARU] sembunyikan akun dev dari daftar karyawan
+    private final ReportScopeService reportScopeService; // [BARU] sembunyikan superadmin & dev dari daftar karyawan
 
-    // [UBAH] Akun dev (role DEV / sys_dev) tidak ikut daftar karyawan.
+    // [UBAH] Akun tersembunyi (superadmin & dev) tidak ikut daftar karyawan.
     public List<Employee> getAllKaryawan() {
         return reportScopeService.withoutDevEmployees(karyawanRepository.findAllWithRelations()); // [UBAH] 1 query, bukan N+1
     }
@@ -28,6 +28,7 @@ public class EmployeeService {
                 .filter(employee -> employee.getUser().getRoleId() != null)
                 .filter(employee -> employee.getUser().getRoleId().getRoleName() != null)
                 .filter(employee -> employee.getUser().getRoleId().getRoleName().equalsIgnoreCase(role))
+                .filter(employee -> !reportScopeService.isExcludedFromReports(employee)) // [BARU] akun tersembunyi tidak jadi pilihan approver/cover
                 .toList();
     }
 

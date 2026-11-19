@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.news.dto.NewsRequest;
 import sys.hris.sims.news.dto.NewsResponse;
 import sys.hris.sims.news.entity.News;
@@ -36,8 +37,11 @@ public class NewsServiceImpl implements NewsService {
 
     private final NewsRepository newsRepository;
 
-    public NewsServiceImpl(NewsRepository newsRepository) {
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] nama superadmin/dev tidak tampil sebagai penulis
+
+    public NewsServiceImpl(NewsRepository newsRepository, HiddenAccountPolicy hiddenAccountPolicy) {
         this.newsRepository = newsRepository;
+        this.hiddenAccountPolicy = hiddenAccountPolicy;
     }
 
     // [BARU] Mengisi publishAt & expiresAt kalau kosong dari frontend:
@@ -159,7 +163,8 @@ public class NewsServiceImpl implements NewsService {
         response.setPublishAt(news.getPublishAt());
         response.setExpiresAt(news.getExpiresAt());
 
-        response.setCreatedBy(news.getCreatedBy());
+        // [UBAH] null -> frontend menampilkan "HRD" (lihat announcementService.js)
+        response.setCreatedBy(hiddenAccountPolicy.maskActorName(news.getCreatedBy()));
         response.setCreatedAt(news.getCreatedAt());
         response.setUpdatedAt(news.getUpdatedAt());
 

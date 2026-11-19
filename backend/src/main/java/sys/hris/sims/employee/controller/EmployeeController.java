@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.common.service.HrdApproverPolicy;
 import sys.hris.sims.divisi.entity.Divisi;
 import sys.hris.sims.divisi.repository.DivisiRepository;
@@ -54,6 +55,7 @@ public class EmployeeController {
     private final DivisiRepository divisiRepository;
     private final CloudinaryService cloudinaryService;
     private final HrdApproverPolicy hrdApproverPolicy; // [BARU] daftar approver HRD
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
 
     // helper method ambil userId dari token
     private Long getCurrentUserId(Authentication authentication) {
@@ -98,6 +100,7 @@ public class EmployeeController {
                 throw new RuntimeException("Tidak memiliki akses untuk memilih approver atas nama karyawan lain");
             }
             divisionSource = karyawanService.getKaryawanById(employeeId);
+            hiddenAccountPolicy.requireVisible(divisionSource, authentication.getName()); // [BARU]
         }
 
         Long divisiId = divisionSource.getDivisi() == null ? null : divisionSource.getDivisi().getId();
@@ -151,6 +154,7 @@ public class EmployeeController {
                 throw new RuntimeException("Tidak memiliki akses untuk memilih cover atas nama karyawan lain");
             }
             divisionSource = karyawanService.getKaryawanById(employeeId);
+            hiddenAccountPolicy.requireVisible(divisionSource, authentication.getName()); // [BARU]
         }
 
         String role = divisionSource.getUser().getRoleId().getRoleName();
@@ -186,7 +190,9 @@ public class EmployeeController {
         // [MERGED] catat activity log dari file kedua
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_KARYAWAN", "employees", id, "Melihat detail karyawan id: " + id, httpRequest);
         
-        return ResponseEntity.ok(karyawanService.getKaryawanById(id));
+        Employee found = karyawanService.getKaryawanById(id);
+        hiddenAccountPolicy.requireVisible(found, authentication.getName()); // [BARU] akun tersembunyi = "tidak ditemukan"
+        return ResponseEntity.ok(found);
     }
 
     // PUT update profil milik user yang sedang login (dipakai halaman Profile).
@@ -249,6 +255,7 @@ public class EmployeeController {
 
         // 1. Ambil data karyawan lama
         Employee employee = karyawanService.getKaryawanById(id);
+        hiddenAccountPolicy.requireVisible(employee, authentication.getName()); // [BARU] tidak ada yang bisa mengubah akun tersembunyi
 
         if (isNotBlank(request.getFullName())) employee.setFullName(request.getFullName());
         if (isNotBlank(request.getAddress())) employee.setAddress(request.getAddress());
@@ -365,6 +372,7 @@ public class EmployeeController {
     // DELETE karyawan (soft delete)
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteKaryawan(@PathVariable Long id, Authentication authentication, HttpServletRequest httpRequest) {
+        hiddenAccountPolicy.requireVisible(karyawanService.getKaryawanById(id), authentication.getName()); // [BARU]
         karyawanService.deleteKaryawan(id);
 
         // catat activity log
