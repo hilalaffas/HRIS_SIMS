@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,7 +35,7 @@ import sys.hris.sims.schedule.entity.WorkSchedule;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 import sys.hris.sims.schedule.workhours.WorkHours;
 import sys.hris.sims.schedule.workhours.WorkHoursResolver;
-import sys.hris.sims.holiday.repository.HolidayRepository;
+import sys.hris.sims.overtime.service.HolidayOvertimePolicy; // [BARU]
 import sys.hris.sims.notification.service.NotificationService;
 
 @Service
@@ -66,7 +65,7 @@ public class AttendanceService {
     // [BARU] Nama lokasi dari koordinat GPS (Google Geocoding, opsional).
     private final ReverseGeocodingService reverseGeocodingService;
     private final WorkScheduleRepository workScheduleRepository;
-    private final HolidayRepository holidayRepository;
+    private final HolidayOvertimePolicy holidayOvertimePolicy; // [BARU] jendela absen lembur hari libur
     private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] aturan cuti <-> absen
     private final NotificationService notificationService; // [BARU] notifikasi lonceng disimpan di database
 
@@ -158,10 +157,12 @@ public class AttendanceService {
             throw new IllegalArgumentException("Foto bukti kehadiran wajib diunggah.");
         }
 
-        LocalDate today = LocalDate.now(APP_ZONE);
         LocalDateTime nowDateTime = LocalDateTime.now(APP_ZONE);
         var workday = AttendanceWorkday.resolve(employee, nowDateTime, action.equals("KELUAR"), workScheduleRepository, attendanceRepository);
-        LocalDate workDate = workday.workDate();
+        // [BARU] Hari libur: absen hanya dibuka pada jendela lembur yang sudah disetujui semua approver.
+        var holidayWindow = reason.equals("ABSEN")
+                ? holidayOvertimePolicy.attendanceWindow(employee, nowDateTime, action.equals("KELUAR")) : null;
+        LocalDate workDate = holidayWindow == null ? workday.workDate() : holidayWindow.date();
         WorkSchedule schedule = workday.schedule();
         boolean shifting = employee.getDivisi() != null && "SHIFTING".equalsIgnoreCase(employee.getDivisi().getTipeDivisi());
         // [BARU] Jam kerja efektif pada tanggal kerja ini (reguler / jadwal khusus hari / shift).
@@ -172,11 +173,6 @@ public class AttendanceService {
         if (reason.equals("ABSEN") && action.equals("MASUK") && shifting
                 && nowDateTime.isBefore(workDate.atTime(schedule.getShift().getStartTime()))) {
             throw new IllegalStateException("Absensi masuk belum dibuka. Shift Anda dimulai pukul " + schedule.getShift().getStartTime() + ".");
-        }
-        if (reason.equals("ABSEN") && action.equals("MASUK") && !shifting) {
-            if (today.getDayOfWeek() == DayOfWeek.SATURDAY || today.getDayOfWeek() == DayOfWeek.SUNDAY)
-                throw new IllegalStateException("Jadwal Regular libur setiap Sabtu dan Minggu.");
-            if (holidayRepository.existsByDate(today)) throw new IllegalStateException("Hari ini libur nasional. Absensi masuk tidak diperlukan.");
         }
         // [BARU] Cuti yang sudah DISETUJUI: sehari penuh -> absen ditolak; setengah hari pagi ->
         // absen masuk baru dibuka satu jam sebelum cuti berakhir. Cuti PENDING tidak memblokir.
@@ -216,9 +212,15 @@ public class AttendanceService {
         // aturan durasi minimum ("pulang cepat") tidak berlaku.
         // [UBAH] Aturan alasan hanya berlaku SEBELUM jam pulang jadwal. Setelah jam pulang, check-out dianggap
         // normal walau karyawan datang terlambat (durasi kerja < 8 jam), sejalan dengan useCheckoutFlow.js.
-        if (action.equals("KELUAR") && !leaveToday.isHalfDay()
+        String note = request.getNote();
+        boolean noteBlank = note == null || note.isBlank();
+        if (holidayWindow != null && action.equals("KELUAR") && noteBlank
+                && nowDateTime.isBefore(holidayWindow.endsAt())) {
+            note = "Pulang sebelum lembur hari libur selesai"; // [BARU] otomatis, tanpa alasan wajib
+        }
+        if (action.equals("KELUAR") && holidayWindow == null && !leaveToday.isHalfDay()
                 && nowDateTime.isBefore(workHours.endAt(workDate)) // [UBAH] jam pulang terjadwal hari itu
-                && (request.getNote() == null || request.getNote().isBlank())) {
+                && noteBlank) {
             attendanceRepository
                     .findActiveByAction(employee.getEmployeeId(), workDate, "MASUK")
                     .ifPresent(checkIn -> {
@@ -260,8 +262,12 @@ public class AttendanceService {
                 .employee(employee)
                 .action(action)
                 .reason(reason)
-                .status(resolveStatus(action, reason, workHours, workDate, leaveToday)) // [UBAH]
-                .note(request.getNote())
+                .holidayOvertime(holidayWindow != null)
+                .holidayOvertimeStart(holidayWindow == null ? null : holidayWindow.startsAt())
+                .holidayOvertimeEnd(holidayWindow == null ? null : holidayWindow.endsAt())
+                .status(holidayWindow != null && action.equals("MASUK")
+                        ? "HOLIDAY_OVERTIME" : resolveStatus(action, reason, workHours, workDate, leaveToday)) // [UBAH]
+                .note(note)
                 .approvalStatus(reason.equals("SAKIT") ? "PENDING" : "NOT_REQUIRED")
                 .photoUrl(photoUrl)
                 .latitude(BigDecimal.valueOf(request.getLatitude()))
@@ -783,6 +789,9 @@ public class AttendanceService {
                 .attendanceId(attendance.getAttendanceId())
                 .employeeId(attendance.getEmployee().getEmployeeId())
                 .employeeName(attendance.getEmployee().getFullName())
+                .holidayOvertime(attendance.isHolidayOvertime())
+                .holidayOvertimeStart(attendance.getHolidayOvertimeStart())
+                .holidayOvertimeEnd(attendance.getHolidayOvertimeEnd())
                 .action(attendance.getAction())
                 .reason(attendance.getReason())
                 .status(attendance.getStatus())

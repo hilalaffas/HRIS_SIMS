@@ -43,12 +43,13 @@ export default function OvertimeTab({
               type="date"
               name="overtimeDate"
               value={form.overtimeDate}
-              max={overtime.todayKey}
+              max={overtime.maxDate}
               onChange={overtime.updateField}
               disabled={overtime.isSubmitting}
               className={inputErrorClass(fieldErrors.overtimeDate, 'form-control')}
             />
-            <FieldError message={fieldErrors.overtimeDate} />
+            <FieldError message={fieldErrors.overtimeDate || overtime.calendarError} />
+            {overtime.holidayWindow?.regularEmployee && <p className="pgj-char-count">Lembur hari libur diajukan pada hari kerja terakhir sebelumnya. Jumat dapat memilih Sabtu/Minggu dan libur beruntun setelahnya. Buat pengajuan terpisah untuk setiap tanggal; jam mulai dan selesai harus pada hari yang sama.</p>}
           </div>
           <div className="flex-1">
             <label className="form-label" htmlFor="pgj-overtime-start">JAM MULAI *</label>

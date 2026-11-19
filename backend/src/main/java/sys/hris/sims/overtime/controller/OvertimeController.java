@@ -40,6 +40,11 @@ public class OvertimeController {
         return user != null ? user.getUserId() : null;
     }
 
+    @GetMapping("/holiday-window")
+    public ResponseEntity<sys.hris.sims.overtime.service.HolidayOvertimePolicy.SubmissionWindow> holidayWindow(Authentication authentication) {
+        return ResponseEntity.ok(overtimeService.getHolidayWindow(authentication.getName()));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<List<OvertimeResponse>> getMyOvertime(Authentication authentication) {
         return ResponseEntity.ok(overtimeService.getMyOvertime(authentication.getName()));

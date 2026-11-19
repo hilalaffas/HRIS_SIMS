@@ -52,12 +52,16 @@ const QuickAttendanceModal = lazyPage(() => import('../Dashboard/components/Quic
 const CheckoutFlowModals = lazyPage(() => import('./components/CheckoutFlowModals'));
 // [BARU] Data lembur untuk kolom "Lembur" di tabel riwayat
 import { getMyOvertime, toDisplayOvertime } from '../../services/overtimeService';
+import useHolidayOvertimeWindow from '../../hooks/useHolidayOvertimeWindow'; // [BARU] jendela lembur hari libur
+import { withHolidayWindow } from '../../utils/holidayOvertime'; // [BARU]
 import './Absensi.css';
 
 export default function Absensi() {
   const [records, setRecords] = useState([]);
   const [overtimeRecords, setOvertimeRecords] = useState([]); // [BARU]
-  const [myWorkSchedule, setMyWorkSchedule] = useState(null);
+  const [baseSchedule, setBaseSchedule] = useState(null); // [UBAH] jadwal dari backend; jendela lembur ditempel terpisah
+  const { holidayWindow } = useHolidayOvertimeWindow(); // [BARU] disegarkan sendiri tiap menit (1 request ringan)
+  const myWorkSchedule = useMemo(() => withHolidayWindow(baseSchedule, holidayWindow), [baseSchedule, holidayWindow]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [toast, setToast] = useState(null);
   // [BARU] Popup pengajuan izin/sakit & popup upload surat dokter susulan
@@ -92,7 +96,7 @@ export default function Absensi() {
         return [item.attendanceDate, { status: item.status, currentApproverRole: current?.role || '' }];
       })));
       setOvertimeRecords((overtimeData || []).map(toDisplayOvertime));
-      setMyWorkSchedule(scheduleData);
+      setBaseSchedule(scheduleData);
     } catch (error) {
       showToast(error?.message || 'Gagal memuat riwayat absensi.', 'error');
     } finally {
@@ -160,6 +164,7 @@ export default function Absensi() {
     checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
     shiftEndTime: shiftContext.endsAt ? shiftContext.hoursLabel.split(' - ')[1] : null,
     shiftEndAt: shiftContext.endsAt,
+    holidayOvertime: shiftContext.holidayOvertime, // [BARU] lembur hari libur
     requiredWorkHours: shiftContext.requiredAttendanceHours ?? shiftContext.requiredWorkHours, // [UBAH] lama hadir (kerja bersih + istirahat)
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });

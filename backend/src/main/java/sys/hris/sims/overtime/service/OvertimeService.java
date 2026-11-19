@@ -63,6 +63,7 @@ public class OvertimeService {
     // pengajuan awal (pola sama dengan awalan "Pulang cepat: " di absensi).
     private static final String EXTENSION_REASON_PREFIX = "Tambahan saat check-out: ";
 
+    private final HolidayOvertimePolicy holidayOvertimePolicy;
     private final OvertimeRepository overtimeRepository;
     private final OvertimeApprovalRepository approvalRepository;
     private final EmployeeRepository employeeRepository;
@@ -226,14 +227,13 @@ public class OvertimeService {
         if (request.getOvertimeDate() == null) {
             throw new IllegalArgumentException("Tanggal lembur wajib diisi.");
         }
-        if (request.getOvertimeDate().isAfter(LocalDate.now(APP_ZONE))) {
-            throw new IllegalArgumentException("Tanggal lembur tidak boleh melebihi hari ini.");
-        }
+        holidayOvertimePolicy.validateSubmission(employee, request.getOvertimeDate(), LocalDate.now(APP_ZONE));
+        boolean holidayAttendance = holidayOvertimePolicy.requiresHolidayAttendance(employee, request.getOvertimeDate());
         if (request.getStartTime() == null || request.getEndTime() == null) {
             throw new IllegalArgumentException("Jam mulai dan jam selesai wajib diisi.");
         }
         if (!request.getEndTime().isAfter(request.getStartTime())) {
-            throw new IllegalArgumentException("Jam selesai harus lebih besar dari jam mulai.");
+            throw new IllegalArgumentException("Jam selesai harus setelah jam mulai pada tanggal yang sama. Untuk hari berbeda, buat pengajuan terpisah.");
         }
 
         String reason = request.getReason() == null ? "" : request.getReason().trim();
@@ -254,6 +254,7 @@ public class OvertimeService {
 
         OvertimeRequest saved = overtimeRepository.save(OvertimeRequest.builder()
                 .employee(employee)
+                .holidayAttendanceRequired(holidayAttendance)
                 .overtimeDate(request.getOvertimeDate())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
@@ -264,6 +265,11 @@ public class OvertimeService {
         createApprovalSteps(saved, employee, request);
 
         return toResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public HolidayOvertimePolicy.SubmissionWindow getHolidayWindow(String username) {
+        return holidayOvertimePolicy.submissionWindow(resolveEmployee(username), LocalDate.now(APP_ZONE));
     }
 
     // [BARU] Jendela lembur tambahan hari ini -- dibaca frontend saat popup
@@ -287,6 +293,8 @@ public class OvertimeService {
         ZonedDateTime now = ZonedDateTime.now(APP_ZONE);
         ScheduleContext context = resolveScheduleContext(employee, now);
         LocalDate workDate = context.workDate();
+        if (holidayOvertimePolicy.requiresHolidayAttendance(employee, workDate))
+            throw new IllegalStateException("Lembur hari libur harus diajukan pada hari kerja terakhir sebelum libur; tidak dapat ditambah saat checkout.");
 
         // Hanya sah selama user sedang bekerja: sudah check-in, belum check-out,
         // dan bukan hari Sakit/Izin. Setelah check-out, pakai menu Pengajuan Lembur.
@@ -504,6 +512,7 @@ public class OvertimeService {
                 .overtimeDate(overtime.getOvertimeDate())
                 .startTime(overtime.getStartTime())
                 .endTime(overtime.getEndTime())
+                .holidayAttendanceRequired(overtime.isHolidayAttendanceRequired())
                 .totalMinutes(overtime.getTotalMinutes())
                 .reason(overtime.getReason())
                 .status(overtime.getStatus())

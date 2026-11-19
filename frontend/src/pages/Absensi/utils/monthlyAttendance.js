@@ -1,3 +1,5 @@
+import { creditedOvertimeMinutes } from '../../../utils/holidayOvertime';
+import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus';
 import { isSickDocumentExpired } from '../../../utils/sickDocumentDeadline';
 // src/pages/Absensi/utils/monthlyAttendance.js
 //
@@ -17,7 +19,6 @@ import { shiftBounds } from './activeWorkShift';
 import { normalWorkMinutes } from './normalWorkDuration';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { breakMinutesOf, formatRegularLabel, resolveRegularDay } from '../../../utils/regularSchedule'; // [BARU]
-import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus';
 import { formatDateLabel, parseLocalDate } from '../../../services/attendanceService'; // [UBAH] + parseLocalDate
 import { formatOvertimeDuration, getOvertimeStatus } from '../../../services/overtimeService'; // [UBAH] + formatOvertimeDuration
 
@@ -307,7 +308,8 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   const shifting = String(divisionType).toUpperCase() === 'SHIFTING';
   const bounds = shiftBounds(key, shifting ? publishedShift?.startTime : regularDay.startTime, shifting ? publishedShift?.endTime : regularDay.endTime); // [UBAH] jam jadwal hari itu
   const lateMinutes = checkIn?.recordedAt && bounds ? Math.max(0, Math.floor((checkIn.recordedAt - bounds.startsAt) / 60000)) : 0;
-  const isLate = Boolean(checkIn?.isLate);
+  const isHolidayOvertime = Boolean(checkIn?.holidayOvertime);
+  const isLate = !isHolidayOvertime && Boolean(checkIn?.isLate);
 
   let note = 'Bekerja Normal';
   if (isLate) note = lateMinutes > 0 ? `Terlambat ${lateMinutes} Menit` : 'Terlambat';
@@ -332,7 +334,8 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     rejectionText,
   ].filter(Boolean).join(' · ');
 
-  const minutesWorked = shifting && !bounds ? null : normalWorkMinutes(
+  // [UBAH] Lembur hari libur tidak dihitung sebagai jam kerja normal (dihitung lewat pengajuan lembur).
+  const minutesWorked = isHolidayOvertime ? (checkOut ? 0 : null) : shifting && !bounds ? null : normalWorkMinutes(
     checkIn?.recordedAt, checkOut?.recordedAt, key, shifting ? publishedShift : regularDay, // [UBAH] + istirahat & jam hari itu
   );
 
@@ -342,7 +345,11 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
     checkOut: formatClock(checkOut?.recordedAt),
     duration: formatDuration(minutesWorked),
     durationMinutes: minutesWorked, // angka mentah, dipakai untuk sort kolom Durasi
-    status: isLate ? lateAttendanceStatus(lateNotice?.approvalStatus) : 'HADIR TEPAT WAKTU',
+    status: isHolidayOvertime ? 'LEMBUR HARI LIBUR' : isLate ? lateAttendanceStatus(lateNotice?.approvalStatus) : 'HADIR TEPAT WAKTU',
+    shift: isHolidayOvertime ? 'Libur' : base.shift,
+    holidayOvertime: isHolidayOvertime,
+    attendanceCheckInAt: checkIn?.recordedAt || null,
+    attendanceCheckOutAt: checkOut?.recordedAt || null,
     lateApprovalStatus: lateNotice?.approvalStatus || null,
     tone: isLate ? 'telat' : 'hadir',
     lateMinutes: isLate ? lateMinutes : 0, // [BARU]
@@ -469,7 +476,7 @@ export function attachOvertime(rows, overtimeRecords = []) {
       };
     }
 
-    const totalMinutes = active.reduce((sum, record) => sum + (record.totalMinutes || 0), 0);
+    const totalMinutes = active.reduce((sum, record) => sum + (record.statusCode === 'APPROVED' ? creditedOvertimeMinutes(record, row) : record.totalMinutes || 0), 0);
     const pendingMinutes = active
       .filter((record) => record.statusCode === 'PENDING')
       .reduce((sum, record) => sum + (record.totalMinutes || 0), 0);

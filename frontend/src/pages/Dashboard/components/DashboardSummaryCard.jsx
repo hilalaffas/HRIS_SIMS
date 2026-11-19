@@ -109,6 +109,7 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
     checkInAt: attendance.checkInAt,
     shiftEndTime: attendance.shiftContext.endsAt ? attendance.shiftContext.hoursLabel.split(' - ')[1] : null,
     shiftEndAt: attendance.shiftContext.endsAt,
+    holidayOvertime: attendance.shiftContext.holidayOvertime, // [BARU] lembur hari libur
     requiredWorkHours: attendance.shiftContext.requiredAttendanceHours ?? attendance.shiftContext.requiredWorkHours, // [UBAH] lama hadir (kerja bersih + istirahat)
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });

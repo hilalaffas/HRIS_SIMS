@@ -4,6 +4,8 @@
 // berjalan (tutup buku tgl 21 - 20), status absen hari ini, dan divisi.
 // Memakai ulang buildMonthlyRows() dari modul Absensi supaya angka di
 // Dashboard SAMA PERSIS dengan tabel "Jadwal & Log Absensi Bulanan".
+import useHolidayOvertimeWindow from '../../../hooks/useHolidayOvertimeWindow'; // [BARU]
+import { withHolidayWindow } from '../../../utils/holidayOvertime'; // [BARU]
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // [UBAH] + useCallback, useRef, useMemo
 import { getMyAttendanceHistory, getMyWorkSchedule, toDisplayRecord } from '../../../services/attendanceService';
 import useActiveWorkShift from '../../Absensi/hooks/useActiveWorkShift';
@@ -132,16 +134,20 @@ export default function useAttendanceSummary() {
 
   // [BARU] Cuti yang sudah disetujui menimpa status tombol (sakit tetap menang).
   const { gate: leaveGate, leaveOpensLabel } = useTodayLeave();
-  const shiftContext = useActiveWorkShift(state.scheduleData, state.records);
+  // [BARU] Jendela lembur hari libur disegarkan sendiri (1 request ringan), bukan lewat muat ulang seluruh rekap.
+  const { holidayWindow } = useHolidayOvertimeWindow();
+  const scheduleData = useMemo(() => withHolidayWindow(state.scheduleData, holidayWindow), [state.scheduleData, holidayWindow]);
+  const shiftContext = useActiveWorkShift(scheduleData, state.records);
   // [UBAH] Dihitung ulang hanya saat data/hari kerja berubah, bukan di setiap render Dashboard.
   const activeStatus = useMemo(
-    () => resolveTodayStatus(state.records, shiftContext.workDate, state.scheduleData),
-    [state.records, state.scheduleData, shiftContext.workDate],
+    () => resolveTodayStatus(state.records, shiftContext.workDate, scheduleData),
+    [state.records, scheduleData, shiftContext.workDate],
   );
   const continuing = shiftContext.workDate !== workDateKey(jakartaWallClock()) && activeStatus.todayStatus === 'checkedIn';
 
   return {
     ...state,
+    scheduleData,
     ...activeStatus,
     shiftContext,
     todayStatus: continuing ? activeStatus.todayStatus : applyLeaveGate(activeStatus.todayStatus, leaveGate),

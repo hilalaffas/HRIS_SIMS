@@ -1,8 +1,8 @@
 // src/pages/Pengajuan/hooks/useOvertimeForm.js
 //
 // State + validasi formulir inline "Lembur" (tab Pengajuan). Aturannya sama
-// dengan OvertimeFormModal di halaman Lembur: tanggal tidak boleh melewati hari
-// ini, jam selesai harus lebih besar dari jam mulai, alasan wajib (maks 500).
+// dengan OvertimeFormModal: hari kerja maksimal hari ini; lembur hari libur
+// diajukan pada hari kerja terakhir sebelumnya. Satu pengajuan untuk satu tanggal.
 // Validasi di sini hanya untuk UX -- aturan sebenarnya ditegakkan backend
 // (OvertimeService.submit()). `onSubmit` milik parent HARUS melempar error bila
 // gagal supaya pesannya tampil.
@@ -10,6 +10,8 @@
 // Contoh pemakaian:
 // const form = useOvertimeForm(async (values) => { await submitOvertime(values); }, ['LEADER', 'SPV', 'MANAGER']);
 // requiredStages = tahap approval sesuai jabatan pemohon (constants/overtimeFlow.js: getRequiredStages).
+import useHolidayOvertimeWindow from '../../../hooks/useHolidayOvertimeWindow';
+import { validateOvertimeDate, overtimeRangeMinutes, overtimeTodayKey } from '../../../utils/holidayOvertime';
 import { useRef, useState } from 'react';
 import { buildApproverPayload, formatOvertimeDuration } from '../../../services/overtimeService';
 import { STAGE_FIELD, STAGE_META } from '../../../constants/overtimeFlow';
@@ -17,35 +19,23 @@ import { validateRequired } from '../../../utils/validation';
 
 export const OVERTIME_REASON_MAX_LENGTH = 500;
 
-const pad = (value) => String(value).padStart(2, '0');
-
 // Dihitung tiap render (bukan disimpan) supaya tetap benar bila halaman dibiarkan lewat tengah malam.
-export const getTodayKey = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-};
-
-// "17:00" -> 1020 (menit sejak tengah malam)
-const toMinutes = (time) => {
-  if (!time) return null;
-  const [hour, minute] = time.split(':').map(Number);
-  return hour * 60 + minute;
-};
+export const getTodayKey = overtimeTodayKey;
 
 const createInitialForm = () => ({ overtimeDate: getTodayKey(), startTime: '', endTime: '', reason: '',
   leaderEmployeeId: '', spvEmployeeId: '', managerEmployeeId: '', hrdEmployeeId: '',
 });
 
 export default function useOvertimeForm(onSubmit, requiredStages = ['HRD']) {
+  const calendar = useHolidayOvertimeWindow();
+  const { holidayWindow } = calendar;
   const submitLockRef = useRef(false); // gerbang sinkron anti double-submit
   const [form, setForm] = useState(createInitialForm);
   const [fieldErrors, setFieldErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const startMinutes = toMinutes(form.startTime);
-  const endMinutes = toMinutes(form.endTime);
-  const totalMinutes = startMinutes != null && endMinutes != null ? endMinutes - startMinutes : null;
+  const totalMinutes = overtimeRangeMinutes(form.startTime, form.endTime);
   const hasValidRange = totalMinutes != null && totalMinutes > 0;
   const totalLabel = hasValidRange ? formatOvertimeDuration(totalMinutes) : '-';
 
@@ -69,11 +59,12 @@ export default function useOvertimeForm(onSubmit, requiredStages = ['HRD']) {
         value: form[STAGE_FIELD[stage]],
       })),
     ]);
-    if (!errors.overtimeDate && form.overtimeDate > getTodayKey()) {
-      errors.overtimeDate = 'Tanggal lembur tidak boleh melebihi hari ini.';
+    if (!errors.overtimeDate) {
+      const dateError = validateOvertimeDate(form.overtimeDate, holidayWindow);
+      if (dateError) errors.overtimeDate = dateError;
     }
     if (!errors.startTime && !errors.endTime && !hasValidRange) {
-      errors.endTime = 'Jam selesai harus lebih besar dari jam mulai.';
+      errors.endTime = 'Jam selesai harus setelah jam mulai pada tanggal yang sama.';
     }
     return errors;
   };
@@ -112,6 +103,9 @@ export default function useOvertimeForm(onSubmit, requiredStages = ['HRD']) {
     fieldErrors,
     errorMessage,
     isSubmitting,
+    calendarError: calendar.error,
+    maxDate: holidayWindow?.maxDate || getTodayKey(),
+    holidayWindow,
     totalLabel,
     hasValidRange,
     todayKey: getTodayKey(),

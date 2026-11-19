@@ -24,6 +24,11 @@ public class AttendanceResponse {
     private Long employeeId;
     private String employeeName;
 
+    // [BARU] Penanda absen lembur hari libur beserta jendela jamnya.
+    private boolean holidayOvertime;
+    private LocalDateTime holidayOvertimeStart;
+    private LocalDateTime holidayOvertimeEnd;
+
     private String action;   // MASUK / KELUAR
     private String reason;   // ABSEN / SAKIT / IZIN
     private String status;   // ON_TIME / LATE / DONE / SICK / IZIN

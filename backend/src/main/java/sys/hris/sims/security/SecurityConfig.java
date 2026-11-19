@@ -444,6 +444,10 @@ public class SecurityConfig {
                         // ==========================
                         // PENGAJUAN LEMBUR (Overtime)
                         // ==========================
+                        // [BARU] Jendela pengajuan lembur hari libur (untuk form pengajuan).
+                        .requestMatchers(HttpMethod.GET, "/api/lembur/holiday-window")
+                        .authenticated()
+
                         // [BARU] Karyawan hanya lihat & kirim lembur MILIKNYA ("/me").
                         .requestMatchers(HttpMethod.GET, "/api/lembur/me")
                         .authenticated()

@@ -173,6 +173,7 @@ public class AttendanceReportService {
                 .overtimeDate(overtime.getOvertimeDate())
                 .startTime(overtime.getStartTime())
                 .endTime(overtime.getEndTime())
+                .holidayAttendanceRequired(overtime.isHolidayAttendanceRequired())
                 .totalMinutes(overtime.getTotalMinutes())
                 .status(overtime.getStatus())
                 .createdAt(overtime.getCreatedAt())
