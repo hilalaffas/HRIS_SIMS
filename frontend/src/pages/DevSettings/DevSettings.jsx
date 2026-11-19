@@ -28,6 +28,7 @@ import NikEditorSection from './components/NikEditorSection'; // [BARU] edit NIK
 import LeaveHistorySection from './components/LeaveHistorySection'; // [BARU] import/export riwayat cuti (ledger)
 import ForfeitRuleSection from './components/ForfeitRuleSection'; // [BARU] aturan tahun berlaku cuti hangus
 import { DevTabBar } from './components/DevTabBar'; // [BARU]
+import LogSistem from '../LogSistem/LogSistem'; // [BARU] Log Sistem juga bisa dibuka dari panel dev
 import './DevSettings.css';
 
 // [BARU] Tab halaman dev. Tab "features" = isi lama halaman ini (saklar fitur + reset izin/sakit).
@@ -38,6 +39,7 @@ const TAB_LEAVE_BALANCE = 'leaveBalance';
 const TAB_LEAVE_HISTORY = 'leaveHistory';
 const TAB_FORFEIT_RULE = 'forfeitRule'; // [BARU]
 const TAB_NIK = 'nik';
+const TAB_SYSTEM_LOG = 'systemLog'; // [BARU]
 
 const TABS = [
   { id: TAB_FEATURES, label: 'Pengaturan Fitur' },
@@ -46,6 +48,7 @@ const TABS = [
   { id: TAB_LEAVE_HISTORY, label: 'Riwayat Cuti' },
   { id: TAB_FORFEIT_RULE, label: 'Aturan Hangus' }, // [BARU]
   { id: TAB_NIK, label: 'NIK' },
+  { id: TAB_SYSTEM_LOG, label: 'Log Sistem' }, // [BARU]
 ];
 
 const VALID_TAB_IDS = TABS.map((tab) => tab.id);
@@ -131,6 +134,9 @@ export default function DevSettings() {
         {activeTab === TAB_LEAVE_HISTORY && <LeaveHistorySection />}
         {activeTab === TAB_FORFEIT_RULE && <ForfeitRuleSection />}
         {activeTab === TAB_NIK && <NikEditorSection />}
+
+        {/* [BARU] Log Sistem (read-only). Dimuat hanya saat tab dibuka. */}
+        {activeTab === TAB_SYSTEM_LOG && <LogSistem />}
       </div>
     </div>
   );
