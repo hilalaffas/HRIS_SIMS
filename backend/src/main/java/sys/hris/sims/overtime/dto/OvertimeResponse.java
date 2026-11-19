@@ -25,6 +25,7 @@ public class OvertimeResponse {
     private LocalTime startTime;
     private LocalTime endTime;
     private Integer totalMinutes;
+    private boolean holidayAttendanceRequired;
 
     private String reason;
     private String status; // PENDING / APPROVED / REJECTED

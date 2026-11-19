@@ -30,6 +30,9 @@ import sys.hris.sims.employee.entity.Employee;
 @Table(name = "overtime_requests")
 public class OvertimeRequest {
 
+    @Column(name = "holiday_attendance_required", nullable = false)
+    private boolean holidayAttendanceRequired;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "overtime_id")

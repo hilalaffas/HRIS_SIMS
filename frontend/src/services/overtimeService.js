@@ -94,6 +94,7 @@ export function toDisplayOvertime(item) {
     date: item.overtimeDate, // "2026-09-28"
     startTime: toClockLabel(item.startTime),
     endTime: toClockLabel(item.endTime),
+    holidayAttendanceRequired: Boolean(item.holidayAttendanceRequired),
     totalMinutes: item.totalMinutes,
     duration: formatOvertimeDuration(item.totalMinutes),
     reason: item.reason || '-',
@@ -119,3 +120,5 @@ export function toDisplayExtensionWindow(raw) {
     entries: (raw?.entries || []).map(toDisplayOvertime),
   };
 }
+
+export const getHolidayOvertimeWindow = () => api.get('/api/lembur/holiday-window', { silent: true });

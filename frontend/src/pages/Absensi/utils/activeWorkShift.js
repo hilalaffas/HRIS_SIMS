@@ -1,4 +1,5 @@
 import { breakMinutesOf, resolveRegularDay } from '../../../utils/regularSchedule.js'; // [BARU]
+import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays.js';
 // Attendance timestamps are naive WIB wall-clock dates, matching parseLocalDate.
 // [UBAH] Formatter dibuat SEKALI (membuat Intl.DateTimeFormat itu mahal; sebelumnya dibuat di setiap pemanggilan).
 const WIB_FORMATTER = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
@@ -28,6 +29,30 @@ export function resolveActiveWorkShift(scheduleData, records = [], now = new Dat
   const schedules = scheduleData.schedules || [];
   const checkInFor = (date) => records.find((r) => r.attendanceDate === date && r.actionCode === 'MASUK' && r.reasonCode === 'ABSEN' && r.approvalStatus !== 'REJECTED');
   const checkOutFor = (date) => records.find((r) => r.attendanceDate === date && r.actionCode === 'KELUAR');
+  if (!shifting) {
+    const holiday = scheduleData.holidayWindow;
+    const rest = new Date(`${today}T00:00:00`).getDay();
+    const isHoliday = rest === 0 || rest === 6 || (holiday ? holiday.holidayDates.includes(today) : Boolean(LOCAL_HOLIDAYS_2026[today]));
+    const context = (date, start, end, checkIn = null, checkOut = null) => ({
+      workDate: date, checkIn, checkOut, startsAt: start, endsAt: end, overnight: end.toDateString() !== start.toDateString(),
+      holidayOvertime: true, requiredWorkHours: 0,
+      hoursLabel: `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')} - ${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}`,
+      shiftName: 'Lembur Hari Libur', label: 'Lembur Hari Libur',
+      canCheckIn: !checkIn && wall >= start && wall < end,
+      blockedLabel: wall < start ? `Absen Dibuka ${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}` : 'Jam lembur sudah berakhir',
+    });
+    for (const date of [yesterday, today]) {
+      const checkIn = checkInFor(date); const checkOut = checkOutFor(date);
+      if (checkIn?.holidayOvertime && (!checkOut || date === today)) {
+        return context(date, checkIn.holidayOvertimeStart, checkIn.holidayOvertimeEnd, checkIn, checkOut || null);
+      }
+    }
+    const approved = (holiday?.approvedOvertimes || []).map((item) => ({ date: item.date, start: new Date(item.startsAt), end: new Date(item.endsAt) }));
+    const active = approved.find((item) => wall >= item.start && wall < item.end);
+    const planned = active || approved.find((item) => item.date === today && wall < item.start);
+    if (planned) return context(planned.date, planned.start, planned.end);
+    if (isHoliday) return blocked('Libur — hanya untuk lembur yang disetujui');
+  }
   let workDate = today;
   let schedule = schedules.find((s) => s.date === today);
   if (shifting && !checkInFor(today)) {

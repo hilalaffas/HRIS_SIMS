@@ -1,6 +1,6 @@
 // src/pages/Laporan/utils/overtimeAcc.js
 //
-// [BARU] Hitungan jam lembur ACC untuk laporan absensi (fungsi murni, tanpa import,
+// [BARU] Hitungan jam lembur ACC untuk laporan absensi (fungsi murni, hanya memakai util murni,
 // supaya mudah dites dan dipakai builder laporan).
 //
 // Aturan pengali (jam yang disetujui, per tanggal):
@@ -11,6 +11,7 @@
 //   calculateOvertimeAccMinutes(90, false); // 60*1.5 + 30*2 = 150
 //   calculateOvertimeAccMinutes(60, true);  // 120
 //   const rows = applyOvertimeAcc(rows, overtimes, { holidaysByDate, divisionType });
+import { creditedOvertimeMinutes } from '../../../utils/holidayOvertime.js';
 
 const FIRST_HOUR_MINUTES = 60;
 const WORKDAY_FIRST_HOUR_RATE = 1.5;
@@ -29,11 +30,12 @@ export function calculateOvertimeAccMinutes(approvedMinutes, isRestDay) {
 }
 
 // Total menit lembur berstatus APPROVED per tanggal ('YYYY-MM-DD' -> menit).
-export function sumApprovedMinutesByDate(overtimes = []) {
+export function sumApprovedMinutesByDate(overtimes = [], rows = []) {
+  const byDate = new Map(rows.map((row) => [row.date, row]));
   const minutesByDate = new Map();
   overtimes.forEach((item) => {
     if (item.statusCode !== 'APPROVED') return;
-    minutesByDate.set(item.date, (minutesByDate.get(item.date) || 0) + (item.totalMinutes || 0));
+    minutesByDate.set(item.date, (minutesByDate.get(item.date) || 0) + creditedOvertimeMinutes(item, byDate.get(item.date)));
   });
   return minutesByDate;
 }
@@ -47,8 +49,10 @@ function isOvertimeRestDay(row, holidaysByDate, isShiftingDivision) {
 // yang punya lembur ACC (baris lain tidak disentuh -> tidak ada alokasi objek sia-sia).
 // Bila tidak ada lembur ACC sama sekali, array asli dikembalikan apa adanya.
 export function applyOvertimeAcc(rows, overtimes, { holidaysByDate, divisionType } = {}) {
-  const approvedMinutesByDate = sumApprovedMinutesByDate(overtimes);
+  const approvedMinutesByDate = sumApprovedMinutesByDate(overtimes, rows);
   if (!approvedMinutesByDate.size) return rows;
+  // [UBAH] Tanggal lembur hari libur dihitung sekali (sebelumnya overtimes.some() dijalankan untuk setiap baris).
+  const holidayAttendanceDates = new Set(overtimes.filter((item) => item.holidayAttendanceRequired).map((item) => item.date));
 
   const isShiftingDivision = String(divisionType || '').toUpperCase() === 'SHIFTING';
   return rows.map((row) => {
@@ -58,7 +62,7 @@ export function applyOvertimeAcc(rows, overtimes, { holidaysByDate, divisionType
       ...row,
       overtimeAccMinutes: calculateOvertimeAccMinutes(
         approvedMinutes,
-        isOvertimeRestDay(row, holidaysByDate, isShiftingDivision),
+        isOvertimeRestDay(row, holidaysByDate, isShiftingDivision) || holidayAttendanceDates.has(row.date),
       ),
     };
   });

@@ -12,6 +12,7 @@
 //      tidak memuat cuti, tanpa ini hari cuti terbaca Alpha).
 //   3. Absensi reason IZIN diberi label "IZIN" (di halaman karyawan berlabel "CUTI").
 //   4. Alasan sakit (teks bebas, bisa memuat data kesehatan) TIDAK ikut laporan.
+import { creditedOvertimeMinutes } from '../../../utils/holidayOvertime';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { parseLocalDate, toDisplayRecord } from '../../../services/attendanceService';
 import { toDisplayOvertime } from '../../../services/overtimeService';
@@ -145,9 +146,10 @@ export function summarizeRows(rows, overtimes = []) {
     }
   });
   // Lembur dihitung dari pengajuan yang sudah ACC saja.
+  const attendanceByDate = new Map(rows.map((row) => [row.date, row]));
   summary.overtimeMinutes = overtimes
     .filter((item) => item.statusCode === 'APPROVED')
-    .reduce((total, item) => total + (item.totalMinutes || 0), 0);
+    .reduce((total, item) => total + creditedOvertimeMinutes(item, attendanceByDate.get(item.date)), 0);
   summary.overtimeAccMinutes = rows.reduce((total, row) => total + (row.overtimeAccMinutes || 0), 0);
   return summary;
 }

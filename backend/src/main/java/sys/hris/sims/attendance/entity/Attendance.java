@@ -41,6 +41,16 @@ import sys.hris.sims.employee.entity.Employee;
 @Table(name = "attendances")
 public class Attendance {
 
+    // [BARU] Absen lembur hari libur (akhir pekan / libur nasional): jendela lembur yang disetujui.
+    @Column(name = "holiday_overtime", nullable = false)
+    private boolean holidayOvertime;
+
+    @Column(name = "holiday_overtime_start")
+    private LocalDateTime holidayOvertimeStart;
+
+    @Column(name = "holiday_overtime_end")
+    private LocalDateTime holidayOvertimeEnd;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "attendance_id")
@@ -58,7 +68,7 @@ public class Attendance {
     @Column(name = "reason", nullable = false, length = 10)
     private String reason;
 
-    // Dihitung AttendanceService.resolveStatus() -- ON_TIME/LATE/DONE/SICK/IZIN
+    // Dihitung AttendanceService.resolveStatus() -- ON_TIME/LATE/DONE/SICK/IZIN (+ HOLIDAY_OVERTIME untuk absen masuk lembur hari libur)
     @Column(name = "status", nullable = false, length = 20)
     private String status;
 
