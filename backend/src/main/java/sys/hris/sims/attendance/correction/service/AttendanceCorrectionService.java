@@ -20,6 +20,7 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 @Service @RequiredArgsConstructor
 public class AttendanceCorrectionService {
     private static final ZoneId ZONE = ZoneId.of("Asia/Jakarta");
+    private static final int MIN_REJECT_NOTE_LENGTH = 5; // [BARU] sama dengan aturan lembur
     private final AttendanceCorrectionRepository correctionRepository;
     private final AttendanceCorrectionApprovalRepository approvalRepository;
     private final AttendanceRepository attendanceRepository;
@@ -185,6 +186,9 @@ public class AttendanceCorrectionService {
             throw new IllegalStateException("Menunggu persetujuan tahap sebelumnya.");
         String decisionNote = note == null ? "" : note.trim();
         if (decisionNote.length() > 500) throw new IllegalArgumentException("Catatan maksimal 500 karakter.");
+        // [BARU] Penolakan wajib disertai alasan (dicek di server, bukan hanya di popup frontend).
+        if ("REJECTED".equals(status) && decisionNote.length() < MIN_REJECT_NOTE_LENGTH)
+            throw new IllegalArgumentException("Alasan penolakan wajib diisi (minimal " + MIN_REJECT_NOTE_LENGTH + " karakter).");
         mine.setAction(status);
         mine.setActedAt(LocalDateTime.now(ZONE));
         mine.setNote(decisionNote.isEmpty() ? null : decisionNote);
