@@ -14,12 +14,13 @@ const isDisplayableLog = (log) => {
 };
 
 const toLogRow = (log) => {
-  // Memisahkan tanggal dan jam dari createdAt (LocalDateTime)
-  const createdAt = new Date(log.createdAt);
+  // [UBAH] createdAt dari backend = LocalDateTime WIB tanpa offset. Ditambah "+07:00" agar
+  // tidak ikut zona waktu browser, lalu ditampilkan dengan timeZone Asia/Jakarta.
+  const createdAt = new Date(`${log.createdAt}+07:00`);
   return {
     id: log.logId,
-    tanggal: createdAt.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-    jam: createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    tanggal: createdAt.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }),
+    jam: createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }),
     aktor: log.username,
     aksi: log.description || log.action,
     type: 'normal',
