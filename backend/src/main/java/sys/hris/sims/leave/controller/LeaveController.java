@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.leave.dto.LeaveActionRequest;
@@ -41,6 +42,15 @@ public class LeaveController {
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
+
+    // [BARU] Karyawan yang dituju adalah akun tersembunyi (dan bukan milik pemanggil) -> "tidak ditemukan".
+    private void guardEmployeeAccess(Long employeeId, Authentication authentication) {
+        Employee target = employeeRepository.findById(employeeId).orElse(null);
+        if (target != null && !hiddenAccountPolicy.canAccess(target, authentication.getName())) {
+            throw new RuntimeException("Karyawan tidak ditemukan");
+        }
+    }
 
     // helper method ambil userId dari token
     private Long getCurrentUserId(Authentication authentication) {
@@ -98,7 +108,11 @@ public class LeaveController {
 
         // catat activity log
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_CUTI", "leave_requests", id, "Melihat detail cuti id: " + id, httpRequest);
-        return ResponseEntity.ok(cutiService.getCutiById(id));
+        LeaveRequest found = cutiService.getCutiById(id);
+        if (!hiddenAccountPolicy.canAccess(found.getEmployee(), authentication.getName())) { // [BARU]
+            throw new RuntimeException("Cuti tidak ditemukan");
+        }
+        return ResponseEntity.ok(found);
     }
 
     // GET detail cuti untuk pemohon sendiri, LENGKAP dengan info approver
@@ -119,6 +133,7 @@ public class LeaveController {
         // catat activity log
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_CUTI_BY_KARYAWAN", "leave_requests", idKaryawan, "Melihat data cuti karyawan id: " + idKaryawan, httpRequest);
         
+        guardEmployeeAccess(idKaryawan, authentication); // [BARU]
         return ResponseEntity.ok(cutiService.getCutiByKaryawan(idKaryawan));
     }
 
@@ -131,7 +146,8 @@ public class LeaveController {
     // [BARU] GET sisa cuti tahunan karyawan TERTENTU, dipakai HR/Admin di
     // form Manajemen Data Pegawai (ModalDetailKaryawan.jsx)
     @GetMapping("/balance/{employeeId}")
-    public ResponseEntity<LeaveBalanceResponse> getLeaveBalanceByEmployeeId(@PathVariable Long employeeId) {
+    public ResponseEntity<LeaveBalanceResponse> getLeaveBalanceByEmployeeId(@PathVariable Long employeeId, Authentication authentication) {
+        guardEmployeeAccess(employeeId, authentication); // [BARU]
         return ResponseEntity.ok(cutiService.getLeaveBalanceByEmployeeId(employeeId));
     }
 
@@ -264,6 +280,10 @@ public class LeaveController {
     // DELETE cuti
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteCuti(@PathVariable Long id, Authentication authentication, HttpServletRequest httpRequest) {
+        LeaveRequest target = cutiService.getCutiById(id); // [BARU] akun tersembunyi = "tidak ditemukan"
+        if (!hiddenAccountPolicy.canAccess(target.getEmployee(), authentication.getName())) {
+            throw new RuntimeException("Cuti tidak ditemukan");
+        }
         cutiService.deleteCuti(id);
 
         // catat activity log 

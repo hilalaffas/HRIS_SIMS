@@ -31,6 +31,7 @@ import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.attendance.service.LeaveAttendancePolicy;
 import sys.hris.sims.common.service.HrdApproverPolicy;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.common.service.ReportScopeService;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.entity.LeaveRequestApproval;
@@ -79,6 +80,7 @@ public class LeaveService {
     private final HolidayRepository holidayRepository;
     private final LeaveAttendancePolicy leaveAttendancePolicy; // [BARU] hapus absen di tanggal cuti saat disetujui
     private final ReportScopeService reportScopeService; // [BARU] sembunyikan superadmin & akun dev dari laporan
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] aturan akses langsung akun tersembunyi
     private final NotificationService notificationService; // [BARU] notifikasi lonceng disimpan di database
     private final HrdApproverPolicy hrdApproverPolicy; // [BARU] aturan approver HRD
 
@@ -176,6 +178,7 @@ public class LeaveService {
         // hasil sama dengan filter lama. Filter cuti hangus tetap di sini.
         return cutiRepository.findCalendarLeaves(start, end).stream()
                 .filter(cuti -> !isForfeiture(cuti)) // [BARU] catatan hangus tidak tampil di kalender
+                .filter(cuti -> !hiddenAccountPolicy.isHiddenEmployee(cuti.getEmployee())) // [BARU] cuti superadmin/dev tidak tampil di kalender
                 .toList();
     }
 
@@ -247,6 +250,7 @@ public class LeaveService {
 
         Employee targetEmployee = karyawanRepository.findById(cuti.getEmployee().getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Karyawan tidak ditemukan"));
+        hiddenAccountPolicy.requireVisible(targetEmployee, hrUsername); // [BARU] tidak bisa membuat cuti susulan atas nama akun tersembunyi
         Employee hrActor = getEmployeeByUsername(hrUsername);
 
         cuti.setEmployee(targetEmployee);
@@ -395,6 +399,7 @@ public class LeaveService {
                 .findByApproverEmployee_EmployeeIdAndAction(approver.getEmployeeId(), ACTION_PENDING).stream()
                 .map(LeaveRequestApproval::getLeaveRequest)
                 .filter(cuti -> ACTION_PENDING.equalsIgnoreCase(cuti.getStatus().getStatusName()))
+                .filter(cuti -> hiddenAccountPolicy.canAccess(cuti.getEmployee(), username)) // [BARU] pengajuan akun tersembunyi tidak tampil
                 .distinct()
                 .toList();
         // [UBAH] Performa: seluruh tahap approval dimuat SEKALI (sebelumnya 1 query per pengajuan).
@@ -420,6 +425,7 @@ public class LeaveService {
         List<LeaveRequest> requests = approvalRepository.findByApproverEmployee_EmployeeId(approver.getEmployeeId()).stream()
                 .map(LeaveRequestApproval::getLeaveRequest)
                 .distinct()
+                .filter(cuti -> hiddenAccountPolicy.canAccess(cuti.getEmployee(), username)) // [BARU]
                 .filter(cuti -> status == null || status.isBlank()
                         || cuti.getStatus().getStatusName().equalsIgnoreCase(status))
                 .toList();
@@ -440,7 +446,11 @@ public class LeaveService {
         if (!assignedToApprover) {
             throw new RuntimeException("Anda tidak memiliki akses ke detail cuti ini");
         }
-        return toApprovalResponse(getCutiById(leaveRequestId), approver.getEmployeeId());
+        LeaveRequest detail = getCutiById(leaveRequestId);
+        if (!hiddenAccountPolicy.canAccess(detail.getEmployee(), username)) { // [BARU] sama dengan data yang tidak ada
+            throw new RuntimeException("Cuti tidak ditemukan");
+        }
+        return toApprovalResponse(detail, approver.getEmployeeId());
     }
 
     // [BARU] Dipakai alat dev (/devAccess) yang sudah memegang entity Employee,

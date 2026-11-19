@@ -5,8 +5,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sys.hris.sims.activity_logs.entity.ActivityLog;
 import sys.hris.sims.activity_logs.repository.ActivityLogRepository;
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import java.time.LocalDateTime;
@@ -16,6 +19,7 @@ import java.time.LocalDateTime;
 public class ActivityLogService {
 
     private final ActivityLogRepository activityLogRepository;
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] aksi superadmin & dev tidak tampil di Log Sistem
 
     // [BARU] Action berawalan "GET_" (mis. GET_ALL_CUTI, GET_KARYAWAN) hanya
     // berarti "melihat data/menu", bukan perubahan data, jadi tidak dicatat
@@ -52,12 +56,32 @@ public class ActivityLogService {
 
     // [UBAH] Memakai findVisibleLogs: log GET_* dan sync libur otomatis milik
     // "System" yang sudah terlanjur tersimpan di database ikut disembunyikan.
-    public List<ActivityLog> getAllLogs() {
-        return activityLogRepository.findVisibleLogs(VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION);
+    // [UBAH] Log milik akun tersembunyi (superadmin & dev) dibuang untuk semua penonton;
+    // pemilik akunnya sendiri tetap melihat log miliknya.
+    public List<ActivityLog> getAllLogs(String viewerUsername) {
+        return withoutHiddenActors(
+                activityLogRepository.findVisibleLogs(VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION),
+                viewerUsername);
     }
 
-    public List<ActivityLog> getLogsByUser(Long userId) {
-        return activityLogRepository.findVisibleLogsByUserId(userId, VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION);
+    public List<ActivityLog> getLogsByUser(Long userId, String viewerUsername) {
+        return withoutHiddenActors(
+                activityLogRepository.findVisibleLogsByUserId(userId, VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION),
+                viewerUsername);
+    }
+
+    private List<ActivityLog> withoutHiddenActors(List<ActivityLog> logs, String viewerUsername) {
+        Set<String> hidden = hiddenAccountPolicy.hiddenUsernames();
+        if (hidden.isEmpty() || logs.isEmpty()) {
+            return logs;
+        }
+        String viewer = viewerUsername == null ? "" : viewerUsername.trim().toLowerCase(Locale.ROOT);
+        return logs.stream()
+                .filter(entry -> {
+                    String actor = entry.getUsername() == null ? "" : entry.getUsername().trim().toLowerCase(Locale.ROOT);
+                    return !hidden.contains(actor) || actor.equals(viewer);
+                })
+                .toList();
     }
 
     // Cron: 0 0 0 1 * * artinya setiap jam 00:00:00 di tanggal 1 setiap bulan

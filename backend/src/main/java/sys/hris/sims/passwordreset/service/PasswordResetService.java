@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.notification.service.NotificationService;
@@ -32,26 +33,31 @@ public class PasswordResetService {
     // jabatan, & divisi -- lihat getPendingRequests() di bawah.
     private final EmployeeRepository employeeRepository;
     private final NotificationService notificationService; // [BARU] notifikasi lonceng disimpan di database
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tidak bisa direset lewat jalur ini
 
     public PasswordResetService(
             PasswordResetRequestRepository passwordResetRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             EmployeeRepository employeeRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            HiddenAccountPolicy hiddenAccountPolicy) {
 
         this.passwordResetRepository = passwordResetRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.employeeRepository = employeeRepository;
         this.notificationService = notificationService;
+        this.hiddenAccountPolicy = hiddenAccountPolicy;
     }
 
     public PasswordResetResponse createRequest(ForgotPasswordRequest request) {
 
         User user = userRepository.findByUsername(request.getUsername());
 
-        if (user == null) {
+        // [UBAH] Akun tersembunyi (superadmin & dev) diperlakukan SAMA dengan username yang tidak ada:
+        // tidak ada permintaan yang dibuat, tidak ada notifikasi ke HRD, pesan error identik.
+        if (user == null || hiddenAccountPolicy.isHiddenUser(user)) {
             throw new RuntimeException("Username tidak ditemukan");
         }
 
@@ -102,6 +108,7 @@ public class PasswordResetService {
     // yang tepat begitu tombol "Proses" diklik di frontend.
     public List<PendingPasswordResetResponse> getPendingRequests() {
         return passwordResetRepository.findByStatus("PENDING").stream()
+                .filter(item -> !hiddenAccountPolicy.isHiddenUser(item.getUser())) // [BARU]
                 .map(this::toPendingResponse)
                 .collect(Collectors.toList());
     }
@@ -129,7 +136,10 @@ public class PasswordResetService {
     }
 
     public long getPendingCount() {
-        return passwordResetRepository.countByStatus("PENDING");
+        // [UBAH] Hitung hanya permintaan akun biasa (angka badge tidak boleh membocorkan akun tersembunyi).
+        return passwordResetRepository.findByStatus("PENDING").stream()
+                .filter(item -> !hiddenAccountPolicy.isHiddenUser(item.getUser()))
+                .count();
     }
 
     public String approveRequest(
@@ -139,6 +149,10 @@ public class PasswordResetService {
 
         PasswordResetRequest resetRequest = passwordResetRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Permintaan reset tidak ditemukan"));
+
+        if (hiddenAccountPolicy.isHiddenUser(resetRequest.getUser())) { // [BARU] HRD tidak boleh me-reset password akun tersembunyi
+            throw new RuntimeException("Permintaan reset tidak ditemukan");
+        }
 
         if (!resetRequest.getStatus().equals("PENDING")) {
             throw new RuntimeException("Permintaan sudah diproses");
@@ -179,6 +193,10 @@ public class PasswordResetService {
 
         PasswordResetRequest resetRequest = passwordResetRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Permintaan reset tidak ditemukan"));
+
+        if (hiddenAccountPolicy.isHiddenUser(resetRequest.getUser())) { // [BARU]
+            throw new RuntimeException("Permintaan reset tidak ditemukan");
+        }
 
         if (!resetRequest.getStatus().equals("PENDING")) {
             // Sudah diproses sebelumnya (mis. di-klik dari 2 tab) -- diamkan

