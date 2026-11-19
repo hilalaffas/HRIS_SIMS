@@ -14,6 +14,9 @@ RUN groupadd --system app && useradd --system --gid app --home-dir /app app \
 COPY --from=build --chown=app:app /app/target/*.jar app.jar
 USER app
 EXPOSE 8080
-# [UBAH] + ExitOnOutOfMemoryError (container restart bersih, bukan hidup setengah mati)
-#        + UseG1GC & random-urandom (start lebih cepat, tidak macet menunggu entropy)
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "-XX:+UseG1GC", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+# [UBAH] Hemat memori untuk container 512 MB (Render). Heap 75% + metaspace + thread + code cache
+#        sebelumnya melewati batas 512 MiB -> container dimatikan ("Out of memory").
+#        MaxRAMPercentage 75 -> 50 (sisakan ruang untuk memori non-heap), SerialGC (lebih hemat
+#        daripada G1 untuk heap kecil), C1 saja (TieredStopAtLevel=1) + batas code cache & metaspace,
+#        stack thread 512k. ExitOnOutOfMemoryError tetap: container restart bersih bila heap habis.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=50", "-XX:MaxMetaspaceSize=160m", "-XX:ReservedCodeCacheSize=48m", "-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-Xss512k", "-XX:+ExitOnOutOfMemoryError", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
