@@ -2,6 +2,7 @@ package sys.hris.sims.news.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import sys.hris.sims.common.util.HtmlSanitizer; // [BARU]
 import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -79,7 +80,7 @@ public class NewsServiceImpl implements NewsService {
         News news = new News();
 
         news.setTitle(request.getTitle());
-        news.setContent(request.getContent());
+        news.setContent(HtmlSanitizer.sanitizeNewsHtml(request.getContent())); // [UBAH] bersihkan HTML (anti-XSS)
         news.setCategory(request.getCategory());
         news.setPublished(request.getPublished());
         applyDefaultSchedule(news, request);
@@ -135,7 +136,7 @@ public class NewsServiceImpl implements NewsService {
                 .orElseThrow(() -> new RuntimeException("News tidak ditemukan"));
 
         news.setTitle(request.getTitle());
-        news.setContent(request.getContent());
+        news.setContent(HtmlSanitizer.sanitizeNewsHtml(request.getContent())); // [UBAH] bersihkan HTML (anti-XSS)
         news.setCategory(request.getCategory());
         news.setPublished(request.getPublished());
         applyDefaultSchedule(news, request);

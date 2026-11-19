@@ -30,9 +30,24 @@ public class JwtService {
     // memalsukan token (termasuk role SUPER_ADMIN). Peringatan keras di log saat server
     // berjalan dengan secret bawaan, supaya env var JWT_SECRET yang lupa diisi di produksi
     // langsung ketahuan.
+    // [BARU] APP_ENV=prod di Railway -> server menolak start bila JWT_SECRET masih bawaan repo.
+    @Value("${APP_ENV:}")
+    private String appEnv;
+
+    private static final int MIN_SECRET_BYTES = 32; // syarat minimum HS256
+
     @PostConstruct
     void warnIfDevSecretInUse() {
+        // [BARU] Secret terlalu pendek -> gagal start (sebelumnya baru error saat login pertama).
+        if (secret.getBytes().length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT_SECRET minimal 32 karakter.");
+        }
         if (secret.startsWith(DEV_SECRET_PREFIX)) {
+            // [UBAH] Di production: gagal start, bukan sekadar warning.
+            if ("prod".equalsIgnoreCase(appEnv)) {
+                throw new IllegalStateException(
+                        "JWT_SECRET masih memakai secret DEV bawaan repo. Set JWT_SECRET baru di environment.");
+            }
             log.warn("JWT_SECRET belum di-set: memakai secret DEV bawaan repo. JANGAN dipakai di produksi.");
         }
     }

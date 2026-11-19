@@ -12,4 +12,7 @@ public interface PasswordResetRequestRepository extends JpaRepository<PasswordRe
 
     long countByStatus(String status);
 
+    // [BARU] Cegah permintaan PENDING ganda untuk user yang sama (spam notifikasi HRD).
+    boolean existsByUserAndStatus(sys.hris.sims.user.entity.User user, String status);
+
 }

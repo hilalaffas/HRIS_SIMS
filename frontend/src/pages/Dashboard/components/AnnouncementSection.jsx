@@ -11,6 +11,7 @@ import {
 } from '../../../services/announcementService';
 import Skeleton from '../../../components/Skeleton'; // [BARU]
 import { openLinksInNewTab } from '../../../utils/linkUtils'; // [BARU]
+import { sanitizeHtml } from '../../../utils/sanitizeHtml'; // [BARU] anti-XSS
 
 // [BARU] Jumlah berita yang ditampilkan per halaman.
 const ITEMS_PER_PAGE = 3;
@@ -184,7 +185,7 @@ export default function AnnouncementSection({ onEdit, onDelete, mode }) {
                   event.preventDefault();
                   setPreviewImage({ src: image.currentSrc || image.src, alt: image.alt || 'Gambar berita' });
                 }}
-                dangerouslySetInnerHTML={{ __html: openLinksInNewTab(item.isi) }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(openLinksInNewTab(item.isi)) }} /* [UBAH] + sanitizeHtml */
               />
               {isAdminMode && (item.publishAt || item.expiresAt) && (
                 <p className="text-[11px] text-gray-400 mt-3">

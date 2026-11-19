@@ -4,14 +4,17 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -21,6 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitFilter rateLimitFilter; // [BARU]
 
     // [BARU] Dua handler ini membuat 401 (sesi habis) dan 403 (role tidak
     // cukup) balas JSON yang jelas & bisa dibedakan frontend -- lihat
@@ -53,9 +57,11 @@ public class SecurityConfig {
     private static final String[] HRD_ROLES = {"HRD_ADMIN", "HRD_KARYAWAN"};
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                           RateLimitFilter rateLimitFilter,
                            RestAuthenticationEntryPoint restAuthenticationEntryPoint,
                            RestAccessDeniedHandler restAccessDeniedHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.rateLimitFilter = rateLimitFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
@@ -66,14 +72,22 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    // [UBAH] Origin CORS bisa diatur lewat env CORS_ALLOWED_ORIGINS (pisahkan dengan koma).
+    // Production: isi HANYA domain frontend resmi, contoh
+    //   CORS_ALLOWED_ORIGINS=https://sims-gamma-three.vercel.app,https://sims.perusahaan.co.id
+    // Kosong = perilaku lama (termasuk preview *.vercel.app & ngrok) supaya dev tidak putus.
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${cors.allowed-origin-patterns:}") String allowedOriginPatterns) {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173",
-                                                "https://sims-gamma-three.vercel.app",
-                                                "https://*.vercel.app",
-                                                "https://*.ngrok-free.dev"));
+        List<String> originPatterns = allowedOriginPatterns.isBlank()
+                ? List.of("http://localhost:5173",
+                          "https://sims-gamma-three.vercel.app",
+                          "https://*.vercel.app",
+                          "https://*.ngrok-free.dev")
+                : List.of(allowedOriginPatterns.split("\\s*,\\s*"));
+        configuration.setAllowedOriginPatterns(originPatterns);
 
         configuration.setAllowedMethods(List.of(
                 "GET",
@@ -83,8 +97,11 @@ public class SecurityConfig {
                 "OPTIONS"
         ));
 
-        configuration.setAllowedHeaders(List.of("*"));
+        // [UBAH] Whitelist header (sebelumnya "*"): frontend hanya mengirim tiga header ini.
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         configuration.setAllowCredentials(true);
+        // [BARU] Performa: browser menyimpan hasil preflight 1 jam -> mengurangi request OPTIONS.
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
@@ -100,6 +117,18 @@ public class SecurityConfig {
         return http
                 .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
+
+                // [BARU] Header keamanan respons API.
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentTypeOptions(Customizer.withDefaults())
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000))
+                        .referrerPolicy(referrer -> referrer
+                                .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("frame-ancestors 'none'")))
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -567,6 +596,9 @@ public class SecurityConfig {
 
                 )
 
+                // [BARU] Rate limit dipasang SEBELUM JWT filter.
+                .addFilterBefore(rateLimitFilter,
+                        UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class)
 

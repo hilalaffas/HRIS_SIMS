@@ -41,6 +41,13 @@ public class PasswordResetController {
         return authentication != null ? authentication.getName() : "System";
     }
 
+    // [BARU] Endpoint publik: buang karakter kontrol & batasi panjang sebelum masuk log aktivitas.
+    private String safeLogValue(String value) {
+        if (value == null) return "";
+        String cleaned = value.replaceAll("[\\p{Cntrl}]", " ").trim();
+        return cleaned.length() > 50 ? cleaned.substring(0, 50) : cleaned;
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<PasswordResetResponse> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request,
@@ -51,7 +58,7 @@ public class PasswordResetController {
         // Log aktivitas diperbaiki: getUsername() dan label "username"
         activityLogService.log("System", null, 
             "FORGOT_PASSWORD", "password_resets", null, 
-            "Permintaan reset password untuk username: " + request.getUsername(), httpRequest);
+            "Permintaan reset password untuk username: " + safeLogValue(request.getUsername()), httpRequest);
 
         return ResponseEntity.ok(response);
     }
