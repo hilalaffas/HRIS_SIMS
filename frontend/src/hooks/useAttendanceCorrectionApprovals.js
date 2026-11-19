@@ -66,15 +66,20 @@ export default function useAttendanceCorrectionApprovals(enabled = true) {
 
   const pendingCount = useMemo(() => rows.filter((row) => row.status === 'PENDING').length, [rows]);
 
-  const handleDecision = useCallback(async (row, status) => {
-    if (lock.current) return;
+  // [UBAH] + note (catatan approver, wajib saat REJECTED -- dicek di popup & di backend) dan mengembalikan
+  // true/false supaya popup konfirmasi hanya ditutup bila berhasil (isian tidak hilang saat gagal).
+  const handleDecision = useCallback(async (row, status, note = '') => {
+    if (lock.current) return false;
     lock.current = true; setProcessingKey(row.rowKey);
     try {
-      const updated = await decideCorrectionApproval(row.id, status);
+      const updated = await decideCorrectionApproval(row.id, status, note);
       setRows((current) => current.map((item) => item.id === row.id ? toRow(updated) : item).sort(sortRows));
       showToast(status === 'APPROVED' ? 'Koreksi absensi disetujui.' : 'Koreksi absensi ditolak.');
-    } catch (error) { showToast(error?.message || 'Gagal memproses koreksi.', 'error'); }
-    finally { lock.current = false; setProcessingKey(''); }
+      return true;
+    } catch (error) {
+      showToast(error?.message || 'Gagal memproses koreksi.', 'error');
+      return false;
+    } finally { lock.current = false; setProcessingKey(''); }
   }, [showToast]);
 
   return { rows, loading, processingKey, toast, pendingCount, handleDecision, reload: load };

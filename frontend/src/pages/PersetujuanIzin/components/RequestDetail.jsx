@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { CircleCheck, CircleX, Hourglass } from 'lucide-react';
 import AttachmentPreview from './AttachmentPreview';
 import DecisionPanel from './DecisionPanel';
+import DecisionConfirmModal from './DecisionConfirmModal'; // [BARU] konfirmasi Setujui/Tolak
 import {
   MIN_REJECT_NOTE_LENGTH,
   formatPeriod,
@@ -35,6 +36,8 @@ function DecidedBanner({ row }) {
 function RequestDetail({ row, processing, onApprove, onReject }) {
   const [note, setNote] = useState('');
   const [noteError, setNoteError] = useState('');
+  // [BARU] Keputusan yang menunggu konfirmasi: null | 'APPROVED' | 'REJECTED'.
+  const [confirmStatus, setConfirmStatus] = useState(null);
 
   const fileStatus = permissionFileStatus(row);
   const isPending = row.status === 'PENDING';
@@ -46,7 +49,8 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
     if (noteError) setNoteError('');
   };
 
-  const handleApprove = () => onApprove(row, note.trim());
+  // [UBAH] Setujui tidak lagi langsung diproses; buka popup konfirmasi dulu.
+  const handleApprove = () => setConfirmStatus('APPROVED');
 
   // Mengembalikan false bila catatan belum valid (DecisionPanel lalu memfokuskan kolom catatan).
   const handleReject = () => {
@@ -54,8 +58,17 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
       setNoteError('Catatan untuk karyawan wajib diisi saat menolak.');
       return false;
     }
-    onReject(row, note.trim());
+    // [UBAH] Catatan valid -> minta konfirmasi dulu sebelum menolak.
+    setConfirmStatus('REJECTED');
     return true;
+  };
+
+  // [BARU] Dipanggil dari popup konfirmasi. Popup ditutup lebih dulu; hasilnya ditangani parent.
+  const handleConfirm = () => {
+    const status = confirmStatus;
+    setConfirmStatus(null);
+    if (status === 'APPROVED') onApprove(row, note.trim());
+    else if (status === 'REJECTED') onReject(row, note.trim());
   };
 
   return (
@@ -126,6 +139,17 @@ function RequestDetail({ row, processing, onApprove, onReject }) {
         </section>
       )}
       <ApprovalLogAccordion logs={buildPermissionLogs(row.source)} />
+      {confirmStatus && (
+        <DecisionConfirmModal
+          status={confirmStatus}
+          row={row}
+          note={note.trim()}
+          isDocumentReview={isDocumentReview}
+          processing={processing}
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmStatus(null)}
+        />
+      )}
     </article>
   );
 }

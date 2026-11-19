@@ -16,6 +16,7 @@ import './ActionReasonModal.css';
  *      action  -> 'acc' | 'revisi' | 'tolak'
  *      subject -> [BARU] { name, meta } ringkasan di atas kolom alasan. Default: data cuti (karyawan.nama, jenisCuti, durasi)
  *      copy    -> [BARU] teks pengganti sebagian (modalTitle, modalSubtitle, placeholder, helperText) untuk jenis pengajuan lain
+ *                 [BARU] + reasonRequired (false = alasan opsional, dipakai konfirmasi ACC lembur/koreksi) & maxLength
  *    Modal tidak dirender (return null) kalau request bernilai null.
  *  - onCancel: () => void
  *  - onSubmit: (id, action, alasan) => void
@@ -96,7 +97,9 @@ const ActionReasonModal = ({ request, onCancel, onSubmit, isSubmitting = false }
   if (!request || !config || !item) return null;
 
   const trimmedAlasan = alasan.trim();
-  const isValid = trimmedAlasan.length >= MIN_ALASAN_LENGTH;
+  // [BARU] Alasan wajib kecuali copy.reasonRequired === false (mis. konfirmasi ACC lembur/koreksi).
+  const isReasonRequired = config.reasonRequired !== false;
+  const isValid = !isReasonRequired || trimmedAlasan.length >= MIN_ALASAN_LENGTH;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -139,13 +142,14 @@ const ActionReasonModal = ({ request, onCancel, onSubmit, isSubmitting = false }
             </div>
 
             <label className="action-reason__label" htmlFor="action-reason-textarea">
-              Alasan / Catatan
+              {isReasonRequired ? 'Alasan / Catatan' : 'Catatan (opsional)'}
             </label>
             <textarea
               id="action-reason-textarea"
               ref={textareaRef}
               className={`action-reason__textarea${touched && !isValid ? ' input-error' : ''}`}
               rows={4}
+              maxLength={config.maxLength}
               value={alasan}
               placeholder={config.placeholder}
               onChange={(e) => setAlasan(e.target.value)}
