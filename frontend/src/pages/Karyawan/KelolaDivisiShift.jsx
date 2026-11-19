@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Download, Layers3, RotateCcw, Save, Send, Upload } from 'lucide-react';
-import { unzipSync, strFromU8 } from 'fflate';
+// [UBAH] fflate di-import dinamis di parseScheduleXlsx() -- hanya diunduh saat user mengimpor jadwal.
 import DataDivisi from './components/DataDivisi';
 import RegularScheduleEditor from './components/RegularScheduleEditor'; // [BARU]
 import { DEFAULT_REGULAR_SCHEDULE, divisionToRegularSchedule, formatRegularHours, validateRegularSchedule } from '../../utils/regularSchedule'; // [BARU]
@@ -65,6 +65,7 @@ const codeFromShiftName = (name, index, count) => {
   return count <= 4 ? (standardShiftCodes[count]?.[index] || codeForIndex(index)) : codeForIndex(index);
 };
 const parseScheduleXlsx = async (file) => {
+  const { unzipSync, strFromU8 } = await import('fflate'); // [BARU]
   const zip = unzipSync(new Uint8Array(await file.arrayBuffer()));
   const xml = (name) => zip[name] ? strFromU8(zip[name]) : '';
   const workbook = new DOMParser().parseFromString(xml('xl/workbook.xml'), 'application/xml');

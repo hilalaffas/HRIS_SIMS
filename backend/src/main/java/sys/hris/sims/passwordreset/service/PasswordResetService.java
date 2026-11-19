@@ -55,10 +55,13 @@ public class PasswordResetService {
 
         User user = userRepository.findByUsername(request.getUsername());
 
-        // [UBAH] Akun tersembunyi (superadmin & dev) diperlakukan SAMA dengan username yang tidak ada:
-        // tidak ada permintaan yang dibuat, tidak ada notifikasi ke HRD, pesan error identik.
-        if (user == null || hiddenAccountPolicy.isHiddenUser(user)) {
-            throw new RuntimeException("Username tidak ditemukan");
+        // [UBAH] Anti user-enumeration: username tidak ada, akun tersembunyi (superadmin & dev),
+        // atau permintaan PENDING yang sudah ada -> balasan SAMA PERSIS dengan kasus sukses
+        // (tanpa error, tanpa email, tanpa notifikasi baru ke HRD).
+        if (user == null
+                || hiddenAccountPolicy.isHiddenUser(user)
+                || passwordResetRepository.existsByUserAndStatus(user, "PENDING")) {
+            return genericResponse(request.getUsername());
         }
 
         PasswordResetRequest resetRequest = PasswordResetRequest.builder()
@@ -89,12 +92,18 @@ public class PasswordResetService {
             System.err.println("Gagal membuat notifikasi reset sandi: " + ex.getMessage());
         }
 
+        // [UBAH] Email & id tidak lagi dikembalikan ke pemanggil publik (kebocoran data).
+        return genericResponse(user.getUsername());
+    }
+
+    // [BARU] Balasan seragam untuk endpoint publik forgot-password.
+    private PasswordResetResponse genericResponse(String username) {
         return PasswordResetResponse.builder()
-                .id(resetRequest.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .status(resetRequest.getStatus())
-                .requestedAt(resetRequest.getRequestedAt())
+                .id(null)
+                .username(username)
+                .email(null)
+                .status("PENDING")
+                .requestedAt(LocalDateTime.now())
                 .approvedBy(null)
                 .approvedAt(null)
                 .notes(null)

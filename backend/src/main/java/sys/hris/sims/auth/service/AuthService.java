@@ -19,6 +19,10 @@ import sys.hris.sims.user.repository.UserRepository;
 @Service
 public class AuthService {
 
+    // [BARU] Kebijakan password minimal untuk perubahan password oleh user.
+    private static final int MIN_PASSWORD_LENGTH = 8;
+    private static final int MAX_PASSWORD_LENGTH = 72;
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final EmployeeRepository employeeRepository;
@@ -101,6 +105,17 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new RuntimeException("Password lama salah");
+        }
+
+        // [BARU] Validasi password baru di sisi server (frontend saja tidak cukup).
+        if (request.getNewPassword() == null || request.getNewPassword().length() < MIN_PASSWORD_LENGTH) {
+            throw new RuntimeException("Password baru minimal " + MIN_PASSWORD_LENGTH + " karakter");
+        }
+        if (request.getNewPassword().length() > MAX_PASSWORD_LENGTH) { // BCrypt hanya membaca 72 byte
+            throw new RuntimeException("Password baru terlalu panjang");
+        }
+        if (request.getNewPassword().equals(request.getOldPassword())) {
+            throw new RuntimeException("Password baru tidak boleh sama dengan password lama");
         }
 
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {

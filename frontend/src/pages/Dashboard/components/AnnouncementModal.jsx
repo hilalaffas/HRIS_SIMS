@@ -4,6 +4,7 @@ import Dropdown from '../../../components/Dropdown';
 import Toast from '../../../components/Toast';
 import { validateRequired, inputErrorClass } from '../../../utils/validation';
 import { normalizeUrl, openLinksInNewTab } from '../../../utils/linkUtils'; // [BARU]
+import { sanitizeHtml } from '../../../utils/sanitizeHtml'; // [BARU] anti-XSS
 import { uploadAnnouncementImage, formatScheduleDate } from '../../../services/announcementService';
 import './AnnouncementModal.css';
 
@@ -78,7 +79,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
     if (initialData) {
       setJudul(initialData.judul || '');
       setLabel(initialData.label === 'update' ? 'penting' : (initialData.label || 'penting'));
-      if (editorRef.current) editorRef.current.innerHTML = initialData.isi || '';
+      if (editorRef.current) editorRef.current.innerHTML = sanitizeHtml(initialData.isi); // [UBAH] sanitasi sebelum masuk editor
 
       // Mode Edit: jadwal yang sudah ada dipertahankan, bukan "kirim sekarang".
       setKirimSekarang(false);
@@ -236,7 +237,7 @@ export default function AnnouncementModal({ isOpen, onClose, onSubmit, initialDa
         label,
         // [UBAH] Tautan (termasuk yang di-paste dari luar editor) disimpan
         // sudah lengkap dengan target="_blank" rel="noopener noreferrer".
-        isi: openLinksInNewTab(editorRef.current?.innerHTML || ''),
+        isi: sanitizeHtml(openLinksInNewTab(editorRef.current?.innerHTML || '')), // [UBAH] + sanitizeHtml
         // [BARU] "Kirim Sekarang" dicentang -> publishAt dikirim kosong,
         // backend otomatis mengisi waktu sekarang (lihat
         // NewsServiceImpl.applyDefaultSchedule()). Kalau tidak dicentang,
