@@ -99,6 +99,7 @@ public class SecurityConfig {
 
         // [UBAH] Whitelist header (sebelumnya "*"): frontend hanya mengirim tiga header ini.
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        configuration.setExposedHeaders(List.of("Retry-After")); // [BARU] supaya frontend bisa membaca sisa waktu tunggu
         configuration.setAllowCredentials(true);
         // [BARU] Performa: browser menyimpan hasil preflight 1 jam -> mengurangi request OPTIONS.
         configuration.setMaxAge(3600L);

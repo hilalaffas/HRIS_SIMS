@@ -126,10 +126,20 @@ async function request(path, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  // [UBAH] Gagal terhubung (server tidur, tantangan Cloudflare, CORS, offline) membuat
+  // fetch melempar TypeError berbahasa Inggris ("Failed to fetch"). Ganti dengan
+  // pesan yang bisa dipahami pengguna.
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch {
+    throw new Error(
+      'Tidak dapat terhubung ke server. Periksa koneksi internet Anda, lalu coba lagi beberapa saat lagi.'
+    );
+  }
 
   // Beberapa endpoint (mis. DELETE /api/holidays/{id}) mengembalikan plain text,
   // bukan JSON, jadi kita coba parse JSON dulu dan fallback ke teks mentah kalau gagal.
@@ -146,10 +156,14 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
+    // [UBAH] Balasan teks hanya dipakai bila bukan HTML (mis. halaman tantangan Cloudflare).
+    const isHtmlBody = typeof data === 'string' && data.trimStart().startsWith('<');
     const message =
       (data && typeof data === 'object' && (data.message || data.error)) ||
-      (typeof data === 'string' ? data : null) ||
-      `Request gagal (${response.status})`;
+      (typeof data === 'string' && !isHtmlBody ? data : null) ||
+      (response.status === 429
+        ? 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.'
+        : `Request gagal (${response.status})`);
 
     // [BARU] Backend (RestAuthenticationEntryPoint) membalas 401 dengan
     // errorCode SESSION_EXPIRED HANYA untuk kasus token tidak ada/tidak
