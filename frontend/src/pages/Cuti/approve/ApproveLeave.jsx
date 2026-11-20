@@ -183,12 +183,37 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
    *   await api.post(`/cuti/approval/${id}`, { action, alasan });
    * lalu refetch/replace data pending & history setelah sukses.
    */
+  // [BARU] Kunci klik ganda: tombol "Ya, Setujui" tidak boleh terkirim dua kali selama permintaan berjalan.
+  const actionLockRef = useRef(false);
+  const [isActionSubmitting, setIsActionSubmitting] = useState(false);
+
   const handleConfirmAction = async (id, action, alasan) => {
+    if (actionLockRef.current) return; // [BARU]
+    actionLockRef.current = true;
+    setIsActionSubmitting(true);
     try {
       await takeApprovalAction(id, action === 'acc' ? 'approve' : action === 'revisi' ? 'return' : 'reject', alasan);
       setActionRequest(null);
       await loadData();
-    } catch (err) { alert(err.message || 'Aksi cuti gagal diproses.'); }
+    } catch (err) {
+      alert(err.message || 'Aksi cuti gagal diproses.');
+      // [BARU] Respons error tidak selalu berarti aksinya gagal (server bisa sudah menyimpan lalu gagal membalas).
+      // Cek ulang antrean: bila berkas sudah tidak pending, tutup popup dan segarkan daftar supaya
+      // tombol ACC-nya hilang dan tidak bisa diklik lagi. Bila masih pending, popup tetap terbuka.
+      try {
+        const tasks = await getPendingApprovals();
+        const stillPending = (Array.isArray(tasks) ? tasks : []).some((task) => String(task.id) === String(id));
+        if (!stillPending) {
+          setActionRequest(null);
+          await loadData();
+        }
+      } catch {
+        // gagal mengecek ulang: biarkan popup terbuka seperti sebelumnya
+      }
+    } finally {
+      actionLockRef.current = false; // [BARU]
+      setIsActionSubmitting(false);
+    }
   };
 
   // [BARU] Data Persetujuan Lembur dimuat di sini (bukan di dalam tab) supaya
@@ -275,6 +300,7 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
       {/*Bagian popup alasan ACC/Revisi/Tolak*/}
       <ActionReasonModal
         request={actionRequest}
+        isSubmitting={isActionSubmitting} // [BARU]
         onCancel={handleCancelAction}
         onSubmit={handleConfirmAction}
       />
