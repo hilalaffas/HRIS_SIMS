@@ -64,6 +64,29 @@ function resolveGeolocationError(error) {
   return 'Lokasi tidak tersedia. Pastikan GPS aktif lalu coba lagi.';
 }
 
+// [BARU] Preferensi "Balik kamera" disimpan per perangkat. Default MATI = gambar apa adanya dari kamera.
+// Dipakai bila driver/HP menghasilkan stream yang sudah terbalik (mirror) dari sananya.
+const FLIP_STORAGE_KEY = 'sims.attendance.flipCamera';
+const DEFAULT_CAMERA_FLIPPED = true;
+function readFlipPreference() {
+  try {
+    const stored = window.localStorage.getItem(FLIP_STORAGE_KEY);
+    return stored === null ? DEFAULT_CAMERA_FLIPPED : stored === '1';
+  } catch { return DEFAULT_CAMERA_FLIPPED; }
+}
+
+// [BARU] Browser mobile tertentu (mis. Opera) membiarkan <video> hitam/berhenti bila stream hanya
+// disambungkan lewat `autoPlay`. Paksa muted + playsInline lalu panggil play() secara eksplisit.
+function playVideo(node) {
+  if (!node) return;
+  node.muted = true;
+  node.defaultMuted = true;
+  node.setAttribute('playsinline', '');
+  node.setAttribute('webkit-playsinline', '');
+  const result = node.play?.();
+  if (result && typeof result.catch === 'function') result.catch(() => { /* diputar ulang lewat event */ });
+}
+
 export default function useAttendanceCapture({ onSubmitted } = {}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -75,6 +98,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const cameraRetryLockRef = useRef(false); // [BARU] anti klik "Coba Lagi" beruntun
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isCameraFlipped, setIsCameraFlipped] = useState(readFlipPreference); // [BARU]
   const [action, setAction] = useState('Masuk');
   const [reason, setReason] = useState('Absen');
   const [note, setNote] = useState('');
@@ -101,9 +125,16 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   // "Ambil ulang") langsung disambungkan lagi ke stream yang masih aktif.
   const attachVideo = useCallback((node) => {
     videoRef.current = node;
-    if (node && streamRef.current && node.srcObject !== streamRef.current) {
+    if (!node) return;
+    if (!node.dataset.simsPlayBound) { // [BARU] pasang sekali per elemen <video>
+      node.dataset.simsPlayBound = '1';
+      node.addEventListener('loadedmetadata', () => playVideo(node));
+      node.addEventListener('canplay', () => { if (node.paused) playVideo(node); });
+    }
+    if (streamRef.current && node.srcObject !== streamRef.current) {
       node.srcObject = streamRef.current;
     }
+    if (streamRef.current) playVideo(node); // [BARU]
   }, []);
 
   const teardown = useCallback(() => {
@@ -183,7 +214,15 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
         return;
       }
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        playVideo(videoRef.current); // [BARU]
+        // [BARU] Jaring pengaman: bila setelah 1,2 detik masih berhenti, coba putar lagi.
+        window.setTimeout(() => {
+          const node = videoRef.current;
+          if (node && session === sessionRef.current && node.paused) playVideo(node);
+        }, 1200);
+      }
       setCameraError('');
       setCameraErrorType('');
     } catch (error) {
@@ -267,6 +306,15 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     setSubmitError('');
   }, [teardown]);
 
+  // [BARU] Balik tampilan kamera (pratinjau + hasil foto selalu konsisten).
+  const toggleCameraFlip = useCallback(() => {
+    setIsCameraFlipped((prev) => {
+      const next = !prev;
+      try { window.localStorage.setItem(FLIP_STORAGE_KEY, next ? '1' : '0'); } catch { /* abaikan */ }
+      return next;
+    });
+  }, []);
+
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
@@ -285,7 +333,15 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
 
     const context = canvas.getContext('2d');
     if (!context) return;
+    // [UBAH] Bila "Balik kamera" aktif, hanya gambar kamera yang dibalik; overlay teks di bawah
+    // digambar sesudah restore() sehingga tulisan tetap terbaca normal (tidak ikut terbalik).
+    if (isCameraFlipped) {
+      context.save();
+      context.translate(sourceWidth, 0);
+      context.scale(-1, 1);
+    }
     context.drawImage(video, frame.x, frame.y, frame.cropWidth, frame.cropHeight, 0, 0, sourceWidth, sourceHeight);
+    if (isCameraFlipped) context.restore();
 
     // Metadata ditampilkan sebagai overlay DI ATAS foto dan ikut tertanam
     // permanen ke file JPEG yang dikirim/disimpan.
@@ -328,7 +384,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
 
     setCaptured(canvas.toDataURL('image/jpeg', 0.85)); // [UBAH] kualitas 0.9 -> 0.85 (file lebih kecil, selisih visual nyaris tak terlihat)
     setSubmitError('');
-  }, [coords, locationName, locationType]);
+  }, [coords, isCameraFlipped, locationName, locationType]);
 
   const retake = useCallback(() => {
     setCaptured('');
@@ -387,6 +443,8 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     isLocationNameLoading, // [BARU]
     isSubmitting,
     // handler
+    isCameraFlipped, // [BARU]
+    toggleCameraFlip, // [BARU]
     attachVideo,
     open,
     retryCamera, // [BARU]
