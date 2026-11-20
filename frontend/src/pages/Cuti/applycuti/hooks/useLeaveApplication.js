@@ -21,6 +21,10 @@ import { getAllHolidays } from '../../../../services/holidayService';
 import { isEmpty } from '../../../../utils/validation';
 import { isHrd } from '../../../../utils/roles';
 import { approvalRolesFor } from '../../../../utils/approvalHierarchy';
+import { NO_APPROVER_VALUE } from '../../../../constants/overtimeFlow'; // [BARU] pilihan "-" pada dropdown Leader/SPV
+
+// [BARU] Pilihan "-" (NO_APPROVER_VALUE) atau kosong = tahap dilewati -> null; selain itu id karyawan.
+const toApproverId = (value) => (!value || value === NO_APPROVER_VALUE ? null : Number(value));
 
 // [BARU] Interval polling live-sync riwayat cuti (lihat useEffect di bawah).
 const HISTORY_POLL_INTERVAL_MS = 30000; // [UBAH] 15000 -> 30000 (lihat startPolling di bawah)
@@ -263,11 +267,12 @@ export default function useLeaveApplication(user, { notify = (message) => window
   // Gabungan semua approver (LEADER, SPV, MANAGER) menjadi map { employeeId: fullName }
   // Dipakai sebagai fallback untuk menampilkan nama approver di popup detail,
   // kalau-kalau Backend hanya mengirim ID approver tanpa objek nama lengkapnya.
-  const employeeLookup = [...approvers.LEADER, ...approvers.SPV, ...approvers.MANAGER, ...approvers.HRD]
+  // [UBAH] useMemo: hanya dihitung ulang saat daftar approver berubah (bukan tiap ketikan di form).
+  const employeeLookup = useMemo(() => [...approvers.LEADER, ...approvers.SPV, ...approvers.MANAGER, ...approvers.HRD]
     .reduce((acc, person) => {
       acc[person.employeeId] = person.fullName;
       return acc;
-    }, {});
+    }, {}), [approvers]);
 
   const load = useCallback(async () => {
     try {
@@ -522,8 +527,8 @@ export default function useLeaveApplication(user, { notify = (message) => window
       session: isActualHalfDayType
         ? (SESSION_CODE_BY_LABEL[durasiSesi] || 'PAGI')
         : (isHalfDayLeave ? URGENT_HALF_DAY_SESSION_CODE : null),
-      leaderEmployeeId: isHrdRequester || !needsLeader || !leaderEmployeeId ? null : Number(leaderEmployeeId),
-      spvEmployeeId: isHrdRequester || !needsSpv || !spvEmployeeId ? null : Number(spvEmployeeId),
+      leaderEmployeeId: isHrdRequester || !needsLeader ? null : toApproverId(leaderEmployeeId), // [UBAH] "-" = null
+      spvEmployeeId: isHrdRequester || !needsSpv ? null : toApproverId(spvEmployeeId), // [UBAH] "-" = null
       managerEmployeeId: isHrdRequester || !managerEmployeeId ? null : Number(managerEmployeeId),
       hrdEmployeeId: isHrdRequester && hrdEmployeeId ? Number(hrdEmployeeId) : null
     };
@@ -540,8 +545,9 @@ export default function useLeaveApplication(user, { notify = (message) => window
       approvers: isHrdRequester
         ? [{ role: 'HRD', name: employeeLookup[hrdEmployeeId] || '-' }]
         : [
-            ...(needsLeader ? [{ role: 'Leader', name: employeeLookup[leaderEmployeeId] || '-' }] : []),
-            ...(needsSpv ? [{ role: 'SPV', name: employeeLookup[spvEmployeeId] || '-' }] : []),
+            // [UBAH] Tahap yang dipilih "-" tidak ditampilkan di ringkasan konfirmasi.
+            ...(needsLeader && leaderEmployeeId !== NO_APPROVER_VALUE ? [{ role: 'Leader', name: employeeLookup[leaderEmployeeId] || '-' }] : []),
+            ...(needsSpv && spvEmployeeId !== NO_APPROVER_VALUE ? [{ role: 'SPV', name: employeeLookup[spvEmployeeId] || '-' }] : []),
             { role: 'Manager', name: employeeLookup[managerEmployeeId] || '-' },
           ],
       reason,
@@ -682,8 +688,9 @@ export default function useLeaveApplication(user, { notify = (message) => window
     // tetap responsif -- approver menyusul begitu fetch selesai.
     try {
       const detail = await getMyLeaveDetail(id);
-      setLeaderEmployeeId(detail.leaderEmployeeId ? String(detail.leaderEmployeeId) : '');
-      setSpvEmployeeId(detail.spvEmployeeId ? String(detail.spvEmployeeId) : '');
+      // [UBAH] Tahap Leader/SPV tanpa approver di pengajuan lama = dulu dipilih "-".
+      setLeaderEmployeeId(detail.leaderEmployeeId ? String(detail.leaderEmployeeId) : (needsLeader ? NO_APPROVER_VALUE : ''));
+      setSpvEmployeeId(detail.spvEmployeeId ? String(detail.spvEmployeeId) : (needsSpv ? NO_APPROVER_VALUE : ''));
       setManagerEmployeeId(detail.managerEmployeeId ? String(detail.managerEmployeeId) : '');
       setHrdEmployeeId(detail.hrdEmployeeId ? String(detail.hrdEmployeeId) : '');
       if (showReminder) setError('Data pengajuan sebelumnya sudah dimuat ulang (termasuk approver). Periksa kembali, lalu simpan perbaikan cuti Anda.');

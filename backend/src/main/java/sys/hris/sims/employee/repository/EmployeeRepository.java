@@ -74,4 +74,16 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             order by e.fullName asc
             """)
     List<Employee> findActiveByRoleNamesUpper(@Param("roleNames") Collection<String> roleNames);
+
+    // [BARU] Sama seperti di atas tetapi disaring di database ke SATU role dan SATU divisi -- dipakai daftar
+    // approver Leader/SPV (satu divisi) supaya tidak memuat Leader/SPV semua divisi lalu menyaring di memori.
+    @Query("""
+            select e from Employee e
+            join fetch e.user u
+            join fetch u.roleId r
+            join fetch e.divisi d
+            where e.isActive = true and upper(r.roleName) = :roleName and d.id = :divisiId
+            order by e.fullName asc
+            """)
+    List<Employee> findActiveByRoleNameUpperAndDivisiId(@Param("roleName") String roleName, @Param("divisiId") Long divisiId);
 }

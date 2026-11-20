@@ -31,6 +31,7 @@ import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.attendance.service.LeaveAttendancePolicy;
 import sys.hris.sims.common.service.HrdApproverPolicy;
+import sys.hris.sims.common.service.ApproverScopePolicy; // [BARU]
 import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.common.service.ReportScopeService;
 import sys.hris.sims.leave.entity.LeaveRequest;
@@ -83,6 +84,7 @@ public class LeaveService {
     private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] aturan akses langsung akun tersembunyi
     private final NotificationService notificationService; // [BARU] notifikasi lonceng disimpan di database
     private final HrdApproverPolicy hrdApproverPolicy; // [BARU] aturan approver HRD
+    private final ApproverScopePolicy approverScopePolicy; // [BARU] Leader/SPV satu divisi & opsional, Manager lintas divisi
 
     // [UBAH] Sumber data tab "Cuti Karyawan" & ekspor cuti: pengajuan milik
     // SUPER_ADMIN / akun dev tidak ditampilkan, hanya karyawan asli.
@@ -979,6 +981,8 @@ public class LeaveService {
                 case ROLE_SPV -> cuti.getSpvEmployeeId();
                 default -> cuti.getManagerEmployeeId();
             };
+            // [BARU] Leader/SPV yang dikosongkan ("-") dilewati: pengajuan langsung ke tahap berikutnya.
+            if (ApproverScopePolicy.isOptionalStage(stage) && !hasValue(id)) continue;
             approvals.add(buildApproval(cuti, stage, getSelectedApprover(id, stage, requester)));
         }
 
@@ -1353,8 +1357,8 @@ public class LeaveService {
         if (requester.getDivisi() == null) {
             throw new RuntimeException("Divisi pemohon belum ditentukan");
         }
-        if (employee.getDivisi() == null
-                || !requester.getDivisi().getId().equals(employee.getDivisi().getId())) {
+        // [UBAH] Leader/SPV harus satu divisi; Manager boleh dari divisi mana pun (ApproverScopePolicy).
+        if (!approverScopePolicy.allowsApprover(requester, employee, expectedRole)) {
             throw new RuntimeException("Approver " + expectedRole + " harus berasal dari divisi yang sama dengan pemohon");
         }
 

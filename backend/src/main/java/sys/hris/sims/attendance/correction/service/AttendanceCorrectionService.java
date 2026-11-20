@@ -26,6 +26,7 @@ public class AttendanceCorrectionService {
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
     private final HrdApproverPolicy hrdApproverPolicy; // [BARU] aturan approver HRD
+    private final sys.hris.sims.common.service.ApproverScopePolicy approverScopePolicy; // [BARU] Leader/SPV satu divisi & opsional, Manager lintas divisi
 
     private Employee employee(String username) {
         return employeeRepository.findFirstByUser_Username(username)
@@ -62,11 +63,13 @@ public class AttendanceCorrectionService {
         var stages = requiredRoles(requester).stream().map(stage -> {
             List<Employee> people = stage.equals(HrdApproverPolicy.STAGE_ROLE)
                     ? hrdApproverPolicy.findSelectableApprovers(requester)
-                    : employeeRepository.findActiveByRoleNamesUpper(Set.of(stage)).stream()
-                        .filter(person -> sameDivision(requester, person))
-                        .filter(person -> !Objects.equals(person.getEmployeeId(), requester.getEmployeeId())).toList();
+                    : approverScopePolicy.selectableApprovers(requester, stage); // [UBAH] Leader/SPV satu divisi, Manager lintas divisi
             return new CorrectionApproverOptions.Stage(stage, field(stage), people.stream()
-                    .map(person -> new CorrectionApproverOptions.Person(person.getEmployeeId(), person.getFullName())).toList());
+                    .map(person -> {
+                        boolean cross = !stage.equals(HrdApproverPolicy.STAGE_ROLE) && !sameDivision(requester, person); // [BARU]
+                        return new CorrectionApproverOptions.Person(person.getEmployeeId(), person.getFullName(),
+                                cross ? person.getDivisi().getNamaDivisi() : null, cross);
+                    }).toList());
         }).toList();
         return new CorrectionApproverOptions(stages);
     }
@@ -79,7 +82,8 @@ public class AttendanceCorrectionService {
             throw new IllegalArgumentException("Pilih approver " + expectedRole + " yang masih aktif.");
         if (Objects.equals(approver.getEmployeeId(), requester.getEmployeeId()))
             throw new IllegalArgumentException("Anda tidak dapat memilih diri sendiri sebagai approver.");
-        if (!sameDivision(requester, approver)) throw new IllegalArgumentException("Approver harus dari divisi yang sama dengan pemohon.");
+        if (!approverScopePolicy.allowsApprover(requester, approver, expectedRole)) // [UBAH]
+            throw new IllegalArgumentException("Approver harus dari divisi yang sama dengan pemohon.");
         return approver;
     }
 
@@ -100,6 +104,8 @@ public class AttendanceCorrectionService {
                 case "SPV" -> request.getSpvEmployeeId();
                 default -> request.getManagerEmployeeId();
             };
+            // [BARU] Leader/SPV yang dikosongkan ("-") dilewati.
+            if (sys.hris.sims.common.service.ApproverScopePolicy.isOptionalStage(stage) && (id == null || id <= 0)) continue;
             steps.add(step(correction, stage, selectedApprover(id, stage, requester)));
         }
         approvalRepository.saveAll(steps);

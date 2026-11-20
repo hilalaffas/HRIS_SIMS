@@ -367,7 +367,7 @@ public class OvertimeService {
                 .filter(item -> !item.getOvertimeId().equals(currentOvertimeId))
                 .limit(10)
                 .map(item -> loadSortedSteps(item.getOvertimeId()))
-                .filter(steps -> steps.size() == requiredStages.size())
+                .filter(steps -> !steps.isEmpty()) // [UBAH] rantai boleh lebih pendek (Leader/SPV dilewati)
                 .map(steps -> revalidateChain(requester, requiredStages, steps))
                 .filter(chain -> !chain.isEmpty())
                 .findFirst()
@@ -379,7 +379,7 @@ public class OvertimeService {
         for (OvertimeApproval step : steps) {
             approverIdByStage.put(step.getApproverRole().toUpperCase(Locale.ROOT), step.getApproverEmployee().getEmployeeId());
         }
-        if (!approverIdByStage.keySet().equals(new java.util.HashSet<>(requiredStages))) {
+        if (!requiredStages.containsAll(approverIdByStage.keySet())) { // [UBAH] tahap yang dilewati tidak ada barisnya
             return Map.of();
         }
         try {

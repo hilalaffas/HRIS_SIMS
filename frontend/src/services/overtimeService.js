@@ -5,7 +5,7 @@
 // (pages/Absensi/utils/monthlyAttendance.js). Pola sama dengan
 // attendanceService.js: data MENTAH dari backend, diformat di sini.
 import { api } from './api';
-import { STAGE_FIELD } from '../constants/overtimeFlow';
+import { NO_APPROVER_VALUE, STAGE_FIELD } from '../constants/overtimeFlow'; // [UBAH] + NO_APPROVER_VALUE
 
 // [UBAH] + config opsional ({ silent }) -- pemuatan ulang di latar belakang
 // (mis. setelah Tambah Lembur saat check-out) tidak perlu memicu LoadingScreen global.
@@ -19,7 +19,8 @@ export async function getMyOvertime(config = {}) {
 export function buildApproverPayload(stages, selected = {}) {
   return Object.fromEntries(Object.entries(STAGE_FIELD).map(([stage, field]) => [
     field,
-    stages.includes(stage) && selected[field] ? Number(selected[field]) : null,
+    // [UBAH] Pilihan "-" (NO_APPROVER_VALUE) = tahap dilewati -> null, bukan Number('NONE').
+    stages.includes(stage) && selected[field] && selected[field] !== NO_APPROVER_VALUE ? Number(selected[field]) : null,
   ]));
 }
 
