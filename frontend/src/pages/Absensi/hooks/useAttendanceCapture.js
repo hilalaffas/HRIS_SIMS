@@ -64,6 +64,13 @@ function resolveGeolocationError(error) {
   return 'Lokasi tidak tersedia. Pastikan GPS aktif lalu coba lagi.';
 }
 
+// [BARU] Preferensi "Balik kamera" disimpan per perangkat. Default MATI = gambar apa adanya dari kamera.
+// Dipakai bila driver/HP menghasilkan stream yang sudah terbalik (mirror) dari sananya.
+const FLIP_STORAGE_KEY = 'sims.attendance.flipCamera';
+function readFlipPreference() {
+  try { return window.localStorage.getItem(FLIP_STORAGE_KEY) === '1'; } catch { return false; }
+}
+
 export default function useAttendanceCapture({ onSubmitted } = {}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -75,6 +82,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const cameraRetryLockRef = useRef(false); // [BARU] anti klik "Coba Lagi" beruntun
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isCameraFlipped, setIsCameraFlipped] = useState(readFlipPreference); // [BARU]
   const [action, setAction] = useState('Masuk');
   const [reason, setReason] = useState('Absen');
   const [note, setNote] = useState('');
@@ -267,6 +275,15 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     setSubmitError('');
   }, [teardown]);
 
+  // [BARU] Balik tampilan kamera (pratinjau + hasil foto selalu konsisten).
+  const toggleCameraFlip = useCallback(() => {
+    setIsCameraFlipped((prev) => {
+      const next = !prev;
+      try { window.localStorage.setItem(FLIP_STORAGE_KEY, next ? '1' : '0'); } catch { /* abaikan */ }
+      return next;
+    });
+  }, []);
+
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
@@ -285,7 +302,15 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
 
     const context = canvas.getContext('2d');
     if (!context) return;
+    // [UBAH] Bila "Balik kamera" aktif, hanya gambar kamera yang dibalik; overlay teks di bawah
+    // digambar sesudah restore() sehingga tulisan tetap terbaca normal (tidak ikut terbalik).
+    if (isCameraFlipped) {
+      context.save();
+      context.translate(sourceWidth, 0);
+      context.scale(-1, 1);
+    }
     context.drawImage(video, frame.x, frame.y, frame.cropWidth, frame.cropHeight, 0, 0, sourceWidth, sourceHeight);
+    if (isCameraFlipped) context.restore();
 
     // Metadata ditampilkan sebagai overlay DI ATAS foto dan ikut tertanam
     // permanen ke file JPEG yang dikirim/disimpan.
@@ -328,7 +353,7 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
 
     setCaptured(canvas.toDataURL('image/jpeg', 0.85)); // [UBAH] kualitas 0.9 -> 0.85 (file lebih kecil, selisih visual nyaris tak terlihat)
     setSubmitError('');
-  }, [coords, locationName, locationType]);
+  }, [coords, isCameraFlipped, locationName, locationType]);
 
   const retake = useCallback(() => {
     setCaptured('');
@@ -387,6 +412,8 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
     isLocationNameLoading, // [BARU]
     isSubmitting,
     // handler
+    isCameraFlipped, // [BARU]
+    toggleCameraFlip, // [BARU]
     attachVideo,
     open,
     retryCamera, // [BARU]

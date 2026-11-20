@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Camera,
   Check,
+  FlipHorizontal2,
   Info,
   Loader2,
   MapPinned,
@@ -40,7 +41,7 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
   const {
     action, note, captured, cameraError, cameraErrorType, isCameraRetrying, submitError, coords, locationType, setLocationType,
     locationStatus, locationError, locationName, isLocationNameLoading, isSubmitting,
-    attachVideo, retryCamera, close, takePhoto, retake, submit, refreshLocation, setNote,
+    isCameraFlipped, toggleCameraFlip, attachVideo, retryCamera, close, takePhoto, retake, submit, refreshLocation, setNote,
   } = capture;
 
   const clock = useLiveClock();
@@ -129,7 +130,14 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
             ) : (
               <>
                 {/* <video> tetap terpasang saat foto sudah diambil, supaya "Ambil ulang" langsung hidup lagi */}
-                <video ref={attachVideo} className="quickAtt__video" autoPlay playsInline muted hidden={Boolean(captured)} />
+                <video ref={attachVideo} className={`quickAtt__video${isCameraFlipped ? ' is-flipped' : ''}`} autoPlay playsInline muted hidden={Boolean(captured)} />
+                {!captured && (
+                  <button type="button" className={`quickAtt__flip${isCameraFlipped ? ' is-on' : ''}`}
+                    onClick={toggleCameraFlip} aria-pressed={isCameraFlipped}
+                    aria-label="Balik tampilan kamera" title="Balik tampilan kamera (kiri-kanan)">
+                    <FlipHorizontal2 size={15} aria-hidden="true" />
+                  </button>
+                )}
                 {captured && (
                   <>
                     <img className="quickAtt__photo" src={captured} alt="Pratinjau selfie absensi" />

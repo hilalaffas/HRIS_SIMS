@@ -133,6 +133,30 @@
 
 .quickAtt__video[hidden] { display: none; }
 
+/* [BARU] Balik kamera kiri-kanan (hanya pratinjau; foto dibalik di canvas saat takePhoto) */
+.quickAtt__video.is-flipped { transform: scaleX(-1); }
+
+.quickAtt__flip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(0, 0, 0, .45);
+  cursor: pointer;
+  transition: background .2s ease, transform .15s ease;
+}
+.quickAtt__flip:hover { background: rgba(0, 0, 0, .65); }
+.quickAtt__flip:active { transform: scale(.94); }
+.quickAtt__flip.is-on { background: var(--color-success); }
+.quickAtt__flip:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
 .quickAtt__photo {
   display: block;
   object-fit: contain;
