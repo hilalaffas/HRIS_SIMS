@@ -285,10 +285,11 @@ public class LeaveController {
         if (!hiddenAccountPolicy.canAccess(target.getEmployee(), authentication.getName())) {
             throw new RuntimeException("Cuti tidak ditemukan");
         }
+        String ownerName = target.getEmployee().getFullName(); // [BARU] nama pengaju, diambil sebelum data dihapus
         cutiService.deleteCuti(id);
 
         // catat activity log 
-        activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "DELETE_CUTI", "leave_requests", id,"Menghapus cuti id: " + id, httpRequest);
+        activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "DELETE_CUTI", "leave_requests", id,"Menghapus cuti " + ownerName, httpRequest); // [UBAH] dulu "Menghapus cuti id: " + id
 
         return ResponseEntity.ok("Cuti berhasil dihapus");
     }

@@ -60,6 +60,42 @@
    (komponen Dropdown reusable). .select-filter_log_sistem sekarang hanya
    dipakai sebagai className tambahan (lihat variant="pill" di Dropdown). */
 
+/* [BARU] Pencarian + filter jenis aktivitas. Tema gelap lewat var(--dk-*, <hex terang>). */
+.toolbar_log_sistem {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.search-input_log_sistem {
+  flex: 1 1 240px;
+  max-width: 380px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--dk-border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--dk-bg-card, #ffffff);
+  color: var(--dk-text, #1f2937);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.search-input_log_sistem::placeholder {
+  color: var(--dk-text-4, #9ca3af);
+}
+
+.search-input_log_sistem:focus {
+  outline: none;
+  border-color: var(--dk-border-strong, #9ca3af);
+}
+
+.result-info_log_sistem {
+  font-size: 13px;
+  color: var(--dk-text-3, #6b7280);
+}
+
 /* LIST ITEM LOG */
 .body_log_sistem {
   display: flex;

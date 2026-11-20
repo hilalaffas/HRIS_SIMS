@@ -22,6 +22,7 @@ const toLogRow = (log) => {
     tanggal: createdAt.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }),
     jam: createdAt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }),
     aktor: log.username,
+    action: String(log.action || '').toUpperCase(), // [BARU] dipakai filter jenis aktivitas (mis. LOGIN)
     aksi: log.description || log.action,
     type: 'normal',
   };

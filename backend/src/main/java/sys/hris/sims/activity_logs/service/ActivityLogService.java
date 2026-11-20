@@ -20,6 +20,7 @@ public class ActivityLogService {
 
     private final ActivityLogRepository activityLogRepository;
     private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] aksi superadmin & dev tidak tampil di Log Sistem
+    private final ActivityLogDescriptionResolver descriptionResolver; // [BARU] ID di deskripsi -> nama karyawan
 
     // [BARU] Action berawalan "GET_" (mis. GET_ALL_CUTI, GET_KARYAWAN) hanya
     // berarti "melihat data/menu", bukan perubahan data, jadi tidak dicatat
@@ -59,15 +60,15 @@ public class ActivityLogService {
     // [UBAH] Log milik akun tersembunyi (superadmin & dev) dibuang untuk semua penonton;
     // pemilik akunnya sendiri tetap melihat log miliknya.
     public List<ActivityLog> getAllLogs(String viewerUsername) {
-        return withoutHiddenActors(
+        return descriptionResolver.resolve(withoutHiddenActors( // [UBAH] + ID -> nama
                 activityLogRepository.findVisibleLogs(VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION),
-                viewerUsername);
+                viewerUsername));
     }
 
     public List<ActivityLog> getLogsByUser(Long userId, String viewerUsername) {
-        return withoutHiddenActors(
+        return descriptionResolver.resolve(withoutHiddenActors( // [UBAH] + ID -> nama
                 activityLogRepository.findVisibleLogsByUserId(userId, VIEW_ACTION_PREFIX, HIDDEN_ACTOR, HIDDEN_ACTION),
-                viewerUsername);
+                viewerUsername));
     }
 
     private List<ActivityLog> withoutHiddenActors(List<ActivityLog> logs, String viewerUsername) {
