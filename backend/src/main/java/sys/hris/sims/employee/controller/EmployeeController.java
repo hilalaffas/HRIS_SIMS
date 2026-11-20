@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
+import sys.hris.sims.common.service.ApproverScopePolicy; // [BARU]
 import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.common.service.HrdApproverPolicy;
 import sys.hris.sims.divisi.entity.Divisi;
@@ -56,6 +57,7 @@ public class EmployeeController {
     private final CloudinaryService cloudinaryService;
     private final HrdApproverPolicy hrdApproverPolicy; // [BARU] daftar approver HRD
     private final HiddenAccountPolicy hiddenAccountPolicy; // [BARU] superadmin & dev tersembunyi
+    private final ApproverScopePolicy approverScopePolicy; // [BARU] Leader/SPV satu divisi, Manager lintas divisi
 
     // helper method ambil userId dari token
     private Long getCurrentUserId(Authentication authentication) {
@@ -104,17 +106,23 @@ public class EmployeeController {
         }
 
         Long divisiId = divisionSource.getDivisi() == null ? null : divisionSource.getDivisi().getId();
+        if (divisiId == null) {
+            throw new RuntimeException("Divisi pemohon belum ditentukan"); // [BARU] sama seperti perilaku sebelumnya
+        }
 
-        Long requesterEmployeeId = divisionSource.getEmployeeId();
-        List<Map<String, Object>> response = karyawanService.getApproversByRoleAndDivisi(role, divisiId).stream()
-                .filter(person -> !person.getEmployeeId().equals(requesterEmployeeId))
-                .map(employee -> Map.<String, Object>of(
-                        "employeeId", employee.getEmployeeId(),
-                        "fullName", employee.getFullName(),
-                        "roleName", employee.getUser().getRoleId().getRoleName(),
-                        "divisiId", employee.getDivisi().getId(),
-                        "namaDivisi", employee.getDivisi().getNamaDivisi()
-                ))
+        // [UBAH] Daftar dibuat ApproverScopePolicy: Leader & SPV satu divisi, Manager dari divisi mana pun
+        // (ditandai crossDivision bila beda divisi). Pemohon sendiri sudah dikeluarkan.
+        List<Map<String, Object>> response = approverScopePolicy.selectableApprovers(divisionSource, role).stream()
+                .map(employee -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("employeeId", employee.getEmployeeId());
+                    item.put("fullName", employee.getFullName());
+                    item.put("roleName", employee.getUser().getRoleId().getRoleName());
+                    item.put("divisiId", employee.getDivisi().getId());
+                    item.put("namaDivisi", employee.getDivisi().getNamaDivisi());
+                    item.put("crossDivision", !employee.getDivisi().getId().equals(divisiId)); // [BARU]
+                    return item;
+                })
                 .toList();
 
         return ResponseEntity.ok(response);

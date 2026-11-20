@@ -14,6 +14,14 @@ export const STAGE_META = {
 
 const STAGE_ORDER = ['LEADER', 'SPV', 'MANAGER', 'HRD'];
 
+// [BARU] Nilai dropdown untuk pilihan "-" (tahap dilewati). Bukan id karyawan: tidak pernah dikirim ke backend,
+// diubah jadi null oleh buildApproverPayload / payload Cuti. Backend (ApproverScopePolicy) melewati tahap tanpa pilihan.
+export const NO_APPROVER_VALUE = 'NONE';
+
+// [BARU] Tahap yang boleh dikosongkan lewat "-". MANAGER dan HRD selalu wajib.
+// Sinkron dengan ApproverScopePolicy.isOptionalStage() di backend.
+export const OPTIONAL_STAGES = ['LEADER', 'SPV'];
+
 // Payload field name used by the backend (OvertimeSubmitRequest) for each stage.
 export const STAGE_FIELD = {
   LEADER: 'leaderEmployeeId',

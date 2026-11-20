@@ -38,7 +38,7 @@ function gpsBadgeText(locationStatus, coords) {
 
 export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 'Shift Normal', shiftOvernight = false }) { // [UBAH] prop onUploadFallback dihapus
   const {
-    action, reason, note, captured, cameraError, cameraErrorType, isCameraRetrying, submitError, coords, locationType, setLocationType,
+    action, note, captured, cameraError, cameraErrorType, isCameraRetrying, submitError, coords, locationType, setLocationType,
     locationStatus, locationError, locationName, isLocationNameLoading, isSubmitting,
     attachVideo, retryCamera, close, takePhoto, retake, submit, refreshLocation, setNote,
   } = capture;
@@ -107,8 +107,9 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
 
         <div className="quickAtt__body">
           {/* ---------- Kamera ---------- */}
-          <div className={isCheckout ? 'quickAtt__gpsOnly' : `quickAtt__camera ${captured ? 'is-captured' : ''}`}>
-            {!isCheckout && (cameraError && !captured ? (
+          <div className={isCheckout ? 'quickAtt__gpsOnly' : 'quickAtt__capturePanel'}>
+            {!isCheckout && <div className={`quickAtt__camera ${captured ? 'is-captured' : ''}`}>
+            {cameraError && !captured ? (
               <div className="quickAtt__cameraError" role="alert">
                 <Camera size={28} aria-hidden="true" />
                 <p>{cameraError}</p>
@@ -136,7 +137,8 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
                   </>
                 )}
               </>
-            ))}
+            )}
+            </div>}
 
             <section className="quickAtt__locationInfo" aria-label="Informasi GPS dan waktu">
             <div className="quickAtt__locationInfoTop">
@@ -154,12 +156,13 @@ export default function QuickAttendanceModal({ capture, shiftHours, shiftName = 
             {locationStatus === 'loading' && <p className="quickAtt__muted">Mengambil lokasi...</p>}
             {locationStatus === 'error' && <p className="quickAtt__error">{locationError}</p>}
             {hasLocation && <>
-              {isLocationNameLoading && <p className="quickAtt__muted">Mencari nama lokasi...</p>}
-              {locationName && <p className="quickAtt__place">{locationName}</p>}
-              <code className="quickAtt__coords">{isCheckout ? <>
+              <p className="quickAtt__place" aria-label="Alamat lokasi" title={locationName || undefined}>
+                {isLocationNameLoading ? 'Mencari alamat...' : locationName || 'Alamat belum tersedia'}
+              </p>
+              <code className="quickAtt__coords">
                 <span>Lat: {coords.lat.toFixed(6)}</span>
                 <span>Lng: {coords.lng.toFixed(6)}</span>
-              </> : <>Lat: {coords.lat.toFixed(6)} | Lng: {coords.lng.toFixed(6)}</>}</code>
+              </code>
               {isLowAccuracy && <p className="quickAtt__warn"><AlertTriangle size={12} /> Akurasi GPS lebih dari 5000 m. Perbarui lokasi.</p>}
             </>}
             </section>

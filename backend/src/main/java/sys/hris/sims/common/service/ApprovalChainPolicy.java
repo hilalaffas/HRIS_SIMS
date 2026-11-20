@@ -38,6 +38,7 @@ public class ApprovalChainPolicy {
 
     private final HrdApproverPolicy hrdApproverPolicy;
     private final EmployeeRepository employeeRepository;
+    private final ApproverScopePolicy approverScopePolicy; // [BARU] Leader/SPV satu divisi & opsional, Manager lintas divisi
 
     // Tahap approval yang WAJIB dilalui pengajuan milik `requester`.
     public static List<String> requiredStages(Employee requester) {
@@ -70,6 +71,10 @@ public class ApprovalChainPolicy {
         Map<String, Employee> approvers = new LinkedHashMap<>();
         for (String stage : requiredStages(requester)) {
             Long selectedId = selectedIdForStage.apply(stage);
+            // [BARU] Leader/SPV yang dikosongkan ("-") dilewati; Manager & HRD tetap wajib.
+            if (ApproverScopePolicy.isOptionalStage(stage) && (selectedId == null || selectedId <= 0)) {
+                continue;
+            }
             approvers.put(stage, STAGE_HRD.equals(stage)
                     ? hrdApproverPolicy.requireSelectableApprover(selectedId, requester)
                     : requireStageApprover(stage, selectedId, requester));
@@ -78,7 +83,7 @@ public class ApprovalChainPolicy {
     }
 
     // Aturan sama dengan LeaveService.getSelectedApprover(): role tepat sesuai tahap, aktif,
-    // satu divisi dengan pemohon, dan bukan pemohon sendiri (Manager memilih Manager lain).
+    // satu divisi dengan pemohon (kecuali Manager: divisi mana pun), dan bukan pemohon sendiri (Manager memilih Manager lain).
     private Employee requireStageApprover(String stage, Long approverId, Employee requester) {
         if (approverId == null || approverId <= 0) {
             throw new IllegalArgumentException("Approver " + stage + " wajib dipilih.");
@@ -97,7 +102,8 @@ public class ApprovalChainPolicy {
         if (requester.getDivisi() == null) {
             throw new IllegalArgumentException("Divisi pemohon belum ditentukan.");
         }
-        if (approver.getDivisi() == null || !requester.getDivisi().getId().equals(approver.getDivisi().getId())) {
+        // [UBAH] Leader/SPV harus satu divisi; Manager boleh dari divisi mana pun (ApproverScopePolicy).
+        if (!approverScopePolicy.allowsApprover(requester, approver, stage)) {
             throw new IllegalArgumentException(
                     "Approver " + stage + " harus berasal dari divisi yang sama dengan pemohon.");
         }

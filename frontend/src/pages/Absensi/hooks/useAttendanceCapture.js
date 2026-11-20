@@ -11,6 +11,7 @@
 // capture.open('Keluar', 'Absen', 'Pulang cepat: ...'); // [BARU] dengan Keterangan terisi
 // capture.submit();        // kirim ke backend
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { selfieFrame } from '../utils/selfieFrame.js';
 import {
   dataUrlToBlob,
   getLocationName, // [BARU]
@@ -269,22 +270,22 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
+    const frame = selfieFrame(video.videoWidth, video.videoHeight, video.clientWidth, video.clientHeight);
+    if (!frame) return;
 
     const canvas = document.createElement('canvas');
     // [UBAH] Performa unggah: sisi terpanjang foto dibatasi 1280 px (kamera HP bisa 1920x1080 atau lebih).
     // Foto tetap jelas untuk bukti absen & overlay, tetapi ukuran file lebih kecil sehingga unggah
-    // (terutama di jaringan seluler) lebih cepat. Kamera di bawah 1280 px tidak berubah.
-    const rawWidth = video.videoWidth || 640;
-    const rawHeight = video.videoHeight || 480;
-    const captureScale = Math.min(1, 1280 / Math.max(rawWidth, rawHeight));
-    const sourceWidth = Math.round(rawWidth * captureScale);
-    const sourceHeight = Math.round(rawHeight * captureScale);
+    // (terutama di jaringan seluler) lebih cepat, tanpa memperbesar gambar beresolusi rendah.
+    // Area yang ditangkap sama persis dengan potongan tengah pada frame kamera.
+    const sourceWidth = frame.width;
+    const sourceHeight = frame.height;
     canvas.width = sourceWidth;
     canvas.height = sourceHeight;
 
     const context = canvas.getContext('2d');
     if (!context) return;
-    context.drawImage(video, 0, 0, sourceWidth, sourceHeight);
+    context.drawImage(video, frame.x, frame.y, frame.cropWidth, frame.cropHeight, 0, 0, sourceWidth, sourceHeight);
 
     // Metadata ditampilkan sebagai overlay DI ATAS foto dan ikut tertanam
     // permanen ke file JPEG yang dikirim/disimpan.

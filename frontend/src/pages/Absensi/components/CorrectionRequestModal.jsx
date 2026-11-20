@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Pencil, X } from 'lucide-react';
 import { getCorrectionApproverOptions } from '../../../services/attendanceCorrectionService';
 import './PermissionRequestModal.css';
+import { NO_APPROVER_VALUE, OPTIONAL_STAGES } from '../../../constants/overtimeFlow'; // [BARU] pilihan "-" untuk Leader/SPV
 
 const MIN_REASON_LENGTH = 10;
 const MAX_REASON_LENGTH = 500;
@@ -34,7 +35,9 @@ export default function CorrectionRequestModal({ dateLabel, lateLabel, onSubmit,
     for (const stage of stages) {
       if (!selected[stage.field]) return setErrorMessage(`Pilih approver ${ROLE_LABELS[stage.role] || stage.role} terlebih dahulu.`);
     }
-    const approvers = Object.fromEntries(stages.map((stage) => [stage.field, Number(selected[stage.field])]));
+    // [UBAH] Pilihan "-" (Leader/SPV) dikirim null = tahap dilewati.
+    const approvers = Object.fromEntries(stages.map((stage) => [stage.field,
+      selected[stage.field] === NO_APPROVER_VALUE ? null : Number(selected[stage.field])]));
     submitLockRef.current = true; setIsSubmitting(true); setErrorMessage('');
     try { await onSubmit({ reason: trimmedReason, ...approvers }); }
     catch (error) { setErrorMessage(error?.message || 'Gagal mengirim pengajuan koreksi.'); }
@@ -64,16 +67,17 @@ export default function CorrectionRequestModal({ dateLabel, lateLabel, onSubmit,
             <label className="abs-permission-label" htmlFor={`correction-${stage.field}`}>Approver {ROLE_LABELS[stage.role] || stage.role}</label>
             <select id={`correction-${stage.field}`} value={selected[stage.field] || ''}
               onChange={(event) => { setSelected((current) => ({ ...current, [stage.field]: event.target.value })); setErrorMessage(''); }}
-              disabled={isSubmitting || !stage.people.length}>
-              <option value="">{!stage.people.length ? `Belum ada ${ROLE_LABELS[stage.role]} lain yang tersedia` : `Pilih ${ROLE_LABELS[stage.role]}`}</option>
-              {stage.people.map((person) => <option key={person.employeeId} value={person.employeeId}>{person.fullName}</option>)}
+              disabled={isSubmitting || (!stage.people.length && !OPTIONAL_STAGES.includes(stage.role))}>
+              <option value="">{!stage.people.length && !OPTIONAL_STAGES.includes(stage.role) ? `Belum ada ${ROLE_LABELS[stage.role]} lain yang tersedia` : `Pilih ${ROLE_LABELS[stage.role]}`}</option>
+              {OPTIONAL_STAGES.includes(stage.role) && <option value={NO_APPROVER_VALUE}>-</option>}
+              {stage.people.map((person) => <option key={person.employeeId} value={person.employeeId}>{person.crossDivision && person.divisionName ? `${person.fullName} — ${person.divisionName}` : person.fullName}</option>)}
             </select>
           </div>)}
           {errorMessage && <p className="abs-permission-error" role="alert">{errorMessage}</p>}
         </div>
         <div className="abs-permission-footer">
           <button type="button" className="abs-permission-cancel" onClick={onClose} disabled={isSubmitting}>Batal</button>
-          <button type="button" className="abs-permission-submit" onClick={handleSubmit} disabled={isSubmitting || loadingApprovers || !stages.length || stages.some((stage) => !stage.people.length)}>
+          <button type="button" className="abs-permission-submit" onClick={handleSubmit} disabled={isSubmitting || loadingApprovers || !stages.length || stages.some((stage) => !stage.people.length && !OPTIONAL_STAGES.includes(stage.role))}>
             {isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan'}
           </button>
         </div>
