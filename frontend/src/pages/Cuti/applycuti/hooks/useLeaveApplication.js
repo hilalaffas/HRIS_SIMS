@@ -13,6 +13,7 @@
 // const leave = useLeaveApplication(user, { notify: showToast, onSubmitted: closeFormModal });
 // `formTopRef` (opsional): ref elemen yang di-scroll saat "Edit" dari Riwayat di halaman Cuti.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startPolling } from '../../../../utils/polling'; // [BARU] polling hemat (tab tersembunyi dilewati)
 import { useSearchParams } from 'react-router-dom';
 import { getApprovers, getHrdApprovers, getCoverOptions, getLeaveBalance, getLeaveTypes, getMyCoverageReminders, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../../services/CutiService';
 import { hariLiburNasional, hitungBatasMinTanggal } from '../../../../utils/dateUtils';
@@ -22,7 +23,7 @@ import { isHrd } from '../../../../utils/roles';
 import { approvalRolesFor } from '../../../../utils/approvalHierarchy';
 
 // [BARU] Interval polling live-sync riwayat cuti (lihat useEffect di bawah).
-const HISTORY_POLL_INTERVAL_MS = 15000;
+const HISTORY_POLL_INTERVAL_MS = 30000; // [UBAH] 15000 -> 30000 (lihat startPolling di bawah)
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const isSupervisor = (role = '') => ['LEADER', 'SPV', 'MANAGER'].includes(
@@ -300,10 +301,11 @@ export default function useLeaveApplication(user, { notify = (message) => window
   }, [isHrdRequester, user?.employeeId]);
 
   useEffect(() => {
+    // [UBAH] Performa: load() sudah mengambil riwayat cuti (getRiwayatByUser) di dalam Promise.all-nya,
+    // jadi pemanggilan kedua tepat setelahnya hanya menggandakan request & menunda halaman.
+    // Cukup tandai waktu sinkron setelah load() selesai.
     const initData = async () => {
       await load();
-      const latest = await getRiwayatByUser();
-      setHistory(latest);
       setHistorySyncedAt(new Date());
     };
     initData();
@@ -326,15 +328,12 @@ export default function useLeaveApplication(user, { notify = (message) => window
         // sudah cukup untuk ditampilkan lewat state `error`.
       }
     };
-    const intervalId = window.setInterval(syncHistory, HISTORY_POLL_INTERVAL_MS);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') syncHistory();
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
+    // [UBAH] startPolling (utils/polling.js): dilewati saat tab tersembunyi, tidak menumpuk bila server
+    // lambat, dan menyegarkan SEKALI begitu tab kembali terlihat. Interval 15 dtk -> 30 dtk.
+    const stopPolling = startPolling(syncHistory, HISTORY_POLL_INTERVAL_MS);
 
     return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibility);
+      stopPolling();
     };
   }, [load]);  
   

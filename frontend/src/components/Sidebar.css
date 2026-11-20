@@ -13,6 +13,8 @@
   transition-property: all; 
   transition-duration: 300ms;
   box-sizing: border-box;
+  min-height: 0;   /* [BARU] boleh lebih pendek dari isinya; menu yang scroll, bukan seluruh sidebar */
+  overflow: hidden; /* [BARU] isi tidak pernah keluar dari kotak hijau */
 }
 
 @media (min-width: 768px) {
@@ -27,6 +29,9 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  flex: 1 1 auto;  /* [BARU] ambil sisa tinggi di atas footer */
+  min-height: 0;   /* [BARU] wajib agar overflow-y bekerja di dalam flex column */
+  overscroll-behavior: contain; /* [BARU] scroll menu tidak menggulung halaman di belakang */
 }
 
 /* Sembunyikan scrollbar bawaan */
@@ -273,6 +278,19 @@ div.profile-avatar {
   width: 100%;
   padding-top: 1rem; 
   border-top: 1px solid rgba(255, 255, 255, 0.06); 
+  flex-shrink: 0; /* [BARU] tombol Keluar tidak pernah ikut menyusut / terpotong */
+}
+
+/* [BARU] Layar pendek (laptop 768px, zoom 125-150%, HP landscape): profil dipadatkan
+   supaya lebih banyak menu terlihat dan tombol Keluar tetap utuh di bawah. */
+@media (max-height: 720px) {
+  .profile-section { padding-top: 0.25rem; padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
+  .profile-avatar-container { width: 3.75rem; height: 3.75rem; margin-bottom: 0.25rem; }
+  div.profile-avatar { font-size: 1.25rem; }
+  .profile-name { font-size: 1rem; margin-top: 0.25rem; }
+  .profile-role { margin-top: 0.25rem; }
+  .sidebar-nav { gap: 1rem; }
+  .menu-link { padding-top: 0.55rem; padding-bottom: 0.55rem; }
 }
 
 .btn-logout {
