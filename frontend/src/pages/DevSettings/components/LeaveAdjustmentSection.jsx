@@ -12,6 +12,10 @@
 // Hanya kolom yang diubah yang dikirim ke backend.
 //
 // [UBAH] Edit per karyawan, Import, dan Export dipisah ke sub-tab (DevTabBar) supaya tidak menumpuk.
+// [BARU] Angka "Terpakai" periode berjalan bisa diedit langsung di kolom Periode cuti tahunan. Terpakai dan
+//        Sisa tahun berjalan saling terhubung (sisa = kuota - terpakai); yang dikirim ke backend tetap
+//        currentYearRemaining, jadi endpoint & aturan backend tidak berubah.
+// [BARU] Sub-tab "Terpakai Ringkasan": edit Terpakai pada Ringkasan Cuti (lihat LeaveUsedEditor).
 //
 // Contoh pemakaian: <LeaveAdjustmentSection />
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,6 +27,7 @@ import {
 } from '../../../services/devToolsService';
 import CsvExportButton from './CsvExportButton';
 import CsvImportPanel from './CsvImportPanel';
+import LeaveUsedEditor from './LeaveUsedEditor'; // [BARU]
 import { DevTabBar, DevTabPanel } from './DevTabBar'; // [BARU]
 import './DevDataSections.css';
 
@@ -31,6 +36,7 @@ const MAX_VISIBLE_ROWS = 100;
 // [BARU] Sub-tab saldo cuti.
 const SUB_TABS = [
   { id: 'balanceEdit', label: 'Edit per Karyawan' },
+  { id: 'usedSummary', label: 'Terpakai Ringkasan' }, // [BARU]
   { id: 'balanceImport', label: 'Import' },
   { id: 'balanceExport', label: 'Export' },
 ];
@@ -40,6 +46,9 @@ const formatDate = (isoDate) => {
   const [year, month, day] = isoDate.split('-');
   return `${day}/${month}/${year}`;
 };
+
+// [BARU] Bulatkan ke 2 desimal supaya hasil kuota - terpakai tidak tampil seperti 8.499999.
+const formatNumber = (value) => String(Number(value.toFixed(2)));
 
 const parseNumber = (text) => {
   const normalized = String(text).trim().replace(',', '.');
@@ -100,6 +109,35 @@ export default function LeaveAdjustmentSection() {
     setRowMessages((previous) => ({ ...previous, [employeeId]: null }));
   };
 
+  // [BARU] Ubah beberapa field draft sekaligus (Terpakai & Sisa tahun berjalan saling mengisi).
+  const setDraftFields = (employeeId, patch) => {
+    setDrafts((previous) => ({
+      ...previous,
+      [employeeId]: { ...previous[employeeId], ...patch },
+    }));
+    setRowMessages((previous) => ({ ...previous, [employeeId]: null }));
+  };
+
+  // [BARU] Terpakai diketik -> Sisa tahun berjalan = kuota - terpakai. Teks kosong/tidak valid: sisa tidak diubah.
+  const handleUsedChange = (row, text) => {
+    const used = parseNumber(text);
+    const isUsable = used !== null && !Number.isNaN(used);
+    setDraftFields(row.employeeId, {
+      annualUsed: text,
+      currentYear: isUsable ? formatNumber(Number(row.annualQuota) - used) : undefined,
+    });
+  };
+
+  // [BARU] Sisa tahun berjalan diketik -> Terpakai ikut menyesuaikan (kuota - sisa).
+  const handleRemainingChange = (row, text) => {
+    const remaining = parseNumber(text);
+    const isUsable = remaining !== null && !Number.isNaN(remaining);
+    setDraftFields(row.employeeId, {
+      currentYear: text,
+      annualUsed: isUsable ? formatNumber(Number(row.annualQuota) - remaining) : undefined,
+    });
+  };
+
   const handleSave = async (row) => {
     const draft = drafts[row.employeeId];
     if (!draft || savingId !== null) return;
@@ -108,6 +146,18 @@ export default function LeaveAdjustmentSection() {
     if (draft.joinDate !== undefined) payload.joinDate = draft.joinDate || null;
     if (draft.oldBalance !== undefined) payload.oldLeaveBalance = parseNumber(draft.oldBalance);
     if (draft.currentYear !== undefined) payload.currentYearRemaining = parseNumber(draft.currentYear);
+
+    // [BARU] Terpakai harus angka valid dan tidak negatif (yang dikirim tetap currentYearRemaining di atas).
+    if (draft.annualUsed !== undefined && String(draft.annualUsed).trim() !== '') {
+      const usedValue = parseNumber(draft.annualUsed);
+      if (Number.isNaN(usedValue) || usedValue < 0) {
+        setRowMessages((previous) => ({
+          ...previous,
+          [row.employeeId]: { type: 'error', text: 'Isi angka Terpakai yang valid, tidak boleh negatif (contoh 3.5).' },
+        }));
+        return;
+      }
+    }
 
     if (Object.values(payload).some((value) => Number.isNaN(value))) {
       setRowMessages((previous) => ({
@@ -148,6 +198,11 @@ export default function LeaveAdjustmentSection() {
         label="Saldo cuti"
         variant="sub"
       />
+
+      {/* [BARU] Edit Terpakai pada Ringkasan Cuti */}
+      <DevTabPanel activeId={activeSubTab} id="usedSummary">
+        <LeaveUsedEditor />
+      </DevTabPanel>
 
       <DevTabPanel activeId={activeSubTab} id="balanceExport">
       <div className="devdata-block">
@@ -228,8 +283,17 @@ export default function LeaveAdjustmentSection() {
                         {row.eligible ? (
                           <>
                             {formatDate(row.periodStart)} – {formatDate(row.periodEnd)}
+                            {/* [UBAH] "terpakai" kini bisa diedit (dulu hanya teks) */}
                             <span className="devdata-muted">
-                              Kuota {row.annualQuota} · terpakai {row.annualUsed}
+                              Kuota {row.annualQuota} · terpakai{' '}
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                value={draft?.annualUsed ?? String(row.annualUsed ?? 0)}
+                                onChange={(event) => handleUsedChange(row, event.target.value)}
+                                aria-label={`Terpakai periode berjalan ${row.fullName}`}
+                              />
                               {Number(row.annualUsedOutsideSystem) > 0 && ` (manual ${row.annualUsedOutsideSystem})`}
                             </span>
                           </>
@@ -252,7 +316,7 @@ export default function LeaveAdjustmentSection() {
                           disabled={!row.eligible}
                           placeholder={row.eligible ? '' : 'Belum berhak'}
                           value={row.eligible ? (draft?.currentYear ?? String(row.annualRemaining)) : ''}
-                          onChange={(event) => setDraftField(row.employeeId, 'currentYear', event.target.value)}
+                          onChange={(event) => handleRemainingChange(row, event.target.value)} // [UBAH] dulu setDraftField(...)
                         />
                       </td>
                       <td>
