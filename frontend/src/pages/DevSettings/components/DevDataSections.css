@@ -423,3 +423,27 @@
 .devdata-rules li + li {
   margin-top: var(--space-1);
 }
+
+/* [BARU] Koreksi riwayat cuti hasil import: tombol hapus & penanda baris hangus. */
+.devdata-btn--danger {
+  color: var(--dk-text-red, var(--color-danger));
+  border-color: var(--color-danger-border);
+}
+
+.devdata-btn--danger:hover:not(:disabled) {
+  background: var(--color-danger-bg);
+}
+
+.devdata-confirm--inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 0;
+  padding: var(--space-2);
+}
+
+.devdata-info {
+  margin: var(--space-3) 0 0;
+  font-size: 0.8rem;
+  color: var(--dk-text-green, var(--color-success));
+}

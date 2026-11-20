@@ -26,6 +26,8 @@
 // (periksa saja, tidak menyimpan) untuk isi file yang sama. Import sungguhan (dryRun = false) tanpa
 // validasi sebelumnya, atau dengan file/opsi yang sudah berubah, ditolak server (HTTP 400).
 // [BARU] GET  /api/dev/leave-history/export-xlsx  -> file Excel; tipe cuti (selain tahunan & setengah hari) jadi komentar sel
+// [BARU] GET    /api/dev/leave-history/records?employeeId=  -> daftar riwayat cuti HASIL IMPORT satu karyawan
+// [BARU] DELETE /api/dev/leave-history/records/{id}         -> hapus SATU baris riwayat import (saldo & Ringkasan Cuti tidak berubah)
 import { api, getStoredToken, toApiUrl } from './api';
 
 export const getPermissionRecords = (username) =>
@@ -130,3 +132,11 @@ export const updateForfeitRule = (startDate) => api.put('/api/dev/leave-rules/fo
 export const resetForfeitRule = () => api.post('/api/dev/leave-rules/forfeit/reset', {});
 
 export const scanForfeitRule = () => api.get('/api/dev/leave-rules/forfeit/scan');
+
+// ====================== [BARU] Koreksi riwayat cuti hasil import ======================
+
+export const getImportedLeaveRecords = (employeeId) =>
+  api.get(`/api/dev/leave-history/records?employeeId=${encodeURIComponent(employeeId)}`, { silent: true });
+
+export const deleteImportedLeaveRecord = (leaveRequestId) =>
+  api.delete(`/api/dev/leave-history/records/${leaveRequestId}`);
