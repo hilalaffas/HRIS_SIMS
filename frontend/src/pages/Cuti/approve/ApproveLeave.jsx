@@ -183,12 +183,47 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
    *   await api.post(`/cuti/approval/${id}`, { action, alasan });
    * lalu refetch/replace data pending & history setelah sukses.
    */
+  // [BARU] Kunci klik ganda: tombol "Ya, Setujui" tidak boleh terkirim dua kali selama permintaan berjalan.
+  const actionLockRef = useRef(false);
+  const [isActionSubmitting, setIsActionSubmitting] = useState(false);
+
+  // [BARU] Hapus satu berkas dari antrean "Perlu Diproses" di layar SEGERA setelah aksi berhasil.
+  // Berlaku untuk ACC, Revisi, dan Tolak: ketiganya membuat berkas keluar dari antrean approver ini
+  // (backend hanya menampilkan tahap yang masih PENDING milik approver). Data lengkap tetap
+  // disegarkan lewat loadData() sehingga bila ada selisih, hasil server yang dipakai.
+  const removePendingItem = (id) => {
+    setPending((previous) => previous.filter((item) => String(item.id) !== String(id)));
+  };
+
   const handleConfirmAction = async (id, action, alasan) => {
+    if (actionLockRef.current) return; // [BARU]
+    actionLockRef.current = true;
+    setIsActionSubmitting(true);
     try {
       await takeApprovalAction(id, action === 'acc' ? 'approve' : action === 'revisi' ? 'return' : 'reject', alasan);
       setActionRequest(null);
-      await loadData();
-    } catch (err) { alert(err.message || 'Aksi cuti gagal diproses.'); }
+      removePendingItem(id); // [BARU] baris langsung hilang dari antrean, tanpa menunggu server
+      loadData(); // [UBAH] segarkan data di belakang layar (tanpa await) supaya layar tidak menunggu 3 request
+    } catch (err) {
+      alert(err.message || 'Aksi cuti gagal diproses.');
+      // [BARU] Respons error tidak selalu berarti aksinya gagal (server bisa sudah menyimpan lalu gagal membalas).
+      // Cek ulang antrean: bila berkas sudah tidak pending, tutup popup dan segarkan daftar supaya
+      // tombol ACC-nya hilang dan tidak bisa diklik lagi. Bila masih pending, popup tetap terbuka.
+      try {
+        const tasks = await getPendingApprovals();
+        const stillPending = (Array.isArray(tasks) ? tasks : []).some((task) => String(task.id) === String(id));
+        if (!stillPending) {
+          setActionRequest(null);
+          removePendingItem(id); // [BARU]
+          loadData(); // [UBAH] di belakang layar
+        }
+      } catch {
+        // gagal mengecek ulang: biarkan popup terbuka seperti sebelumnya
+      }
+    } finally {
+      actionLockRef.current = false; // [BARU]
+      setIsActionSubmitting(false);
+    }
   };
 
   // [BARU] Data Persetujuan Lembur dimuat di sini (bukan di dalam tab) supaya
@@ -275,6 +310,7 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
       {/*Bagian popup alasan ACC/Revisi/Tolak*/}
       <ActionReasonModal
         request={actionRequest}
+        isSubmitting={isActionSubmitting} // [BARU]
         onCancel={handleCancelAction}
         onSubmit={handleConfirmAction}
       />

@@ -21,6 +21,7 @@ import sys.hris.sims.common.service.HiddenAccountPolicy;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.leave.dto.LeaveActionRequest;
+import sys.hris.sims.leave.dto.LeaveActionResultResponse; // [BARU]
 import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
@@ -233,7 +234,7 @@ public class LeaveController {
 
     // PUT approve cuti
     @PutMapping("/{id}/approve")
-    public ResponseEntity<LeaveRequest> approveCuti(
+    public ResponseEntity<LeaveActionResultResponse> approveCuti( // [UBAH] dulu ResponseEntity<LeaveRequest>
             @PathVariable Long id,
             Authentication authentication,
             @RequestBody(required = false) LeaveActionRequest request,
@@ -243,12 +244,12 @@ public class LeaveController {
         // catat activity log        
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "APPROVE_CUTI", "leave_requests", id, "Menyetujui cuti id: " + id, httpRequest);
 
-        return ResponseEntity.ok(cutiService.approveCuti(id, authentication.getName(), note));
+        return ResponseEntity.ok(LeaveActionResultResponse.from(cutiService.approveCuti(id, authentication.getName(), note))); // [UBAH] DTO, bukan entity
     }
 
     // PUT reject cuti
     @PutMapping("/{id}/reject")
-    public ResponseEntity<LeaveRequest> rejectCuti(
+    public ResponseEntity<LeaveActionResultResponse> rejectCuti( // [UBAH] dulu ResponseEntity<LeaveRequest>
             @PathVariable Long id,
             Authentication authentication,
             @RequestBody(required = false) LeaveActionRequest request,
@@ -258,12 +259,12 @@ public class LeaveController {
         // catat activity log 
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "REJECT_CUTI", "leave_requests", id, "Menolak cuti id: " + id + (note != null ? " | note: " + note : ""), httpRequest);
 
-        return ResponseEntity.ok(cutiService.rejectCuti(id, authentication.getName(), note));
+        return ResponseEntity.ok(LeaveActionResultResponse.from(cutiService.rejectCuti(id, authentication.getName(), note))); // [UBAH] DTO, bukan entity
     }
 
     // PUT return/revisi cuti
     @PutMapping("/{id}/return")
-    public ResponseEntity<LeaveRequest> returnCuti(
+    public ResponseEntity<LeaveActionResultResponse> returnCuti( // [UBAH] dulu ResponseEntity<LeaveRequest>
             @PathVariable Long id,
             Authentication authentication,
             @RequestBody(required = false) LeaveActionRequest request,
@@ -273,7 +274,7 @@ public class LeaveController {
         // catat activity log 
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "RETURN_CUTI", "leave_requests", id, "Mengembalikan cuti id: " + id + (note != null ? " | note: " + note : ""), httpRequest);
         
-        return ResponseEntity.ok(cutiService.returnCuti(id, authentication.getName(), note));
+        return ResponseEntity.ok(LeaveActionResultResponse.from(cutiService.returnCuti(id, authentication.getName(), note))); // [UBAH] DTO, bukan entity
 
     }
 
