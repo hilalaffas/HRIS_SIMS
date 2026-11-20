@@ -75,6 +75,18 @@ function readFlipPreference() {
   } catch { return DEFAULT_CAMERA_FLIPPED; }
 }
 
+// [BARU] Browser mobile tertentu (mis. Opera) membiarkan <video> hitam/berhenti bila stream hanya
+// disambungkan lewat `autoPlay`. Paksa muted + playsInline lalu panggil play() secara eksplisit.
+function playVideo(node) {
+  if (!node) return;
+  node.muted = true;
+  node.defaultMuted = true;
+  node.setAttribute('playsinline', '');
+  node.setAttribute('webkit-playsinline', '');
+  const result = node.play?.();
+  if (result && typeof result.catch === 'function') result.catch(() => { /* diputar ulang lewat event */ });
+}
+
 export default function useAttendanceCapture({ onSubmitted } = {}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -113,9 +125,16 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
   // "Ambil ulang") langsung disambungkan lagi ke stream yang masih aktif.
   const attachVideo = useCallback((node) => {
     videoRef.current = node;
-    if (node && streamRef.current && node.srcObject !== streamRef.current) {
+    if (!node) return;
+    if (!node.dataset.simsPlayBound) { // [BARU] pasang sekali per elemen <video>
+      node.dataset.simsPlayBound = '1';
+      node.addEventListener('loadedmetadata', () => playVideo(node));
+      node.addEventListener('canplay', () => { if (node.paused) playVideo(node); });
+    }
+    if (streamRef.current && node.srcObject !== streamRef.current) {
       node.srcObject = streamRef.current;
     }
+    if (streamRef.current) playVideo(node); // [BARU]
   }, []);
 
   const teardown = useCallback(() => {
@@ -195,7 +214,15 @@ export default function useAttendanceCapture({ onSubmitted } = {}) {
         return;
       }
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        playVideo(videoRef.current); // [BARU]
+        // [BARU] Jaring pengaman: bila setelah 1,2 detik masih berhenti, coba putar lagi.
+        window.setTimeout(() => {
+          const node = videoRef.current;
+          if (node && session === sessionRef.current && node.paused) playVideo(node);
+        }, 1200);
+      }
       setCameraError('');
       setCameraErrorType('');
     } catch (error) {

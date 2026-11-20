@@ -134,7 +134,17 @@
 .quickAtt__video[hidden] { display: none; }
 
 /* [BARU] Balik kamera kiri-kanan (hanya pratinjau; foto dibalik di canvas saat takePhoto) */
-.quickAtt__video.is-flipped { transform: scaleX(-1); }
+/* [UBAH] Layer sendiri untuk <video> supaya tidak hitam di Chromium mobile tertentu (Opera):
+   hindari kombinasi video + transform di dalam induk overflow/border-radius yang beranimasi. */
+.quickAtt__video {
+  background: #000;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+.quickAtt__video.is-flipped { transform: scaleX(-1) translateZ(0); }
+
+/* [BARU] Denyut box-shadow pada bingkai dihentikan selama kamera live; video tidak ikut repaint. */
+.quickAtt__camera:has(.quickAtt__video:not([hidden])) { animation: none; isolation: isolate; }
 
 .quickAtt__flip {
   position: absolute;
