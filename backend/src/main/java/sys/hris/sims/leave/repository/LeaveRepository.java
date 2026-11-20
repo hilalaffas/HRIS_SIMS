@@ -95,4 +95,20 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
             """)
     List<LeaveRequest> findApprovedCovering(@Param("employeeId") Long employeeId,
                                             @Param("date") LocalDate date);
+
+    // [BARU] Cuti PENDING/APPROVED yang beririsan dengan rentang tanggal (bukan catatan hangus & bukan
+    // riwayat import). Dipakai LeaveService.recalculateLeaveDaysForHolidayChange() saat hari libur
+    // ditambah/diubah/dihapus supaya total hari cuti ikut kalender.
+    @Query("""
+            select l from LeaveRequest l
+            join fetch l.employee e
+            join fetch l.status s
+            join fetch l.leaveType t
+            where l.endDate >= :start and l.startDate <= :end
+              and upper(s.statusName) in ('PENDING', 'APPROVED')
+              and t.forfeiture = false
+              and l.importedHistory = false
+            """)
+    List<LeaveRequest> findRecalculableBetween(@Param("start") LocalDate start,
+                                               @Param("end") LocalDate end);
 }

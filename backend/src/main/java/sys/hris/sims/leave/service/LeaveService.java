@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // [BARU] log peringatan hitung ulang hari cuti
 import sys.hris.sims.devtools.service.DevAccessService;
 import sys.hris.sims.employee.entity.Employee;
 import sys.hris.sims.employee.repository.EmployeeRepository;
@@ -28,6 +29,7 @@ import sys.hris.sims.leave.dto.LeaveApprovalLogResponse;
 import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
+import sys.hris.sims.leave.dto.LeaveDaysAdjustment; // [BARU]
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.attendance.service.LeaveAttendancePolicy;
 import sys.hris.sims.common.service.HrdApproverPolicy;
@@ -46,6 +48,7 @@ import sys.hris.sims.notification.service.NotificationService;
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
 
+@Slf4j // [BARU]
 @Service
 @RequiredArgsConstructor
 public class LeaveService {
@@ -1408,6 +1411,89 @@ public class LeaveService {
             }
         }
         return workingDays;
+    }
+
+    // ===================== [BARU] HITUNG ULANG HARI CUTI SAAT HARI LIBUR BERUBAH =====================
+
+    /**
+     * Total hari cuti (totalDays) disimpan saat pengajuan dibuat. Kalau sesudah itu hari libur
+     * ditambah / diubah / dihapus (manual oleh HRD atau sync libur nasional), nilai tersimpan
+     * jadi usang -- mis. cuti 28 Des - 4 Jan tetap 6 hari padahal 1 Jan libur (seharusnya 5).
+     * Method ini menghitung ulang cuti yang beririsan dengan rentang [from, to] memakai aturan
+     * yang sama dengan saat pengajuan (calculateLeaveDays):
+     *  - PENDING                -> totalDays langsung diperbarui.
+     *  - APPROVED, belum selesai -> totalDays diperbarui + porsi Sisa Cuti Lama disesuaikan
+     *                              (ManualLeaveRebalancer); jatah tahunan ikut otomatis.
+     *  - APPROVED yang sudah selesai (endDate < hari ini) dibiarkan: saldo & periode hangusnya
+     *    sudah final, jadi koreksi hari libur lama tidak mengubah riwayat.
+     *  - Hasil hitung 0 hari (mis. cuti setengah hari yang tanggalnya jadi libur) dilewati
+     *    supaya tidak melanggar aturan minimal 1 hari kerja; HRD perlu menanganinya manual.
+     * Dijalankan dalam transaksi pemanggil (HolidayService) sehingga perubahan libur dan
+     * perubahan total hari cuti berhasil/gagal bersama. Mengembalikan daftar perubahan (untuk Log Sistem).
+     */
+    @Transactional
+    public List<LeaveDaysAdjustment> recalculateLeaveDaysForHolidayChange(LocalDate from, LocalDate to) {
+        if (from == null || to == null || to.isBefore(from)) {
+            return List.of();
+        }
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Jakarta"));
+        List<LeaveDaysAdjustment> adjustments = new ArrayList<>();
+
+        for (LeaveRequest leave : cutiRepository.findRecalculableBetween(from, to)) {
+            boolean approved = ACTION_APPROVED.equalsIgnoreCase(leave.getStatus().getStatusName());
+            if (approved && leave.getEndDate().isBefore(today)) {
+                continue;
+            }
+
+            BigDecimal oldTotal = nonNullDays(leave.getTotalDays());
+            BigDecimal newTotal;
+            try {
+                newTotal = calculateLeaveDays(leave);
+            } catch (RuntimeException e) {
+                log.warn("Hitung ulang cuti #{} dilewati: {}", leave.getLeaveRequestId(), e.getMessage());
+                continue;
+            }
+            if (newTotal.signum() <= 0) {
+                log.warn("Hitung ulang cuti #{} dilewati: hasilnya 0 hari kerja (perlu ditangani HRD)",
+                        leave.getLeaveRequestId());
+                continue;
+            }
+            if (newTotal.compareTo(oldTotal) == 0) {
+                continue;
+            }
+
+            if (approved) {
+                rebalanceManualLeave(leave, oldTotal, newTotal);
+            }
+            leave.setTotalDays(newTotal);
+            cutiRepository.save(leave);
+            adjustments.add(new LeaveDaysAdjustment(leave.getLeaveRequestId(),
+                    leave.getEmployee().getFullName(), leave.getStatus().getStatusName(), oldTotal, newTotal));
+        }
+        return adjustments;
+    }
+
+    // [BARU] Sesuaikan porsi Sisa Cuti Lama cuti APPROVED yang total harinya berubah.
+    private void rebalanceManualLeave(LeaveRequest leave, BigDecimal oldTotal, BigDecimal newTotal) {
+        if (leave.getLeaveType() == null || !Boolean.TRUE.equals(leave.getLeaveType().getDeductsAnnualQuota())) {
+            return;
+        }
+        Employee employee = karyawanRepository.findById(leave.getEmployee().getEmployeeId())
+                .orElseThrow(() -> new RuntimeException("Karyawan pemohon tidak ditemukan"));
+        BigDecimal oldManual = nonNullDays(leave.getManualLeaveDays());
+        BigDecimal balance = nonNullDays(employee.getManualLeaveBalance());
+
+        ManualLeaveRebalancer.Result result = ManualLeaveRebalancer.rebalance(oldTotal, newTotal, oldManual, balance);
+        if (result.manualLeaveDays().compareTo(oldManual) == 0) {
+            return;
+        }
+        leave.setManualLeaveDays(result.manualLeaveDays());
+        employee.setManualLeaveBalance(result.manualLeaveBalance());
+        karyawanRepository.save(employee);
+    }
+
+    private static BigDecimal nonNullDays(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     // [UBAH] Overload 6-parameter (khusus baris auto-ACC Cuti Susulan) dihapus
