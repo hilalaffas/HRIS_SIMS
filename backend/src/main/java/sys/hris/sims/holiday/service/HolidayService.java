@@ -1,6 +1,8 @@
 package sys.hris.sims.holiday.service;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // [BARU]
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -16,8 +18,10 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier; // [BARU]
 import java.util.stream.Collectors;
 
+@Slf4j // [BARU]
 @Service
 @RequiredArgsConstructor
 public class HolidayService {
@@ -25,8 +29,12 @@ public class HolidayService {
     private final HolidayRepository holidayRepository;
     private final RestTemplate restTemplate = createRestTemplate();
 
-    private static final String PRIMARY_API = "https://api-hari-libur.vercel.app/api?year=%d";
+    // [UBAH] Host primary diperbaiki: "api-harilibur" (tanpa tanda hubung antara "hari" dan "libur").
+    // Responsnya array JSON langsung dengan field holiday_date / holiday_name.
+    private static final String PRIMARY_API = "https://api-harilibur.vercel.app/api?year=%d";
     private static final String FALLBACK_API = "https://dayoffapi.vercel.app/api?year=%d";
+    // [BARU] Sumber ketiga (hanya libur nasional resmi, belum tentu memuat cuti bersama).
+    private static final String NAGER_API = "https://date.nager.at/api/v3/PublicHolidays/%d/ID";
 
     private static RestTemplate createRestTemplate() {
         var factory = new SimpleClientHttpRequestFactory();
@@ -88,14 +96,36 @@ public class HolidayService {
         List<ExternalHolidayDto> external = fetchFromExternalApi(year);
         int inserted = 0, updated = 0, skipped = 0;
 
+        if (external.isEmpty()) {
+            log.warn("Sync libur nasional {}: kedua API eksternal tidak mengembalikan data", year); // [BARU]
+        }
+
         for (ExternalHolidayDto dto : external) {
-            LocalDate date = LocalDate.parse(dto.getDate());
+            // [BARU] Lewati data tak valid (tanggal kosong/format salah) supaya satu baris
+            // buruk tidak menggagalkan sync seluruh tahun.
+            LocalDate date;
+            try {
+                date = parseFlexibleDate(dto.getDate()); // [UBAH] toleran terhadap "2026-01-1"
+            } catch (Exception e) {
+                skipped++;
+                continue;
+            }
+            // [BARU] Abaikan data yang bukan tahun yang diminta.
+            if (date.getYear() != year) {
+                skipped++;
+                continue;
+            }
+            // [BARU] Kolom name NOT NULL & maks 100 karakter.
+            String holidayName = (dto.getDescription() == null || dto.getDescription().isBlank())
+                    ? "Libur Nasional"
+                    : dto.getDescription().trim();
+            if (holidayName.length() > 100) holidayName = holidayName.substring(0, 100);
             Optional<Holiday> existing = holidayRepository.findByDate(date);
             try {
                 if (existing.isEmpty()) {
                     Holiday holiday = Holiday.builder()
-                            .name(dto.getDescription()).date(date)
-                            .description(dto.getDescription()).isNational(true)
+                            .name(holidayName).date(date) // [UBAH]
+                            .description(holidayName).isNational(true)
                             .createdBy(createdBy).build();
                     holidayRepository.save(holiday);
                     inserted++;
@@ -114,23 +144,55 @@ public class HolidayService {
         return new HolidaySyncResult(inserted, updated, skipped);
     }
 
+    // [UBAH] Mencoba beberapa sumber berurutan sampai ada yang mengembalikan data.
     private List<ExternalHolidayDto> fetchFromExternalApi(int year) {
-        try {
-            ApiHariLiburResponse res = restTemplate.getForObject(
-                    String.format(PRIMARY_API, year), ApiHariLiburResponse.class);
-            if (res != null && res.getData() != null && !res.getData().isEmpty()) {
-                return res.getData();
-            }
-            throw new RuntimeException("Primary API kosong");
-        } catch (Exception e) {
+        List<String> sourceNames = List.of("api-harilibur", "dayoffapi", "nager.date");
+        List<Supplier<List<ExternalHolidayDto>>> sources = List.of(
+                () -> fetchHolidayArray(String.format(PRIMARY_API, year)),
+                () -> fetchHolidayArray(String.format(FALLBACK_API, year)),
+                () -> fetchFromNager(year));
+
+        for (int i = 0; i < sources.size(); i++) {
             try {
-                ExternalHolidayDto[] fallback = restTemplate.getForObject(
-                        String.format(FALLBACK_API, year), ExternalHolidayDto[].class);
-                return fallback != null ? Arrays.asList(fallback) : List.of();
-            } catch (Exception e2) {
-                return List.of();
+                List<ExternalHolidayDto> result = sources.get(i).get();
+                if (!result.isEmpty()) {
+                    log.info("Libur nasional {} diambil dari {} ({} data)", year, sourceNames.get(i), result.size());
+                    return result;
+                }
+                log.warn("Sumber {} mengembalikan data kosong (tahun {})", sourceNames.get(i), year);
+            } catch (Exception e) {
+                log.warn("Sumber {} gagal (tahun {}): {}", sourceNames.get(i), year, e.getMessage());
             }
         }
+        log.error("Semua sumber libur nasional gagal (tahun {})", year);
+        return List.of();
+    }
+
+    // [BARU] API yang mengembalikan array JSON langsung.
+    private List<ExternalHolidayDto> fetchHolidayArray(String url) {
+        ExternalHolidayDto[] body = restTemplate.getForObject(url, ExternalHolidayDto[].class);
+        return body != null ? Arrays.asList(body) : List.of();
+    }
+
+    // [BARU] Nager.Date: field yang dipakai hanya "date" dan "localName".
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record NagerHolidayDto(String date, String localName) {}
+
+    private List<ExternalHolidayDto> fetchFromNager(int year) {
+        NagerHolidayDto[] body = restTemplate.getForObject(String.format(NAGER_API, year), NagerHolidayDto[].class);
+        if (body == null) return List.of();
+        return Arrays.stream(body).map(h -> {
+            ExternalHolidayDto dto = new ExternalHolidayDto();
+            dto.setDate(h.date());
+            dto.setDescription(h.localName());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    // [BARU] Menerima "2026-01-01" maupun "2026-01-1" (sebagian API tidak memakai nol di depan).
+    private LocalDate parseFlexibleDate(String raw) {
+        String[] parts = raw.trim().split("-");
+        return LocalDate.of(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
     }
 
     private HolidayResponse toResponse(Holiday holiday) {
@@ -138,11 +200,5 @@ public class HolidayService {
                 holiday.getHolidayId(), holiday.getName(), holiday.getDate(),
                 holiday.getDescription(), holiday.getIsNational(),
                 holiday.getCreatedBy(), holiday.getCreatedAt());
-    }
-
-    private static class ApiHariLiburResponse {
-        private List<ExternalHolidayDto> data;
-        public List<ExternalHolidayDto> getData() { return data; }
-        public void setData(List<ExternalHolidayDto> data) { this.data = data; }
     }
 }

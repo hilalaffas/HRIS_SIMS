@@ -1,5 +1,6 @@
 // Detail laporan karyawan dalam halaman Laporan.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, FileDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import { EXPORT_FORMATS, STATUS_TONE_CLASS } from '../config/laporanConfig';
 import { buildDailyRows, DAILY_HEADERS, formatAccHours } from '../utils/attendanceReportSheets';
@@ -39,20 +40,26 @@ function PhotoPreview({ photo, onClose }) {
   const buttonRef = useRef(null);
   useEffect(() => {
     const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     buttonRef.current?.focus();
     const handleKey = (event) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); }
       if (event.key === 'Tab') { event.preventDefault(); buttonRef.current?.focus(); }
     };
     document.addEventListener('keydown', handleKey, true);
-    return () => { document.removeEventListener('keydown', handleKey, true); previous?.focus(); };
+    return () => {
+      document.removeEventListener('keydown', handleKey, true);
+      document.body.style.overflow = previousOverflow;
+      previous?.focus();
+    };
   }, [onClose]);
-  return <div className="lpr-photo-overlay" onMouseDown={(event) => { event.stopPropagation(); onClose(); }}>
+  return createPortal(<div className="lpr-photo-overlay" onMouseDown={(event) => { event.stopPropagation(); onClose(); }}>
     <section className="lpr-photo-modal" role="dialog" aria-modal="true" aria-labelledby="lpr-photo-title" onMouseDown={(event) => event.stopPropagation()}>
-      <header><h3 id="lpr-photo-title">{photo.label}</h3><button ref={buttonRef} type="button" onClick={onClose} aria-label="Tutup foto"><X /></button></header>
+      <header className="lpr-photo-header"><h3 id="lpr-photo-title">{photo.label}</h3><button ref={buttonRef} type="button" onClick={onClose} aria-label="Tutup foto" title="Tutup foto"><X size={22} aria-hidden="true" /></button></header>
       <img src={photo.url} alt={photo.label} />
     </section>
-  </div>;
+  </div>, document.body);
 }
 
 function ScrollableReportTable({ children }) {

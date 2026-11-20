@@ -43,6 +43,23 @@ public class HolidaySyncScheduler implements ApplicationRunner {
         }
     }
 
+    /**
+     * [BARU] Self-healing: tiap jam (menit ke-15), bila tabel libur tahun ini masih kosong
+     * (mis. sync saat startup gagal karena API eksternal down/timeout), coba sync lagi.
+     * Bila tabel sudah terisi, method ini tidak melakukan apa-apa.
+     */
+    @Scheduled(cron = "0 15 * * * *", zone = "Asia/Jakarta")
+    public void retryIfEmpty() {
+        int year = LocalDate.now().getYear();
+        boolean isEmpty = holidayService
+                .getHolidaysByRange(LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31))
+                .isEmpty();
+        if (isEmpty) {
+            log.warn("Tabel libur nasional {} masih kosong, mencoba sync ulang...", year);
+            syncYear(year);
+        }
+    }
+
     private void syncYear(int year) {
         try {
             HolidaySyncResult result = holidayService.syncNationalHolidays(year, null);

@@ -1,8 +1,29 @@
 // src/pages/Dashboard/components/CalendarCard.jsx
 import React, { useState, useEffect } from 'react';
-import { startPolling } from '../../../utils/polling'; // [BARU]
 import { getHolidaysByMonth } from '../../../services/holidayService';
 import { getTeamLeaveByYear } from '../../../services/CutiService';
+import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays'; // [BARU] cadangan bila API gagal
+
+// [BARU] Ubah daftar libur dari backend menjadi peta { 'YYYY-MM-DD': { name, isNational, id } }.
+const buildHolidayInfoMap = (holidayList) => {
+  const infoMap = {};
+  (holidayList || []).forEach((h) => {
+    // h.date dari backend berbentuk 'YYYY-MM-DD' (LocalDate diserialisasi Jackson)
+    infoMap[h.date] = { name: h.name, isNational: !!h.isNational, id: h.holidayId };
+  });
+  return infoMap;
+};
+
+// [BARU] Data cadangan untuk SATU bulan, hanya dipakai bila request ke backend GAGAL
+// (bukan bila hasilnya kosong, supaya hari libur yang sengaja dihapus HR tidak muncul lagi).
+const buildLocalHolidayInfoMap = (year, month) => {
+  const prefix = `${year}-${String(month).padStart(2, '0')}-`;
+  const infoMap = {};
+  Object.entries(LOCAL_HOLIDAYS_2026).forEach(([date, name]) => {
+    if (date.startsWith(prefix)) infoMap[date] = { name, isNational: true, id: null };
+  });
+  return infoMap;
+};
 
 export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChange, onTeamLeavesChange, refreshTrigger }) {
   const todayObj = new Date();
@@ -14,7 +35,12 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
   // per-hari) -- sumber untuk currentMonthTeamLeaves di bawah, dipakai
   // KaryawanCutiPanel. Lihat getTeamLeaveByYear di CutiService.js.
   const [teamLeaveList, setTeamLeaveList] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // [UBAH] isLoading dipecah dua: hari libur (per bulan) & cuti tim (per tahun) dimuat terpisah.
+  const [isHolidayLoading, setIsHolidayLoading] = useState(false);
+  const [isLeaveLoading, setIsLeaveLoading] = useState(false);
+  const [hasLoadError, setHasLoadError] = useState(false); // [BARU]
+  const [refreshTick, setRefreshTick] = useState(0); // [BARU] naik 1 tiap tombol "Muat Ulang" ditekan
+  const isLoading = isHolidayLoading || isLeaveLoading;
 
   const monthNames = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
@@ -24,45 +50,64 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
   const currentYear = viewDate.getFullYear();
   const currentMonth = viewDate.getMonth(); // 0-indexed (JS)
 
-  // Ambil data hari libur bulan aktif dari backend, & cuti tim setahun
+  // [UBAH] Pemuatan data dipecah jadi DUA effect terpisah dan polling otomatis dihapus.
+  // Sebelumnya: 1 Promise.all (hari libur + cuti setahun) + polling 60 detik, dan di
+  // blok catch-nya setHolidays({}) -- jadi bila salah satu request gagal/timeout (mis.
+  // Render sedang bangun dari sleep), SEMUA tanggal merah ikut hilang sampai polling
+  // berikutnya. Sekarang: gagal memuat tidak lagi mengosongkan kalender.
+
+  // Effect 1: hari libur bulan aktif (1 request kecil, ikut dimuat tiap pindah bulan)
   useEffect(() => {
-    const loadCalendarData = async () => {
-      setIsLoading(true);
+    let isCancelled = false; // [BARU] cegah respons lama menimpa bulan yang sudah berganti
+    const loadHolidays = async () => {
+      setIsHolidayLoading(true);
       try {
-        // [UBAH] { silent: true } -- widget sekunder di Dashboard (bukan
-        // konten utama halaman), jadi polling 30 detiknya tidak boleh
-        // memicu LoadingScreen global. Lihat services/api.js.
-        const [holidayList, teamLeaveData] = await Promise.all([
-          getHolidaysByMonth(currentYear, currentMonth + 1, { silent: true }), // backend 1-indexed (LocalDate Java)
-          getTeamLeaveByYear(currentYear, { silent: true }),
-        ]);
+        // { silent: true } -- widget sekunder, tidak boleh memicu LoadingScreen global.
+        const holidayList = await getHolidaysByMonth(currentYear, currentMonth + 1, { silent: true }); // backend 1-indexed
+        if (isCancelled) return;
+        setHolidays(buildHolidayInfoMap(holidayList));
+        setHasLoadError(false);
+      } catch (err) {
+        if (isCancelled) return;
+        console.error('Gagal memuat hari libur:', err);
+        setHolidays(buildLocalHolidayInfoMap(currentYear, currentMonth + 1));
+        setHasLoadError(true);
+      } finally {
+        if (!isCancelled) setIsHolidayLoading(false);
+      }
+    };
+    loadHolidays();
+    return () => { isCancelled = true; };
+  }, [currentYear, currentMonth, refreshTrigger, refreshTick]);
 
-        const holidayMap = {};
-        (holidayList || []).forEach((h) => {
-          // h.date dari backend berbentuk 'YYYY-MM-DD' (LocalDate diserialisasi Jackson)
-          holidayMap[h.date] = {
-            name: h.name,
-            isNational: !!h.isNational,
-            id: h.holidayId,
-          };
-        });
-
-        setHolidays(holidayMap);
-        // [UBAH] getTeamLeaveByYear sekarang balikin { byDate, list }.
+  // Effect 2: cuti tim SETAHUN (request lebih berat) -- hanya dimuat ulang saat TAHUN berganti
+  // atau saat dimuat ulang manual, TIDAK tiap pindah bulan.
+  useEffect(() => {
+    let isCancelled = false;
+    const loadTeamLeaves = async () => {
+      setIsLeaveLoading(true);
+      try {
+        const teamLeaveData = await getTeamLeaveByYear(currentYear, { silent: true });
+        if (isCancelled) return;
+        // getTeamLeaveByYear mengembalikan { byDate, list }.
         setTeamLeaves(teamLeaveData?.byDate || {});
         setTeamLeaveList(teamLeaveData?.list || []);
       } catch (err) {
-        console.error('Gagal memuat data kalender:', err);
-        setHolidays({});
+        // Data lama dipertahankan; kalender tidak dikosongkan.
+        if (!isCancelled) console.error('Gagal memuat cuti tim:', err);
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) setIsLeaveLoading(false);
       }
     };
-    loadCalendarData();
-    // [UBAH] setInterval 30 dtk -> startPolling 60 dtk (widget sekunder; berhenti saat tab tersembunyi)
-    const stopPolling = startPolling(loadCalendarData, 60000);
-    return () => stopPolling();
-  }, [currentYear, currentMonth, refreshTrigger]);
+    loadTeamLeaves();
+    return () => { isCancelled = true; };
+  }, [currentYear, refreshTrigger, refreshTick]);
+
+  // [BARU] Muat ulang manual (menggantikan polling otomatis).
+  const handleManualRefresh = () => {
+    if (isLoading) return;
+    setRefreshTick((prev) => prev + 1);
+  };
 
   // [UBAH] Functional update (pakai nilai viewDate sebelumnya dari React,
   // bukan currentYear/currentMonth dari closure render ini). Sebelumnya kalau
@@ -208,11 +253,28 @@ export default function CalendarCard({ selectedDate, onDateClick, onHolidaysChan
             </h4>
             {isLoading && (
               <span className="shrink-0 whitespace-nowrap text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full animate-pulse">
-                Menyinkronkan...
+                Memuat...
+              </span>
+            )}
+            {/* [BARU] Tampil bila hari libur gagal dimuat dari server (kalender memakai data cadangan). */}
+            {!isLoading && hasLoadError && (
+              <span className="shrink-0 whitespace-nowrap text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+                Gagal memuat, tekan muat ulang
               </span>
             )}
           </div>
           <div className="flex gap-1">
+            {/* [BARU] Tombol muat ulang manual */}
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={isLoading}
+              title="Muat ulang kalender"
+              aria-label="Muat ulang kalender"
+              className="p-1 px-2 border border-gray-200 rounded-md text-xs hover:bg-gray-50 text-gray-600 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <i className={`fa-solid fa-rotate ${isLoading ? 'animate-spin' : ''}`}></i>
+            </button>
             <button type="button" onClick={handlePrevMonth} className="p-1 px-2 border border-gray-200 rounded-md text-xs hover:bg-gray-50 text-gray-600 font-bold cursor-pointer">&lt;</button>
             <button type="button" onClick={handleNextMonth} className="p-1 px-2 border border-gray-200 rounded-md text-xs hover:bg-gray-50 text-gray-600 font-bold cursor-pointer">&gt;</button>
           </div>
