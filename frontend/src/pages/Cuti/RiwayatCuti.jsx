@@ -4,6 +4,7 @@ import Skeleton from '../../components/Skeleton'; // [BARU]
 import './RiwayatCuti.css';
 import { getAllLeaveRequestsForHr, getApprovalHistory, getRiwayatByUser } from '../../services/CutiService';
 import { isHrAdmin, isManagerOrSpv, isSuperAdmin } from '../../utils/roles';
+import { startPolling } from '../../utils/polling'; // [BARU]
 
 /**
  * RiwayatCuti.jsx
@@ -33,7 +34,7 @@ import { isHrAdmin, isManagerOrSpv, isSuperAdmin } from '../../utils/roles';
  */
 
 // Auto-refresh setiap 15 detik. Ganti angka ini kalau butuh lebih/kurang cepat.
-const POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 30000; // [UBAH] 15000 -> 30000
 
 // [UBAH] Ditambah opsi 5; default tampilan awal = 5.
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
@@ -155,18 +156,12 @@ export default function RiwayatCuti({ user }) {
 
   useEffect(() => {
     fetchHistory();
-    const intervalId = window.setInterval(() => fetchHistory({ silent: true }), POLL_INTERVAL_MS);
-
-    // [BARU] Begitu tab/window ini aktif lagi (mis. user pindah tab lalu
-    // balik), langsung sinkronkan -- tidak perlu menunggu interval berikutnya.
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') fetchHistory({ silent: true });
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
+    // [UBAH] startPolling: tab tersembunyi dilewati, request tidak menumpuk, dan begitu tab aktif lagi
+    // langsung disegarkan sekali bila ada poll yang terlewat (menggantikan setInterval + visibilitychange).
+    const stopPolling = startPolling(() => fetchHistory({ silent: true }), POLL_INTERVAL_MS);
 
     return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibility);
+      stopPolling();
     };
   }, [fetchHistory]);
 

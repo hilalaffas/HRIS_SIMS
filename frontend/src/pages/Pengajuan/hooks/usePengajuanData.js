@@ -11,8 +11,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getMyAttendanceHistory, toDisplayRecord } from '../../../services/attendanceService';
 import { getMyOvertime, toDisplayOvertime } from '../../../services/overtimeService';
+import { startPolling } from '../../../utils/polling'; // [BARU]
 
-const SYNC_INTERVAL_MS = 15000;
+const SYNC_INTERVAL_MS = 30000; // [UBAH] 15000 -> 30000
 
 const fetchAll = (silent) => Promise.allSettled([
   getMyOvertime({ silent }),
@@ -51,20 +52,16 @@ export default function usePengajuanData(onError) {
     });
 
     const syncInBackground = () => {
-      fetchAll(true).then((results) => {
+      return fetchAll(true).then((results) => { // [UBAH] return agar startPolling bisa menunggu request selesai
         if (!cancelled) applyResults(results, true);
       });
     };
-    const intervalId = window.setInterval(syncInBackground, SYNC_INTERVAL_MS);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') syncInBackground();
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
+    // [UBAH] startPolling: tab tersembunyi dilewati, request tidak menumpuk, segar lagi saat tab kembali aktif.
+    const stopPolling = startPolling(syncInBackground, SYNC_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibility);
+      stopPolling();
     };
   }, [applyResults]);
 

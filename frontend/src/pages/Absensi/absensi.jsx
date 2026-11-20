@@ -106,8 +106,18 @@ export default function Absensi() {
 
   useEffect(() => {
     Promise.resolve().then(loadHistory);
-    window.addEventListener('focus', loadHistory);
-    return () => window.removeEventListener('focus', loadHistory);
+    // [UBAH] Performa: pindah tab / alt-tab membuat event `focus` muncul berkali-kali, dan tiap kali
+    // memicu 5 request sekaligus (riwayat absen, lembur, jadwal x2, koreksi). Sekarang disegarkan
+    // hanya bila data sudah lebih dari 30 detik. Data setelah absen/pengajuan tetap langsung
+    // diperbarui lewat state lokal (handleSubmitted dll), jadi tampilan tidak basi.
+    let lastLoadedAt = Date.now();
+    const handleFocus = () => {
+      if (Date.now() - lastLoadedAt < 30000) return;
+      lastLoadedAt = Date.now();
+      loadHistory();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [loadHistory]);
 
   // ===================== KAMERA, LOKASI & SUBMIT (hook bersama) =====================
