@@ -111,4 +111,14 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
             """)
     List<LeaveRequest> findRecalculableBetween(@Param("start") LocalDate start,
                                                @Param("end") LocalDate end);
+
+    // [BARU] Riwayat cuti HASIL IMPORT satu karyawan (is_imported_history = true), lengkap dengan jenis cuti.
+    // Dipakai panel /devAccess untuk mengoreksi baris import yang salah (DevImportedLeaveService).
+    @Query("""
+            select l from LeaveRequest l
+            join fetch l.leaveType t
+            where l.employee.employeeId = :employeeId
+              and l.importedHistory = true
+            """)
+    List<LeaveRequest> findImportedHistoryByEmployee(@Param("employeeId") Long employeeId);
 }

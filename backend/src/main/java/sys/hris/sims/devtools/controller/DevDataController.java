@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping; // [BARU]
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +26,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.devtools.dto.DevEmployeeRow;
+import sys.hris.sims.devtools.dto.DevImportedLeaveRow; // [BARU]
 import sys.hris.sims.devtools.dto.DevLeaveRow;
 import sys.hris.sims.devtools.dto.ImportCsvRequest;
 import sys.hris.sims.devtools.dto.ImportLeaveHistoryRequest; // [BARU]
@@ -33,6 +35,7 @@ import sys.hris.sims.devtools.dto.UpdateLeaveRequest;
 import sys.hris.sims.devtools.dto.UpdateNikRequest;
 import sys.hris.sims.devtools.service.DevAccessService;
 import sys.hris.sims.devtools.service.DevEmployeeDataService;
+import sys.hris.sims.devtools.service.DevImportedLeaveService; // [BARU]
 import sys.hris.sims.devtools.service.DevLeaveDataService;
 import sys.hris.sims.devtools.service.DevLeaveHistoryService; // [BARU]
 import sys.hris.sims.devtools.service.ImportValidationRegistry; // [BARU]
@@ -64,6 +67,7 @@ public class DevDataController {
     private final DevEmployeeDataService employeeDataService;
     private final DevLeaveDataService leaveDataService;
     private final DevLeaveHistoryService leaveHistoryService; // [BARU]
+    private final DevImportedLeaveService importedLeaveService; // [BARU] koreksi riwayat import
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
     private final ImportValidationRegistry validationRegistry; // [BARU]
@@ -203,6 +207,33 @@ public class DevDataController {
     }
 
     // ============================== RIWAYAT CUTI (format ledger) ==============================
+
+    // [BARU] Koreksi riwayat cuti HASIL IMPORT (mis. ada tanggal kelebihan di Excel).
+    // GET: daftar riwayat import satu karyawan. DELETE: hapus SATU baris riwayat import.
+    // Saldo & Ringkasan Cuti tidak berubah (lihat DevImportedLeaveService).
+    @GetMapping("/leave-history/records")
+    public ResponseEntity<?> listImportedLeave(@RequestParam Long employeeId,
+                                               Authentication authentication) {
+        if (!isDevAccount(authentication)) {
+            return forbidden();
+        }
+        List<DevImportedLeaveRow> rows = importedLeaveService.listByEmployee(employeeId);
+        return ResponseEntity.ok(rows);
+    }
+
+    @DeleteMapping("/leave-history/records/{leaveRequestId}")
+    public ResponseEntity<?> deleteImportedLeave(@PathVariable Long leaveRequestId,
+                                                 Authentication authentication,
+                                                 HttpServletRequest httpRequest) {
+        if (!isDevAccount(authentication)) {
+            return forbidden();
+        }
+        DevImportedLeaveRow deleted = importedLeaveService.deleteImported(leaveRequestId);
+        log(authentication, httpRequest, "DEV_HAPUS_RIWAYAT_CUTI", "leave_requests", leaveRequestId,
+                "Dev: hapus riwayat cuti import " + deleted.employeeName() + " (" + deleted.leaveTypeName() + ", "
+                        + deleted.startDate() + ", " + deleted.totalDays() + " hari); saldo tidak berubah");
+        return ResponseEntity.ok(deleted);
+    }
 
     // [BARU] Export riwayat cuti per tanggal dengan bentuk yang sama seperti file ledger.
     // [UBAH] Parameter opsional: from & to (yyyy-MM-dd, diisi keduanya) membatasi periode.

@@ -28,6 +28,7 @@ import {
 import CsvExportButton from './CsvExportButton';
 import CsvImportPanel from './CsvImportPanel';
 import { DevTabBar, DevTabPanel } from './DevTabBar'; // [BARU]
+import ImportedLeaveCleanupSection from './ImportedLeaveCleanupSection'; // [BARU] hapus riwayat import yang salah
 import './DevDataSections.css';
 
 const SHEET_TITLE = '使用・残日数';
@@ -37,6 +38,7 @@ const LEDGER_FILE_BASE = 'インドネシア有給管理台帳';
 const SUB_TABS = [
   { id: 'historyImport', label: 'Import' },
   { id: 'historyExport', label: 'Export' },
+  { id: 'historyCleanup', label: 'Koreksi Riwayat' }, // [BARU]
 ];
 
 // [BARU] Ringkasan aturan jumlah hari & komentar sel (sama dengan aturan di backend).
@@ -181,6 +183,11 @@ export default function LeaveHistorySection() {
           onImport={(csvText, file) => runImport(csvText, file, false)}
         />
       </div>
+      </DevTabPanel>
+
+      {/* [BARU] Hapus baris riwayat hasil import yang salah (saldo & Ringkasan Cuti tidak berubah) */}
+      <DevTabPanel activeId={activeSubTab} id="historyCleanup">
+        <ImportedLeaveCleanupSection />
       </DevTabPanel>
     </section>
   );
