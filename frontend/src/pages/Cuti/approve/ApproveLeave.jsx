@@ -187,6 +187,14 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   const actionLockRef = useRef(false);
   const [isActionSubmitting, setIsActionSubmitting] = useState(false);
 
+  // [BARU] Hapus satu berkas dari antrean "Perlu Diproses" di layar SEGERA setelah aksi berhasil.
+  // Berlaku untuk ACC, Revisi, dan Tolak: ketiganya membuat berkas keluar dari antrean approver ini
+  // (backend hanya menampilkan tahap yang masih PENDING milik approver). Data lengkap tetap
+  // disegarkan lewat loadData() sehingga bila ada selisih, hasil server yang dipakai.
+  const removePendingItem = (id) => {
+    setPending((previous) => previous.filter((item) => String(item.id) !== String(id)));
+  };
+
   const handleConfirmAction = async (id, action, alasan) => {
     if (actionLockRef.current) return; // [BARU]
     actionLockRef.current = true;
@@ -194,7 +202,8 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
     try {
       await takeApprovalAction(id, action === 'acc' ? 'approve' : action === 'revisi' ? 'return' : 'reject', alasan);
       setActionRequest(null);
-      await loadData();
+      removePendingItem(id); // [BARU] baris langsung hilang dari antrean, tanpa menunggu server
+      loadData(); // [UBAH] segarkan data di belakang layar (tanpa await) supaya layar tidak menunggu 3 request
     } catch (err) {
       alert(err.message || 'Aksi cuti gagal diproses.');
       // [BARU] Respons error tidak selalu berarti aksinya gagal (server bisa sudah menyimpan lalu gagal membalas).
@@ -205,7 +214,8 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
         const stillPending = (Array.isArray(tasks) ? tasks : []).some((task) => String(task.id) === String(id));
         if (!stillPending) {
           setActionRequest(null);
-          await loadData();
+          removePendingItem(id); // [BARU]
+          loadData(); // [UBAH] di belakang layar
         }
       } catch {
         // gagal mengecek ulang: biarkan popup terbuka seperti sebelumnya
