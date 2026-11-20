@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react'; // [UBAH] + useMemo
 import Dropdown from '../../../components/Dropdown';
 import './LogTable.css'; // [UBAH] sebelumnya LogSistem.css
 
@@ -11,6 +11,28 @@ const LOG_PAGE_SIZE_OPTIONS = [
   { value: 100, label: '100' },
 ];
 
+// [BARU] Filter jenis aktivitas (mis. melihat siapa saja yang sudah login). Cocok dengan field `action` log.
+const ACTIVITY_FILTER_OPTIONS = [
+  { value: 'all', label: 'Semua aktivitas' },
+  { value: 'login', label: 'Login berhasil' },
+  { value: 'loginFailed', label: 'Login gagal' },
+];
+
+const FAILED_LOGIN_ACTIONS = ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED'];
+
+const matchesActivityFilter = (log, filter) => {
+  if (filter === 'login') return log.action === 'LOGIN';
+  if (filter === 'loginFailed') return FAILED_LOGIN_ACTIONS.includes(log.action);
+  return true;
+};
+
+// [BARU] Semua kata yang diketik harus ada di salah satu kolom (nama, aktivitas, tanggal, jam).
+const matchesSearch = (log, terms) => {
+  if (terms.length === 0) return true;
+  const haystack = `${log.aktor} ${log.aksi} ${log.tanggal} ${log.jam}`.toLowerCase();
+  return terms.every((term) => haystack.includes(term));
+};
+
 // [UBAH] Komponen ini sebelumnya bernama LogSistem (tab di halaman Karyawan);
 // sekarang dipakai halaman sendiri pages/LogSistem/LogSistem.jsx.
 // [UBAH] + headerActions: tombol ekspor dari halaman, ditaruh di header kartu (sebelah "Tampilkan").
@@ -18,16 +40,36 @@ const LogTable = ({ logList = [], headerActions = null }) => {
   // State untuk Pagination
   const [itemsPerPage, setItemsPerPage] = useState(5); // [UBAH] default tampilan awal 5 (sebelumnya 10)
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchText, setSearchText] = useState(''); // [BARU] pencarian nama / aktivitas / tanggal
+  const [activityFilter, setActivityFilter] = useState('all'); // [BARU] jenis aktivitas
+
+  // [BARU] Daftar yang sudah disaring; pagination di bawah memakai daftar ini (bukan logList penuh).
+  const filteredLogs = useMemo(() => {
+    const terms = searchText.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    return logList.filter((log) => matchesActivityFilter(log, activityFilter) && matchesSearch(log, terms));
+  }, [logList, searchText, activityFilter]);
+  const isFiltering = searchText.trim() !== '' || activityFilter !== 'all';
 
   // Kalkulasi Pagination
-  const totalPages = Math.ceil(logList.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage); // [UBAH] dulu logList.length
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentLogs = logList.slice(startIndex, startIndex + itemsPerPage);
+  const currentLogs = filteredLogs.slice(startIndex, startIndex + itemsPerPage); // [UBAH] dulu logList.slice
 
   // Handler Perubahan
   const handleFilterChange = (e) => {
     setItemsPerPage(Number(e.target.value));
     setCurrentPage(1); // Reset ke halaman 1 setiap mengganti jumlah filter
+  };
+
+  // [BARU] Ganti pencarian / filter -> kembali ke halaman 1.
+  const handleSearchChange = (e) => {
+    setSearchText(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleActivityFilterChange = (e) => {
+    setActivityFilter(e.target.value);
+    setCurrentPage(1);
   };
 
   const handleNext = () => {
@@ -66,8 +108,33 @@ const LogTable = ({ logList = [], headerActions = null }) => {
         </div>
       </div>
       
+      {/* [BARU] Pencarian + filter jenis aktivitas */}
+      <div className="toolbar_log_sistem">
+        <input
+          type="search"
+          className="search-input_log_sistem"
+          placeholder="Cari nama, aktivitas, atau tanggal..."
+          value={searchText}
+          onChange={handleSearchChange}
+          aria-label="Cari log sistem"
+        />
+        <Dropdown
+          id="log-activity-filter"
+          value={activityFilter}
+          onChange={handleActivityFilterChange}
+          options={ACTIVITY_FILTER_OPTIONS}
+          variant="pill"
+          className="select-filter_log_sistem"
+        />
+        {isFiltering && (
+          <span className="result-info_log_sistem">
+            {filteredLogs.length} dari {logList.length} log
+          </span>
+        )}
+      </div>
+
       {/* Trik: Atribut 'key' yang berubah akan men-trigger ulang animasi CSS */}
-      <div key={`${currentPage}-${itemsPerPage}`} className="body_log_sistem animate-fade_log_sistem">
+      <div key={`${currentPage}-${itemsPerPage}-${searchText}-${activityFilter}`} className="body_log_sistem animate-fade_log_sistem">
         {currentLogs.map((log) => (
           <div 
             key={log.id} 
@@ -87,10 +154,13 @@ const LogTable = ({ logList = [], headerActions = null }) => {
         {logList.length === 0 && (
           <div className="empty-log_log_sistem">Belum ada aktivitas terekam.</div>
         )}
+        {logList.length > 0 && filteredLogs.length === 0 && ( // [BARU]
+          <div className="empty-log_log_sistem">Tidak ada log yang cocok dengan pencarian.</div>
+        )}
       </div>
 
       {/* Kontrol Pagination (Hanya tampil jika ada data) */}
-      {logList.length > 0 && (
+      {filteredLogs.length > 0 && ( // [UBAH] dulu logList.length
         <div className="pagination_log_sistem">
           <button 
             onClick={handlePrev} 
