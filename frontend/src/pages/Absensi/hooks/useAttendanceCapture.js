@@ -67,8 +67,12 @@ function resolveGeolocationError(error) {
 // [BARU] Preferensi "Balik kamera" disimpan per perangkat. Default MATI = gambar apa adanya dari kamera.
 // Dipakai bila driver/HP menghasilkan stream yang sudah terbalik (mirror) dari sananya.
 const FLIP_STORAGE_KEY = 'sims.attendance.flipCamera';
+const DEFAULT_CAMERA_FLIPPED = true;
 function readFlipPreference() {
-  try { return window.localStorage.getItem(FLIP_STORAGE_KEY) === '1'; } catch { return false; }
+  try {
+    const stored = window.localStorage.getItem(FLIP_STORAGE_KEY);
+    return stored === null ? DEFAULT_CAMERA_FLIPPED : stored === '1';
+  } catch { return DEFAULT_CAMERA_FLIPPED; }
 }
 
 export default function useAttendanceCapture({ onSubmitted } = {}) {
