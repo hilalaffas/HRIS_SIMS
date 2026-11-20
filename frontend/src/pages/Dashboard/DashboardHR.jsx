@@ -1,8 +1,9 @@
 // src/pages/Dashboard/DashboardHR.jsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react'; // [UBAH] + useEffect
 import AnnouncementSection from './components/AnnouncementSection';
 import CalendarCard from './components/CalendarCard';
 import KaryawanCutiPanel from './components/KaryawanCutiPanel';
+import DashboardSummaryCard from './components/DashboardSummaryCard'; // [BARU] kartu ringkasan + absen (sama seperti Karyawan/Manager)
 import AnnouncementModal from './components/AnnouncementModal';
 import HolidayModal from './components/HolidayModal';
 import HolidayListPanel from './components/HolidayListPanel';
@@ -14,6 +15,7 @@ import {
   deleteAnnouncement,
 } from '../../services/announcementService';
 import { addHoliday, updateHoliday, deleteHoliday } from '../../services/holidayService';
+import { getLeaveBalance } from '../../services/CutiService'; // [BARU]
 import './Dashboard.css';
 import { formatSelectedDayLabel } from '../../utils/dateUtils'; // [BARU] label judul panel "Cuti Tanggal ..."
 
@@ -33,6 +35,17 @@ export default function DashboardHR({ user }) {
   const [teamLeavesThisMonth, setTeamLeavesThisMonth] = useState([]);
   const [holidaysThisMonth, setHolidaysThisMonth] = useState([]);
   const [sidebarPanel, setSidebarPanel] = useState(SIDEBAR_PANEL.leaves);
+
+  // [BARU] Saldo cuti HRD sendiri untuk kartu "Total Sisa Cuti" (pola sama dgn DashboardKaryawan).
+  const [leaveBalance, setLeaveBalance] = useState(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+
+  useEffect(() => {
+    getLeaveBalance()
+      .then(setLeaveBalance)
+      .catch(() => setLeaveBalance(null))
+      .finally(() => setIsLoadingBalance(false));
+  }, []);
 
   // Kunci untuk memaksa AnnouncementSection & CalendarCard refresh data setelah submit
   const [announcementRefreshKey, setAnnouncementRefreshKey] = useState(0);
@@ -136,6 +149,9 @@ export default function DashboardHR({ user }) {
 
       {/* Kolom Kiri: Pengumuman */}
       <div className="dashboard__announcements">
+        {/* [BARU] Kartu ringkasan (Sisa Cuti, Kehadiran, Terlambat, Izin/Sakit) + status absen hari ini */}
+        <DashboardSummaryCard balance={leaveBalance} isLoadingBalance={isLoadingBalance} />
+
         <div className="dashboard__section-header">
           <h2 className="dashboard__section-title">PENGUMUMAN &amp; PORTAL BERITA</h2>
           <button type="button" onClick={handleOpenAddAnnouncement} className="dashboard__action-btn">
