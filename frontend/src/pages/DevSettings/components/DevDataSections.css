@@ -322,6 +322,12 @@
   width: 90px;
 }
 
+/* [BARU] Input "terpakai" kecil di dalam teks kuota (Saldo Cuti > Edit per Karyawan) */
+.devdata-table .devdata-muted input[type='number'] {
+  width: 64px;
+  padding: 2px 6px;
+}
+
 .devdata-nik-input {
   width: 150px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

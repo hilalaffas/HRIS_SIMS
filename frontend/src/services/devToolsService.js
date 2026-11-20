@@ -16,6 +16,8 @@
 // GET  /api/dev/leave/export              -> CSV saldo cuti (teks)
 // POST /api/dev/leave/import              -> { csvText, dryRun } -> ringkasan + hasil per baris
 // PUT  /api/dev/leave/employees/{id}      -> { joinDate, oldLeaveBalance, currentYearRemaining }
+// [BARU] GET /api/dev/leave/used          -> angka Ringkasan Cuti semua karyawan (untuk edit kolom Terpakai)
+// [BARU] PUT /api/dev/leave/used/{id}     -> { usedLeave } ganti Terpakai (hanya karyawan yang sudah punya angka import Excel)
 //
 // [BARU] Riwayat cuti format ledger (satu baris per tanggal):
 // GET  /api/dev/leave-history/export      -> CSV ledger (teks); opsional ?from=&to= (tanggal selalu YYYY-MM-DD)
@@ -64,6 +66,12 @@ export const importLeaveCsv = (csvText, dryRun = false) => api.post('/api/dev/le
 // payload: { joinDate?, oldLeaveBalance?, currentYearRemaining? } -- field yang tidak dikirim tidak diubah.
 export const updateLeaveAdjustment = (employeeId, payload) =>
   api.put(`/api/dev/leave/employees/${employeeId}`, payload);
+
+// [BARU] Terpakai Ringkasan Cuti (total sejak masuk), sama dengan kolom "Terpakai" di Laporan > Ringkasan Cuti.
+export const getDevLeaveUsedRows = () => api.get('/api/dev/leave/used', { silent: true });
+
+export const updateLeaveUsed = (employeeId, usedLeave) =>
+  api.put(`/api/dev/leave/used/${employeeId}`, { usedLeave });
 
 // ====================== [BARU] Riwayat cuti (format ledger) ======================
 

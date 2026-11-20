@@ -28,16 +28,19 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.devtools.dto.DevEmployeeRow;
 import sys.hris.sims.devtools.dto.DevImportedLeaveRow; // [BARU]
 import sys.hris.sims.devtools.dto.DevLeaveRow;
+import sys.hris.sims.devtools.dto.DevLeaveUsedRow; // [BARU] edit Terpakai Ringkasan
 import sys.hris.sims.devtools.dto.ImportCsvRequest;
 import sys.hris.sims.devtools.dto.ImportLeaveHistoryRequest; // [BARU]
 import sys.hris.sims.devtools.dto.ImportResultResponse;
 import sys.hris.sims.devtools.dto.UpdateLeaveRequest;
+import sys.hris.sims.devtools.dto.UpdateLeaveUsedRequest; // [BARU]
 import sys.hris.sims.devtools.dto.UpdateNikRequest;
 import sys.hris.sims.devtools.service.DevAccessService;
 import sys.hris.sims.devtools.service.DevEmployeeDataService;
 import sys.hris.sims.devtools.service.DevImportedLeaveService; // [BARU]
 import sys.hris.sims.devtools.service.DevLeaveDataService;
 import sys.hris.sims.devtools.service.DevLeaveHistoryService; // [BARU]
+import sys.hris.sims.devtools.service.DevLeaveUsedService; // [BARU]
 import sys.hris.sims.devtools.service.ImportValidationRegistry; // [BARU]
 import sys.hris.sims.user.entity.User;
 import sys.hris.sims.user.repository.UserRepository;
@@ -67,6 +70,7 @@ public class DevDataController {
     private final DevEmployeeDataService employeeDataService;
     private final DevLeaveDataService leaveDataService;
     private final DevLeaveHistoryService leaveHistoryService; // [BARU]
+    private final DevLeaveUsedService leaveUsedService; // [BARU] edit Terpakai Ringkasan
     private final DevImportedLeaveService importedLeaveService; // [BARU] koreksi riwayat import
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
@@ -375,6 +379,34 @@ public class DevDataController {
                 "Dev: penyesuaian cuti " + row.fullName() + " (tanggal masuk " + row.joinDate()
                         + ", sisa lama " + row.oldLeaveBalance() + ", sisa tahun berjalan "
                         + (row.eligible() ? row.annualRemaining() : "-") + ")");
+        return ResponseEntity.ok(row);
+    }
+
+    // ============================== [BARU] TERPAKAI RINGKASAN CUTI ==============================
+
+    // Daftar angka Ringkasan Cuti (sama dengan tabel di Laporan) untuk diedit kolom Terpakai-nya.
+    @GetMapping("/leave/used")
+    public ResponseEntity<?> listLeaveUsedRows(Authentication authentication) {
+        if (!isDevAccount(authentication)) {
+            return forbidden();
+        }
+        List<DevLeaveUsedRow> rows = leaveUsedService.listRows();
+        return ResponseEntity.ok(rows);
+    }
+
+    // Mengganti angka Terpakai satu karyawan (hanya yang sudah punya angka import Excel).
+    @PutMapping("/leave/used/{employeeId}")
+    public ResponseEntity<?> updateLeaveUsed(@PathVariable Long employeeId,
+                                             @RequestBody UpdateLeaveUsedRequest request,
+                                             Authentication authentication,
+                                             HttpServletRequest httpRequest) {
+        if (!isDevAccount(authentication)) {
+            return forbidden();
+        }
+        DevLeaveUsedRow row = leaveUsedService.updateUsed(employeeId, request.usedLeave());
+        log(authentication, httpRequest, "DEV_UBAH_TERPAKAI", "employees", employeeId,
+                "Dev: Terpakai Ringkasan Cuti " + row.fullName() + " diubah menjadi " + row.usedLeave()
+                        + " (selisih data " + row.reconcileDifference() + ")");
         return ResponseEntity.ok(row);
     }
 }
