@@ -22,6 +22,7 @@
 import React, { useMemo, useState } from 'react';
 import PanelPagination from './PanelPagination'; // [BARU] dipakai bersama tab Absen Hari Ini
 import TodayAttendanceList from './TodayAttendanceList'; // [BARU]
+import { sortRows, toDateTimestamp, SORT_DIRECTION } from '../../../utils/tableSort'; // [BARU] urutan terbaru di atas
 
 const PAGE_SIZE = 5;
 
@@ -70,7 +71,12 @@ export default function KaryawanCutiPanel({
 
   const isTodayMode = mode === 'today'; // [BARU]
   const isEmployeeVariant = todayAttendanceVariant === 'employee'; // [BARU]
-  const activeLeaves = mode === 'month' ? monthLeaves : dayLeaves;
+  const rawLeaves = mode === 'month' ? monthLeaves : dayLeaves; // [UBAH] sebelumnya activeLeaves langsung
+  // [BARU] Urutkan dari tanggal cuti paling baru ke paling lama (tab Bulan Ini & tab tanggal).
+  const activeLeaves = useMemo(
+    () => sortRows(rawLeaves, (item) => toDateTimestamp(item.startDate), SORT_DIRECTION.desc),
+    [rawLeaves],
+  );
 
   // [UBAH] Reset ke halaman 1 saat ISI daftar tab aktif berubah (status
   // suatu cuti berubah lewat polling 30 detik) -- bukan tiap kali referensi

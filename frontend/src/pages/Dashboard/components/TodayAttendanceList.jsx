@@ -10,6 +10,7 @@ import React, { useMemo, useState } from 'react';
 import useTodayAttendanceSummary from '../hooks/useTodayAttendanceSummary';
 import { getTodayAbsence } from '../../../services/attendanceService'; // [BARU]
 import PanelPagination from './PanelPagination';
+import { sortRows, toDateTimestamp, SORT_DIRECTION } from '../../../utils/tableSort'; // [BARU]
 
 const PAGE_SIZE = 5;
 
@@ -46,6 +47,18 @@ const formatJam = (value) => {
   return match ? `${match[1]}:${match[2]}` : '-';
 };
 
+// [BARU] Nilai pengurut per kategori -- paling baru di atas.
+//   sick         -> tanggal mulai sakit
+//   late         -> jam masuk (entri "Izin terlambat" belum punya jam masuk, jadi otomatis di bawah)
+//   notCheckedIn -> jadwal masuk
+//   permission   -> tidak punya tanggal (semuanya hari ini), urutan dari server dipertahankan
+const getSortValue = (categoryKey, entry) => {
+  if (categoryKey === 'sick') return toDateTimestamp(entry.sickStart);
+  if (categoryKey === 'late') return entry.checkInAt ? new Date(entry.checkInAt).getTime() || null : null;
+  if (categoryKey === 'notCheckedIn') return entry.workStart ? String(entry.workStart) : null;
+  return null;
+};
+
 const describeEntry = (categoryKey, entry) => {
   if (categoryKey === 'sick') return formatRentang(entry.sickStart, entry.sickEnd);
   if (categoryKey === 'permission') return 'Izin terlambat'; // [BARU]
@@ -66,7 +79,11 @@ export default function TodayAttendanceList({ variant = 'hr' }) { // [UBAH] + va
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
 
-  const entries = useMemo(() => summary?.[categoryKey] || [], [summary, categoryKey]);
+  // [UBAH] Daftar diurutkan terbaru di atas (sebelumnya urutan apa adanya dari server).
+  const entries = useMemo(
+    () => sortRows(summary?.[categoryKey] || [], (entry) => getSortValue(categoryKey, entry), SORT_DIRECTION.desc),
+    [summary, categoryKey],
+  );
   const filteredEntries = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return entries;
