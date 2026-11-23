@@ -12,6 +12,10 @@ import sys.hris.sims.leave.entity.LeaveRequest;
 
 @Repository
 public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from LeaveRequest l where l.leaveRequestId=:id")
+    java.util.Optional<LeaveRequest> findForCancellation(@Param("id") Long id);
+
     List<LeaveRequest> findByEmployee_EmployeeId(Long employeeId);
     List<LeaveRequest> findByStatus_StatusId(Long statusId);
     List<LeaveRequest> findByLeaveType_LeaveTypeId(Long leaveTypeId);
@@ -69,7 +73,7 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
             join fetch l.status s
             join fetch l.leaveType t
             where l.employee.employeeId in :employeeIds
-              and upper(s.statusName) = 'APPROVED'
+              and upper(s.statusName) in ('APPROVED','CANCELLED')
               and t.forfeiture = false
               and l.startDate <= :endDate
               and l.endDate >= :startDate

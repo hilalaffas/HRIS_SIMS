@@ -22,6 +22,7 @@
     { value: "DISETUJUI", label: "Disetujui (ACC)" },
     { value: "DIKEMBALIKAN", label: "Dikembalikan (Revisi)" },
     { value: "DITOLAK", label: "Ditolak" },
+    { value: "DIBATALKAN", label: "Batal Cuti" },
   ];
 
   const STATUS_BADGE_CLASS = {
@@ -29,6 +30,7 @@
     DISETUJUI: "statusBadge--green",
     DIKEMBALIKAN: "statusBadge--amber",
     DITOLAK: "statusBadge--rose",
+    DIBATALKAN: "statusBadge--amber",
   };
 
   const STATUS_BADGE_LABEL = {
@@ -36,6 +38,7 @@
     DISETUJUI: "Disetujui",
     DIKEMBALIKAN: "Dikembalikan",
     DITOLAK: "Ditolak",
+    DIBATALKAN: "Batal Cuti",
   };
 
   const LeaveListSection = ({ data, onOpenDetail }) => {

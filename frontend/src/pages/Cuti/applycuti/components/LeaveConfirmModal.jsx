@@ -60,6 +60,10 @@ const LeaveConfirmModal = ({
   title,
   confirmLabel,
   notice,
+  subtitle,
+  cancelLabel = 'Batal',
+  submittingLabel = 'Mengirim...',
+  customSections,
   onConfirm,
   onCancel,
 }) => {
@@ -83,7 +87,7 @@ const LeaveConfirmModal = ({
 
   if (!isOpen || !summary) return null;
 
-  const sections = [
+  const sections = customSections || [
     {
       title: 'Detail Cuti',
       rows: [
@@ -129,7 +133,7 @@ const LeaveConfirmModal = ({
             {title || (isEditing ? 'Konfirmasi Perbaikan Cuti' : 'Konfirmasi Pengajuan Cuti')}
           </h3>
           <p className="leaveConfirmModal__subtitle">
-            Apakah data di bawah ini sudah benar? Periksa kembali sebelum mengirim.
+            {subtitle || 'Apakah data di bawah ini sudah benar? Periksa kembali sebelum mengirim.'}
           </p>
         </div>
 
@@ -181,7 +185,7 @@ const LeaveConfirmModal = ({
             disabled={isSubmitting}
             autoFocus
           >
-            Batal
+            {cancelLabel}
           </button>
           <button
             type="button"
@@ -189,7 +193,7 @@ const LeaveConfirmModal = ({
             onClick={onConfirm}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Mengirim...' : confirmLabel || (isEditing ? 'Ya, Simpan Perbaikan' : 'Ya, Kirim Pengajuan')}
+            {isSubmitting ? submittingLabel : confirmLabel || (isEditing ? 'Ya, Simpan Perbaikan' : 'Ya, Kirim Pengajuan')}
           </button>
         </div>
       </div>

@@ -6,13 +6,14 @@
  * bagaimana saldo cuti seorang karyawan berkurang dari waktu ke waktu.
  *
  * Aturan:
- *  1. Hanya cuti berstatus DISETUJUI yang masuk hitungan. Ditolak,
+ *  1. Cuti DISETUJUI dan DIBATALKAN masuk hitungan. Ditolak,
  *     Proses, dan Dikembalikan tidak memotong saldo (baris ini tidak
  *     mendapat angka -> tabel menampilkan "-").
  *  2. Urutan pemotongan mengikuti waktu APPROVAL (approvedAt), bukan
  *     tanggal cuti dan bukan urutan baris di tabel.
- *  3. Angka di tiap baris = saldo SETELAH cuti itu disetujui.
- *  4. Dihitung MUNDUR dari saldo karyawan saat ini (sumber sama dengan
+ *  3. Angka per baris = saldo setelah approval atau pembatalan terakhirnya.
+ *  4. Debit approval dan refund pembatalan dihitung MUNDUR dari saldo kini,
+ *     (sumber sama dengan
  *     Direktori Karyawan), jadi cuti disetujui paling akhir selalu sama
  *     dengan sisa cuti karyawan sekarang.
  *  5. Jenis cuti yang tidak memotong kuota (deductsQuota === false)
@@ -22,19 +23,11 @@
  *                         disetujui tgl 20 (1 hari) -> 10.
  * ------------------------------------------------------------------
  */
-const APPROVED_STATUS = 'DISETUJUI';
+const INCLUDED_STATUSES = ['DISETUJUI', 'DIBATALKAN'];
 
 const toTimestamp = (value) => {
   const time = value ? new Date(value).getTime() : NaN;
   return Number.isNaN(time) ? -Infinity : time;
-};
-
-// Urut naik menurut waktu approval; kalau sama/kosong, urut menurut id.
-const compareByApproval = (a, b) => {
-  const timeA = toTimestamp(a.approvedAt);
-  const timeB = toTimestamp(b.approvedAt);
-  if (timeA === timeB) return a.id - b.id;
-  return timeA < timeB ? -1 : 1;
 };
 
 const roundDays = (value) => Math.round(value * 100) / 100;
@@ -52,7 +45,7 @@ export const buildLeaveBalanceTimeline = (leaveList, currentBalanceByEmployeeId 
   leaveList.forEach((leave) => {
     // [UBAH] Riwayat hasil import ledger tidak memotong saldo, jadi tidak ikut dihitung mundur
     // (kolom sisa cuti barisnya tampil "-").
-    if (leave.statusBerkas !== APPROVED_STATUS || leave.employeeId == null || leave.importedHistory) return;
+    if (!INCLUDED_STATUSES.includes(leave.statusBerkas) || leave.employeeId == null || leave.importedHistory) return;
     if (!approvedByEmployeeId[leave.employeeId]) approvedByEmployeeId[leave.employeeId] = [];
     approvedByEmployeeId[leave.employeeId].push(leave);
   });
@@ -61,15 +54,28 @@ export const buildLeaveBalanceTimeline = (leaveList, currentBalanceByEmployeeId 
     const rawBalance = currentBalanceByEmployeeId[employeeId];
     if (rawBalance == null || Number.isNaN(Number(rawBalance))) return;
 
-    const orderedLeaves = [...approvedLeaves].sort(compareByApproval);
-
-    // Mulai dari saldo sekarang (cuti terakhir disetujui), lalu mundur:
-    // saldo sebelum sebuah cuti = saldo sesudahnya + hari yang dipotong.
+    // Replay approval debits and cancellation refunds separately so cancellations
+    // after a newer approval also restore that row's historical balance correctly.
+    const events = approvedLeaves.flatMap(leave => {
+      const cancellations = leave.cancellations || [];
+      const refundedDays = cancellations.reduce((sum, c) => sum + Number(c.days || 0), 0);
+      const originalDays = Number(leave.originalTotalDays ?? (Number(leave.totalDays || 0) + refundedDays));
+      return [
+        { leave, at: leave.approvedAt, order: 0, delta: leave.deductsQuota ? -originalDays : 0 },
+        ...cancellations.map((c, index) => ({ leave, at: c.cancelledAt, order: index + 1,
+          delta: leave.deductsQuota ? Number(c.returnedQuotaDays ?? c.days ?? 0) : 0 })),
+      ];
+    }).sort((a, b) => {
+      const timeA = toTimestamp(a.at), timeB = toTimestamp(b.at);
+      if (timeA !== timeB) return timeA < timeB ? -1 : 1;
+      return Number(a.leave.id) - Number(b.leave.id) || a.order - b.order;
+    });
     let balanceAfter = Number(rawBalance);
-    for (let index = orderedLeaves.length - 1; index >= 0; index -= 1) {
-      const leave = orderedLeaves[index];
-      balanceAfterByLeaveId[leave.id] = roundDays(balanceAfter);
-      if (leave.deductsQuota) balanceAfter += Number(leave.totalDays || 0);
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      // A cancelled row displays the balance after its latest cancellation.
+      if (!(event.leave.id in balanceAfterByLeaveId)) balanceAfterByLeaveId[event.leave.id] = roundDays(balanceAfter);
+      balanceAfter = roundDays(balanceAfter - event.delta);
     }
   });
 

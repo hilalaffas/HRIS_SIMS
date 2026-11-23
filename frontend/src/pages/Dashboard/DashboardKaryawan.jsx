@@ -8,7 +8,7 @@ import { getLeaveBalance } from '../../services/CutiService';
 import './Dashboard.css';
 import { formatSelectedDayLabel } from '../../utils/dateUtils'; // [BARU] label judul panel "Cuti Tanggal ..."
 
-export default function DashboardKaryawan({ user }) {
+export default function DashboardKaryawan() {
   const [selectedDate, setSelectedDate] = useState({
     day: 22,
     month: 5,
@@ -30,10 +30,14 @@ export default function DashboardKaryawan({ user }) {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
 
   useEffect(() => {
-    getLeaveBalance()
-      .then(setLeaveBalance)
-      .catch(() => setLeaveBalance(null))
-      .finally(() => setIsLoadingBalance(false));
+    let active=true;
+    const refreshBalance=() => getLeaveBalance()
+      .then(value => { if(active) setLeaveBalance(value); })
+      .catch(() => { if(active) setLeaveBalance(null); })
+      .finally(() => { if(active) setIsLoadingBalance(false); });
+    refreshBalance();
+    window.addEventListener('sims:leave-changed',refreshBalance);
+    return () => { active=false; window.removeEventListener('sims:leave-changed',refreshBalance); };
   }, []);
 
   return (

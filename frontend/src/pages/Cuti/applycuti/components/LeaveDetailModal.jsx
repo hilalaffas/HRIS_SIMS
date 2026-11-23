@@ -7,6 +7,7 @@ import { buildLeaveProgressSteps } from '../../../../utils/approvalProgress'; //
 import './LeaveDetailModal.css'; 
 
 const STATUS_LABEL = {
+  DIBATALKAN: 'Batal Cuti',
   'PROSES': "Proses",
   'PENDING': "Proses",
   'DALAM PROSES': "Proses",

@@ -41,10 +41,14 @@ export default function DashboardHR({ user }) {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
 
   useEffect(() => {
-    getLeaveBalance()
-      .then(setLeaveBalance)
-      .catch(() => setLeaveBalance(null))
-      .finally(() => setIsLoadingBalance(false));
+    let active=true;
+    const refreshBalance=() => getLeaveBalance()
+      .then(value => { if(active) setLeaveBalance(value); })
+      .catch(() => { if(active) setLeaveBalance(null); })
+      .finally(() => { if(active) setIsLoadingBalance(false); });
+    refreshBalance();
+    window.addEventListener('sims:leave-changed',refreshBalance);
+    return () => { active=false; window.removeEventListener('sims:leave-changed',refreshBalance); };
   }, []);
 
   // Kunci untuk memaksa AnnouncementSection & CalendarCard refresh data setelah submit

@@ -285,7 +285,10 @@ public class EmployeeController {
             if (manualBalance.abs().compareTo(new java.math.BigDecimal("9999.99")) > 0) {
                 throw new IllegalArgumentException("Sisa Cuti (lama) harus antara -9999.99 dan 9999.99.");
             }
-            employee.setManualLeaveBalance(manualBalance.setScale(2, java.math.RoundingMode.HALF_UP));
+            if (manualBalance.remainder(new java.math.BigDecimal("0.5")).signum() != 0) {
+                throw new IllegalArgumentException("Sisa Cuti (lama) harus kelipatan 0,5 hari, misalnya 0,5; 1; atau 1,5.");
+            }
+            employee.setManualLeaveBalance(manualBalance.setScale(2, java.math.RoundingMode.UNNECESSARY));
         }
 
         // [BARU] Status akun

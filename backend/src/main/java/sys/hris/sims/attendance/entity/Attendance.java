@@ -42,6 +42,10 @@ import sys.hris.sims.employee.entity.Employee;
 public class Attendance {
 
     // [BARU] Absen lembur hari libur (akhir pekan / libur nasional): jendela lembur yang disetujui.
+    private java.time.LocalDateTime scheduledWorkStart;
+    private java.time.LocalDateTime scheduledWorkEnd;
+    private Integer scheduledWorkMinutes;
+
     @Column(name = "holiday_overtime", nullable = false)
     private boolean holidayOvertime;
 

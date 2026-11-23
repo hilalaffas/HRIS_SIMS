@@ -25,6 +25,10 @@ public class AttendanceResponse {
     private String employeeName;
 
     // [BARU] Penanda absen lembur hari libur beserta jendela jamnya.
+
+    private java.time.LocalDateTime scheduledWorkStart;
+    private java.time.LocalDateTime scheduledWorkEnd;
+    private Integer scheduledWorkMinutes;
     private boolean holidayOvertime;
     private LocalDateTime holidayOvertimeStart;
     private LocalDateTime holidayOvertimeEnd;

@@ -6,7 +6,7 @@
 //
 // Gagal memuat TIDAK mengunci tombol: server tetap menolak absen yang tidak boleh,
 // jadi kegagalan di sini hanya berarti tombol tampil normal.
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getMyLeaveToday } from '../../../services/attendanceService';
 import {
   NO_LEAVE_TODAY,
@@ -22,13 +22,20 @@ export default function useTodayLeave() {
   const [leave, setLeave] = useState(NO_LEAVE_TODAY);
   const [now, setNow] = useState(() => new Date());
 
+  const mounted = useRef(true);
+  const sequence = useRef(0);
+  const refresh = useCallback(async () => {
+    const current = ++sequence.current;
+    try { const raw=await getMyLeaveToday({silent:true}); if (mounted.current && current === sequence.current) setLeave(toDisplayLeaveToday(raw)); }
+    catch { /* Preserve the last known gate; server always validates attendance. */ }
+  },[]);
   useEffect(() => {
-    let cancelled = false;
-    getMyLeaveToday({ silent: true })
-      .then((raw) => { if (!cancelled) setLeave(toDisplayLeaveToday(raw)); })
-      .catch(() => { if (!cancelled) setLeave(NO_LEAVE_TODAY); });
-    return () => { cancelled = true; };
-  }, []);
+    mounted.current=true;
+    Promise.resolve().then(refresh);
+    window.addEventListener('sims:leave-changed',refresh);
+    window.addEventListener('focus',refresh);
+    return () => { mounted.current=false; window.removeEventListener('sims:leave-changed',refresh); window.removeEventListener('focus',refresh); };
+  },[refresh]);
 
   const gate = useMemo(() => resolveLeaveGate(leave, now), [leave, now]);
 
@@ -42,6 +49,7 @@ export default function useTodayLeave() {
 
   return {
     leave,
+    refresh,
     gate, // 'onLeave' | 'leaveWait' | null
     leaveTypeName: leave.leaveTypeName,
     leaveOpensLabel: formatClock(leave.opensAt), // "12:00" (kosong bila bukan cuti pagi)

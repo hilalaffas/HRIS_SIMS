@@ -1,3 +1,4 @@
+import CancelLeaveTodayButton from '../../Absensi/components/CancelLeaveTodayButton';
 // src/pages/Dashboard/components/DashboardSummaryCard.jsx
 //
 // [BARU] Kartu utama Dashboard (Karyawan & Manager): 4 kartu mini (Sisa Cuti,
@@ -109,6 +110,7 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
     checkInAt: attendance.checkInAt,
     shiftEndTime: attendance.shiftContext.endsAt ? attendance.shiftContext.hoursLabel.split(' - ')[1] : null,
     shiftEndAt: attendance.shiftContext.endsAt,
+    halfDayLeave: attendance.shiftContext.halfDayLeave,
     holidayOvertime: attendance.shiftContext.holidayOvertime, // [BARU] lembur hari libur
     requiredWorkHours: attendance.shiftContext.requiredAttendanceHours ?? attendance.shiftContext.requiredWorkHours, // [UBAH] lama hadir (kerja bersih + istirahat)
     onOvertimeSubmitted: handleOvertimeSubmitted,
@@ -220,6 +222,7 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
                 {statusConfig.pillLabel}
               </span>
             )}
+            <CancelLeaveTodayButton leave={attendance.leave} onCancelled={refreshAttendance} className="dashSummary__btn dashSummary__btn--primary" />
             <button
               type="button"
               className="dashSummary__btn dashSummary__btn--primary"

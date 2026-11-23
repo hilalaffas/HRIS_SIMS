@@ -12,6 +12,7 @@ const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Se
 
 // Status berkas (id/en) -> kode umum
 const OVERALL_BY_KEY = {
+  DIBATALKAN: 'CANCELLED', CANCELLED: 'CANCELLED',
   PROSES: 'PENDING', PENDING: 'PENDING', 'DALAM PROSES': 'PENDING',
   DISETUJUI: 'APPROVED', APPROVED: 'APPROVED',
   DITOLAK: 'REJECTED', REJECTED: 'REJECTED',

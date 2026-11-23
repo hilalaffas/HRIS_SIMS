@@ -1,3 +1,4 @@
+import { applyLeaveSession } from '../../Absensi/utils/leaveToday';
 // src/pages/Dashboard/hooks/useAttendanceSummary.js
 //
 // [BARU] Data untuk kartu ringkasan Dashboard: rekap presensi periode
@@ -133,11 +134,12 @@ export default function useAttendanceSummary() {
   }, []);
 
   // [BARU] Cuti yang sudah disetujui menimpa status tombol (sakit tetap menang).
-  const { gate: leaveGate, leaveOpensLabel } = useTodayLeave();
+  const { gate: leaveGate, leaveOpensLabel, leave } = useTodayLeave();
   // [BARU] Jendela lembur hari libur disegarkan sendiri (1 request ringan), bukan lewat muat ulang seluruh rekap.
   const { holidayWindow } = useHolidayOvertimeWindow();
   const scheduleData = useMemo(() => withHolidayWindow(state.scheduleData, holidayWindow), [state.scheduleData, holidayWindow]);
-  const shiftContext = useActiveWorkShift(scheduleData, state.records);
+  const rawShiftContext = useActiveWorkShift(scheduleData, state.records);
+  const shiftContext = useMemo(() => applyLeaveSession(rawShiftContext, leave), [rawShiftContext, leave]);
   // [UBAH] Dihitung ulang hanya saat data/hari kerja berubah, bukan di setiap render Dashboard.
   const activeStatus = useMemo(
     () => resolveTodayStatus(state.records, shiftContext.workDate, scheduleData),
@@ -152,6 +154,7 @@ export default function useAttendanceSummary() {
     shiftContext,
     todayStatus: continuing ? activeStatus.todayStatus : applyLeaveGate(activeStatus.todayStatus, leaveGate),
     leaveOpensLabel,
+    leave,
     refresh,
   };
 }

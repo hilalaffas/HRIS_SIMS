@@ -218,6 +218,9 @@ public class AttendanceService {
                 && nowDateTime.isBefore(holidayWindow.endsAt())) {
             note = "Pulang sebelum lembur hari libur selesai"; // [BARU] otomatis, tanpa alasan wajib
         }
+        if (action.equals("KELUAR") && holidayWindow == null && leaveToday.isHalfDay()
+                && nowDateTime.isBefore(leaveToday.workEnd()) && noteBlank)
+            throw new IllegalArgumentException("Sesi kerja belum selesai. Alasan pulang cepat wajib diisi.");
         if (action.equals("KELUAR") && holidayWindow == null && !leaveToday.isHalfDay()
                 && nowDateTime.isBefore(workHours.endAt(workDate)) // [UBAH] jam pulang terjadwal hari itu
                 && noteBlank) {
@@ -278,6 +281,9 @@ public class AttendanceService {
                         ? officeDistanceMeters(request.getLatitude(), request.getLongitude(), locationType) : null)
                 .officeLocationStatus(action.equals("MASUK") && reason.equals("ABSEN")
                         ? resolveOfficeLocationStatus(request.getLatitude(), request.getLongitude(), locationType) : null)
+                .scheduledWorkStart(leaveToday.isHalfDay() ? leaveToday.workStart() : null)
+                .scheduledWorkEnd(leaveToday.isHalfDay() ? leaveToday.workEnd() : null)
+                .scheduledWorkMinutes(leaveToday.isHalfDay() ? (int)leaveToday.requiredMinutes() : null)
                 .attendanceDate(workDate)
                 .build();
 
@@ -750,9 +756,11 @@ public class AttendanceService {
     public LeaveTodayResponse getMyLeaveToday(String username) {
         Employee employee = resolveEmployee(username);
         LocalDate today = LocalDate.now(APP_ZONE);
-        LeaveAttendancePolicy.LeaveToday leave = leaveAttendancePolicy.resolve(
-                employee, today, findSchedule(employee.getEmployeeId(), today));
-        return new LeaveTodayResponse(leave.mode().name(), leave.leaveTypeName(), leave.boundary(), leave.opensAt());
+        var workday = AttendanceWorkday.resolve(employee,LocalDateTime.now(APP_ZONE),false,workScheduleRepository,attendanceRepository);
+        LeaveAttendancePolicy.LeaveToday leave = leaveAttendancePolicy.resolve(employee,workday.workDate(),workday.schedule());
+        return new LeaveTodayResponse(leave.mode().name(), leave.leaveTypeName(), leave.boundary(), leave.opensAt(),
+                leave.leaveRequestId(),leave.workDate(),leave.workStart(),leave.workEnd(),leave.requiredMinutes(),
+                leave.leaveRequestId() != null && today.equals(leave.workDate()));
     }
 
     private WorkSchedule findSchedule(Long employeeId, LocalDate date) {
@@ -789,6 +797,9 @@ public class AttendanceService {
                 .attendanceId(attendance.getAttendanceId())
                 .employeeId(attendance.getEmployee().getEmployeeId())
                 .employeeName(attendance.getEmployee().getFullName())
+                .scheduledWorkStart(attendance.getScheduledWorkStart())
+                .scheduledWorkEnd(attendance.getScheduledWorkEnd())
+                .scheduledWorkMinutes(attendance.getScheduledWorkMinutes())
                 .holidayOvertime(attendance.isHolidayOvertime())
                 .holidayOvertimeStart(attendance.getHolidayOvertimeStart())
                 .holidayOvertimeEnd(attendance.getHolidayOvertimeEnd())

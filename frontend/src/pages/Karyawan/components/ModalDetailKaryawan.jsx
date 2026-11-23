@@ -175,6 +175,12 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
       return;
     }
 
+    const manualBalance = Number(formData.manualLeaveBalance);
+    if (!Number.isFinite(manualBalance) || !Number.isInteger(manualBalance * 2)) {
+      setErrorMessage('Sisa Cuti (lama) harus kelipatan 0,5 hari, misalnya 0,5; 1; atau 1,5.');
+      return;
+    }
+
     // --- 1. Data karyawan (tabel employees) -> PUT /api/karyawan/{id} ---
     const relasiTerpilih = relationshipList.find((r) => r.name === formData.hubDarurat);
 
@@ -448,11 +454,13 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
                 <label>SISA CUTI (lama)</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.5"
+                  min="-9999.5"
+                  max="9999.5"
                   name="manualLeaveBalance"
                   value={formData.manualLeaveBalance}
                   onChange={handleInputChange}
-                  title="Alokasi awal yang diisi HR (boleh desimal, mis. 2,25; boleh negatif untuk defisit, mis. -2). Sisa yang benar-benar tersisa (setelah kepakai cuti) otomatis muncul di kolom Total di bawah."
+                  title="Alokasi awal yang diisi HR harus kelipatan 0,5 hari, mis. 0,5; 1; 1,5. Boleh negatif untuk defisit, mis. -0,5 atau -2. Sisa yang benar-benar tersisa (setelah kepakai cuti) otomatis muncul di kolom Total di bawah."
                 />
               </div>
             </div>

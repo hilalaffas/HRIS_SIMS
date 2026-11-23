@@ -618,7 +618,7 @@ export default function useLeaveApplication(user, { notify = (message) => window
       id: item.id, karyawan: { nama: item.userName || 'Pemohon' }, jenisCuti: item.jenisCuti,
       durasi: `${item.stringTanggal} (${item.totalHari})`, keterangan: item.rawDetail?.reason || '-',
       pendingWork: item.rawDetail?.pendingWork || '-', coveredBy: item.rawDetail?.coveredBy || '-',
-      statusBerkas: item.status === 'Dikembalikan' ? 'DIKEMBALIKAN' : item.status === 'Disetujui (ACC)' ? 'DISETUJUI' : item.status === 'Ditolak' ? 'DITOLAK' : 'PROSES', approvalChain: {}, riwayatLog: [],
+      statusBerkas: item.status === 'Batal Cuti' ? 'DIBATALKAN' : item.status === 'Dikembalikan' ? 'DIKEMBALIKAN' : item.status === 'Disetujui (ACC)' ? 'DISETUJUI' : item.status === 'Ditolak' ? 'DITOLAK' : 'PROSES', approvalChain: {}, riwayatLog: [],
       isApprovalLoading: true, // [BARU]
     });
     try {

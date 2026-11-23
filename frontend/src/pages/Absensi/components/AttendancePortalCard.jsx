@@ -1,3 +1,4 @@
+import CancelLeaveTodayButton from './CancelLeaveTodayButton';
 // src/pages/Absensi/components/AttendancePortalCard.jsx
 //
 // [BARU] Kartu header "Portal Absensi Harian Karyawan" -- menggantikan kartu
@@ -19,6 +20,7 @@ import './AttendancePortalCard.css';
 
 export default function AttendancePortalCard({
   attendanceStatus = 'idle',
+  leave, onLeaveCancelled,
   shiftContext,
   isLoading = false,
   disablePermission = false,
@@ -40,6 +42,7 @@ export default function AttendancePortalCard({
       </div>
 
       <div className="abs-portal-actions">
+        <CancelLeaveTodayButton leave={leave} onCancelled={onLeaveCancelled} className="abs-portal-button abs-portal-button--permission" />
         <button
           type="button"
           className="abs-portal-button abs-portal-button--attendance"

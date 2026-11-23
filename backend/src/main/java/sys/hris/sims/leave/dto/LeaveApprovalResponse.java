@@ -48,4 +48,6 @@ public class LeaveApprovalResponse {
     private String myApprovalStatus;
     private String reviewNote;
     private List<LeaveApprovalLogResponse> approvalLogs;
+    private BigDecimal originalTotalDays;
+    private List<sys.hris.sims.leave.entity.LeaveDayCancellation> cancellations;
 }

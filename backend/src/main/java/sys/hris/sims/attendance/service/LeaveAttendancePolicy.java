@@ -25,8 +25,7 @@ import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 //   1. Cuti sehari penuh / multi-hari yang sudah DISETUJUI -> absen masuk & keluar ditolak.
 //   2. Cuti setengah hari PAGI (dan Cuti Urgent setengah hari, kode "HALF") -> absen masuk
 //      dibuka SATU JAM sebelum cuti berakhir (cuti sampai 13:00 -> absen mulai 12:00).
-//   3. Cuti setengah hari SIANG -> absen masuk normal; check-out sah tanpa aturan
-//      "pulang cepat" (karyawan memang hanya bekerja setengah hari).
+//   3. Cuti setengah hari SIANG -> bekerja sesi pertama; jam pulang mengikuti akhir sesi tersebut.
 //   4. Cuti PENDING tidak memblokir absen. Begitu cuti DISETUJUI, absen yang terlanjur
 //      tercatat di tanggal cuti dihapus (lihat reconcileOnApproval) dan hari itu tampil
 //      sebagai CUTI di laporan.
@@ -37,16 +36,12 @@ public class LeaveAttendancePolicy {
     public enum Mode { NONE, FULL_DAY, HALF_MORNING, HALF_AFTERNOON }
 
     // boundary = batas pagi/siang; opensAt = awal absen masuk dibuka (hanya HALF_MORNING).
-    public record LeaveToday(Mode mode, String leaveTypeName, LocalDateTime boundary, LocalDateTime opensAt) {
-        public static final LeaveToday NONE = new LeaveToday(Mode.NONE, null, null, null);
-
-        public boolean isHalfDay() {
-            return mode == Mode.HALF_MORNING || mode == Mode.HALF_AFTERNOON;
-        }
+    public record LeaveToday(Mode mode, String leaveTypeName, LocalDateTime boundary, LocalDateTime opensAt,
+                             Long leaveRequestId, LocalDate workDate, LocalDateTime workStart, LocalDateTime workEnd, long requiredMinutes) {
+        public static final LeaveToday NONE = new LeaveToday(Mode.NONE,null,null,null,null,null,null,null,0);
+        public boolean isHalfDay() { return mode == Mode.HALF_MORNING || mode == Mode.HALF_AFTERNOON; }
     }
 
-    // Divisi Regular: cuti pagi berakhir 13:00. Divisi Shifting: tengah-tengah shift.
-    private static final LocalTime REGULAR_HALF_DAY_BOUNDARY = LocalTime.of(13, 0);
     private static final Duration EARLY_OPEN = Duration.ofHours(1);
     private static final long DEFAULT_SHIFT_SECONDS = 8L * 60 * 60;
     private static final long SECONDS_PER_DAY = 24L * 60 * 60;
@@ -64,21 +59,21 @@ public class LeaveAttendancePolicy {
     // `schedule` = jadwal karyawan di tanggal itu (boleh null). Hanya dipakai divisi Shifting.
     @Transactional(readOnly = true)
     public LeaveToday resolve(Employee employee, LocalDate workDate, WorkSchedule schedule) {
-        List<LeaveRequest> leaves = leaveRepository.findApprovedCovering(employee.getEmployeeId(), workDate);
+        List<LeaveRequest> leaves = leaveRepository.findApprovedCovering(employee.getEmployeeId(), workDate).stream().filter(l -> !l.cancelledOn(workDate)).toList();
         if (leaves.isEmpty()) return LeaveToday.NONE;
 
         // Cuti sehari penuh menang atas setengah hari bila keduanya mencakup tanggal yang sama.
         Optional<LeaveRequest> fullDay = leaves.stream().filter(leave -> !isHalfDay(leave)).findFirst();
         if (fullDay.isPresent()) {
-            return new LeaveToday(Mode.FULL_DAY, typeName(fullDay.get()), null, null);
+            return new LeaveToday(Mode.FULL_DAY, typeName(fullDay.get()), null, null, fullDay.get().getLeaveRequestId(), workDate, null, null, 0);
         }
 
         LeaveRequest half = leaves.get(0);
-        LocalDateTime boundary = halfDayBoundary(employee, workDate, schedule);
-        if (SESSION_AFTERNOON.equalsIgnoreCase(half.getSession())) {
-            return new LeaveToday(Mode.HALF_AFTERNOON, typeName(half), boundary, null);
-        }
-        return new LeaveToday(Mode.HALF_MORNING, typeName(half), boundary, boundary.minus(EARLY_OPEN));
+        var session = HalfDayWorkSession.resolve(sys.hris.sims.schedule.workhours.WorkHoursResolver.resolve(employee,workDate,schedule), workDate, SESSION_AFTERNOON.equalsIgnoreCase(half.getSession()));
+        boolean afternoon=SESSION_AFTERNOON.equalsIgnoreCase(half.getSession());
+        return new LeaveToday(afternoon ? Mode.HALF_AFTERNOON : Mode.HALF_MORNING, typeName(half),
+                afternoon ? session.end() : session.start(), afternoon ? null : session.start().minus(EARLY_OPEN),
+                half.getLeaveRequestId(), workDate, session.start(), session.end(), session.minutes());
     }
 
     // Melempar IllegalStateException (pesan tampil di UI) bila absen belum boleh dilakukan.
@@ -86,6 +81,9 @@ public class LeaveAttendancePolicy {
         if (leave.mode() == Mode.FULL_DAY) {
             throw new IllegalStateException(
                     "Anda sedang cuti hari ini (" + leave.leaveTypeName() + "). Absensi tidak diperlukan.");
+        }
+        if (leave.mode() == Mode.HALF_AFTERNOON && ACTION_MASUK.equals(action) && !now.isBefore(leave.workEnd())) {
+            throw new IllegalStateException("Sesi kerja sebelum cuti siang sudah selesai. Batalkan cuti hari ini bila ingin kembali bekerja.");
         }
         if (leave.mode() == Mode.HALF_MORNING && ACTION_MASUK.equals(action) && now.isBefore(leave.opensAt())) {
             throw new IllegalStateException("Anda cuti setengah hari (pagi) sampai "
@@ -115,15 +113,31 @@ public class LeaveAttendancePolicy {
                 .stream().findFirst().orElse(null);
         LocalDateTime boundary = halfDayBoundary(employee, date, schedule);
         boolean afternoon = SESSION_AFTERNOON.equalsIgnoreCase(cuti.getSession());
+        if (afternoon) boundary = HalfDayWorkSession.resolve(sys.hris.sims.schedule.workhours.WorkHoursResolver.resolve(employee,date,schedule),date,true).end();
+        final LocalDateTime attendanceBoundary = boundary;
 
         Optional<Attendance> checkIn = attendanceRepository.findActiveByAction(employeeId, date, ACTION_MASUK)
                 .filter(record -> REASON_ABSEN.equals(record.getReason()));
         boolean conflicts = checkIn
                 .map(record -> afternoon
-                        ? !record.getRecordedAt().isBefore(boundary)
-                        : record.getRecordedAt().isBefore(boundary.minus(EARLY_OPEN)))
+                        ? !record.getRecordedAt().isBefore(attendanceBoundary)
+                        : record.getRecordedAt().isBefore(attendanceBoundary.minus(EARLY_OPEN)))
                 .orElse(false);
         return conflicts ? attendanceRepository.deleteAbsenInRange(employeeId, date, date) : 0;
+    }
+
+    @Transactional
+    public void clearCancelledSession(Employee employee, LocalDate date) {
+        WorkSchedule schedule = workScheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(employee.getEmployeeId(),date,date).stream().findFirst().orElse(null);
+        var hours = sys.hris.sims.schedule.workhours.WorkHoursResolver.resolve(employee,date,schedule);
+        for (String action : List.of("MASUK","KELUAR")) {
+            attendanceRepository.findActiveByAction(employee.getEmployeeId(),date,action).ifPresent(record -> {
+                if (!"ABSEN".equals(record.getReason())) return;
+                record.setScheduledWorkStart(null); record.setScheduledWorkEnd(null); record.setScheduledWorkMinutes(null);
+                if ("MASUK".equals(action)) record.setStatus(record.getRecordedAt().isAfter(hours.startAt(date)) ? "LATE" : "ON_TIME");
+                attendanceRepository.save(record);
+            });
+        }
     }
 
     // ---------- util ----------
@@ -142,13 +156,6 @@ public class LeaveAttendancePolicy {
     }
 
     private LocalDateTime halfDayBoundary(Employee employee, LocalDate workDate, WorkSchedule schedule) {
-        if (!isShifting(employee) || schedule == null || schedule.getShift() == null) {
-            return LocalDateTime.of(workDate, REGULAR_HALF_DAY_BOUNDARY);
-        }
-        LocalTime start = schedule.getShift().getStartTime();
-        LocalTime end = schedule.getShift().getEndTime();
-        long seconds = (end.toSecondOfDay() - start.toSecondOfDay() + SECONDS_PER_DAY) % SECONDS_PER_DAY;
-        if (seconds == 0) seconds = DEFAULT_SHIFT_SECONDS;
-        return LocalDateTime.of(workDate, start).plusSeconds(seconds / 2);
+        return HalfDayWorkSession.resolve(sys.hris.sims.schedule.workhours.WorkHoursResolver.resolve(employee,workDate,schedule),workDate,false).start();
     }
 }

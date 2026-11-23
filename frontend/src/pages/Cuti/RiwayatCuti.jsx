@@ -46,9 +46,11 @@ const STATUS_TABS = [
   { key: 'DISETUJUI', label: 'Disetujui' },
   { key: 'DIKEMBALIKAN', label: 'Dikembalikan' },
   { key: 'DITOLAK', label: 'Ditolak' },
+  { key: 'DIBATALKAN', label: 'Batal Cuti' },
 ];
 
 const STATUS_META = {
+  DIBATALKAN: { label: 'Batal Cuti', className: 'dikembalikan' },
   PROSES: { label: 'Menunggu', className: 'proses' },
   DISETUJUI: { label: 'Disetujui', className: 'disetujui' },
   DIKEMBALIKAN: { label: 'Dikembalikan', className: 'dikembalikan' },
@@ -60,6 +62,7 @@ const STATUS_META = {
 // mapKaryawanLeave(). Dipetakan balik ke kode supaya badge & filter tabel
 // konsisten dipakai untuk ketiga role.
 const LABEL_TO_STATUS_CODE = {
+  'Batal Cuti': 'DIBATALKAN',
   'Dalam Proses': 'PROSES',
   'Disetujui (ACC)': 'DISETUJUI',
   'Dikembalikan': 'DIKEMBALIKAN',
