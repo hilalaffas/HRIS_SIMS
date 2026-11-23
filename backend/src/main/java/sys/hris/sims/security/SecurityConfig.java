@@ -435,6 +435,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/absensi/laporan")
                         .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN", "DEV")
 
+                        // [BARU] Karyawan sakit & izin hari ini (Dashboard semua role) -- cukup login.
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/today-absence")
+                        .authenticated()
+
                         // [BARU] Ringkasan absensi hari ini (Dashboard) -- HRD_ADMIN & SUPER_ADMIN saja.
                         .requestMatchers(HttpMethod.GET, "/api/absensi/today-summary")
                         .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN")

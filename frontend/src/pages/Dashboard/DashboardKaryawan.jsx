@@ -62,6 +62,8 @@ export default function DashboardKaryawan({ user }) {
           monthLeaves={teamLeavesThisMonth}
           dayLeaves={selectedDate.teamLeaveList || []}
           dayLabel={formatSelectedDayLabel(selectedDate)}
+          showTodayAttendance // [BARU] tab "Sakit & Izin" (karyawan yang sakit / izin hari ini)
+          todayAttendanceVariant="employee"
         />
       </div>
     </div>

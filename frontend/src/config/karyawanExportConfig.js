@@ -4,14 +4,6 @@
 // Tab baru = cukup tambah satu entri di sini, tanpa menyentuh komponen lain.
 
 import { getAllDivisi } from '../services/divisiService';
-import { buildLeavePivot } from '../utils/leavePivot';
-
-const LEAVE_STATUS_LABEL = {
-  PROSES: 'Proses',
-  DISETUJUI: 'Disetujui',
-  DIKEMBALIKAN: 'Dikembalikan',
-  DITOLAK: 'Ditolak',
-};
 
 // Format ekspor yang tersedia untuk sebuah tab (CSV selalu ada, PDF opsional).
 export const getExportFormats = (tabName) => {
@@ -37,41 +29,6 @@ export const KARYAWAN_EXPORT_CONFIG = {
         emp.phoneNumber || emp.phone || emp.noTelp || emp.telepon,
         emp.isActive ? 'AKTIF' : 'NONAKTIF',
       ]),
-  },
-
-  'Cuti Karyawan': {
-    fileNamePrefix: 'Data_Cuti_Karyawan',
-    emptyMessage: 'Tidak ada data cuti karyawan untuk diekspor.',
-    headers: [
-      'NIK Karyawan',
-      'Nama Karyawan',
-      'Jenis Cuti',
-      'Tanggal Mulai',
-      'Tanggal Selesai',
-      'Durasi (Hari)',
-      'Sisa Cuti Setelah Pengajuan (Hari)',
-      'Status Berkas',
-    ],
-    buildRows: ({ riwayatCuti, balanceAfterByLeaveId }) =>
-      riwayatCuti.map((item) => [
-        item.karyawan?.kode,
-        item.karyawan?.nama,
-        item.jenisCuti,
-        item.startDate,
-        item.endDate,
-        item.totalDays,
-        // Hanya cuti yang disetujui punya angka sisa -> selain itu tampil "-"
-        balanceAfterByLeaveId[item.id],
-        LEAVE_STATUS_LABEL[item.statusBerkas] || item.statusBerkas,
-      ]),
-    // Opsional: tab yang punya blok `pdf` otomatis menampilkan pilihan CSV / PDF.
-    pdf: {
-      title: 'Rekap Cuti Karyawan',
-      fileNamePrefix: 'Rekap_Cuti_Karyawan',
-      emptyMessage: 'Tidak ada data cuti karyawan untuk diekspor.',
-      buildPivot: ({ riwayatCuti, balanceAfterByLeaveId }) =>
-        buildLeavePivot(riwayatCuti, balanceAfterByLeaveId),
-    },
   },
 
   'Data Divisi': {

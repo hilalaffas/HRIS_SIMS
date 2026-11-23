@@ -8,14 +8,16 @@ import { getTodayAttendanceSummary } from '../../../services/attendanceService';
 
 const POLL_INTERVAL_MS = 60 * 1000;
 
-export default function useTodayAttendanceSummary() {
+// [UBAH] + parameter fetcher (default: ringkasan lengkap HRD). Dashboard karyawan memberi getTodayAbsence.
+// fetcher harus fungsi yang stabil (fungsi module), bukan fungsi inline.
+export default function useTodayAttendanceSummary(fetcher = getTodayAttendanceSummary) {
   const [summary, setSummary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const isMountedRef = useRef(true);
 
   const load = useCallback(() => {
-    return getTodayAttendanceSummary()
+    return fetcher()
       .then((data) => {
         if (!isMountedRef.current) return;
         setSummary(data);
@@ -28,7 +30,7 @@ export default function useTodayAttendanceSummary() {
       .finally(() => {
         if (isMountedRef.current) setIsLoading(false);
       });
-  }, []);
+  }, [fetcher]);
 
   useEffect(() => {
     isMountedRef.current = true;

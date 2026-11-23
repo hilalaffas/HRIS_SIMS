@@ -4,16 +4,25 @@
 // Tiga daftar dengan sub-tab: Sakit, Terlambat, Belum Absen. Data dari useTodayAttendanceSummary
 // (GET /api/absensi/today-summary). Dipasang hanya saat tab aktif, jadi data tidak diambil
 // selama tab ini tidak dibuka.
+// [BARU] prop variant: 'hr' (default) = Sakit / Terlambat / Belum Absen lengkap dengan status ACC;
+// 'employee' = hanya Sakit & Izin, data dari GET /api/absensi/today-absence (tanpa data sensitif).
 import React, { useMemo, useState } from 'react';
 import useTodayAttendanceSummary from '../hooks/useTodayAttendanceSummary';
+import { getTodayAbsence } from '../../../services/attendanceService'; // [BARU]
 import PanelPagination from './PanelPagination';
 
 const PAGE_SIZE = 5;
 
-const CATEGORIES = [
+const HR_CATEGORIES = [
   { key: 'sick', label: 'Sakit', emptyMessage: 'Tidak ada karyawan yang sakit hari ini.' },
   { key: 'late', label: 'Terlambat', emptyMessage: 'Tidak ada karyawan yang terlambat hari ini.' },
   { key: 'notCheckedIn', label: 'Belum Absen', emptyMessage: 'Semua karyawan yang wajib masuk sudah absen.' },
+];
+
+// [BARU] Dashboard karyawan: hanya Sakit & Izin.
+const EMPLOYEE_CATEGORIES = [
+  { key: 'sick', label: 'Sakit', emptyMessage: 'Tidak ada karyawan yang sakit hari ini.' },
+  { key: 'permission', label: 'Izin', emptyMessage: 'Tidak ada karyawan yang izin hari ini.' },
 ];
 
 const parseIsoDate = (value) => {
@@ -39,6 +48,7 @@ const formatJam = (value) => {
 
 const describeEntry = (categoryKey, entry) => {
   if (categoryKey === 'sick') return formatRentang(entry.sickStart, entry.sickEnd);
+  if (categoryKey === 'permission') return 'Izin terlambat'; // [BARU]
   if (categoryKey === 'late') {
     return entry.lateNotice
       ? 'Izin terlambat'
@@ -47,8 +57,11 @@ const describeEntry = (categoryKey, entry) => {
   return `Jadwal masuk ${formatJam(entry.workStart)}`;
 };
 
-export default function TodayAttendanceList() {
-  const { summary, isLoading, errorMessage } = useTodayAttendanceSummary();
+export default function TodayAttendanceList({ variant = 'hr' }) { // [UBAH] + variant
+  const isEmployeeView = variant === 'employee';
+  const categories = isEmployeeView ? EMPLOYEE_CATEGORIES : HR_CATEGORIES;
+  // undefined -> hook memakai fetcher default (ringkasan lengkap HRD)
+  const { summary, isLoading, errorMessage } = useTodayAttendanceSummary(isEmployeeView ? getTodayAbsence : undefined);
   const [categoryKey, setCategoryKey] = useState('sick');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -63,7 +76,7 @@ export default function TodayAttendanceList() {
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages); // data polling bisa memendekkan daftar saat halaman > 1
   const pageItems = filteredEntries.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const activeCategory = CATEGORIES.find((category) => category.key === categoryKey);
+  const activeCategory = categories.find((category) => category.key === categoryKey);
   const isSearchMiss = entries.length > 0 && filteredEntries.length === 0;
 
   const handleCategoryChange = (nextKey) => {
@@ -80,9 +93,9 @@ export default function TodayAttendanceList() {
 
   return (
     <>
-      {/* Sub-tab Sakit / Terlambat / Belum Absen, lengkap dengan jumlahnya */}
+      {/* Sub-tab (HRD: Sakit / Terlambat / Belum Absen; Karyawan: Sakit / Izin), lengkap dengan jumlahnya */}
       <div className="flex gap-1 mt-3">
-        {CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <button
             key={category.key}
             type="button"
@@ -119,14 +132,14 @@ export default function TodayAttendanceList() {
       ) : pageItems.length > 0 ? (
         <>
           <div className="flex flex-col divide-y divide-gray-100 mt-1">
-            {pageItems.map((entry) => (
-              <div key={entry.employeeId} className="py-3">
+            {pageItems.map((entry, index) => (
+              <div key={entry.employeeId ?? `${entry.employeeName}-${index}`} className="py-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-sm text-gray-800">{entry.employeeName}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{describeEntry(categoryKey, entry)}</p>
                   </div>
-                  {categoryKey === 'sick' && (
+                  {categoryKey === 'sick' && !isEmployeeView && ( // [UBAH] status ACC hanya untuk HRD
                     <span
                       className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
                         entry.approvalStatus === 'APPROVED'

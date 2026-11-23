@@ -52,6 +52,9 @@ const HeadlineKaryawan = ({
     onExport(format);
   };
 
+  // [BARU] Tab tanpa konfigurasi ekspor (mis. Cuti Karyawan) tidak menampilkan tombol sama sekali.
+  if (exportFormats.length === 0) return null;
+
   return (
     <div className="headline-container">
       <div className="export-wrapper" ref={menuRef}>

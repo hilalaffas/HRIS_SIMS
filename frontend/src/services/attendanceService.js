@@ -34,6 +34,12 @@ export async function getTodayAttendanceSummary() {
   return api.get('/api/absensi/today-summary');
 }
 
+// [BARU] Sakit & izin HARI INI untuk Dashboard semua role (tab "Sakit & Izin").
+// Hasil: { date, generatedAt, sick: [{ employeeName, sickStart, sickEnd }], permission: [{ employeeName }] }.
+export async function getTodayAbsence() {
+  return api.get('/api/absensi/today-absence');
+}
+
 export async function getMyWorkSchedule(year, month) {
   const previous = new Date(year, month - 2, 1);
   const queryForMonth = (targetYear, targetMonth) => {

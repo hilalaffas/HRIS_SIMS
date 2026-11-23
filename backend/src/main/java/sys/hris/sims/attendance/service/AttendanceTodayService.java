@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import sys.hris.sims.attendance.dto.AttendanceTodayPublicResponse; // [BARU]
 import sys.hris.sims.attendance.dto.AttendanceTodayResponse;
 import sys.hris.sims.attendance.dto.AttendanceTodayResponse.Entry;
 import sys.hris.sims.attendance.entity.Attendance;
@@ -146,6 +147,23 @@ public class AttendanceTodayService {
         late.sort(BY_NAME);
         notCheckedIn.sort(BY_NAME);
         return new AttendanceTodayResponse(today, now, sick, late, notCheckedIn);
+    }
+
+    // [BARU] Versi ringkas untuk Dashboard semua role: hanya yang sakit & izin terlambat hari ini.
+    // Memakai ulang buildToday() supaya aturan sakit/izin tetap satu sumber, lalu membuang field
+    // sensitif (id, divisi, status persetujuan) sebelum dikirim ke rekan kerja.
+    @Transactional(readOnly = true)
+    public AttendanceTodayPublicResponse buildTodayPublic() {
+        AttendanceTodayResponse full = buildToday();
+        List<AttendanceTodayPublicResponse.Person> sick = full.sick().stream()
+                .map(entry -> new AttendanceTodayPublicResponse.Person(
+                        entry.employeeName(), entry.sickStart(), entry.sickEnd()))
+                .toList();
+        List<AttendanceTodayPublicResponse.Person> permission = full.late().stream()
+                .filter(Entry::lateNotice)
+                .map(entry -> new AttendanceTodayPublicResponse.Person(entry.employeeName(), null, null))
+                .toList();
+        return new AttendanceTodayPublicResponse(full.date(), full.generatedAt(), sick, permission);
     }
 
     // Divisi Shifting: hari kerja = ada shift di jadwal (shift null = OFF). Lainnya: bukan akhir pekan/libur.

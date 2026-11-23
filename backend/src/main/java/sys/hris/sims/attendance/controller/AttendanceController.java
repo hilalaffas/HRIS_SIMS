@@ -27,6 +27,7 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.attendance.dto.AttendanceReportResponse;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
+import sys.hris.sims.attendance.dto.AttendanceTodayPublicResponse; // [BARU]
 import sys.hris.sims.attendance.dto.AttendanceTodayResponse; // [BARU]
 import sys.hris.sims.attendance.dto.LeaveTodayResponse;
 import sys.hris.sims.attendance.dto.LocationNameResponse;
@@ -216,6 +217,14 @@ public class AttendanceController {
     @GetMapping("/today-summary")
     public ResponseEntity<AttendanceTodayResponse> getTodaySummary() {
         return ResponseEntity.ok(attendanceTodayService.buildToday());
+    }
+
+    // [BARU] Karyawan sakit & izin HARI INI untuk Dashboard semua role (nama saja, tanpa data
+    // sensitif -- lihat AttendanceTodayPublicResponse). Cukup login; tidak masuk activity log
+    // karena dipanggil berkala oleh Dashboard.
+    @GetMapping("/today-absence")
+    public ResponseEntity<AttendanceTodayPublicResponse> getTodayAbsence() {
+        return ResponseEntity.ok(attendanceTodayService.buildTodayPublic());
     }
 
     @GetMapping

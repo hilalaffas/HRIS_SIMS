@@ -13,8 +13,10 @@
 //
 // [UBAH] Item cuti kini hanya menampilkan NAMA + TANGGAL cuti (tipe cuti tidak ditampilkan lagi);
 // badge status (Disetujui / Menunggu) tetap ada.
-// [BARU] Tab ke-3 "Absen Hari Ini" (prop showTodayAttendance, hanya Dashboard HRD & Super Admin):
-// karyawan yang sakit, terlambat, dan belum absen hari ini -- lihat TodayAttendanceList.jsx.
+// [BARU] Tab ke-3 "Absen Hari Ini" (prop showTodayAttendance): karyawan yang sakit, terlambat, dan
+// belum absen hari ini (HRD & Super Admin) -- lihat TodayAttendanceList.jsx.
+// [BARU] prop todayAttendanceVariant="employee" (Dashboard Karyawan): tab bernama "Sakit & Izin"
+// dan hanya menampilkan karyawan sakit & izin hari ini.
 //
 // Bentuk tiap item leaves: { id, nama, jenisCuti, status, statusCode, startDate, endDate }
 import React, { useMemo, useState } from 'react';
@@ -39,7 +41,13 @@ const formatRentang = (item) => {
   return `${formatTanggal(item.startDate)} - ${formatTanggal(item.endDate)}`;
 };
 
-export default function KaryawanCutiPanel({ monthLeaves = [], dayLeaves = [], dayLabel = '', showTodayAttendance = false }) { // [UBAH] + showTodayAttendance
+export default function KaryawanCutiPanel({
+  monthLeaves = [],
+  dayLeaves = [],
+  dayLabel = '',
+  showTodayAttendance = false,
+  todayAttendanceVariant = 'hr', // [BARU] 'hr' | 'employee'
+}) {
   // [UBAH] Tab aktif: 'month' (Bulan Ini), 'day' (Tanggal Terpilih), atau 'today' (Absen Hari Ini).
   const [mode, setMode] = useState('month');
   const [page, setPage] = useState(1);
@@ -61,6 +69,7 @@ export default function KaryawanCutiPanel({ monthLeaves = [], dayLeaves = [], da
   }
 
   const isTodayMode = mode === 'today'; // [BARU]
+  const isEmployeeVariant = todayAttendanceVariant === 'employee'; // [BARU]
   const activeLeaves = mode === 'month' ? monthLeaves : dayLeaves;
 
   // [UBAH] Reset ke halaman 1 saat ISI daftar tab aktif berubah (status
@@ -108,7 +117,7 @@ export default function KaryawanCutiPanel({ monthLeaves = [], dayLeaves = [], da
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
       <h4 className="font-bold text-sm text-gray-800 pb-3 border-b border-gray-100">
-        {isTodayMode ? 'Absensi Hari Ini' : 'Karyawan Cuti'} {/* [UBAH] judul mengikuti tab */}
+        {isTodayMode ? (isEmployeeVariant ? 'Sakit & Izin Hari Ini' : 'Absensi Hari Ini') : 'Karyawan Cuti'} {/* [UBAH] judul mengikuti tab */}
       </h4>
 
       {/* [UBAH] Tab switcher Bulan Ini / Tanggal Terpilih / (HRD & Super Admin) Absen Hari Ini */}
@@ -135,13 +144,13 @@ export default function KaryawanCutiPanel({ monthLeaves = [], dayLeaves = [], da
             onClick={() => handleModeChange('today')}
             className={`${TAB_BASE_CLASS} ${isTodayMode ? TAB_ACTIVE_CLASS : TAB_IDLE_CLASS}`}
           >
-            Absen Hari Ini
+            {isEmployeeVariant ? 'Sakit & Izin' : 'Absen Hari Ini'}
           </button>
         )}
       </div>
 
       {/* [BARU] Tab Absen Hari Ini punya daftar & pencarian sendiri */}
-      {isTodayMode && <TodayAttendanceList />}
+      {isTodayMode && <TodayAttendanceList variant={todayAttendanceVariant} />}
 
       {!isTodayMode && activeLeaves.length > 0 && ( // [UBAH] + !isTodayMode
         <div className="relative mt-3">
