@@ -1,20 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { changeMyPassword, getMyProfile, updateMyProfile } from '../../../services/profileService';
 import { validatePhotoFile } from '../../../utils/fileValidation';
-import { validateRequired, isValidPhoneNumber } from '../../../utils/validation'; // [UBAH] + isValidPhoneNumber
-import { FIELD_CONFIG, EMERGENCY_CONTACT_KEY } from '../config/profileFieldConfig'; // [UBAH] + EMERGENCY_CONTACT_KEY
+import { validateRequired, isValidPhoneNumber } from '../../../utils/validation';
+import { FIELD_CONFIG, EMERGENCY_CONTACT_KEY } from '../config/profileFieldConfig';
+import { getProfileChanges } from '../utils/profileChanges';
 
-// [BARU] Field nomor telepon yang wajib berisi nomor sungguhan (bukan "-").
+// Phone fields must contain a real number (not the "-" placeholder sent by the backend).
 const PHONE_FIELD_KEYS = ['nomorTelepon', EMERGENCY_CONTACT_KEY];
-
-// [BARU] Cek apakah field boleh diedit oleh role tertentu -- logikanya sama
-// persis dengan isFieldEditable() di ProfilePageBase.jsx. Dipakai di
-// handleSave supaya field yang terkunci (mis. namaLengkap utk non-HR-Admin)
-// tidak ikut terkirim ke backend walau inputnya sempat ter-render disabled.
-const isFieldEditableForRole = (fieldKey, role) => {
-  const cfg = FIELD_CONFIG.find((field) => field.key === fieldKey);
-  return !cfg?.lockedFor || !cfg.lockedFor.includes(role);
-};
 
 export const getInitials = (fullName) => {
   if (!fullName) return 'AS';
@@ -40,6 +32,7 @@ export const useProfileForm = (currentUserRole, mockData) => {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
   const toastTimer = useRef(null);
+  const saveLock = useRef(false);
   const [formData, setFormData] = useState({});
   const [draftData, setDraftData] = useState({});
   const [passwordData, setPasswordData] = useState({ kataSandiLama: '', kataSandiBaru: '', ulangiSandiBaru: '' });
@@ -199,11 +192,10 @@ export const useProfileForm = (currentUserRole, mockData) => {
     e.preventDefault();
     setFormError('');
 
-    // [BARU] Field yang di FIELD_CONFIG ditandai required:true (mis. Nomor
-    // Telepon Darurat, Hubungan) sudah lama dikasih label "*" tapi TIDAK
-    // PERNAH benar-benar dicek sebelum disimpan. Sekarang dicek generik dari
-    // config yang sama supaya label "*" dan validasinya selalu sinkron.
-    const requiredFieldRules = FIELD_CONFIG
+    if (saveLock.current) return;
+    const { changedFields, payload } = getProfileChanges(formData, draftData, currentUserRole);
+    // Existing incomplete fields do not block unrelated edits or password changes.
+    const requiredFieldRules = changedFields
       .filter((cfg) => cfg.required)
       .map((cfg) => ({
         field: cfg.key,
@@ -218,9 +210,10 @@ export const useProfileForm = (currentUserRole, mockData) => {
       return;
     }
 
-    // [BARU] Nomor telepon harus berupa nomor yang valid (8-15 digit), tidak cukup hanya "tidak kosong".
+    // Changed phone numbers must be valid (8-15 digits); untouched legacy values do not block the save.
     const phoneErrors = {};
     PHONE_FIELD_KEYS.forEach((key) => {
+      if (!changedFields.some((cfg) => cfg.key === key)) return;
       if (isValidPhoneNumber(draftData[key])) return;
       const label = FIELD_CONFIG.find((cfg) => cfg.key === key)?.label ?? key;
       phoneErrors[key] = `${label} tidak valid. Isi dengan 8-15 digit angka.`;
@@ -232,42 +225,43 @@ export const useProfileForm = (currentUserRole, mockData) => {
     }
     setFieldErrors({});
 
-    const inginGantiSandi = passwordData.kataSandiBaru || passwordData.ulangiSandiBaru;
+    const inginGantiSandi = Object.values(passwordData).some(Boolean);
     if (inginGantiSandi) {
       if (!passwordData.kataSandiLama) { setPasswordErrorField('kataSandiLama'); return setPasswordError('Masukkan kata sandi lama untuk mengonfirmasi perubahan.'); }
       if (passwordData.kataSandiBaru.length < 8) { setPasswordErrorField('kataSandiBaru'); return setPasswordError('Kata sandi baru minimal 8 karakter.'); }
       if (passwordData.kataSandiBaru !== passwordData.ulangiSandiBaru) { setPasswordErrorField('ulangiSandiBaru'); return setPasswordError('Kata sandi baru dan pengulangannya tidak sama.'); }
     }
     setPasswordErrorField('');
+    setPasswordError('');
+    if (!changedFields.length && !selectedPhoto && !inginGantiSandi) {
+      setFormError('Belum ada perubahan untuk disimpan.');
+      return;
+    }
+    saveLock.current = true;
     setSaving(true);
     try {
-      // [UBAH] fullName hanya disertakan kalau role ini memang boleh
-      // mengedit namaLengkap (lihat isFieldEditableForRole di atas) --
-      // proteksi ganda di sisi frontend selain kuncian di backend.
-      const saved = await updateMyProfile({
-        fullName: isFieldEditableForRole('namaLengkap', currentUserRole) ? draftData.namaLengkap : undefined,
-        address: draftData.alamatLengkap,
-        email: draftData.email,
-        phoneNumber: draftData.nomorTelepon,
-        emergencyContactPhone: draftData.nomorTeleponDarurat,
-        emergencyContactRelationship: draftData.hubunganDarurat,
-      }, selectedPhoto);
+      if (changedFields.length || selectedPhoto) {
+        const saved = await updateMyProfile(payload, selectedPhoto);
+        // Keep successful profile edits if the separate password request fails.
+        setFormData(saved);
+        setDraftData(saved);
+        setSelectedPhoto(null);
+        setChosenFileName('');
+        setProfileImage(saved.photoUrl || null);
+        window.dispatchEvent(new CustomEvent('profile-updated', { detail: saved }));
+      }
       if (inginGantiSandi) {
         await changeMyPassword(passwordData.kataSandiLama, passwordData.kataSandiBaru, passwordData.ulangiSandiBaru);
+        setPasswordData({ kataSandiLama: '', kataSandiBaru: '', ulangiSandiBaru: '' });
       }
-      setFormData(saved);
-      setDraftData(saved);
-      setProfileImage(saved.photoUrl || profileImage);
-      // Sidebar membaca state user global. Kirim data terbaru agar avatar dan
-      // nama di sidebar berubah tanpa reload halaman.
-      window.dispatchEvent(new CustomEvent('profile-updated', { detail: saved }));
       setIsEditing(false);
       setToast(true);
       clearTimeout(toastTimer.current);
       toastTimer.current = setTimeout(() => setToast(false), 3500);
     } catch (error) {
-      setPasswordError(error.message || 'Gagal menyimpan perubahan profil.');
+      setFormError(error.message || 'Gagal menyimpan perubahan profil.');
     } finally {
+      saveLock.current = false;
       setSaving(false);
     }
   };

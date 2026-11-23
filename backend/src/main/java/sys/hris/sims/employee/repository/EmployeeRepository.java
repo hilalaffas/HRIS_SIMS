@@ -12,6 +12,10 @@ import sys.hris.sims.user.entity.User;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select e from Employee e where e.employeeId=:id")
+    Optional<Employee> findForLeaveUpdate(@Param("id") Long id);
+
     List<Employee> findByUser_UserId(Long userId);
     Optional<Employee> findFirstByUser_Username(String username);
     List<Employee> findByIsActive(Boolean isActive); 

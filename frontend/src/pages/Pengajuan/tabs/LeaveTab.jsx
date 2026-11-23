@@ -19,6 +19,7 @@ import '../components/PengajuanTabs.css';
 const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'Semua Berkas' },
   { value: 'PENDING', label: 'Dalam Proses' },
+  { value: 'CANCELLED', label: 'Batal Cuti' },
   { value: 'APPROVED', label: 'Disetujui (ACC)' },
   { value: 'RETURNED', label: 'Dikembalikan' },
   { value: 'REJECTED', label: 'Ditolak' },

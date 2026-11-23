@@ -31,6 +31,32 @@ import sys.hris.sims.leavetype.entity.LeaveType;
 @Table(name = "leave_requests")
 public class LeaveRequest {
 
+    @Builder.Default
+    @jakarta.persistence.ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
+    @jakarta.persistence.CollectionTable(name="leave_day_cancellations", joinColumns=@JoinColumn(name="leave_request_id"))
+    @org.hibernate.annotations.BatchSize(size=50)
+    @jakarta.persistence.OrderBy("date ASC")
+    @com.fasterxml.jackson.annotation.JsonProperty(access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private java.util.List<LeaveDayCancellation> cancellations = new java.util.ArrayList<>();
+
+    // Constructors/builders may explicitly supply null. Consumers run before
+    // @PrePersist as well, so the collection must be safe at read time.
+    public java.util.List<LeaveDayCancellation> getCancellations() {
+        if (cancellations == null) cancellations = new java.util.ArrayList<>();
+        return cancellations;
+    }
+
+    public void setCancellations(java.util.List<LeaveDayCancellation> value) {
+        // Preserve Hibernate's managed collection when a non-null value is supplied.
+        cancellations = value == null ? new java.util.ArrayList<>() : value;
+    }
+
+    public boolean cancelledOn(LocalDate date) { return getCancellations().stream().anyMatch(c -> date.equals(c.getDate())); }
+    @Transient
+    public BigDecimal getOriginalTotalDays() {
+        return (totalDays == null ? BigDecimal.ZERO : totalDays).add(getCancellations().stream().map(LeaveDayCancellation::getDays).reduce(BigDecimal.ZERO,BigDecimal::add));
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "leave_request_id")
@@ -130,6 +156,7 @@ public class LeaveRequest {
     // [BARU] Field NOT NULL yang nilai awalnya bisa hilang (constructor/JSON/builder) diisi default di sini,
     // sehingga INSERT/UPDATE tidak pernah melanggar constraint is_imported_history (V56).
     private void applyDefaults() {
+        if (cancellations == null) cancellations = new java.util.ArrayList<>();
         if (this.importedHistory == null) {
             this.importedHistory = false;
         }

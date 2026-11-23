@@ -35,6 +35,6 @@ public record AttendanceReportResponse(LocalDate from, LocalDate to, List<Employ
 
     // Cuti yang sudah DISETUJUI (data mentah; sesi hanya terisi untuk cuti setengah hari).
     public record LeaveEntry(LocalDate startDate, LocalDate endDate, BigDecimal totalDays,
-                             String session, String leaveTypeName) {
+                             String session, String leaveTypeName, List<sys.hris.sims.leave.entity.LeaveDayCancellation> cancellations) {
     }
 }

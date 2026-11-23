@@ -11,6 +11,7 @@
 //   HALF_AFTERNOON-> tombol normal (karyawan bekerja pagi)
 //
 // Fungsi murni (tanpa React) supaya mudah dites.
+import { jakartaWallClock } from './activeWorkShift';
 import { parseNaiveDateTime } from '../../../services/attendanceService';
 
 export const LEAVE_MODE = Object.freeze({
@@ -29,6 +30,12 @@ export function toDisplayLeaveToday(raw) {
   if (!raw || !raw.mode || raw.mode === LEAVE_MODE.NONE) return NO_LEAVE_TODAY;
   return {
     mode: raw.mode,
+    leaveRequestId: raw.leaveRequestId,
+    workDate: raw.workDate,
+    canCancel: Boolean(raw.canCancel),
+    workStart: parseNaiveDateTime(raw.workStart),
+    workEnd: parseNaiveDateTime(raw.workEnd),
+    requiredMinutes: raw.requiredMinutes,
     leaveTypeName: raw.leaveTypeName || 'Cuti',
     boundary: parseNaiveDateTime(raw.boundary),
     opensAt: parseNaiveDateTime(raw.opensAt),
@@ -53,3 +60,15 @@ export function applyLeaveGate(baseStatus, gate) {
 export const formatClock = (date) => (date
   ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
   : '');
+
+export function applyLeaveSession(context, leave, now = new Date()) {
+  if (!leave?.workStart || !leave?.workEnd || leave.workDate !== context.workDate || !leave.mode.startsWith('HALF_')) return context;
+  const clock = date => `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+  const ended = leave.mode === 'HALF_AFTERNOON' && jakartaWallClock(now) >= leave.workEnd;
+  const canCheckIn = context.canCheckIn && !ended && (!leave.opensAt || jakartaWallClock(now) >= leave.opensAt);
+  const hoursLabel = `${clock(leave.workStart)} - ${clock(leave.workEnd)}`;
+  return { ...context, startsAt:leave.workStart, endsAt:leave.workEnd, requiredWorkHours:leave.requiredMinutes/60,
+    requiredAttendanceHours:leave.requiredMinutes/60, hoursLabel, label:`${context.shiftName} · Sesi kerja ${hoursLabel} WIB`,
+    canCheckIn, blockedLabel:ended ? 'Sesi kerja pagi sudah selesai' : canCheckIn ? '' : `Absen Dibuka ${clock(leave.opensAt || leave.workStart)}`,
+    halfDayLeave:true };
+}

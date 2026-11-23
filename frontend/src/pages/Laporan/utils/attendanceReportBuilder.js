@@ -1,3 +1,4 @@
+import { attachLeaveCancellations } from '../../../utils/leaveCancellation.js';
 // src/pages/Laporan/utils/attendanceReportBuilder.js
 //
 // [BARU] Mengubah data mentah laporan (per karyawan) menjadi baris harian +
@@ -80,7 +81,7 @@ function buildLeaveDayMap(leaves = []) {
       cursor && end && cursor <= end;
       cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
     ) {
-      dayMap[dateKey(cursor)] = { label, value };
+      if (!(leave.cancellations || []).some(c => c.date === dateKey(cursor))) dayMap[dateKey(cursor)] = { label, value };
     }
   });
   return dayMap;
@@ -88,7 +89,9 @@ function buildLeaveDayMap(leaves = []) {
 
 function applyLeave(row, leaveDayMap) {
   const leave = leaveDayMap[row.date];
-  if (!leave || !OPEN_TONES.includes(row.tone)) return row;
+  if (!leave) return row;
+  if (leave.value === 0.5 && ['hadir','telat'].includes(row.tone)) return { ...row, leaveValue:0.5, note:[row.note,leave.label].filter(Boolean).join(' · ') };
+  if (!OPEN_TONES.includes(row.tone)) return row;
   return { ...row, status: 'CUTI', tone: 'leave', note: leave.label, leaveValue: leave.value };
 }
 
@@ -150,6 +153,7 @@ export function summarizeRows(rows, overtimes = []) {
   summary.overtimeMinutes = overtimes
     .filter((item) => item.statusCode === 'APPROVED')
     .reduce((total, item) => total + creditedOvertimeMinutes(item, attendanceByDate.get(item.date)), 0);
+  summary.leave += rows.filter(row => row.tone !== 'leave').reduce((sum,row) => sum + (row.leaveValue || 0),0);
   summary.overtimeAccMinutes = rows.reduce((total, row) => total + (row.overtimeAccMinutes || 0), 0);
   return summary;
 }
@@ -190,10 +194,10 @@ export function buildEmployeeReport(
     .sort((a, b) => (a.date < b.date ? -1 : 1)); // terlama dulu
 
   // [UBAH] Hitungan lembur ACC (pengali jam) dipisah ke utils/overtimeAcc.js.
-  const reportRows = applyOvertimeAcc(attachReportEdits(rows, employee, now), overtimes, {
+  const reportRows = attachLeaveCancellations(applyOvertimeAcc(attachReportEdits(rows, employee, now), overtimes, {
     holidaysByDate,
     divisionType: employee.divisionType,
-  });
+  }), employee.leaves);
 
   return {
     employeeId: employee.employeeId,

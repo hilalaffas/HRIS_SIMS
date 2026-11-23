@@ -27,6 +27,8 @@ import sys.hris.sims.leave.dto.LeaveBalanceResponse;
 import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.leave.dto.LeaveSummaryResponse;
+import sys.hris.sims.leave.dto.LeaveSubmissionResponse;
+import sys.hris.sims.leave.dto.LeaveRecordResponse;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.service.LeaveService;
 import sys.hris.sims.leave.service.LeaveSummaryService;
@@ -59,9 +61,17 @@ public class LeaveController {
         return user != null ? user.getUserId() : null;
     }
 
+    @PostMapping("/{id}/cancel-today")
+    public ResponseEntity<LeaveSubmissionResponse> cancelToday(@PathVariable Long id, Authentication authentication, HttpServletRequest request) {
+        LeaveRequest saved = cutiService.cancelToday(id,authentication.getName());
+        activityLogService.log(authentication.getName(),getCurrentUserId(authentication),"CANCEL_LEAVE_TODAY","leave_requests",id,
+                "Membatalkan cuti hari ini",request);
+        return ResponseEntity.ok(LeaveSubmissionResponse.from(saved));
+    }
+
     // GET riwayat cuti milik user yang sedang login
     @GetMapping("/me")
-    public ResponseEntity<List<LeaveRequest>> getMyCutiHistory(Authentication authentication, HttpServletRequest httpRequest) {
+    public ResponseEntity<List<LeaveRecordResponse>> getMyCutiHistory(Authentication authentication, HttpServletRequest httpRequest) {
 
         Employee employee = employeeRepository.findFirstByUser_Username(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("Data karyawan tidak ditemukan untuk user ini"));
@@ -69,7 +79,7 @@ public class LeaveController {
         // catat activity log
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_MY_CUTI", "leave_requests", employee.getEmployeeId(), "Melihat riwayat cuti sendiri", httpRequest);
 
-        return ResponseEntity.ok(cutiService.getCutiByKaryawan(employee.getEmployeeId()));
+        return ResponseEntity.ok(cutiService.getCutiByKaryawan(employee.getEmployeeId()).stream().map(LeaveRecordResponse::from).toList());
     }
 
     // [BARU] GET progres approval per-tahap milik user yang sedang login --
@@ -95,17 +105,17 @@ public class LeaveController {
 
     // GET semua cuti
     @GetMapping
-    public ResponseEntity<List<LeaveRequest>> getAllCuti(Authentication authentication, HttpServletRequest httpRequest) {
+    public ResponseEntity<List<LeaveRecordResponse>> getAllCuti(Authentication authentication, HttpServletRequest httpRequest) {
 
         // catat activity log
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_ALL_CUTI", "leave_requests", null, "Melihat semua data cuti", httpRequest);
 
-        return ResponseEntity.ok(cutiService.getAllCuti());
+        return ResponseEntity.ok(cutiService.getAllCuti().stream().map(LeaveRecordResponse::from).toList());
     }
 
     // GET cuti by ID
     @GetMapping("/{id}")
-    public ResponseEntity<LeaveRequest> getCutiById(@PathVariable Long id, Authentication authentication, HttpServletRequest httpRequest) {
+    public ResponseEntity<LeaveRecordResponse> getCutiById(@PathVariable Long id, Authentication authentication, HttpServletRequest httpRequest) {
 
         // catat activity log
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_CUTI", "leave_requests", id, "Melihat detail cuti id: " + id, httpRequest);
@@ -113,7 +123,7 @@ public class LeaveController {
         if (!hiddenAccountPolicy.canAccess(found.getEmployee(), authentication.getName())) { // [BARU]
             throw new RuntimeException("Cuti tidak ditemukan");
         }
-        return ResponseEntity.ok(found);
+        return ResponseEntity.ok(LeaveRecordResponse.from(found));
     }
 
     // GET detail cuti untuk pemohon sendiri, LENGKAP dengan info approver
@@ -129,13 +139,13 @@ public class LeaveController {
 
     // GET cuti by karyawan
     @GetMapping("/karyawan/{idKaryawan}")
-    public ResponseEntity<List<LeaveRequest>> getCutiByKaryawan(@PathVariable Long idKaryawan, Authentication authentication, HttpServletRequest httpRequest) {
+    public ResponseEntity<List<LeaveRecordResponse>> getCutiByKaryawan(@PathVariable Long idKaryawan, Authentication authentication, HttpServletRequest httpRequest) {
 
         // catat activity log
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "GET_CUTI_BY_KARYAWAN", "leave_requests", idKaryawan, "Melihat data cuti karyawan id: " + idKaryawan, httpRequest);
         
         guardEmployeeAccess(idKaryawan, authentication); // [BARU]
-        return ResponseEntity.ok(cutiService.getCutiByKaryawan(idKaryawan));
+        return ResponseEntity.ok(cutiService.getCutiByKaryawan(idKaryawan).stream().map(LeaveRecordResponse::from).toList());
     }
 
     // GET total sisa cuti tahunan user yang sedang login
@@ -195,41 +205,41 @@ public class LeaveController {
     }
 
     @GetMapping("/calendar")
-    public ResponseEntity<List<LeaveRequest>> getCalendarLeaves(@RequestParam int year) {
-        return ResponseEntity.ok(cutiService.getCalendarLeaves(year));
+    public ResponseEntity<List<LeaveRecordResponse>> getCalendarLeaves(@RequestParam int year) {
+        return ResponseEntity.ok(cutiService.getCalendarLeaves(year).stream().map(LeaveRecordResponse::from).toList());
     }
 
     // POST ajukan cuti baru
     @PostMapping
-    public ResponseEntity<LeaveRequest> createCuti(@RequestBody LeaveRequest cuti, Authentication authentication, HttpServletRequest httpRequest) {
+    public ResponseEntity<LeaveSubmissionResponse> createCuti(@RequestBody LeaveRequest cuti, Authentication authentication, HttpServletRequest httpRequest) {
 
         // catat activity log
         LeaveRequest saved = cutiService.createCuti(cuti, authentication.getName());
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "CREATE_CUTI", "leave_requests", saved.getLeaveRequestId(), "Mengajukan cuti", httpRequest);
 
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(LeaveSubmissionResponse.from(saved));
     }
 
     // [BARU MERGED] POST cuti darurat/susulan oleh HR Admin/Super Admin
     @PostMapping("/urgent")
-    public ResponseEntity<LeaveRequest> createUrgentCuti(@RequestBody LeaveRequest cuti, Authentication authentication, HttpServletRequest httpRequest) {
+    public ResponseEntity<LeaveSubmissionResponse> createUrgentCuti(@RequestBody LeaveRequest cuti, Authentication authentication, HttpServletRequest httpRequest) {
 
         LeaveRequest saved = cutiService.createUrgentCuti(cuti, authentication.getName());
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "CREATE_URGENT_CUTI", "leave_requests", saved.getLeaveRequestId(),
                 "Menginput cuti susulan (auto-ACC) untuk " + saved.getEmployee().getFullName(), httpRequest);
 
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(LeaveSubmissionResponse.from(saved));
     }
 
     @PutMapping("/{id}/resubmit")
-    public ResponseEntity<LeaveRequest> resubmitCuti(
+    public ResponseEntity<LeaveSubmissionResponse> resubmitCuti(
             @PathVariable Long id,
             @RequestBody LeaveRequest cuti,
             Authentication authentication,
             HttpServletRequest httpRequest) {
         LeaveRequest saved = cutiService.resubmitCuti(id, cuti, authentication.getName());
         activityLogService.log(authentication.getName(), getCurrentUserId(authentication), "RESUBMIT_CUTI", "leave_requests", id, "Memperbaiki dan mengajukan ulang cuti", httpRequest);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(LeaveSubmissionResponse.from(saved));
     }
 
     // PUT approve cuti

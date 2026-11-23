@@ -32,7 +32,7 @@ import { jakartaWallClock, workDateKey } from './utils/activeWorkShift';
 import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useEarlyCheckout
 import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
 import useTodayLeave from './hooks/useTodayLeave'; // [BARU] cuti disetujui mengunci tombol absen
-import { applyLeaveGate } from './utils/leaveToday'; // [BARU]
+import { applyLeaveGate, applyLeaveSession } from './utils/leaveToday'; // [BARU]
 import { getSickRecordCovering, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
 import {
   formatDateLabel,
@@ -131,7 +131,9 @@ export default function Absensi() {
   const capture = useAttendanceCapture({ onSubmitted: handleSubmitted });
 
   // ===================== STATUS HARI INI =====================
-  const shiftContext = useActiveWorkShift(myWorkSchedule, records);
+  const rawShiftContext = useActiveWorkShift(myWorkSchedule, records);
+  const { gate: leaveGate, leaveOpensLabel, leave, refresh: refreshLeave } = useTodayLeave();
+  const shiftContext = useMemo(() => applyLeaveSession(rawShiftContext, leave), [rawShiftContext, leave]);
   const todayKey = shiftContext.workDate;
   const todayCheckIn = shiftContext.checkIn;
   const todayCheckOut = shiftContext.checkOut;
@@ -148,7 +150,6 @@ export default function Absensi() {
   // sick -> abu-abu juga (Masuk/Keluar tidak bisa diklik).
   // [BARU] Cuti yang sudah disetujui: sehari penuh -> 'onLeave'; setengah hari pagi ->
   // 'leaveWait' sampai satu jam sebelum cuti berakhir. Cuti PENDING tidak mengunci.
-  const { gate: leaveGate, leaveOpensLabel } = useTodayLeave();
   const baseAttendanceStatus = todaySickRecord
     ? resolveSickTodayStatus(todaySickRecord) // [UBAH] sick | sickPending
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
@@ -174,6 +175,7 @@ export default function Absensi() {
     checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
     shiftEndTime: shiftContext.endsAt ? shiftContext.hoursLabel.split(' - ')[1] : null,
     shiftEndAt: shiftContext.endsAt,
+    halfDayLeave: shiftContext.halfDayLeave,
     holidayOvertime: shiftContext.holidayOvertime, // [BARU] lembur hari libur
     requiredWorkHours: shiftContext.requiredAttendanceHours ?? shiftContext.requiredWorkHours, // [UBAH] lama hadir (kerja bersih + istirahat)
     onOvertimeSubmitted: handleOvertimeSubmitted,
@@ -227,6 +229,8 @@ export default function Absensi() {
       <section className="abs-attendance-grid">
         <AttendancePortalCard
           attendanceStatus={attendanceStatus}
+          leave={leave}
+          onLeaveCancelled={async () => { await refreshLeave(); await loadHistory(); }}
           shiftContext={shiftContext}
           isLoading={historyLoading} /* status baru valid setelah riwayat termuat */
           disablePermission={disablePermission}

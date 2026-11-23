@@ -14,8 +14,8 @@ export function normalWorkMinutes(checkIn, checkOut, dateKey, schedule) {
   if (!checkIn || !checkOut) return null;
   if (!Number.isFinite(checkIn.getTime()) || !Number.isFinite(checkOut.getTime())) return null;
 
-  const shiftStart = clockOnDate(dateKey, schedule?.startTime || '08:00');
-  const shiftEnd = clockOnDate(dateKey, schedule?.endTime || '17:00');
+  const shiftStart = schedule?.scheduledWorkStart || clockOnDate(dateKey, schedule?.startTime || '08:00');
+  const shiftEnd = schedule?.scheduledWorkEnd || clockOnDate(dateKey, schedule?.endTime || '17:00');
   if (shiftStart && shiftEnd && shiftEnd <= shiftStart) shiftEnd.setDate(shiftEnd.getDate() + 1);
 
   const start = Math.max(checkIn.getTime(), shiftStart?.getTime() ?? checkIn.getTime());

@@ -160,7 +160,7 @@ public class AttendanceReportService {
                 leave.getEndDate(),
                 leave.getTotalDays(),
                 leave.getSession(),
-                leave.getLeaveType() == null ? null : leave.getLeaveType().getName());
+                leave.getLeaveType() == null ? null : leave.getLeaveType().getName(), List.copyOf(leave.getCancellations()));
     }
 
     // Alasan lembur (teks bebas) sengaja TIDAK disertakan -- laporan absensi hanya

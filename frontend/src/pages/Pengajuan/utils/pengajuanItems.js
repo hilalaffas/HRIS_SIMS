@@ -78,6 +78,7 @@ const TYPE_KINDS = {
 
 const LEAVE_STATUS_CODE = {
   'Dalam Proses': 'PENDING',
+  'Batal Cuti': 'CANCELLED',
   'Disetujui (ACC)': 'APPROVED',
   Ditolak: 'REJECTED',
   Dikembalikan: 'RETURNED',

@@ -29,8 +29,8 @@ import {
 
 const IDLE_WINDOW = { status: 'idle', data: null, error: '' }; // status: idle | loading | ready | error
 
-export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubmitted, shiftEndTime, requiredWorkHours, shiftEndAt, holidayOvertime = false }) {
-  const early = useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours });
+export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubmitted, shiftEndTime, requiredWorkHours, shiftEndAt, holidayOvertime = false, halfDayLeave = false }) {
+  const early = useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours, sessionEnd:halfDayLeave ? shiftEndAt : null });
   const { startAttendance: startEarlyAware } = early;
 
   const [step, setStep] = useState(null); // null (tertutup) | 'choice' | 'form'
@@ -70,13 +70,14 @@ export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubm
 
   const startAttendance = useCallback((action) => {
     if (holidayOvertime) { openCapture(action); return; }
+    if (halfDayLeave) { startEarlyAware(action); return; }
     if (action === 'Keluar' && isAfterWorkEnd(new Date(), shiftEndTime, shiftEndAt)) {
       setStep('choice');
       loadWindow();
       return;
     }
     startEarlyAware(action); // pulang cepat -> popup peringatan; selain itu -> kamera
-  }, [loadWindow, shiftEndTime, shiftEndAt, startEarlyAware, holidayOvertime, openCapture]);
+  }, [loadWindow, shiftEndTime, shiftEndAt, startEarlyAware, holidayOvertime, openCapture, halfDayLeave]);
 
   const close = useCallback(() => {
     requestRef.current += 1;

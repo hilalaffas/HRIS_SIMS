@@ -1,11 +1,12 @@
+import { cancellationText } from '../utils/leaveCancellation';
 import { api, getStoredToken } from './api'; // [UBAH] + getStoredToken (dipakai berbagi hasil polling approval)
 
 const statusLabel = (value) => ({ 
-  PENDING: 'Dalam Proses', APPROVED: 'Disetujui (ACC)', RETURNED: 'Dikembalikan', REJECTED: 'Ditolak' 
+  CANCELLED: 'Batal Cuti', PENDING: 'Dalam Proses', APPROVED: 'Disetujui (ACC)', RETURNED: 'Dikembalikan', REJECTED: 'Ditolak' 
 }[String(value || '').toUpperCase()] || value || 'Dalam Proses');
 
 const statusCode = (value) => ({ 
-  PENDING: 'PROSES', APPROVED: 'DISETUJUI', RETURNED: 'DIKEMBALIKAN', REJECTED: 'DITOLAK' 
+  CANCELLED: 'DIBATALKAN', PENDING: 'PROSES', APPROVED: 'DISETUJUI', RETURNED: 'DIKEMBALIKAN', REJECTED: 'DITOLAK' 
 }[String(value || '').toUpperCase()] || 'PROSES');
 
 const dateText = (value) => {
@@ -25,10 +26,11 @@ const logDateText = (value) => {
 };
 
 const logStatusLabel = (value) => ({
-  PENDING: 'DIAJUKAN', APPROVED: 'DISETUJUI (ACC)', RETURNED: 'DIKEMBALIKAN (RETURN)', REJECTED: 'DITOLAK',
+  CANCELLED: 'BATAL CUTI', PENDING: 'DIAJUKAN', APPROVED: 'DISETUJUI (ACC)', RETURNED: 'DIKEMBALIKAN (RETURN)', REJECTED: 'DITOLAK',
 }[String(value || '').toUpperCase()] || value || '-');
 
 const normalizedLeaveDays = (item) => {
+  if (item?.totalDays != null && Number(item.totalDays) === 0) return 0;
   const leaveTypeName = item?.leaveType?.name || item?.leaveType || item?.jenisCuti || '';
   return String(leaveTypeName).trim().toLowerCase() === 'cuti setengah hari'
     ? 0.5
@@ -162,13 +164,15 @@ export function mapMyLeave(item) {
   const rawTanggal = `${dateText(item.startDate)} - ${dateText(item.endDate)}`;
   const totalDays = normalizedLeaveDays(item);
   return {
+    cancellations: item.cancellations || [],
+    originalTotalDays: item.originalTotalDays,
     id: item.leaveRequestId || item.id,
     userName: item.employee?.fullName || item.employeeName,
     jenisCuti: item.leaveType?.name || 'Cuti',
     stringTanggal: rawTanggal.split('(')[0].trim(),
     // [UBAH] Sesi Pagi/Siang disisipkan di sini supaya otomatis tampil di
     // Riwayat & Status Cuti (LeaveHistory.jsx) dan popup Detail Cuti.
-    totalHari: `${dayText(totalDays)} Hari${sessionSuffix(item)}`,
+    totalHari: `${dayText(item.originalTotalDays ?? totalDays)} Hari${sessionSuffix(item)}${item.cancellations?.length ? ` · ${item.cancellations.map(c => `Batal Cuti ${dateText(c.date)}`).join(" · ")}` : ""}`,
     totalDays,
     reportedTotalDays: Number(item.totalDays || 0),
     // [BARU] Kode sesi mentah ("PAGI"/"SIANG"/null), dipakai handleEditKembali
@@ -275,6 +279,7 @@ export async function getTeamLeaveByYear(year, config = {}) {
       for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
         if (date.getFullYear() !== Number(year)) continue;
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        if ((item.cancellations || []).some(c => c.date === key)) continue;
         (byDate[key] ??= []).push({
           // [BARU] id & statusCode disamakan dengan `list` di atas, supaya
           // KaryawanCutiPanel.jsx bisa dipakai ulang untuk daftar cuti PER
@@ -346,7 +351,7 @@ export function mapApproval(item, employeeLookup = {}) {
     const step = logs.find((log) => String(log.approverRole || '').toUpperCase() === role);
     return step && String(step.action || '').toUpperCase() !== 'APPROVED';
   });
-  const approvalProgressStatus = overallStatus === 'APPROVED'
+  const approvalProgressStatus = overallStatus === 'CANCELLED' ? 'Batal Cuti' : overallStatus === 'APPROVED'
     ? 'Cuti sudah di-ACC'
     : overallStatus === 'REJECTED' ? 'Cuti ditolak'
     : overallStatus === 'RETURNED' ? 'Menunggu revisi pemohon'
@@ -356,6 +361,8 @@ export function mapApproval(item, employeeLookup = {}) {
   return {
     id: item.leaveRequestId || item.id,
     approvalProgressStatus,
+    cancellations: item.cancellations || [],
+    originalTotalDays: item.originalTotalDays,
     karyawan: {
       // [BARU] employeeId dari LeaveApprovalResponse.employeeId (backend) --
       // dipakai ApproveLeave.jsx buat mencocokkan Total Sisa Cuti milik
@@ -369,7 +376,7 @@ export function mapApproval(item, employeeLookup = {}) {
     jenisCuti: item.leaveType?.name || item.leaveType || 'Cuti',
     // [UBAH] Sesi Pagi/Siang disisipkan di sini supaya otomatis tampil di
     // popup Detail Cuti (Form.jsx -> "Durasi Cuti") & ListSection.jsx.
-    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari${sessionSuffix(item)})`,
+    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(item.originalTotalDays ?? totalDays)} Hari${sessionSuffix(item)})${item.cancellations?.length ? ` · Batal ${dayText(item.cancellations.reduce((sum, c) => sum + Number(c.days || 0), 0))} hari` : ""}`,
     startDate: item.startDate || null, // [BARU] untuk urutan tanggal cuti di Riwayat Cuti
     totalDays,
     session: item.session ?? null,
@@ -431,6 +438,8 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     // bisa di-lookup per-karyawan dari data balance backend asli, bukan lagi
     // pakai satu angka dummy yang sama untuk semua orang.
     employeeId: item.employee?.employeeId,
+    cancellations: item.cancellations || [],
+    originalTotalDays: item.originalTotalDays,
     // [BARU] Dipakai utils/leaveBalanceTimeline.js untuk menghitung Sisa Cuti
     // per baris (urut waktu approval). deductsQuota false = jenis cuti yang
     // tidak memotong saldo (mis. sakit).
@@ -448,7 +457,7 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     // [UBAH] Sesi Pagi/Siang disisipkan di sini juga, supaya konsisten
     // dengan mapApproval() saat popup Detail Cuti dibuka dari halaman
     // Manajemen Karyawan (tab "Cuti Karyawan").
-    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(totalDays)} Hari${sessionSuffix(item)})`,
+    durasi: `${dateText(item.startDate)} - ${dateText(item.endDate)} (${dayText(item.originalTotalDays ?? totalDays)} Hari${sessionSuffix(item)})${item.cancellations?.length ? ` · Batal ${dayText(item.cancellations.reduce((sum, c) => sum + Number(c.days || 0), 0))} hari` : ""}`,
     session: item.session ?? null,
     statusBerkas: statusCode(status),
     keterangan: item.reason || '-',
@@ -457,12 +466,12 @@ export function mapKaryawanLeave(item, employeeLookup = {}) {
     approvalChain: chain,
     approvalSteps: buildApprovalSteps(logs, chain), // [BARU]
     hrdEmployeeId: item.hrdEmployeeId ?? null, // [BARU] prefill dropdown saat edit/ajukan ulang
-    riwayatLog: hasBeenReviewed ? [{
+    riwayatLog: [...(hasBeenReviewed ? [{
       nama: item.reviewedBy?.fullName || 'Sistem',
       waktu: logDateText(item.approvedAt || item.returnedAt),
-      statusBadge: logStatusLabel(status),
+      statusBadge: logStatusLabel(item.approvedAt ? "APPROVED" : status),
       catatan: item.reviewNote || '-',
-    }] : [],
+    }] : []), ...(item.cancellations || []).map(c => ({ nama: c.actorName, waktu: logDateText(c.cancelledAt), statusBadge: "BATAL CUTI", catatan: cancellationText(c) }))],
   };
 }
 

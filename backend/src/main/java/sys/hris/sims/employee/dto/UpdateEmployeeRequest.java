@@ -27,7 +27,7 @@ public class UpdateEmployeeRequest {
 
     // [BARU] Sisa Cuti (manual, diisi HR) -- menggantikan field dummy "Sisa Cuti Sakit"
     // [UBAH] Integer -> BigDecimal supaya HR bisa isi alokasi awal dengan
-    // angka desimal bebas (mis. 2,25). Spring @ModelAttribute otomatis bisa
+    // kelipatan 0,5 hari (mis. 0,5; 1; 1,5). Spring @ModelAttribute otomatis bisa
     // bind String multipart form ("2.25") ke BigDecimal tanpa converter
     // tambahan -- tidak perlu ubah apa pun di EmployeeController.java.
     private BigDecimal manualLeaveBalance;

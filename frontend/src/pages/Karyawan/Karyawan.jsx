@@ -344,34 +344,18 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     setIsExporting(true);
     try {
       // [UBAH] Ekspor (CSV & PDF) hanya memuat karyawan asli: akun SUPER_ADMIN
-      // / sys_dev disaring dari daftar karyawan, dan cuti milik mereka
-      // dibuang berdasarkan employeeId.
-      const excludedEmployeeIds = new Set(
-        karyawanList.filter((k) => !isReportEmployee(k)).map((k) => k.employeeId ?? k.id)
-      );
+      // / sys_dev disaring dari daftar karyawan. Data cuti tidak lagi diekspor
+      // (tab Cuti Karyawan tanpa tombol ekspor).
       const exportContext = {
         karyawanList: karyawanList.filter(isReportEmployee),
-        riwayatCuti: riwayatCuti.filter((item) => !excludedEmployeeIds.has(item.employeeId)),
-        balanceAfterByLeaveId,
       };
 
       if (format === 'pdf' && exportConfig.pdf) {
         const { pdf } = exportConfig;
         // Import dinamis: library PDF baru diunduh saat pertama kali dipakai
-        const { downloadPivotPdf, downloadTablePdf } = await import('../../utils/pdfExport');
+        const { downloadTablePdf } = await import('../../utils/pdfExport');
 
-        // [UBAH] Ada dua jenis PDF: pivot (buildPivot, mis. Cuti Karyawan)
-        // dan tabel biasa (memakai headers + buildRows CSV, mis. Data Divisi).
-        if (pdf.buildPivot) {
-          const pivot = pdf.buildPivot(exportContext);
-          if (pivot.groups.length === 0) {
-            triggerToast(pdf.emptyMessage || exportConfig.emptyMessage, 'error');
-            return;
-          }
-          downloadPivotPdf({ title: pdf.title, fileNamePrefix: pdf.fileNamePrefix, pivot });
-          return;
-        }
-
+        // PDF tabel biasa: memakai headers + buildRows CSV (mis. Data Divisi).
         const rows = await exportConfig.buildRows(exportContext);
         if (rows.length === 0) {
           triggerToast(exportConfig.emptyMessage, 'error');

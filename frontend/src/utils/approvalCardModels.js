@@ -76,6 +76,7 @@ const joinNames = (names) => (names.length > 1 ? `${names.slice(0, -1).join(', '
 
 // Kode status keseluruhan dari label yang dipakai mapMyLeave().
 const CUTI_OVERALL_BY_LABEL = {
+  'Batal Cuti': 'CANCELLED',
   'Disetujui (ACC)': 'APPROVED',
   Ditolak: 'REJECTED',
   Dikembalikan: 'RETURNED',
@@ -143,6 +144,8 @@ export function buildLeaveCardModel(item, detail, { isLatest = false, isSupervis
     hint = `Dikembalikan oleh ${actedByLabel}.${actedNote} Klik Aksi untuk memperbaiki dan mengirim ulang.`;
   }
 
+  if (overall === 'CANCELLED') { tone='info'; badgeLabel='Batal Cuti'; hint='Cuti dibatalkan. Riwayat persetujuan tetap tersimpan.'; }
+  else if (item.cancellations?.length) { badgeLabel='Disetujui · Sebagian Dibatalkan'; hint='Sebagian tanggal cuti dibatalkan. Tanggal lainnya tetap berlaku.'; }
   const rawDetail = item.rawDetail || {};
   return {
     tone,

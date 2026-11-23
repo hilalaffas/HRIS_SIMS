@@ -23,6 +23,7 @@ import './Form.css';
 
 // Lencana "Status Sekarang": label + warna (sama dengan .pgj-detail-status--*).
 const STATUS_VIEW = {
+  DIBATALKAN: { label: 'Batal Cuti', tone: 'info' },
   DISETUJUI: { label: 'Disetujui', tone: 'success' },
   DITOLAK: { label: 'Ditolak', tone: 'danger' },
   DIKEMBALIKAN: { label: 'Dikembalikan', tone: 'info' },

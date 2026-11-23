@@ -307,7 +307,9 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   const publishedShift = schedulesByDate[key];
   const shifting = String(divisionType).toUpperCase() === 'SHIFTING';
   const bounds = shiftBounds(key, shifting ? publishedShift?.startTime : regularDay.startTime, shifting ? publishedShift?.endTime : regularDay.endTime); // [UBAH] jam jadwal hari itu
-  const lateMinutes = checkIn?.recordedAt && bounds ? Math.max(0, Math.floor((checkIn.recordedAt - bounds.startsAt) / 60000)) : 0;
+  const sessionEvidence = checkIn?.scheduledWorkStart ? checkIn : checkOut?.scheduledWorkStart ? checkOut : null;
+  const lateStart = sessionEvidence?.scheduledWorkStart || bounds?.startsAt;
+  const lateMinutes = checkIn?.recordedAt && lateStart ? Math.max(0, Math.floor((checkIn.recordedAt - lateStart) / 60000)) : 0;
   const isHolidayOvertime = Boolean(checkIn?.holidayOvertime);
   const isLate = !isHolidayOvertime && Boolean(checkIn?.isLate);
 
@@ -336,7 +338,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
 
   // [UBAH] Lembur hari libur tidak dihitung sebagai jam kerja normal (dihitung lewat pengajuan lembur).
   const minutesWorked = isHolidayOvertime ? (checkOut ? 0 : null) : shifting && !bounds ? null : normalWorkMinutes(
-    checkIn?.recordedAt, checkOut?.recordedAt, key, shifting ? publishedShift : regularDay, // [UBAH] + istirahat & jam hari itu
+    checkIn?.recordedAt, checkOut?.recordedAt, key, sessionEvidence ? { ...sessionEvidence, requiredMinutes:sessionEvidence.scheduledWorkMinutes } : shifting ? publishedShift : regularDay, // [UBAH] + istirahat & jam hari itu
   );
 
   return {

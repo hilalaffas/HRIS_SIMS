@@ -10,18 +10,18 @@
 // <button onClick={() => early.startAttendance('Keluar')} />
 // {early.isPromptOpen && <EarlyCheckoutModal onConfirm={early.confirmEarlyCheckout} onCancel={early.cancelEarlyCheckout} />}
 import { useCallback, useState } from 'react';
-import { buildEarlyCheckoutNote, isEarlyCheckout } from '../utils/earlyCheckout';
+import { buildEarlyCheckoutNote, isEarlyCheckout, getJakartaWallClock } from '../utils/earlyCheckout';
 
-export default function useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours }) {
+export default function useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours, sessionEnd }) {
   const [isPromptOpen, setIsPromptOpen] = useState(false);
 
   const startAttendance = useCallback((action) => {
-    if (action === 'Keluar' && isEarlyCheckout(checkInAt, new Date(), requiredWorkHours)) {
+    if (action === 'Keluar' && (sessionEnd ? getJakartaWallClock() < sessionEnd : isEarlyCheckout(checkInAt, new Date(), requiredWorkHours))) {
       setIsPromptOpen(true);
       return;
     }
     openCapture(action);
-  }, [checkInAt, openCapture, requiredWorkHours]);
+  }, [checkInAt, openCapture, requiredWorkHours, sessionEnd]);
 
   const confirmEarlyCheckout = useCallback((reason) => {
     setIsPromptOpen(false);

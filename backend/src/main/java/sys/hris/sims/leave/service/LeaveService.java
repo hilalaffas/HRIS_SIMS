@@ -75,6 +75,7 @@ public class LeaveService {
     // gender (lihat validateCutiNikahLimit()).
     private static final int MARRIAGE_MAX_DAYS = 3;
 
+    private java.time.Clock cancellationClock = java.time.Clock.system(ZoneId.of("Asia/Jakarta"));
     private final LeaveRepository cutiRepository;
     private final EmployeeRepository karyawanRepository;
     private final LeaveStatusRepository statusCutiRepository;
@@ -340,12 +341,13 @@ public class LeaveService {
                 List.of(ACTION_PENDING, ACTION_APPROVED)
         );
 
-        boolean isOverlap = existingCuti.stream()
-                .filter(existing -> !isForfeiture(existing)) // [BARU] catatan hangus bukan hari cuti
-                .anyMatch(existing ->
-                !cuti.getStartDate().isAfter(existing.getEndDate()) &&
-                !cuti.getEndDate().isBefore(existing.getStartDate())
-        );
+        boolean isOverlap = existingCuti.stream().filter(existing -> !isForfeiture(existing))
+                .anyMatch(existing -> {
+                    LocalDate from = cuti.getStartDate().isAfter(existing.getStartDate()) ? cuti.getStartDate() : existing.getStartDate();
+                    LocalDate to = cuti.getEndDate().isBefore(existing.getEndDate()) ? cuti.getEndDate() : existing.getEndDate();
+                    for (LocalDate date=from; !date.isAfter(to); date=date.plusDays(1)) if (!existing.cancelledOn(date)) return true;
+                    return false;
+                });
 
         if (isOverlap) {
             throw new RuntimeException(employee.getFullName() + " sudah memiliki pengajuan cuti pada rentang tanggal yang bentrok");
@@ -740,6 +742,44 @@ public class LeaveService {
     }
 
     @Transactional
+    public LeaveRequest cancelToday(Long id, String username) {
+        LocalDate today = LocalDate.now(cancellationClock);
+        Employee actor = karyawanRepository.findFirstByUser_Username(username)
+                .orElseThrow(() -> new IllegalStateException("Data karyawan tidak ditemukan"));
+        Employee employee = karyawanRepository.findForLeaveUpdate(actor.getEmployeeId())
+                .orElseThrow(() -> new IllegalStateException("Data karyawan tidak ditemukan"));
+        LeaveRequest leave = cutiRepository.findForCancellation(id)
+                .orElseThrow(() -> new IllegalStateException("Pengajuan cuti tidak ditemukan"));
+        if (!employee.getEmployeeId().equals(leave.getEmployee().getEmployeeId()))
+            throw new IllegalStateException("Anda hanya dapat membatalkan cuti sendiri.");
+        // A repeated request is successful without issuing another refund.
+        if (leave.cancelledOn(today)) return leave;
+        if (!ACTION_APPROVED.equalsIgnoreCase(leave.getStatus().getStatusName())
+                || Boolean.TRUE.equals(leave.getImportedHistory()) || isForfeiture(leave)
+                || today.isBefore(leave.getStartDate()) || today.isAfter(leave.getEndDate()))
+            throw new IllegalStateException("Hanya cuti disetujui yang berlaku hari ini dapat dibatalkan.");
+        BigDecimal days = leave.getSession() == null || leave.getSession().isBlank() ? BigDecimal.ONE : new BigDecimal("0.5");
+        // Do not refund a weekend/holiday that did not consume any leave days.
+        if (!countsCalendarDays(leave) && calculateWorkingDays(today,today) == 0)
+            throw new IllegalStateException("Hari ini tidak dihitung sebagai hari cuti pada pengajuan tersebut.");
+        BigDecimal oldTotal = nonNullDays(leave.getTotalDays());
+        if (oldTotal.compareTo(days) < 0) throw new IllegalStateException("Sisa hari pengajuan tidak cukup untuk dibatalkan.");
+        BigDecimal oldManual = nonNullDays(leave.getManualLeaveDays());
+        BigDecimal remaining = oldTotal.subtract(days);
+        rebalanceManualLeave(leave,oldTotal,remaining);
+        BigDecimal manualReturned = oldManual.subtract(nonNullDays(leave.getManualLeaveDays())).max(BigDecimal.ZERO);
+        BigDecimal quotaReturned = Boolean.TRUE.equals(leave.getLeaveType().getDeductsAnnualQuota()) ? days : BigDecimal.ZERO;
+        leave.getCancellations().add(sys.hris.sims.leave.entity.LeaveDayCancellation.builder()
+                .date(today).cancelledAt(java.time.LocalDateTime.now(cancellationClock))
+                .actorId(employee.getEmployeeId()).actorName(employee.getFullName()).days(days)
+                .returnedManualDays(manualReturned).returnedQuotaDays(quotaReturned).build());
+        leaveAttendancePolicy.clearCancelledSession(employee,today);
+        leave.setTotalDays(remaining);
+        if (remaining.signum() == 0) leave.setStatus(getStatus("CANCELLED"));
+        return cutiRepository.save(leave);
+    }
+
+    @Transactional
     public void deleteCuti(Long id) {
         LeaveRequest cuti = getCutiById(id);
 
@@ -1036,7 +1076,7 @@ public class LeaveService {
         // approvedAt) supaya karyawan tetap melihat "Disetujui oleh HR ...".
         if (approvals.isEmpty()
                 && cuti.getReviewedBy() != null
-                && ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName())) {
+                && cuti.getApprovedAt() != null) {
             logs.add(new LeaveApprovalLogResponse(
                     "HR",
                     ACTION_APPROVED,
@@ -1044,6 +1084,12 @@ public class LeaveService {
                     cuti.getReviewNote(),
                     cuti.getApprovedAt()
             ));
+        }
+
+        for (var cancellation : cuti.getCancellations()) {
+            logs.add(new LeaveApprovalLogResponse("PEMOHON", "CANCELLED", cancellation.getActorName(),
+                    "Batal cuti tanggal " + cancellation.getDate() + "; kuota dikembalikan "
+                            + cancellation.getReturnedQuotaDays() + " hari", cancellation.getCancelledAt()));
         }
 
         // Mengambil data Leader, SPV, dan Manager dari tabel approvals
@@ -1080,7 +1126,9 @@ public class LeaveService {
                 cuti.getStatus().getStatusName(),
                 myApprovalStatus,
                 cuti.getReviewNote(),
-                logs
+                logs,
+                cuti.getOriginalTotalDays(),
+                List.copyOf(cuti.getCancellations())
         );
     }
 
@@ -1265,7 +1313,22 @@ public class LeaveService {
         return "cuti urgent".equals(normalized) && cuti.getSession() != null && !cuti.getSession().isBlank();
     }
 
+    private boolean countsCalendarDays(LeaveRequest leave) {
+        String name = leave.getLeaveType() == null ? "" : leave.getLeaveType().getName();
+        String gender = leave.getEmployee() == null ? "" : leave.getEmployee().getGender();
+        return name != null && name.toLowerCase(Locale.ROOT).contains("melahirkan")
+                && ("F".equalsIgnoreCase(gender) || "P".equalsIgnoreCase(gender));
+    }
+
     private BigDecimal calculateLeaveDays(LeaveRequest cuti) {
+        BigDecimal original = calculateOriginalLeaveDays(cuti);
+        BigDecimal cancelled = cuti.getCancellations().stream()
+                .filter(c -> countsCalendarDays(cuti) || calculateWorkingDays(c.getDate(),c.getDate()) > 0)
+                .map(sys.hris.sims.leave.entity.LeaveDayCancellation::getDays).reduce(BigDecimal.ZERO,BigDecimal::add);
+        return original.subtract(cancelled).max(BigDecimal.ZERO);
+    }
+
+    private BigDecimal calculateOriginalLeaveDays(LeaveRequest cuti) {
         String leaveTypeName = cuti.getLeaveType() == null ? "" : cuti.getLeaveType().getName();
         // [FIX] Disamakan dengan getInvalidLeaveDurationMessage() yang sudah
         // trim() lebih dulu -- sebelumnya method ini TIDAK trim, jadi nama

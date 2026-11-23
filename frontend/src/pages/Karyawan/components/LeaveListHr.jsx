@@ -12,6 +12,7 @@ const STATUS_OPTIONS = [
   { value: "DISETUJUI", label: "Disetujui (ACC)" },
   { value: "DIKEMBALIKAN", label: "Dikembalikan (Revisi)" },
   { value: "DITOLAK", label: "Ditolak" },
+    { value: "DIBATALKAN", label: "Batal Cuti" },
 ];
 
 const STATUS_BADGE_CLASS = {
@@ -19,6 +20,7 @@ const STATUS_BADGE_CLASS = {
   DISETUJUI: "statusBadge--green_leaveListHr",
   DIKEMBALIKAN: "statusBadge--amber_leaveListHr",
   DITOLAK: "statusBadge--rose_leaveListHr",
+  DIBATALKAN: "statusBadge--amber_leaveListHr",
 };
 
 const STATUS_BADGE_LABEL = {
@@ -26,6 +28,7 @@ const STATUS_BADGE_LABEL = {
   DISETUJUI: "Disetujui",
   DIKEMBALIKAN: "Dikembalikan",
   DITOLAK: "Ditolak",
+    DIBATALKAN: "Batal Cuti",
 };
 
 // [BARU] Kolom yang bisa diklik untuk sortir. Kolom "Aksi" sengaja tidak

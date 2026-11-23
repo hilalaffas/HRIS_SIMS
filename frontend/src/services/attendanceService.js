@@ -34,6 +34,12 @@ export async function getTodayAttendanceSummary() {
   return api.get('/api/absensi/today-summary');
 }
 
+// [BARU] Sakit & izin HARI INI untuk Dashboard semua role (tab "Sakit & Izin").
+// Hasil: { date, generatedAt, sick: [{ employeeName, sickStart, sickEnd }], permission: [{ employeeName }] }.
+export async function getTodayAbsence() {
+  return api.get('/api/absensi/today-absence');
+}
+
 export async function getMyWorkSchedule(year, month) {
   const previous = new Date(year, month - 2, 1);
   const queryForMonth = (targetYear, targetMonth) => {
@@ -200,6 +206,9 @@ export function toDisplayRecord(item) {
     locationType: item.locationType || 'KANTOR',
     officeDistanceMeters: item.officeDistanceMeters ?? null,
     officeLocationStatus: String(item.officeLocationStatus || '').toUpperCase(),
+    scheduledWorkStart: parseNaiveDateTime(item.scheduledWorkStart),
+    scheduledWorkEnd: parseNaiveDateTime(item.scheduledWorkEnd),
+    scheduledWorkMinutes: item.scheduledWorkMinutes,
     holidayOvertime: Boolean(item.holidayOvertime),
     holidayOvertimeStart: parseNaiveDateTime(item.holidayOvertimeStart),
     holidayOvertimeEnd: parseNaiveDateTime(item.holidayOvertimeEnd),

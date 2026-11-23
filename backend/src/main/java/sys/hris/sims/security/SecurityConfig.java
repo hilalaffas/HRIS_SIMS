@@ -325,6 +325,7 @@ public class SecurityConfig {
                         // approver-nya. Ditaruh SEBELUM catch-all "/api/cuti/**" di bawah
                         // (yang membatasi hanya ADMIN/LEADER/SPV/MANAGER) supaya role
                         // Member/karyawan biasa tidak ikut ke-block 403.
+                        .requestMatchers(HttpMethod.POST, "/api/cuti/*/cancel-today").authenticated()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/cuti/me/approval-updates")
                         .authenticated()
@@ -434,6 +435,10 @@ public class SecurityConfig {
                         .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/absensi/laporan")
                         .hasAnyRole("HRD_ADMIN", "SUPER_ADMIN", "DEV")
+
+                        // [BARU] Karyawan sakit & izin hari ini (Dashboard semua role) -- cukup login.
+                        .requestMatchers(HttpMethod.GET, "/api/absensi/today-absence")
+                        .authenticated()
 
                         // [BARU] Ringkasan absensi hari ini (Dashboard) -- HRD_ADMIN & SUPER_ADMIN saja.
                         .requestMatchers(HttpMethod.GET, "/api/absensi/today-summary")
