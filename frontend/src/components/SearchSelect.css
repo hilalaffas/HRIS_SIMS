@@ -1,0 +1,125 @@
+/* SearchSelect.css -- [BARU] kolom pilihan dengan pencarian langsung (lihat SearchSelect.jsx).
+   Memakai token global (tokens.css) + token tema gelap seperti Dropdown.css. */
+.searchselect {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.searchselect.is-disabled { opacity: 0.6; pointer-events: none; }
+
+.searchselect__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.searchselect__field:hover { border-color: var(--color-primary-soft); }
+.searchselect__field:focus-within,
+.searchselect__field.is-open {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-tint);
+}
+
+.searchselect__input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 0 10px 14px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+.searchselect__input::placeholder { color: var(--color-text-muted); font-weight: 400; }
+
+/* Nama terpilih ditampilkan sebagai teks biasa di atas kolom (saat menu tertutup). */
+.searchselect__value {
+  position: absolute;
+  inset: 0 36px 0 14px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.searchselect__chevron {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  align-self: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dk-text-green, var(--color-primary));
+  cursor: pointer;
+}
+.searchselect__chevron svg { transition: transform 0.15s ease; }
+.searchselect__chevron.is-open svg { transform: rotate(180deg); }
+
+.searchselect__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  outline: 2px solid var(--color-success);
+  outline-offset: -2px;
+  animation: searchselectPop 0.14s ease;
+}
+.searchselect__menu.is-up { top: auto; bottom: calc(100% + 6px); }
+
+.searchselect__option {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.searchselect__option.is-highlighted { background: var(--color-primary-tint); }
+.searchselect__option.is-selected { font-weight: 700; color: var(--dk-text-green, var(--color-primary)); }
+.searchselect__option:disabled { opacity: 0.5; cursor: not-allowed; }
+.searchselect__empty { padding: 10px; color: var(--color-text-muted); font-size: 13px; }
+
+/* Cocok dengan dropdownErrorClass() / validasi native required. */
+.searchselect.dropdown--invalid .searchselect__field {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-bg);
+}
+
+@keyframes searchselectPop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .searchselect__menu { animation: none; }
+}

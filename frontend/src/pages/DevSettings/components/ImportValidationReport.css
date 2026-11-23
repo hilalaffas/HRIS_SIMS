@@ -81,16 +81,17 @@
 }
 
 .importreport__badge {
+  /* [UBAH] Teks biasa: border/background/padding dihapus agar tidak tampak seperti tombol. */
   flex: none;
-  padding: 3px 10px;
-  border-radius: 999px;
+  padding: 0;
+  border-radius: 0;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--report-accent-text);
-  background: var(--color-surface);
-  border: 1px solid var(--report-accent-border);
+  background: none;
+  border: 0;
 }
 
 /* Centang tergambar (passed) dan tanda seru/silang berdenyut sekali (partial/failed). */
@@ -129,12 +130,13 @@
 }
 
 .importreport__count {
-  padding: 1px 8px;
-  border-radius: 999px;
+  /* [UBAH] Teks biasa: border/background/padding dihapus agar tidak tampak seperti tombol. */
+  padding: 0;
+  border-radius: 0;
   font-size: 0.72rem;
   color: var(--dk-text-amber, var(--color-warning));
-  background: var(--color-warning-bg);
-  border: 1px solid var(--color-warning-border);
+  background: none;
+  border: 0;
 }
 
 .importreport__stats {

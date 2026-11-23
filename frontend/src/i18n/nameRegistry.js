@@ -2,7 +2,9 @@
 // Daftar nama orang yang pernah tampil di aplikasi (dari respons API, data login,
 // dan data contoh). Dipakai domTranslator untuk menulis nama dalam katakana
 // SAAT TAMPIL SAJA -- data asli (form, database, API) tidak pernah diubah.
-import { nameSeeds } from './locales/jaPhrases.js';
+// [UBAH] Tidak lagi mengimpor ./locales/jaPhrases.js di sini: api.js mengimpor modul ini untuk SEMUA
+// pengguna, sehingga seluruh kamus Jepang ikut masuk bundle utama. Bibit nama kini dimuat engine.js
+// (hanya saat mode Jepang) lewat seedNames().
 
 const NAME_KEYS = new Set([
   'nama', 'namalengkap', 'name', 'fullname', 'employeename', 'username_display', 'approvername', 'karyawannama',
@@ -11,7 +13,7 @@ const NAME_KEYS = new Set([
   'swapwithname', 'reviewername', 'hrname', 'userfullname', 'leader', 'spv', 'manager', 'coveredby',
 ]);
 
-const names = new Set(nameSeeds);
+const names = new Set();
 let revision = 0;
 const listeners = new Set();
 
@@ -56,6 +58,13 @@ export function collectNamesFromJson(payload) {
   } catch {
     // Pengumpulan nama tidak boleh pernah mengganggu alur API.
   }
+}
+
+// [BARU] Dipanggil engine.js sekali (lazy) untuk memasukkan nama bawaan.
+export function seedNames(list) {
+  let added = false;
+  (list || []).forEach((name) => { if (!names.has(name)) { names.add(name); added = true; } });
+  if (added) revision += 1;
 }
 
 export const getNames = () => [...names];

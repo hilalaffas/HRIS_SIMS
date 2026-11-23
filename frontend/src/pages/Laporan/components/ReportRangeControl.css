@@ -26,18 +26,19 @@
 .lpr-range-mode:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
 
 .lpr-range-today {
+  /* [UBAH] Teks biasa: border/background/padding dihapus agar tidak tampak seperti tombol. */
   display: inline-flex;
   align-items: center;
   gap: 8px;
   height: 40px;
   margin: 0;
-  padding: 0 16px;
+  padding: 0;
   font-size: 13px;
   font-weight: 700;
   color: var(--dk-text-green, var(--color-primary));
-  background: var(--color-success-bg);
-  border: 1px solid var(--color-success-border);
-  border-radius: 999px;
+  background: none;
+  border: 0;
+  border-radius: 0;
 }
 .lpr-range-today svg { width: 16px; height: 16px; }
 

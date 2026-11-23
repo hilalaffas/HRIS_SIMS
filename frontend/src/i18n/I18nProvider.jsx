@@ -12,8 +12,17 @@ import { I18nContext } from './I18nContext';
 import { DEFAULT_LANG, LANGUAGES, STORAGE_KEY, isSupportedLang } from './config';
 import { dictionaries } from './locales';
 import { renderRich } from './rich.jsx';
-import { startDomTranslator, stopDomTranslator } from './domTranslator';
-import { registerName } from './nameRegistry';
+// [UBAH] domTranslator + engine + seluruh kamus Jepang (~190 KB) TIDAK lagi diimpor statis:
+// dimuat lewat import() hanya saat pengguna memakai mode Jepang. Pengguna Indonesia tidak
+// mengunduh / mengurai kamus itu sama sekali.
+let translatorPromise = null;
+const loadTranslator = () => {
+  if (!translatorPromise) {
+    translatorPromise = Promise.all([import('./domTranslator'), import('./nameRegistry')])
+      .catch((error) => { translatorPromise = null; throw error; }); // gagal muat -> boleh dicoba lagi
+  }
+  return translatorPromise;
+};
 
 const readStoredLang = () => {
   try {
@@ -41,10 +50,21 @@ export default function I18nProvider({ children }) {
   // data dari server, tanggal, dan nama orang -> katakana) diterjemahkan oleh domTranslator.
   // Mode Indonesia: teks asli dipulihkan persis seperti sebelumnya.
   useEffect(() => {
-    if (lang !== 'ja') { stopDomTranslator(); return undefined; }
-    try { registerName(localStorage.getItem('user_name') || ''); } catch { /* abaikan */ }
-    startDomTranslator();
-    return () => stopDomTranslator();
+    if (lang !== 'ja') return undefined; // mode Indonesia: tidak ada yang dimuat / dijalankan
+    let cancelled = false;
+    let started = null;
+    loadTranslator()
+      .then(([dom, registry]) => {
+        if (cancelled) return;
+        try { registry.registerName(localStorage.getItem('user_name') || ''); } catch { /* abaikan */ }
+        dom.startDomTranslator();
+        started = dom;
+      })
+      .catch(() => { /* gagal memuat kamus: UI tetap Indonesia, tidak merusak aplikasi */ });
+    return () => {
+      cancelled = true;
+      if (started) started.stopDomTranslator(); // pulihkan teks Indonesia persis
+    };
   }, [lang]);
 
   const setLang = useCallback((next) => {

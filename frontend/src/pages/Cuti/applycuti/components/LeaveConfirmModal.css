@@ -75,6 +75,21 @@
   border-radius: var(--radius-md, 10px);
 }
 
+.leaveConfirmModal__coverWarn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dk-text-amber, #92400e);
+  background: var(--dk-tint-amber, #fffbeb);
+  border: 1px solid var(--dk-border-amber, #fcd34d);
+  border-radius: var(--radius-md, 10px);
+}
+.leaveConfirmModal__coverWarn ul { margin: 0; padding-left: 18px; }
+
 .leaveConfirmModal__section {
   margin-bottom: 16px;
 }

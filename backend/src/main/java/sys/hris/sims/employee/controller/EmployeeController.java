@@ -146,8 +146,8 @@ public class EmployeeController {
         return ResponseEntity.ok(response);
     }
 
-    // Daftar rekan aktif dengan divisi dan jenjang yang sama untuk pilihan
-    // "Dicover Oleh" pada form pengajuan cuti.
+    // [UBAH] Daftar karyawan aktif satu divisi (semua jenjang, tanpa pemohon sendiri)
+    // untuk pilihan "Dicover Oleh" pada form pengajuan cuti.
     @GetMapping("/cover-options")
     public ResponseEntity<List<Map<String, Object>>> getCoverOptions(
             @RequestParam(required = false) Long employeeId,
@@ -165,9 +165,8 @@ public class EmployeeController {
             hiddenAccountPolicy.requireVisible(divisionSource, authentication.getName()); // [BARU]
         }
 
-        String role = divisionSource.getUser().getRoleId().getRoleName();
         Long divisionId = divisionSource.getDivisi() == null ? null : divisionSource.getDivisi().getId();
-        List<Map<String, Object>> response = karyawanService.getCoverOptions(role, divisionId).stream()
+        List<Map<String, Object>> response = karyawanService.getCoverOptions(divisionId, divisionSource.getEmployeeId()).stream()
                 .map(employee -> Map.<String, Object>of(
                         "employeeId", employee.getEmployeeId(),
                         "fullName", employee.getFullName(),

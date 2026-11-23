@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { changeMyPassword, getMyProfile, updateMyProfile } from '../../../services/profileService';
 import { validatePhotoFile } from '../../../utils/fileValidation';
-import { validateRequired } from '../../../utils/validation';
-import { FIELD_CONFIG } from '../config/profileFieldConfig';
+import { validateRequired, isValidPhoneNumber } from '../../../utils/validation'; // [UBAH] + isValidPhoneNumber
+import { FIELD_CONFIG, EMERGENCY_CONTACT_KEY } from '../config/profileFieldConfig'; // [UBAH] + EMERGENCY_CONTACT_KEY
+
+// [BARU] Field nomor telepon yang wajib berisi nomor sungguhan (bukan "-").
+const PHONE_FIELD_KEYS = ['nomorTelepon', EMERGENCY_CONTACT_KEY];
 
 // [BARU] Cek apakah field boleh diedit oleh role tertentu -- logikanya sama
 // persis dengan isFieldEditable() di ProfilePageBase.jsx. Dipakai di
@@ -78,7 +81,11 @@ export const useProfileForm = (currentUserRole, mockData) => {
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   const openEdit = () => {
-    setDraftData(formData);
+    // [UBAH] Backend mengirim "-" untuk nomor yang belum diisi. Di form edit "-" dikosongkan
+    // agar user melihat kolom kosong + pesan "perlu diisi", bukan tanda "-" yang lolos validasi.
+    const initialDraft = { ...formData };
+    PHONE_FIELD_KEYS.forEach((key) => { if (String(initialDraft[key] ?? '').trim() === '-') initialDraft[key] = ''; });
+    setDraftData(initialDraft);
     setPasswordData({ kataSandiLama: '', kataSandiBaru: '', ulangiSandiBaru: '' });
     setPasswordError('');
     setPasswordErrorField('');
@@ -208,6 +215,19 @@ export const useProfileForm = (currentUserRole, mockData) => {
     if (!isValid) {
       setFieldErrors(requiredErrors);
       setFormError(firstErrorMessage);
+      return;
+    }
+
+    // [BARU] Nomor telepon harus berupa nomor yang valid (8-15 digit), tidak cukup hanya "tidak kosong".
+    const phoneErrors = {};
+    PHONE_FIELD_KEYS.forEach((key) => {
+      if (isValidPhoneNumber(draftData[key])) return;
+      const label = FIELD_CONFIG.find((cfg) => cfg.key === key)?.label ?? key;
+      phoneErrors[key] = `${label} tidak valid. Isi dengan 8-15 digit angka.`;
+    });
+    if (Object.keys(phoneErrors).length > 0) {
+      setFieldErrors(phoneErrors);
+      setFormError(Object.values(phoneErrors)[0]);
       return;
     }
     setFieldErrors({});

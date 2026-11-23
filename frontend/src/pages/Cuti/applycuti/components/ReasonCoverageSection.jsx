@@ -1,7 +1,8 @@
 import React from 'react';
 import './LeaveForm.css';
 import { inputErrorClass } from '../../../../utils/validation';
-import Dropdown from '../../../../components/Dropdown';
+import SearchSelect from '../../../../components/SearchSelect'; // [UBAH] Dropdown -> SearchSelect (ketik nama langsung)
+import { buildCoverDropdownOptions } from '../../../../constants/leaveCover'; // [BARU] opsi "-" + rekan satu divisi
 
 /**
  * Bagian: ALASAN/KETERANGAN, PEKERJAAN TERTUNDA, DICOVER OLEH (BACKUP PIC)
@@ -28,13 +29,12 @@ const ReasonCoverageSection = ({
 
       <div className="form-group form-group--cover">
         <label className="form-label">DICOVER OLEH*</label>
-        <Dropdown
+        <SearchSelect
           name="coveredBy"
           value={coveredBy}
           onChange={(event) => setCoveredBy(event.target.value)}
-          options={coverOptions.map((person) => ({ value: person.fullName, label: person.fullName }))}
-          placeholder="Cari nama rekan satu divisi dan jenjang..."
-          searchable
+          options={buildCoverDropdownOptions(coverOptions)} // [UBAH] + pilihan "-" (tanpa cover)
+          placeholder="Cari nama rekan satu divisi atau pilih -"
           required
           className={invalidField === 'coveredBy' ? 'dropdown--invalid' : ''}
           ariaLabel="Pilih karyawan yang meng-cover pekerjaan"
