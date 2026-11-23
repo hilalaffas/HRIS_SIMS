@@ -242,7 +242,23 @@ public class DevLeaveDataService {
 
         if (total.compareTo(annualRemaining) >= 0) {
             BigDecimal oldBalance = total.subtract(annualRemaining);
-            applyAdjustment(employee, null, oldBalance, null);
+            BigDecimal currentTarget = null;
+            // [BARU] Urutan pemotongan: cuti berjalan dulu, Sisa Cuti Lama hanya menutup kekurangannya. Jadi sisa
+            // tahun berjalan TIDAK dibiarkan minus selama Sisa Cuti Lama masih ada: defisit ditutup dari Sisa Cuti
+            // Lama (total tidak berubah). Batas: nilai terbesar yang bisa diterapkan adjustCurrentYear
+            // (annualUsedOutsideSystem tidak boleh negatif).
+            if (eligible && annualRemaining.signum() < 0 && oldBalance.signum() > 0) {
+                BigDecimal usedOutside = balance.getAnnualUsedOutsideSystem() == null
+                        ? BigDecimal.ZERO
+                        : balance.getAnnualUsedOutsideSystem();
+                BigDecimal shift = annualRemaining.negate().min(oldBalance).min(usedOutside);
+                if (shift.signum() > 0) {
+                    annualRemaining = annualRemaining.add(shift);
+                    oldBalance = oldBalance.subtract(shift);
+                    currentTarget = annualRemaining;
+                }
+            }
+            applyAdjustment(employee, null, oldBalance, currentTarget);
             return "total " + total.toPlainString() + " = sisa lama " + oldBalance.toPlainString()
                     + " + sisa tahun berjalan " + annualRemaining.toPlainString();
         }

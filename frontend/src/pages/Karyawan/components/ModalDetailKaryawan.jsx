@@ -483,7 +483,7 @@ const ModalDetailKaryawan = ({ isOpen = true, onClose, employeeData, currentUser
                     : `${(Number(formData.annualLeaveBalance) || 0) + (Number(formData.manualLeaveBalance) || 0)} hari`
                 }
                 disabled
-                title="Sisa Cuti Tahunan + sisa Sisa Cuti (lama) yang belum terpakai. Saat karyawan mengajukan cuti, Sisa Cuti (lama) dipotong lebih dulu."
+                title="Sisa Cuti Tahunan + sisa Sisa Cuti (lama) yang belum terpakai. Saat karyawan mengajukan cuti, Sisa Cuti Tahunan (berjalan) dipotong lebih dulu; Sisa Cuti (lama) baru terpotong setelah cuti berjalan habis."
               />
             </div>
             <p style={{ fontSize: '12px', color: 'var(--dk-text-2, #374151)', background: 'var(--dk-bg-muted, #f3f4f6)', padding: '8px 12px', borderRadius: '6px', margin: '8px 0 0' }}>
