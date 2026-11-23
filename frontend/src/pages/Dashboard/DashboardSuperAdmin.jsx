@@ -141,6 +141,7 @@ export default function DashboardSuperAdmin({ user }) {
           monthLeaves={teamLeavesThisMonth}
           dayLeaves={selectedDate.teamLeaveList || []}
           dayLabel={formatSelectedDayLabel(selectedDate)}
+          showTodayAttendance // [BARU] tab Absen Hari Ini (sakit / terlambat / belum absen)
         />
       </div>
 
