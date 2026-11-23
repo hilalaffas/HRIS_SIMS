@@ -1139,7 +1139,7 @@ export const exact = {
 "sisa cuti setelah pengajuan (hari)": "申請後の休暇残日数（日）",
 "sisa cuti tahunan": "年次有給休暇の残日数",
 "sisa cuti tahunan *": "年次有給休暇の残日数 *",
-"sisa cuti tahunan + sisa sisa cuti (lama) yang belum terpakai. saat karyawan mengajukan cuti, sisa cuti (lama) dipotong lebih dulu.": "年次有給休暇の残日数に、未使用の休暇残日数（旧）を加えた合計です。従業員が休暇を申請すると、休暇残日数（旧）から先に差し引かれます。",
+"sisa cuti tahunan + sisa sisa cuti (lama) yang belum terpakai. saat karyawan mengajukan cuti, sisa cuti tahunan (berjalan) dipotong lebih dulu; sisa cuti (lama) baru terpotong setelah cuti berjalan habis.": "年次有給休暇の残日数に、未使用の休暇残日数（旧）を加えた合計です。従業員が休暇を申請すると、まず年次有給休暇（当期）の残日数から差し引かれ、当期分を使い切った後に休暇残日数（旧）から差し引かれます。",
 "sisa tahun berjalan": "当年の残り",
 "sisipkan gambar": "画像を挿入",
 "sisipkan tautan": "リンクを挿入",

@@ -303,8 +303,8 @@ public class LeaveService {
         cuti.setReviewNote("Auto approve oleh " + getAdminRoleLabel(hrActor));
         cuti.setApprovedAt(LocalDateTime.now());
 
-        // Cuti urgent langsung APPROVED, jadi saldo Cuti Lama dipotong
-        // sekarang dan porsinya disimpan di leave_requests.
+        // Cuti urgent langsung APPROVED, jadi pemotongan saldo (cuti berjalan dulu,
+        // baru Cuti Lama) dilakukan sekarang dan porsi lamanya disimpan di leave_requests.
         allocateManualLeaveOnApproval(cuti);
 
         // [UBAH] Tidak ada lagi baris leave_request_approvals untuk Cuti
@@ -528,6 +528,8 @@ public class LeaveService {
      * 4. Porsi manual yang dipakai setiap pengajuan disimpan di
      *    leave_requests.manual_leave_days. Dengan begitu riwayat yang sudah
      *    terjadi tidak perlu ditebak ulang dari saldo manual saat ini.
+     * 5. [BARU] Saat cuti disetujui, Sisa Cuti BERJALAN dipotong lebih dulu; Sisa Cuti
+     *    LAMA baru terpotong setelah sisa cuti berjalan habis (LeaveQuotaAllocator).
      */
     private LeaveBalanceResponse getLeaveBalance(Employee employee) {
         // [UBAH] Pemuatan data dipisah dari perhitungan supaya getAllLeaveBalances()
@@ -552,33 +554,11 @@ public class LeaveService {
 
         // Hanya histori APPROVED yang memang memotong kuota tahunan yang
         // dipakai untuk menghitung pemakaian tahunan dan defisit.
-        List<LeaveRequest> relevantApprovedLeaves = employeeLeaves.stream()
-                .filter(cuti -> ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
-                .filter(cuti -> Boolean.TRUE.equals(cuti.getLeaveType().getDeductsAnnualQuota()))
-                // [BARU] Riwayat hasil import ledger tidak ikut menghitung saldo (lihat V56).
-                .filter(cuti -> !Boolean.TRUE.equals(cuti.getImportedHistory()))
-                .sorted(Comparator.comparing(LeaveRequest::getStartDate)
-                        .thenComparing(
-                                LeaveRequest::getSubmittedAt,
-                                Comparator.nullsLast(Comparator.naturalOrder())))
-                .toList();
+        List<LeaveRequest> relevantApprovedLeaves = filterRelevantApprovedLeaves(employeeLeaves);
 
         // Porsi yang benar-benar dibebankan ke Cuti Tahunan:
         // totalDays - manualLeaveDays.
-        Map<Long, BigDecimal> annualPortionByRequestId = relevantApprovedLeaves.stream()
-                .collect(Collectors.toMap(
-                        LeaveRequest::getLeaveRequestId,
-                        cuti -> {
-                            BigDecimal totalDays = cuti.getTotalDays() == null
-                                    ? BigDecimal.ZERO
-                                    : cuti.getTotalDays();
-                            BigDecimal manualDays = cuti.getManualLeaveDays() == null
-                                    ? BigDecimal.ZERO
-                                    : cuti.getManualLeaveDays();
-                            return totalDays.subtract(manualDays).max(BigDecimal.ZERO);
-                        },
-                        (existing, replacement) -> existing
-                ));
+        Map<Long, BigDecimal> annualPortionByRequestId = buildAnnualPortionMap(relevantApprovedLeaves);
 
         if (belumBerhakCutiTahunan) {
             return LeaveBalanceResponse.builder()
@@ -644,6 +624,77 @@ public class LeaveService {
                 .build();
     }
 
+    // [BARU] Dipisah dari buildLeaveBalance() supaya aturan yang SAMA dipakai juga untuk menghitung
+    // sisa cuti berjalan saat alokasi pemotongan (annualRemainingForPeriodOf).
+    private List<LeaveRequest> filterRelevantApprovedLeaves(List<LeaveRequest> employeeLeaves) {
+        return employeeLeaves.stream()
+                .filter(cuti -> ACTION_APPROVED.equalsIgnoreCase(cuti.getStatus().getStatusName()))
+                .filter(cuti -> Boolean.TRUE.equals(cuti.getLeaveType().getDeductsAnnualQuota()))
+                // [BARU] Riwayat hasil import ledger tidak ikut menghitung saldo (lihat V56).
+                .filter(cuti -> !Boolean.TRUE.equals(cuti.getImportedHistory()))
+                .sorted(Comparator.comparing(LeaveRequest::getStartDate)
+                        .thenComparing(
+                                LeaveRequest::getSubmittedAt,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+    }
+
+    private Map<Long, BigDecimal> buildAnnualPortionMap(List<LeaveRequest> approvedLeaves) {
+        return approvedLeaves.stream()
+                .collect(Collectors.toMap(
+                        LeaveRequest::getLeaveRequestId,
+                        cuti -> {
+                            BigDecimal totalDays = cuti.getTotalDays() == null
+                                    ? BigDecimal.ZERO
+                                    : cuti.getTotalDays();
+                            BigDecimal manualDays = cuti.getManualLeaveDays() == null
+                                    ? BigDecimal.ZERO
+                                    : cuti.getManualLeaveDays();
+                            return totalDays.subtract(manualDays).max(BigDecimal.ZERO);
+                        },
+                        (existing, replacement) -> existing
+                ));
+    }
+
+    /**
+     * [BARU] Sisa cuti BERJALAN (kuota periode anniversary + defisit periode lalu - pemakaian periode)
+     * untuk periode yang memuat referenceDate. Rumus sama dengan buildLeaveBalance(). Cuti dengan id
+     * excludeLeaveId tidak dihitung sebagai terpakai (dipakai saat cuti itu sendiri sedang dialokasikan).
+     * Mengembalikan 0 bila karyawan belum berhak cuti tahunan pada tanggal tersebut. Boleh negatif (defisit).
+     */
+    private BigDecimal annualRemainingForPeriodOf(Employee employee, LocalDate referenceDate, Long excludeLeaveId) {
+        LocalDate joinDate = employee.getJoinDate();
+        if (joinDate == null || referenceDate == null || joinDate.plusYears(1).isAfter(referenceDate)) {
+            return BigDecimal.ZERO;
+        }
+        LeaveType annualLeave = leaveTypeRepository.findByNameIgnoreCase("Cuti tahunan").orElse(null);
+        List<LeaveRequest> approvedLeaves = filterRelevantApprovedLeaves(
+                getCutiByKaryawan(employee.getEmployeeId()).stream()
+                        .filter(cuti -> excludeLeaveId == null || !excludeLeaveId.equals(cuti.getLeaveRequestId()))
+                        .toList());
+        Map<Long, BigDecimal> annualPortionByRequestId = buildAnnualPortionMap(approvedLeaves);
+
+        long fullYears = ChronoUnit.YEARS.between(joinDate, referenceDate);
+        LocalDate periodStart = joinDate.plusYears(fullYears);
+        LocalDate periodEnd = periodStart.plusYears(1);
+
+        BigDecimal annualQuota = calculateCarryAdjustedAnnualQuota(
+                BigDecimal.valueOf(getAnnualQuota(employee, annualLeave)),
+                joinDate,
+                periodStart,
+                approvedLeaves,
+                annualPortionByRequestId,
+                employee);
+
+        BigDecimal used = approvedLeaves.stream()
+                .filter(cuti -> !cuti.getStartDate().isBefore(periodStart)
+                        && cuti.getStartDate().isBefore(periodEnd))
+                .map(cuti -> annualPortionByRequestId.getOrDefault(cuti.getLeaveRequestId(), BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .add(getAnnualUsedOutsideSystem(employee, periodStart));
+        return annualQuota.subtract(used);
+    }
+
     /**
      * Menghitung kuota pembuka periode berjalan dengan carry-over DEFISIT.
      *
@@ -703,10 +754,12 @@ public class LeaveService {
     }
 
     /**
-     * Saat sebuah pengajuan benar-benar menjadi APPROVED, potong Sisa Cuti
-     * (manual) terlebih dahulu. Porsi manual yang terpakai disimpan pada
-     * leave_requests agar histori tetap konsisten walaupun saldo manual
-     * kemudian diedit HR.
+     * [UBAH] Saat sebuah pengajuan benar-benar menjadi APPROVED, potong Sisa Cuti BERJALAN
+     * (kuota periode anniversary cuti itu) terlebih dahulu. Sisa Cuti LAMA (manual) baru terpotong
+     * setelah sisa cuti berjalan habis (hanya kelebihannya). Porsi lama yang terpakai disimpan pada
+     * leave_requests.manual_leave_days agar histori tetap konsisten walaupun saldo lama kemudian
+     * diedit HR. Porsi berjalan = totalDays - manual_leave_days (dihitung otomatis di getLeaveBalance).
+     * Aturan pembagiannya ada di LeaveQuotaAllocator.
      */
     private void allocateManualLeaveOnApproval(LeaveRequest cuti) {
         // Lindungi dari pemotongan ganda jika method terpanggil lebih dari sekali
@@ -732,9 +785,11 @@ public class LeaveService {
                 ? BigDecimal.ZERO
                 : employee.getManualLeaveBalance();
 
-        BigDecimal manualUsed = manualBalance
-                .min(totalDays)
-                .max(BigDecimal.ZERO);
+        // [BARU] Sisa cuti berjalan pada periode yang memuat tanggal mulai cuti (cuti ini belum dihitung).
+        BigDecimal currentRemaining = annualRemainingForPeriodOf(
+                employee, cuti.getStartDate(), cuti.getLeaveRequestId());
+
+        BigDecimal manualUsed = LeaveQuotaAllocator.manualPortion(totalDays, currentRemaining, manualBalance);
 
         employee.setManualLeaveBalance(manualBalance.subtract(manualUsed));
         karyawanRepository.save(employee);
@@ -941,8 +996,8 @@ public class LeaveService {
                 cuti.setTotalDays(recalculatedTotalDays);
             }
 
-            // Semua tahap sudah ACC: baru pada titik ini saldo Cuti Lama
-            // benar-benar dipotong. Pengajuan PENDING/RETURNED/REJECTED
+            // Semua tahap sudah ACC: baru pada titik ini saldo benar-benar
+            // dipotong (cuti berjalan dulu, Cuti Lama hanya kelebihannya). Pengajuan PENDING/RETURNED/REJECTED
             // tidak menyentuh saldo.
             allocateManualLeaveOnApproval(cuti);
             cuti.setStatus(getStatus(ACTION_APPROVED));
@@ -1549,8 +1604,14 @@ public class LeaveService {
                 .orElseThrow(() -> new RuntimeException("Karyawan pemohon tidak ditemukan"));
         BigDecimal oldManual = nonNullDays(leave.getManualLeaveDays());
         BigDecimal balance = nonNullDays(employee.getManualLeaveBalance());
+        // [BARU] Sisa cuti berjalan hanya dibutuhkan saat total BERTAMBAH (tambahan diambil dari cuti
+        // berjalan dulu, baru dari saldo lama). Cuti ini sudah dihitung terpakai di angka tersebut.
+        BigDecimal annualRoom = newTotal.compareTo(oldTotal) > 0
+                ? annualRemainingForPeriodOf(employee, leave.getStartDate(), null)
+                : BigDecimal.ZERO;
 
-        ManualLeaveRebalancer.Result result = ManualLeaveRebalancer.rebalance(oldTotal, newTotal, oldManual, balance);
+        ManualLeaveRebalancer.Result result = ManualLeaveRebalancer.rebalance(
+                oldTotal, newTotal, oldManual, balance, annualRoom);
         if (result.manualLeaveDays().compareTo(oldManual) == 0) {
             return;
         }
