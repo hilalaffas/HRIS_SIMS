@@ -46,6 +46,16 @@ public class ProfileController {
     @PutMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
     public ResponseEntity<?> updateMyProfile(@ModelAttribute UpdateProfileRequest request, Authentication authentication) {
+        // [BARU] Enforcement di backend: bila nomor telepon ikut dikirim, harus nomor valid
+        // (tidak boleh kosong / "-"). Dicek PALING AWAL sebelum ada data yang diubah.
+        // Request tanpa field ini (mis. ganti foto saja) tetap lolos karena nilainya null.
+        if (request.getPhoneNumber() != null && !isValidPhone(request.getPhoneNumber())) {
+            return ResponseEntity.badRequest().body("Nomor telepon tidak valid. Isi dengan 8-15 digit angka.");
+        }
+        if (request.getEmergencyContactPhone() != null && !isValidPhone(request.getEmergencyContactPhone())) {
+            return ResponseEntity.badRequest().body("Nomor telepon darurat wajib diisi dengan nomor valid (8-15 digit angka).");
+        }
+
         User user = currentUser(authentication);
         if (hasText(request.getEmail())) user.setEmail(request.getEmail().trim());
 
@@ -122,6 +132,14 @@ public class ProfileController {
         if (photo.startsWith("http://") || photo.startsWith("https://")) return photo; //   sudah URL Cloudinary penuh
         String normalised = photo.replace('\\', '/');
         return "/" + (normalised.startsWith("uploads/") ? normalised : "uploads/photos/" + Paths.get    (normalised).getFileName());
+    }
+
+    // [BARU] Angka/spasi/-/() dengan + opsional di depan; 8-15 digit; maks 20 karakter (kolom VARCHAR(20)).
+    private boolean isValidPhone(String value) {
+        String text = value.trim();
+        if (text.length() > 20 || !text.matches("^\\+?[0-9\\s\\-()]+$")) return false;
+        int digitCount = text.replaceAll("\\D", "").length();
+        return digitCount >= 8 && digitCount <= 15;
     }
 
     private String nullToDash(String value) { return hasText(value) ? value : "-"; }

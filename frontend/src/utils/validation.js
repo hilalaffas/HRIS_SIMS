@@ -24,6 +24,19 @@ export const isEmpty = (value) => {
 };
 
 /**
+ * [BARU] Mengecek apakah sebuah nilai layak disebut nomor telepon: hanya boleh
+ * berisi angka, spasi, "-", "(", ")" dengan "+" opsional di depan; jumlah digit
+ * 8-15 dan panjang total maksimal 20 karakter (sesuai kolom VARCHAR(20) di DB).
+ * Nilai pengganti seperti "-" atau "0" TIDAK dianggap valid.
+ */
+export const isValidPhoneNumber = (value) => {
+  const text = String(value ?? '').trim();
+  if (text.length > 20 || !/^\+?[\d\s\-()]+$/.test(text)) return false;
+  const digitCount = text.replace(/\D/g, '').length;
+  return digitCount >= 8 && digitCount <= 15;
+};
+
+/**
  * Menjalankan sekumpulan aturan "wajib diisi" terhadap field-field form.
  *
  * @param {Array<{ field: string, label: string, value: any, verb?: string }>} rules

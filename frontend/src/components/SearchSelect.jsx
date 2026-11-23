@@ -157,6 +157,9 @@ const SearchSelect = ({
   };
 
   const showValueText = !open && selectedOption;
+  // [BARU] Placeholder hanya tampil bila belum ada pilihan. Saat menu tertutup dan ada nama terpilih,
+  // nama itu sudah digambar oleh <span searchselect__value>; placeholder dikosongkan agar tidak bertumpuk.
+  const inputPlaceholder = selectedOption ? (open ? selectedOption.label : '') : placeholder;
 
   return (
     <div
@@ -176,7 +179,7 @@ const SearchSelect = ({
           onFocus={openMenu}
           onClick={() => { if (!open) openMenu(); }}
           onKeyDown={handleKeyDown}
-          placeholder={open && selectedOption ? selectedOption.label : placeholder}
+          placeholder={inputPlaceholder} /* [UBAH] sebelumnya: open && selectedOption ? selectedOption.label : placeholder */
           disabled={disabled}
           autoComplete="off"
           spellCheck={false}
