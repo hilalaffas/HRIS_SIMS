@@ -180,15 +180,16 @@
   color: #ffffff;
 }
 .approvalCard__job {
+  /* [UBAH] Teks biasa: border/background/padding dihapus agar tidak tampak seperti tombol. */
   display: flex;
   align-items: center;
   margin: 0;
-  padding: 8px 12px;
+  padding: 0;
   font-size: 13px;
   color: var(--dk-text, #334155);
-  background: var(--dk-bg-card, #ffffff);
-  border: 1px solid var(--dk-border-amber, #fde7b0);
-  border-radius: 10px;
+  background: none;
+  border: 0;
+  border-radius: 0;
 }
 
 /* ----- Timeline (Diajukan -> level approval, jumlah langkah dinamis) ----- */

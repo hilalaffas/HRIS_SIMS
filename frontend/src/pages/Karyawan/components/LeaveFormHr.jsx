@@ -7,6 +7,8 @@ import LeaveConfirmModal from '../../Cuti/applycuti/components/LeaveConfirmModal
 import { getLeaveTypes, getCoverOptions, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
 import { getAllHolidays } from '../../../services/holidayService';
 import { validateRequired, inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
+import SearchSelect from '../../../components/SearchSelect'; // [BARU] ketik nama langsung
+import { buildCoverDropdownOptions } from '../../../constants/leaveCover'; // [BARU] opsi "-" + rekan satu divisi
 
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const toDateKey = (year, month, day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -207,7 +209,8 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       try {
         const covers = await getCoverOptions(formData.karyawanId);
         if (isCancelled) return;
-        setCoverOptions(covers || []);
+        // [UBAH] Karyawan yang diajukan tidak ikut jadi pilihan cover (backend juga menyaring).
+        setCoverOptions((covers || []).filter((person) => String(person.employeeId) !== String(formData.karyawanId)));
       } catch (error) {
         if (isCancelled) return;
         console.error('Gagal memuat daftar rekan cover untuk karyawan ini:', error);
@@ -382,6 +385,8 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       reason: formData.alasan,
       pendingWork: formData.pekerjaanTertunda,
       coveredBy: formData.dicoverOleh,
+      // [BARU] Dipakai LeaveConfirmModal untuk peringatan jika cover juga sedang cuti di tanggal ini.
+      coverEmployeeId: coverOptions.find((person) => person.fullName === formData.dicoverOleh)?.employeeId ?? null,
     };
 
     setPendingSubmission({ payload, summary });
@@ -600,13 +605,12 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
 
         <div className="form-group_leaveFormHr">
           <label>DICOVER OLEH *</label>
-          <Dropdown
+          <SearchSelect
             name="dicoverOleh"
             value={formData.dicoverOleh}
             onChange={handleInputChange}
-            options={coverOptions.map((person) => ({ value: person.fullName, label: person.fullName }))}
-            placeholder="Cari nama rekan satu divisi dan jenjang..."
-            searchable
+            options={buildCoverDropdownOptions(coverOptions)}
+            placeholder="Cari nama rekan satu divisi atau pilih -"
             required
             className={dropdownErrorClass(errors.dicoverOleh)}
             ariaLabel="Pilih karyawan yang meng-cover pekerjaan"

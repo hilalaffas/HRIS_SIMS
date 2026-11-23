@@ -291,7 +291,8 @@ export default function useLeaveApplication(user, { notify = (message) => window
         MANAGER: (manager || []).filter(person => Number(person.employeeId) !== Number(user?.employeeId)),
         HRD: hrdList || [],
       });
-      setCoverOptions(covers || []);
+      // [UBAH] Pemohon sendiri tidak boleh muncul di daftar cover (backend juga sudah menyaring).
+      setCoverOptions((covers || []).filter(person => Number(person.employeeId) !== Number(user?.employeeId)));
       setCoverageReminders(coverageDuties || []);
       // [UBAH] Sebelumnya ada koreksi "legacyHalfDayCorrection" di sini untuk
       // menambal Cuti setengah hari yang totalDays mentahnya masih 1 (bukan
@@ -553,6 +554,8 @@ export default function useLeaveApplication(user, { notify = (message) => window
       reason,
       pendingWork,
       coveredBy,
+      // [BARU] Dipakai LeaveConfirmModal untuk peringatan jika cover juga sedang cuti di tanggal ini.
+      coverEmployeeId: coverOptions.find(person => person.fullName === coveredBy)?.employeeId ?? null,
     };
 
     setPendingSubmission({ payload, summary, resubmitId: editingId });

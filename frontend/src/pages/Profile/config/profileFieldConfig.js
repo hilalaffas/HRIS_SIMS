@@ -46,7 +46,9 @@ export const FIELD_CONFIG = [
   { key: 'alamatLengkap', label: 'Alamat Lengkap', textarea: true, column: 'kiri', section: 'umum', fullWidth: true },
   { key: 'email', label: 'Alamat Email', column: 'kanan', section: 'kontak' },
   { key: 'divisi', label: 'Divisi / Departemen', lockedFor: LOCKED_FOR_ALL_ROLES, column: 'kanan', section: 'kontak' },
-  { key: 'nomorTelepon', label: 'Nomor Telepon Pribadi', column: 'kanan', section: 'kontak' },
+  // [UBAH] required:true -- Nomor Telepon Pribadi sekarang wajib diisi (sama seperti Nomor Telepon Darurat & Hubungan).
+  // Validasi di handleSave (useProfileForm.js) membaca flag ini, jadi tidak perlu ubah logic lain.
+  { key: 'nomorTelepon', label: 'Nomor Telepon Pribadi', required: true, column: 'kanan', section: 'kontak' },
   { key: EMERGENCY_CONTACT_KEY, label: 'Nomor Telepon Darurat', required: true, column: 'kanan', section: 'kontak' },
   {
     key: EMERGENCY_RELATION_KEY,

@@ -1370,20 +1370,24 @@ public class LeaveService {
         return employee;
     }
 
+    // [UBAH] "-" = tanpa cover (diizinkan). Selain itu cover harus karyawan aktif satu divisi
+    // dengan pemohon (semua jenjang) dan bukan pemohon sendiri.
     private void validateCoveredBy(String coveredBy, Employee requester) {
         if (coveredBy == null || coveredBy.isBlank()) {
-            throw new RuntimeException("Dicover oleh wajib dipilih");
+            throw new RuntimeException("Dicover oleh wajib dipilih (pilih \"-\" bila tidak ada cover)");
         }
-        String requesterRole = normalizeApproverRole(requester.getUser().getRoleId().getRoleName());
-        boolean validCover = karyawanRepository.findByFullNameContainingIgnoreCase(coveredBy.trim()).stream()
+        String coverName = coveredBy.trim();
+        if ("-".equals(coverName)) {
+            return;
+        }
+        boolean validCover = karyawanRepository.findByFullNameContainingIgnoreCase(coverName).stream()
                 .filter(employee -> Boolean.TRUE.equals(employee.getIsActive()))
-                .filter(employee -> employee.getFullName().equalsIgnoreCase(coveredBy.trim()))
-                .filter(employee -> employee.getDivisi() != null && requester.getDivisi() != null
-                        && employee.getDivisi().getId().equals(requester.getDivisi().getId()))
-                .anyMatch(employee -> requesterRole.equals(normalizeApproverRole(
-                        employee.getUser().getRoleId().getRoleName())));
+                .filter(employee -> employee.getFullName().equalsIgnoreCase(coverName))
+                .filter(employee -> !employee.getEmployeeId().equals(requester.getEmployeeId()))
+                .anyMatch(employee -> employee.getDivisi() != null && requester.getDivisi() != null
+                        && employee.getDivisi().getId().equals(requester.getDivisi().getId()));
         if (!validCover) {
-            throw new RuntimeException("Dicover oleh harus karyawan aktif dengan jenjang dan divisi yang sama");
+            throw new RuntimeException("Dicover oleh harus karyawan aktif dari divisi yang sama dan bukan pemohon sendiri");
         }
     }
 

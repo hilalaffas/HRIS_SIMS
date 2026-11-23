@@ -44,13 +44,21 @@ public class EmployeeService {
                 .toList();
     }
 
-    public List<Employee> getCoverOptions(String role, Long divisiId) {
+    // [UBAH] Pilihan "Dicover Oleh": sekarang SEMUA karyawan aktif satu divisi (semua jenjang),
+    // bukan lagi hanya yang satu jenjang. Pemohon sendiri (excludeEmployeeId) tidak ikut.
+    public List<Employee> getCoverOptions(Long divisiId, Long excludeEmployeeId) {
         if (divisiId == null) {
             throw new RuntimeException("Divisi pemohon belum ditentukan");
         }
-        return getApproversByRole(role).stream()
-                .filter(employee -> employee.getDivisi() != null)
-                .filter(employee -> divisiId.equals(employee.getDivisi().getId()))
+        return karyawanRepository.findAllWithRelations().stream()
+                .filter(employee -> Boolean.TRUE.equals(employee.getIsActive()))
+                .filter(employee -> employee.getUser() != null && employee.getUser().getRoleId() != null)
+                .filter(employee -> employee.getDivisi() != null && divisiId.equals(employee.getDivisi().getId()))
+                .filter(employee -> excludeEmployeeId == null || !excludeEmployeeId.equals(employee.getEmployeeId()))
+                .filter(employee -> !reportScopeService.isExcludedFromReports(employee))
+                .sorted(java.util.Comparator.comparing(
+                        (Employee employee) -> employee.getFullName() == null ? "" : employee.getFullName(),
+                        String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }
 

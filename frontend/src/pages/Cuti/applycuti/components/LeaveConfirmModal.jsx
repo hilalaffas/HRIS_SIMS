@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import './LeaveConfirmModal.css';
+import useCoverLeaveConflicts from '../hooks/useCoverLeaveConflicts';
 
 /**
  * LeaveConfirmModal.jsx
@@ -27,6 +28,8 @@ import './LeaveConfirmModal.css';
  *  - title / confirmLabel / notice: (opsional) menimpa judul, label tombol
  *      konfirmasi, dan menambah kotak info di atas rincian. Dipakai form
  *      Cuti Susulan HR; form karyawan cukup memakai default.
+ *  - summary.coverEmployeeId (opsional): employeeId rekan "Dicover Oleh". Bila rekan itu
+ *      juga punya cuti di tanggal yang sama, popup menampilkan PERINGATAN (tidak memblokir kirim).
  *  - isSubmitting: boolean -> mengunci tombol & menutup popup selama proses.
  *  - onConfirm / onCancel: () => void
  * ------------------------------------------------------------------
@@ -60,6 +63,14 @@ const LeaveConfirmModal = ({
   onConfirm,
   onCancel,
 }) => {
+  // [BARU] Peringatan (bukan blokir): cover juga cuti di tanggal pengajuan.
+  const coverConflicts = useCoverLeaveConflicts({
+    enabled: isOpen,
+    coverEmployeeId: summary?.coverEmployeeId,
+    startDate: summary?.startDate,
+    endDate: summary?.endDate,
+  });
+
   // Tombol Esc = Batal (dikunci selama proses kirim berjalan).
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -124,6 +135,21 @@ const LeaveConfirmModal = ({
 
         <div className="leaveConfirmModal__body">
           {notice && <p className="leaveConfirmModal__notice">{notice}</p>}
+          {coverConflicts.length > 0 && (
+            <div className="leaveConfirmModal__coverWarn" role="alert">
+              <strong>Peringatan: {summary.coveredBy} juga mengajukan cuti di tanggal ini.</strong>
+              <ul>
+                {coverConflicts.map((item) => (
+                  <li key={item.id}>
+                    {item.leaveType}: {formatDateLong(item.startDate)}
+                    {item.endDate !== item.startDate ? ` - ${formatDateLong(item.endDate)}` : ''}
+                    {item.status ? ` (${item.status})` : ''}
+                  </li>
+                ))}
+              </ul>
+              <span>Anda tetap dapat mengirim pengajuan, atau batal untuk memilih cover lain.</span>
+            </div>
+          )}
           {sections.map((section) => (
             <section key={section.title} className="leaveConfirmModal__section">
               <h4 className="leaveConfirmModal__sectionTitle">{section.title}</h4>
