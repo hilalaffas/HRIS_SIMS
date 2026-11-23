@@ -113,6 +113,23 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
                                    @Param("startDate") LocalDate startDate,
                                    @Param("endDate") LocalDate endDate);
 
+    // [BARU] Ringkasan absensi HARI INI (Dashboard HRD / Super Admin): catatan absensi bertanggal hari ini
+    // + pengajuan sakit yang masih mencakup hari ini, semua karyawan dalam SATU query. Yang DITOLAK
+    // diabaikan. Pembatasan akhir (SickPeriod.covers) dilakukan di AttendanceTodayService.
+    @Query("""
+            select a from Attendance a
+            join fetch a.employee e
+            left join fetch e.divisi
+            where a.approvalStatus <> 'REJECTED'
+              and (a.attendanceDate = :today
+                   or (a.reason = 'SAKIT' and a.sickStartDate <= :today and a.sickEndDate >= :today)
+                   or (a.reason = 'SAKIT' and a.sickEndDate is null
+                       and a.attendanceDate between :lookbackStart and :today))
+            order by a.recordedAt asc
+            """)
+    List<Attendance> findForTodayStatus(@Param("today") LocalDate today,
+                                        @Param("lookbackStart") LocalDate lookbackStart);
+
     // [BARU] Hapus absen biasa (reason ABSEN) satu karyawan pada rentang tanggal --
     // dipakai saat cuti DISETUJUI (lihat LeaveAttendancePolicy.reconcileOnApproval).
     // Catatan Sakit / Izin terlambat TIDAK ikut terhapus.

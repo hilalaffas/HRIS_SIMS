@@ -26,6 +26,14 @@ export async function getMyLeaveToday(config = {}) {
   return api.get('/api/absensi/me/leave-today', config);
 }
 
+// [BARU] Ringkasan absensi HARI INI untuk Dashboard HRD / Super Admin (tab "Absensi Hari Ini").
+// Hasil: { date, generatedAt, sick: [], late: [], notCheckedIn: [] } -- tiap item:
+// { employeeId, employeeName, divisionName, checkInAt, workStart, sickStart, sickEnd,
+//   approvalStatus, lateNotice }. Tanggal/jam berupa string ISO tanpa zona (waktu server WIB).
+export async function getTodayAttendanceSummary() {
+  return api.get('/api/absensi/today-summary');
+}
+
 export async function getMyWorkSchedule(year, month) {
   const previous = new Date(year, month - 2, 1);
   const queryForMonth = (targetYear, targetMonth) => {

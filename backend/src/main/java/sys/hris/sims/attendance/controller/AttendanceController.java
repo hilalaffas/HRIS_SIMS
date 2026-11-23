@@ -27,11 +27,13 @@ import sys.hris.sims.activity_logs.service.ActivityLogService;
 import sys.hris.sims.attendance.dto.AttendanceReportResponse;
 import sys.hris.sims.attendance.dto.AttendanceResponse;
 import sys.hris.sims.attendance.dto.AttendanceSubmitRequest;
+import sys.hris.sims.attendance.dto.AttendanceTodayResponse; // [BARU]
 import sys.hris.sims.attendance.dto.LeaveTodayResponse;
 import sys.hris.sims.attendance.dto.LocationNameResponse;
 import sys.hris.sims.attendance.dto.PermissionSubmitRequest;
 import sys.hris.sims.attendance.service.AttendanceReportService;
 import sys.hris.sims.attendance.service.AttendanceService;
+import sys.hris.sims.attendance.service.AttendanceTodayService; // [BARU]
 import sys.hris.sims.attendance.service.ReverseGeocodingService;
 import sys.hris.sims.attendance.dto.MedicalDocumentDecisionRequest;
 import sys.hris.sims.user.entity.User;
@@ -50,6 +52,7 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
     // [BARU] Laporan Absensi (HRD)
     private final AttendanceReportService attendanceReportService;
+    private final AttendanceTodayService attendanceTodayService; // [BARU] ringkasan absensi hari ini (Dashboard HRD / Super Admin)
     private final ActivityLogService activityLogService;
     private final UserRepository userRepository;
     // [BARU] Nama lokasi dari koordinat (popup absen Dashboard).
@@ -205,6 +208,14 @@ public class AttendanceController {
                 "Surat dokter " + response.getDocumentReviewStatus() + ": "
                         + response.getDocumentUrl() + "; " + (response.getDocumentReviewNote() == null ? "" : response.getDocumentReviewNote()), httpRequest);
         return ResponseEntity.ok(response);
+    }
+
+    // [BARU] Ringkasan absensi HARI INI: karyawan sakit, terlambat, dan belum absen.
+    // Hanya HRD_ADMIN & SUPER_ADMIN (dibatasi di SecurityConfig). Sengaja tidak masuk activity log
+    // karena dipanggil berkala oleh Dashboard.
+    @GetMapping("/today-summary")
+    public ResponseEntity<AttendanceTodayResponse> getTodaySummary() {
+        return ResponseEntity.ok(attendanceTodayService.buildToday());
     }
 
     @GetMapping

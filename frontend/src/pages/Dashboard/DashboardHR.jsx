@@ -191,6 +191,7 @@ export default function DashboardHR({ user }) {
             monthLeaves={teamLeavesThisMonth}
             dayLeaves={selectedDate.teamLeaveList || []}
             dayLabel={formatSelectedDayLabel(selectedDate)}
+            showTodayAttendance // [BARU] tab Absen Hari Ini (sakit / terlambat / belum absen)
           />
         ) : (
           <HolidayListPanel

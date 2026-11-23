@@ -285,6 +285,8 @@ export async function getTeamLeaveByYear(year, config = {}) {
           jenisCuti: item.leaveType?.name || 'Cuti',
           status: statusLabel(rawStatus),
           statusCode: statusCode(rawStatus),
+          startDate: cleanStart, // [BARU] rentang cuti utuh, supaya tab tanggal juga bisa menampilkan tanggal cuti
+          endDate: cleanEnd, // [BARU]
         });
       }
     });
