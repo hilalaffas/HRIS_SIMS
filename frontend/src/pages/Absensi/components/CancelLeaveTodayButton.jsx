@@ -21,9 +21,10 @@ export default function CancelLeaveTodayButton({ leave, className = '', onCancel
     } catch (e) { setConfirmOpen(false); setError(e?.message || 'Gagal membatalkan cuti.'); }
     finally { lock.current=false; setBusy(false); }
   };
-  return <span>
+  // [UBAH] class cancel-leave-today-control + label dibungkus span (responsif)
+  return <span className="cancel-leave-today-control">
     <button type="button" className={className} disabled={busy} onClick={() => { setError(''); setConfirmOpen(true); }}>
-      <CalendarX size={15} aria-hidden="true" />{busy ? 'Membatalkan...' : 'Batal Cuti Hari Ini'}
+      <CalendarX size={15} aria-hidden="true" /><span className="abs-portal-button__label">{busy ? 'Membatalkan...' : 'Batal Cuti Hari Ini'}</span>
     </button>
     {error && <small role="alert" style={{display:'block',color:'var(--color-danger)',maxWidth:280}}>{error}</small>}
     {confirmOpen && createPortal(
