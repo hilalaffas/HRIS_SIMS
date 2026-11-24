@@ -68,3 +68,12 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
           # JWT_SECRET sengaja tidak diisi: JwtService sudah punya nilai default untuk non-production.
+      - name: Set up JDK 25            # DITAMBAHKAN
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build & verify           # DIUBAH: ./mvnw -> mvn
+        run: mvn -B -ntp verify
