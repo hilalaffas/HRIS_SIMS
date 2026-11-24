@@ -35,19 +35,11 @@ jobs:
     defaults:
       run:
         working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 25
-          cache: maven
-      # -DskipTests ada di Dockerfile; tes dijalankan di sini.
-      # Bila SimsApplicationTests butuh database, tambahkan service postgres atau exclude test itu.
-      - run: ./mvnw -B -ntp verify
+
+    # Database untuk SimsApplicationTests (@SpringBootTest + Flyway butuh PostgreSQL asli).
     services:
       postgres:
-        image: postgres:18
+        image: postgres:17
         env:
           POSTGRES_DB: sims_test
           POSTGRES_USER: postgres
@@ -59,12 +51,20 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      - name: Build with Maven
-        working-directory: backend
-        run: mvn -B clean verify
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+      # -DskipTests ada di Dockerfile; tes dijalankan di sini.
+      - name: Build & test backend
+        run: ./mvnw -B -ntp verify
         env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/sims_test
-          SPRING_DATASOURCE_USERNAME: postgres
-          SPRING_DATASOURCE_PASSWORD: postgres
-          JWT_SECRET: +U+YCtZwc1LVxj4+V2dg8UgNoOa6TUkA93PKGNomkN0=
-          JWT_EXPIRATION: "86400000"
+          # Nama variabel mengikuti application.properties (${DATABASE_URL}, dst).
+          DATABASE_URL: jdbc:postgresql://localhost:5432/sims_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          # JWT_SECRET sengaja tidak diisi: JwtService sudah punya nilai default untuk non-production.
