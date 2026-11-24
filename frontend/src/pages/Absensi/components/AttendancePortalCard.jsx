@@ -50,7 +50,10 @@ export default function AttendancePortalCard({
           disabled={!statusConfig.action || isLoading || (shiftContext && (!shiftContext.endsAt || (statusConfig.action === 'Masuk' && !shiftContext.canCheckIn)))}
         >
           <MainIcon aria-hidden="true" />
-          {shiftContext && (!shiftContext.endsAt || (statusConfig.action === 'Masuk' && !shiftContext.canCheckIn)) ? shiftContext.blockedLabel : statusConfig.buttonLabel}
+          {/* [UBAH] label dibungkus span agar teks bisa wrap di layar sempit */}
+          <span className="abs-portal-button__label">
+            {shiftContext && (!shiftContext.endsAt || (statusConfig.action === 'Masuk' && !shiftContext.canCheckIn)) ? shiftContext.blockedLabel : statusConfig.buttonLabel}
+          </span>
         </button>
         <button
           type="button"
@@ -59,7 +62,7 @@ export default function AttendancePortalCard({
           disabled={disablePermission || isLoading}
         >
           <FilePenLine aria-hidden="true" />
-          Ajukan Izin / Sakit
+          <span className="abs-portal-button__label">Ajukan Izin / Sakit</span>
         </button>
       </div>
     </section>

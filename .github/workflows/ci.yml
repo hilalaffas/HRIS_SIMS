@@ -45,3 +45,26 @@ jobs:
       # -DskipTests ada di Dockerfile; tes dijalankan di sini.
       # Bila SimsApplicationTests butuh database, tambahkan service postgres atau exclude test itu.
       - run: ./mvnw -B -ntp verify
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: sims_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      - name: Build with Maven
+        working-directory: backend
+        run: mvn -B clean verify
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/sims_test
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
+          JWT_SECRET: +U+YCtZwc1LVxj4+V2dg8UgNoOa6TUkA93PKGNomkN0=
+          JWT_EXPIRATION: "86400000"
