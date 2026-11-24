@@ -12,6 +12,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DropdownPortalContext } from '../../../components/DropdownPortalContext'; // [BARU]
+import ReloadButton from '../../../components/ReloadButton'; // [BARU] tombol Muat Ulang
 import Toast from '../../../components/Toast';
 import { getAllDivisi } from '../../../services/divisiService';
 import { downloadCsv } from '../../../utils/csvExport';
@@ -234,6 +235,7 @@ export default function AttendanceReportTab() {
         exportingKind={exportingKind}
         isExportDisabled={isLoading || filteredReports.length === 0} // [UBAH] mengikuti hasil filter
         onExport={(kind) => runExport(kind, filteredReports, scopeLabel)} // [UBAH] sebelumnya `reports`
+        reloadAction={<ReloadButton className="reloadBtn--lg" onReload={reload} isLoading={isLoading} />} // [BARU]
       />
 
       <ReportStatCards totals={totals} isLoading={isLoading} />

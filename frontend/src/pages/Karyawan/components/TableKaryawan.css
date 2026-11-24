@@ -73,7 +73,7 @@
 .karyawan-table th {
   background-color: var(--dk-bg-subtle, #f7fafc);
   text-align: left;
-  padding: 12px 20px;
+  padding: 10px 16px; /* [UBAH] sebelumnya 12px 20px (lebih rapat supaya lebih banyak baris terlihat) */
   font-size: 12px;
   color: var(--dk-text-3, #718096);
   font-weight: 700;
@@ -81,7 +81,7 @@
 }
 
 .karyawan-table td {
-  padding: 16px 20px;
+  padding: 8px 16px; /* [UBAH] sebelumnya 16px 20px */
   border-bottom: 1px solid var(--dk-border-soft, #edf2f7);
   vertical-align: middle;
 }
@@ -93,8 +93,8 @@
 }
 
 .avatar-img {
-  width: 40px;
-  height: 40px;
+  width: 34px; /* [UBAH] sebelumnya 40px */
+  height: 34px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--dk-border, #e2e8f0);
@@ -103,7 +103,7 @@
 .emp-name, .emp-position {
   font-weight: 600;
   color: var(--dk-text, #2d3748);
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0; /* [UBAH] sebelumnya 4px */
   font-size: 14px;
 }
 

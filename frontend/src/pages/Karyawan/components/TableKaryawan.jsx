@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
 import { DropdownPortalContext } from '../../../components/DropdownPortalContext';
 import Skeleton from '../../../components/Skeleton'; // [BARU]
+import ReloadButton from '../../../components/ReloadButton'; // [BARU] tombol Muat Ulang
 import './TableKaryawan.css';
 import { compareByNik } from '../../../utils/sortByNik'; // [BARU] urut NIK
 
@@ -24,7 +25,8 @@ const JABATAN_FILTER_OPTIONS = [
   { value: 'HRD_Karyawan', label: 'HR Karyawan' },
 ];
 
-const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isLoading = false }) => {
+// [UBAH] + onReload: dipanggil tombol Muat Ulang (boleh mengembalikan Promise); tombol tidak tampil bila tidak diisi.
+const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isLoading = false, onReload = null }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterJabatan, setFilterJabatan] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -93,6 +95,8 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
             (tabel pendek) -- sebelumnya menu "rusak" terpotong di bawah header tabel. */}
         <DropdownPortalContext.Provider value>
           <div className="filters">
+            {/* [BARU] Tombol Muat Ulang data karyawan */}
+            {onReload && <ReloadButton onReload={onReload} />}
             {/* 3. Dropdown Filter Dinamis */}
             <Dropdown
               className="filter-select"
@@ -150,7 +154,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
                 <tr key={`skeleton-${i}`} aria-hidden="true">
                   <td>
                     <div className="employee-info">
-                      <Skeleton variant="circle" size={40} />
+                      <Skeleton variant="circle" size={34} /> {/* [UBAH] 40 -> 34, sama dengan avatar */}
                       <div style={{ flex: 1 }}>
                         <Skeleton width="70%" height={13} style={{ marginBottom: 6 }} />
                         <Skeleton width="45%" height={11} />

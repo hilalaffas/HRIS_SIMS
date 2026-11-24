@@ -11,32 +11,3 @@
 .lgs-loading,
 .lgs-error { margin: 0; padding: 16px 0; font-size: 13px; text-align: center; color: var(--color-text-secondary); }
 .lgs-error { color: var(--dk-text-red, var(--color-danger)); }
-
-/* [BARU] Tombol "Muat Ulang" di header kartu log (sebelah tombol Unduh) */
-.lgs-reload-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--dk-text-green, var(--color-primary));
-  background: var(--color-success-bg);
-  border: 1px solid var(--color-success-border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: transform var(--motion-fast, 150ms) ease, box-shadow var(--motion-fast, 150ms) ease;
-}
-.lgs-reload-btn svg { width: 16px; height: 16px; }
-.lgs-reload-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-md); }
-.lgs-reload-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
-.lgs-reload-btn:disabled { opacity: 0.7; cursor: progress; }
-.lgs-reload-btn:focus-visible { outline: 2px solid var(--color-primary-soft); outline-offset: 2px; }
-.lgs-reload-btn--loading svg { animation: lgsReloadSpin 800ms linear infinite; }
-
-@keyframes lgsReloadSpin { to { transform: rotate(360deg); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .lgs-reload-btn--loading svg { animation-duration: 2s; }
-}

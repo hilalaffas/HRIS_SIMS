@@ -22,6 +22,9 @@
   --outlet-pad: var(--space-3, 0.75rem);
   --tabbar-h: 2.25rem;
   --table-max-h: max(18rem, calc(100vh - 17rem));
+  /* [BARU] Tinggi maksimum tabel yang diperlebar (Ringkasan Cuti & Direktori Karyawan): lebih banyak baris
+     terlihat sekaligus. Scroll vertikal & horizontal tetap ada di dalam wadah. */
+  --table-max-h-tall: max(24rem, calc(100vh - 11rem));
 }
 @media (min-width: 768px) { .content-outlet { --outlet-pad: var(--space-4, 1rem); } }
 @media (min-width: 1024px) { .content-outlet { --outlet-pad: var(--space-5, 1.25rem); } }
@@ -59,13 +62,20 @@
 .content-outlet :is(
   .apv-table-wrap,        /* components/ApprovalTable (Persetujuan) */
   .lpr-table-scroll,      /* Laporan Absen */
-  .leaveSummary__scroll,  /* Laporan > Ringkasan Cuti */
   .lmb-table-wrap,        /* Riwayat Lembur */
   .pgj-history__scroll,   /* Riwayat Pengajuan */
-  .table-scroll-wrapper,  /* Direktori Karyawan */
   .abs-table-wrap         /* Absensi */
 ) {
   max-height: var(--table-max-h);
+  overflow: auto;
+}
+
+/* [BARU] Tabel yang diperlebar: sama dengan di atas, tetapi lebih tinggi (--table-max-h-tall). */
+.content-outlet :is(
+  .leaveSummary__scroll,  /* Laporan > Ringkasan Cuti */
+  .table-scroll-wrapper   /* Direktori Karyawan */
+) {
+  max-height: var(--table-max-h-tall);
   overflow: auto;
 }
 

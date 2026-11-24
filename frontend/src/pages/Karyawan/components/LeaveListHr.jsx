@@ -5,6 +5,7 @@ import Dropdown from '../../../components/Dropdown'; // [BARU] pilihan jumlah da
 import { SORT_DIRECTION, sortRows, toDateTimestamp } from '../../../utils/tableSort';
 import Skeleton from '../../../components/Skeleton'; // [BARU] loading skeleton
 import SkeletonGroup from '../../../components/SkeletonGroup'; // [BARU]
+import ReloadButton from '../../../components/ReloadButton'; // [BARU] tombol Muat Ulang
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "Semua Status" },
@@ -89,7 +90,7 @@ const LeaveListSkeleton = () => (
 );
 
 // [UBAH] + isLoading: true selama data pertama belum selesai dimuat (lihat Karyawan.jsx).
-const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUserRole, onRevokeLeave, isLoading = false }) => {
+const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUserRole, onRevokeLeave, isLoading = false, onReload = null }) => { // [UBAH] + onReload
   const [statusFilter, setStatusFilter] = useState("ALL");
   // [BARU] Pencarian nama, filter rentang tanggal (YYYY-MM-DD), dan pagination
   const [searchTerm, setSearchTerm] = useState("");
@@ -264,6 +265,8 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
               Reset
             </button>
           )}
+          {/* [BARU] Tombol Muat Ulang riwayat cuti */}
+          {onReload && <ReloadButton onReload={onReload} />}
         </div>
       </div>
 

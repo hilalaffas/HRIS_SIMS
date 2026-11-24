@@ -16,13 +16,28 @@ const ACTIVITY_FILTER_OPTIONS = [
   { value: 'all', label: 'Semua aktivitas' },
   { value: 'login', label: 'Login berhasil' },
   { value: 'loginFailed', label: 'Login gagal' },
+  { value: 'leave', label: 'Aktivitas cuti' }, // [BARU]
+  { value: 'sick', label: 'Aktivitas sakit & izin' }, // [BARU]
 ];
 
 const FAILED_LOGIN_ACTIONS = ['LOGIN_FAILED', 'LOGIN_BLOCKED', 'ACCOUNT_LOCKED'];
 
+// [BARU] Kode aksi cuti, sakit & izin yang dicatat backend (LeaveController & AttendanceController).
+// Kode baru yang berkaitan dengan cuti/sakit cukup ditambahkan ke daftar ini.
+const LEAVE_ACTIONS = [
+  'CREATE_CUTI', 'CREATE_URGENT_CUTI', 'RESUBMIT_CUTI', 'APPROVE_CUTI',
+  'REJECT_CUTI', 'RETURN_CUTI', 'DELETE_CUTI', 'CANCEL_LEAVE_TODAY',
+];
+const SICK_ACTIONS = [
+  'SUBMIT_IZIN', 'UPLOAD_SURAT_DOKTER', 'REVIEW_SURAT_DOKTER',
+  'APPROVE_SAKIT', 'REJECT_SAKIT', 'APPROVE_IZIN_TERLAMBAT', 'REJECT_IZIN_TERLAMBAT',
+];
+
 const matchesActivityFilter = (log, filter) => {
   if (filter === 'login') return log.action === 'LOGIN';
   if (filter === 'loginFailed') return FAILED_LOGIN_ACTIONS.includes(log.action);
+  if (filter === 'leave') return LEAVE_ACTIONS.includes(log.action); // [BARU]
+  if (filter === 'sick') return SICK_ACTIONS.includes(log.action); // [BARU]
   return true;
 };
 
