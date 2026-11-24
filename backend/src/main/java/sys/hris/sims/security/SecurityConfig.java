@@ -236,6 +236,17 @@ public class SecurityConfig {
                                 "/api/cuti/me/approval-updates")
                         .authenticated()
 
+                        // [BARU/FIX] Reminder "Dicover Oleh" (CoverageReminderBanner.jsx) --
+                        // sama seperti /api/cuti/me/approval-updates di atas, ini juga
+                        // diakses oleh KARYAWAN biasa (bukan cuma approver), jadi HARUS
+                        // authenticated() biasa dan ditaruh SEBELUM catch-all
+                        // "/api/cuti/**" di bawah (yang membatasi hanya ADMIN/LEADER/
+                        // SPV/MANAGER) supaya role Member/karyawan tidak ke-block 403
+                        // saat memuat form Ajukan Cuti.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/cuti/me/covering")
+                        .authenticated()
+
                         // Detail berkas milik pemohon harus dapat dibuka oleh role MEMBER/KARYAWAN.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/cuti/*/detail")

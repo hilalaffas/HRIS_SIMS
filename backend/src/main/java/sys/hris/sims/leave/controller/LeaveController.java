@@ -22,6 +22,7 @@ import sys.hris.sims.employee.repository.EmployeeRepository;
 import sys.hris.sims.leave.dto.LeaveActionRequest;
 import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
+import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.service.LeaveService;
@@ -65,6 +66,17 @@ public class LeaveController {
     @GetMapping("/me/approval-updates")
     public ResponseEntity<List<LeaveStepNotificationResponse>> getMyApprovalStepUpdates(Authentication authentication) {
         return ResponseEntity.ok(cutiService.getMyApprovalStepUpdates(authentication.getName()));
+    }
+
+    // [BARU] GET reminder "Dicover Oleh" milik user yang sedang login --
+    // dipakai form Ajukan Cuti (ApplyCuti.jsx) untuk menampilkan warning
+    // kalau user ini sudah dicantumkan sebagai cover pada pengajuan cuti
+    // rekan lain yang masih berjalan (PENDING/APPROVED). Tidak dicatat ke
+    // activity log karena ikut di-poll bersamaan dengan load() form (bukan
+    // aksi eksplisit user).
+    @GetMapping("/me/covering")
+    public ResponseEntity<List<LeaveCoverageReminderResponse>> getMyCoverageReminders(Authentication authentication) {
+        return ResponseEntity.ok(cutiService.getMyCoverageReminders(authentication.getName()));
     }
 
     // GET semua cuti

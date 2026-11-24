@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getApprovers, getCoverOptions, getLeaveBalance, getLeaveTypes, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../services/CutiService';
+import { getApprovers, getCoverOptions, getLeaveBalance, getLeaveTypes, getMyCoverageReminders, getMyLeaveDetail, getRiwayatByUser, mapApproval, resubmitCuti, submitCuti } from '../../../services/CutiService';
 import CutiSummaryCards from '../../Dashboard/components/CutiSummaryCards';
 import LeaveForm from './components/LeaveForm';
 import { hariLiburNasional, hitungBatasMinTanggal } from '../../../utils/dateUtils'; // sesuaikan path file Anda
@@ -134,6 +134,12 @@ const ApplyCuti = ({ user }) => {
   const [types, setTypes] = useState([]);
   const [approvers, setApprovers] = useState({ LEADER: [], SPV: [], MANAGER: [] });
   const [coverOptions, setCoverOptions] = useState([]);
+  // [BARU] Reminder "Dicover Oleh": pengajuan cuti rekan lain (PENDING/
+  // APPROVED) yang mencantumkan user ini sebagai cover. Diteruskan ke
+  // <LeaveForm> -> LeaveTypeDateSection.jsx, yang menampilkan warning di
+  // bawah DARI/SAMPAI TANGGAL kalau tanggalnya bentrok dengan cuti rekan
+  // yang statusnya sudah DISETUJUI.
+  const [coverageReminders, setCoverageReminders] = useState([]);
   // [UBAH] Sekarang nyimpen objek balance lengkap (bukan cuma angka
   // remainingAnnualLeave) supaya CutiSummaryCards bisa nampilin Total.
   const [balance, setBalance] = useState(null);
@@ -224,13 +230,14 @@ const ApplyCuti = ({ user }) => {
 
   const load = useCallback(async () => {
     try {
-      const [leaveTypes, leader, spv, manager, covers, leaveBalance, records, holidays] = await Promise.all([
+      const [leaveTypes, leader, spv, manager, covers, leaveBalance, records, holidays, coverageDuties] = await Promise.all([
         getLeaveTypes(), getApprovers('LEADER'), getApprovers('SPV'), getApprovers('MANAGER'), getCoverOptions(), getLeaveBalance(), getRiwayatByUser(),
-        getAllHolidays(),
+        getAllHolidays(), getMyCoverageReminders(),
       ]);
       setTypes(leaveTypes); setJenisCuti(current => current || leaveTypes[0]?.name || '');
       setApprovers({ LEADER: leader, SPV: spv, MANAGER: manager });
       setCoverOptions(covers || []);
+      setCoverageReminders(coverageDuties || []);
       // [UBAH] Sebelumnya ada koreksi "legacyHalfDayCorrection" di sini untuk
       // menambal Cuti setengah hari yang totalDays mentahnya masih 1 (bukan
       // 0.5). Akar masalahnya sudah dibetulkan di backend (LeaveService.java
@@ -647,6 +654,11 @@ const ApplyCuti = ({ user }) => {
     <div className="applycuti-summary-wrapper">
       <CutiSummaryCards balance={balance} />
     </div>
+    {/* [UBAH] Sebelumnya ada banner umum "Dicover Oleh" di sini (di atas
+        formulir). Sekarang reminder-nya dipindah ke dalam form, tepat di
+        bawah DARI/SAMPAI TANGGAL -- cuma muncul saat tanggal yang dipilih
+        user BENTROK dengan cuti rekan lain yang statusnya sudah DISETUJUI
+        (lihat prop coverageReminders di <LeaveForm> & LeaveTypeDateSection.jsx). */}
     {/* [UBAH] Sebelumnya kotak inline (.empty-history-box) di atas formulir --
         posisinya bisa "tenggelam" kalau formulir panjang, dan user harus
         scroll ke atas untuk sadar ada kesalahan. Sekarang jadi popup
@@ -665,7 +677,7 @@ const ApplyCuti = ({ user }) => {
     <LeaveForm {...{ jenisCuti, setJenisCuti, durasiSesi, setDurasiSesi, startDate, setStartDate, endDate, setEndDate,
       reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
       pendingWork, setPendingWork, coveredBy, setCoveredBy, coverOptions, handleSubmit, isSubmitting, todayStr, jumlahHariCuti, isEditing: Boolean(editingId), onCancelEdit: cancelEdit, invalidField }}
-      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
+      leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} coverageReminders={coverageReminders} canApplyCuti />
     <LeaveHistory riwayatCuti={history} filterStatus={filterStatus} setFilterStatus={setFilterStatus} handleOpenDetail={handleOpenDetail} handleEditKembali={handleEditKembali} lastSyncedAt={historySyncedAt} />
     {selectedDetail && (
   <FormCuti
@@ -682,7 +694,7 @@ const ApplyCuti = ({ user }) => {
         reason, setReason, leaderEmployeeId, setLeaderEmployeeId, spvEmployeeId, setSpvEmployeeId, managerEmployeeId, setManagerEmployeeId, dinamisBatasMinStr,
         pendingWork, setPendingWork, coveredBy, setCoveredBy, coverOptions, handleSubmit: handleModalEditSubmit, isSubmitting, todayStr, jumlahHariCuti,
         isEditing: true, onCancelEdit: handleCancelModalEdit, hideHeader: true, invalidField }}
-        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} canApplyCuti />
+        leaveTypes={types} approvers={approvers} isSupervisor={atasan} isFemale={isFemale} holidayDates={holidayDates} bookedDates={bookedDates} coverageReminders={coverageReminders} canApplyCuti />
     ) : null}
   />
 )}

@@ -93,6 +93,9 @@ const LeaveTypeDateSection = ({
   bookedDates,
   isFemale = false,
   invalidField = '',
+  // [BARU] Reminder "Dicover Oleh": dipakai untuk warning kontekstual di
+  // bawah DARI/SAMPAI TANGGAL (lihat coveringApprovedConflicts di bawah).
+  coverageReminders = [],
 }) => {
   const safeHolidayDates = holidayDates instanceof Set ? holidayDates : new Set();
   const safeBookedDates = bookedDates instanceof Set ? bookedDates : new Set();
@@ -193,6 +196,24 @@ const LeaveTypeDateSection = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // [BARU] Cek apakah tanggal DARI/SAMPAI yang sedang dipilih user bentrok
+  // dengan pengajuan cuti REKAN LAIN yang mencantumkan user ini sebagai
+  // "Dicover Oleh" DAN pengajuan itu statusnya sudah DISETUJUI (APPROVED).
+  // Sengaja hanya APPROVED (bukan PENDING) -- reminder ini baru relevan
+  // ditampilkan sebagai warning tegas kalau kewajiban cover-nya sudah pasti,
+  // bukan masih menunggu persetujuan atasan. Dipakai untuk warning
+  // kontekstual tepat di bawah DARI/SAMPAI TANGGAL (lihat render di bawah).
+  const coveringApprovedConflicts = (() => {
+    if (!startDate || !endDate || !Array.isArray(coverageReminders) || coverageReminders.length === 0) return [];
+    return coverageReminders.filter((item) => {
+      if (String(item?.status).toUpperCase() !== 'APPROVED') return false;
+      const itemStart = String(item?.startDate || '').split('T')[0];
+      const itemEnd = String(item?.endDate || '').split('T')[0];
+      if (!itemStart || !itemEnd) return false;
+      return startDate <= itemEnd && endDate >= itemStart;
+    });
+  })();
 
   const handleSelectDate = (item, setDateState, setShowCalendar, minDateStr = null, maxDateStr = null) => {
     const selectedStr = `${item.year}-${String(item.month + 1).padStart(2, '0')}-${String(item.day).padStart(2, '0')}`;
@@ -305,6 +326,21 @@ const LeaveTypeDateSection = ({
           })()}
         </div>
       </div>
+
+      {/* [BARU] Warning "Dicover Oleh": muncul persis di bawah DARI/SAMPAI
+          TANGGAL kalau rentang yang dipilih bentrok dengan cuti rekan lain
+          yang sudah DISETUJUI dan mencantumkan user ini sebagai cover. */}
+      {coveringApprovedConflicts.length > 0 && (
+        <div className="duration-info-alert duration-info-alert--warning">
+          {coveringApprovedConflicts.map((item) => (
+            <div key={item.leaveRequestId}>
+              Tanggal ini bentrok dengan cuti <strong>{item.employeeName}</strong> ({item.leaveType}, {' '}
+              {String(item.startDate).split('T')[0]} - {String(item.endDate).split('T')[0]}) yang sudah{' '}
+              <strong>disetujui</strong> -- Anda tercantum sebagai &quot;Dicover Oleh&quot; untuk cuti tersebut.
+            </div>
+          ))}
+        </div>
+      )}
 
       {isMelahirkan && (
         <div className="duration-info-alert" style={{ marginTop: '-6px' }}>

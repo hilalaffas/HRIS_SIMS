@@ -24,6 +24,7 @@ import sys.hris.sims.holiday.repository.HolidayRepository;
 import sys.hris.sims.leave.dto.LeaveApprovalLogResponse;
 import sys.hris.sims.leave.dto.LeaveApprovalResponse;
 import sys.hris.sims.leave.dto.LeaveBalanceResponse;
+import sys.hris.sims.leave.dto.LeaveCoverageReminderResponse;
 import sys.hris.sims.leave.dto.LeaveStepNotificationResponse;
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.entity.LeaveRequestApproval;
@@ -119,6 +120,33 @@ public class LeaveService {
                         approval.getLeaveRequest().getStartDate(),
                         approval.getLeaveRequest().getEndDate(),
                         approval.getActedAt()))
+                .toList();
+    }
+
+    // [BARU] Reminder "Dicover Oleh" untuk user yang sedang login: daftar
+    // pengajuan cuti REKAN LAIN (PENDING/APPROVED) yang mencantumkan nama
+    // user ini di kolom "Dicover Oleh". Dipakai form Ajukan Cuti
+    // (ApplyCuti.jsx) supaya karyawan diingatkan bahwa dirinya sudah
+    // punya tanggung jawab cover sebelum mengajukan cutinya sendiri --
+    // terutama kalau tanggalnya bertabrakan. Hanya rentang tanggal yang
+    // belum lewat (endDate >= hari ini) yang disertakan, supaya reminder
+    // tidak menumpuk dengan kewajiban cover yang sudah selesai.
+    public List<LeaveCoverageReminderResponse> getMyCoverageReminders(String username) {
+        Employee me = getEmployeeByUsername(username);
+        LocalDate today = LocalDate.now();
+
+        return cutiRepository
+                .findByCoveredByIgnoreCaseAndStatus_StatusNameIn(me.getFullName(), List.of(ACTION_PENDING, ACTION_APPROVED))
+                .stream()
+                .filter(cuti -> !cuti.getEndDate().isBefore(today))
+                .sorted(Comparator.comparing(LeaveRequest::getStartDate))
+                .map(cuti -> new LeaveCoverageReminderResponse(
+                        cuti.getLeaveRequestId(),
+                        cuti.getEmployee() != null ? cuti.getEmployee().getFullName() : "-",
+                        cuti.getLeaveType() != null ? cuti.getLeaveType().getName() : "Cuti",
+                        cuti.getStartDate(),
+                        cuti.getEndDate(),
+                        cuti.getStatus().getStatusName()))
                 .toList();
     }
 

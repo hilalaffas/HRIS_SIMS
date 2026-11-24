@@ -22,6 +22,11 @@ const LeaveForm = ({
   jumlahHariCuti = 0,
   holidayDates,
   bookedDates,
+  // [BARU] Reminder "Dicover Oleh": daftar pengajuan cuti rekan lain yang
+  // mencantumkan user ini sebagai cover -- diteruskan ke
+  // LeaveTypeDateSection supaya bisa dicek bentrok dengan startDate/endDate
+  // yang sedang diisi di form ini.
+  coverageReminders = [],
   canApplyCuti,
   todayStr,
   leaveTypes = [],
@@ -68,6 +73,7 @@ const LeaveForm = ({
           bookedDates={bookedDates}
           isFemale={isFemale}
           invalidField={invalidField}
+          coverageReminders={coverageReminders}
         />
 
         <ApprovalFlowSection

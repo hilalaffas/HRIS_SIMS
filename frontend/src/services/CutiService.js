@@ -211,6 +211,12 @@ export const getMyLeaveDetail = (id) => api.get(`/api/cuti/${id}/detail`);
 // (selalu silent, ini murni polling badge notifikasi). Lihat services/api.js.
 export const getMyApprovalUpdates = (config = {}) => api.get('/api/cuti/me/approval-updates', config);
 
+// [BARU] Reminder "Dicover Oleh": daftar pengajuan cuti REKAN LAIN
+// (PENDING/APPROVED) yang mencantumkan user yang sedang login sebagai
+// "Dicover Oleh". Dipakai ApplyCuti.jsx untuk menampilkan warning di form
+// pengajuan cuti supaya user sadar sudah punya tanggung jawab cover.
+export const getMyCoverageReminders = (config = {}) => api.get('/api/cuti/me/covering', config);
+
 // [UBAH] Tambah parameter config opsional ({ silent }) -- dipakai
 // CalendarCard.jsx (widget kalender Dashboard, polling tiap 30 detik selalu
 // silent). Lihat services/api.js.

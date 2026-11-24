@@ -15,4 +15,10 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
 
     //Overlap Cuti
     List<LeaveRequest> findByEmployee_EmployeeIdAndStatus_StatusNameIn(Long employeeId, List<String> statusNames);
+
+    // [BARU] Reminder "Dicover Oleh": cari pengajuan cuti ORANG LAIN yang
+    // mencantumkan nama karyawan tertentu di kolom coveredBy (dicocokkan
+    // case-insensitive karena coveredBy tersimpan sebagai nama bebas, bukan
+    // relasi FK -- lihat LeaveRequest.coveredBy & validateCoveredBy()).
+    List<LeaveRequest> findByCoveredByIgnoreCaseAndStatus_StatusNameIn(String coveredBy, List<String> statusNames);
 }
