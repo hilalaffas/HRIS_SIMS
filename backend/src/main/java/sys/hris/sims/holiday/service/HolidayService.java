@@ -36,6 +36,8 @@ public class HolidayService {
     private final ActivityLogService activityLogService; // [BARU] catat perubahan total hari cuti
     private final RestTemplate restTemplate = createRestTemplate();
 
+    // Refnusa serves SKB national holidays and joint leave without an API key.
+    private static final String REFNUSA_API = "https://refnusa.dev/v1/holidays?year=%d";
     // [UBAH] Host primary diperbaiki: "api-harilibur" (tanpa tanda hubung antara "hari" dan "libur").
     // Responsnya array JSON langsung dengan field holiday_date / holiday_name.
     private static final String PRIMARY_API = "https://api-harilibur.vercel.app/api?year=%d";
@@ -123,7 +125,7 @@ public class HolidayService {
         TreeSet<LocalDate> changedDates = new TreeSet<>(); // [BARU] tanggal libur yang baru/berubah
 
         if (external.isEmpty()) {
-            log.warn("Sync libur nasional {}: kedua API eksternal tidak mengembalikan data", year); // [BARU]
+            log.warn("Sync libur nasional {}: semua API eksternal tidak mengembalikan data", year);
         }
 
         for (ExternalHolidayDto dto : external) {
@@ -213,8 +215,9 @@ public class HolidayService {
 
     // [UBAH] Mencoba beberapa sumber berurutan sampai ada yang mengembalikan data.
     private List<ExternalHolidayDto> fetchFromExternalApi(int year) {
-        List<String> sourceNames = List.of("api-harilibur", "dayoffapi", "nager.date");
+        List<String> sourceNames = List.of("refnusa", "api-harilibur", "dayoffapi", "nager.date");
         List<Supplier<List<ExternalHolidayDto>>> sources = List.of(
+                () -> fetchFromRefnusa(year),
                 () -> fetchHolidayArray(String.format(PRIMARY_API, year)),
                 () -> fetchHolidayArray(String.format(FALLBACK_API, year)),
                 () -> fetchFromNager(year));
@@ -239,6 +242,31 @@ public class HolidayService {
     private List<ExternalHolidayDto> fetchHolidayArray(String url) {
         ExternalHolidayDto[] body = restTemplate.getForObject(url, ExternalHolidayDto[].class);
         return body != null ? Arrays.asList(body) : List.of();
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record RefnusaResponse(Integer year, List<RefnusaHoliday> holidays) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record RefnusaHoliday(String date, String name, String type) {}
+
+    private List<ExternalHolidayDto> fetchFromRefnusa(int year) {
+        RefnusaResponse body = restTemplate.getForObject(String.format(REFNUSA_API, year), RefnusaResponse.class);
+        if (body == null || body.year() == null || body.year() != year || body.holidays() == null)
+            return List.of();
+        return body.holidays().stream()
+                .filter(h -> h != null && h.date() != null && h.name() != null && !h.name().isBlank())
+                .filter(h -> "libur_nasional".equals(h.type()) || "cuti_bersama".equals(h.type()))
+                .filter(h -> {
+                    try { return LocalDate.parse(h.date()).getYear() == year; }
+                    catch (RuntimeException invalidDate) { return false; }
+                })
+                .map(h -> {
+                    ExternalHolidayDto dto = new ExternalHolidayDto();
+                    dto.setDate(h.date());
+                    dto.setDescription(("cuti_bersama".equals(h.type()) ? "Cuti Bersama " : "") + h.name().trim());
+                    return dto;
+                }).toList();
     }
 
     // [BARU] Nager.Date: field yang dipakai hanya "date" dan "localName".
