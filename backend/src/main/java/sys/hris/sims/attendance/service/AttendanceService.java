@@ -2,7 +2,6 @@ package sys.hris.sims.attendance.service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -204,7 +203,7 @@ public class AttendanceService {
             throw new IllegalStateException("Anda tercatat Sakit/Izin hari ini, check-out tidak diperlukan.");
         }
 
-        // [BARU] Pulang cepat: check-out sebelum 8 jam kerja WAJIB menyertakan alasan.
+        // [UBAH] Pulang cepat: check-out sebelum jam pulang terjadwal WAJIB menyertakan alasan.
         // Popup peringatan di frontend hanya UX; aturan ini menjaga agar request yang
         // dikirim langsung ke API pun tidak bisa melewatinya. Dihitung dengan jam
         // SERVER (sama seperti Attendance.prePersist()), bukan jam perangkat.
@@ -221,21 +220,18 @@ public class AttendanceService {
         if (action.equals("KELUAR") && holidayWindow == null && leaveToday.isHalfDay()
                 && nowDateTime.isBefore(leaveToday.workEnd()) && noteBlank)
             throw new IllegalArgumentException("Sesi kerja belum selesai. Alasan pulang cepat wajib diisi.");
+        // [UBAH] Pulang cepat = check-out SEBELUM jam pulang terjadwal hari itu (mis. 16:59 untuk jam pulang 17:00).
+        // Tidak lagi dihitung dari lama hadir sejak absen masuk, jadi masuk lebih pagi dari jam kerja
+        // tidak membuat karyawan boleh pulang lebih awal tanpa alasan.
         if (action.equals("KELUAR") && holidayWindow == null && !leaveToday.isHalfDay()
-                && nowDateTime.isBefore(workHours.endAt(workDate)) // [UBAH] jam pulang terjadwal hari itu
+                && nowDateTime.isBefore(workHours.endAt(workDate)) // jam pulang terjadwal hari itu
                 && noteBlank) {
             attendanceRepository
                     .findActiveByAction(employee.getEmployeeId(), workDate, "MASUK")
                     .ifPresent(checkIn -> {
-                        Duration worked = Duration.between(checkIn.getRecordedAt(), LocalDateTime.now(APP_ZONE));
-                        // [UBAH] Jadwal khusus (ada istirahat): lama hadir wajib = kerja bersih + istirahat (ketat).
-                        Duration required = workHours.requiredAttendance();
-                        if (worked.compareTo(required) < 0) {
-                            throw new IllegalArgumentException(
-                                    "Durasi kerja belum memenuhi " + formatDuration(required)
-                                            + (workHours.hasBreak() ? " (termasuk istirahat)" : "")
-                                            + ". Alasan pulang cepat wajib diisi.");
-                        }
+                        throw new IllegalArgumentException(
+                                "Check-out sebelum jam pulang " + workHours.end()
+                                        + ". Alasan pulang cepat wajib diisi.");
                     });
         }
 
@@ -767,13 +763,6 @@ public class AttendanceService {
         return workScheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
                         employeeId, date, date)
                 .stream().findFirst().orElse(null);
-    }
-
-    // [BARU] "8 jam" / "7 jam 30 menit" -- lama kerja wajib bisa bukan jam bulat (Jumat dengan istirahat panjang).
-    private static String formatDuration(Duration duration) {
-        long hours = duration.toHours();
-        long minutes = duration.toMinutesPart();
-        return minutes == 0 ? hours + " jam" : hours + " jam " + minutes + " menit";
     }
 
     private Employee resolveEmployee(String username) {

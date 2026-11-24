@@ -3,7 +3,7 @@
 // [BARU] Pintu masuk tunggal tombol Absen Masuk/Keluar. Menggabungkan dua
 // penjaga check-out dalam satu alur:
 //
-//   Keluar sebelum 8 jam kerja  -> popup "Peringatan Pulang Cepat" (useEarlyCheckout)
+//   Keluar sebelum jam pulang    -> popup "Peringatan Pulang Cepat" (useEarlyCheckout)
 //   Keluar setelah jam 17:00    -> popup "Check-Out Jam Kerja (17:00+)":
 //        [Check-Out]  -> buka kamera & kirim absen Keluar
 //        [Tambah Lembur] -> form (jam mulai = lanjutan lembur terakhir)
@@ -15,7 +15,7 @@
 // berlaku meskipun durasi kerja belum penuh.
 //
 // Contoh pemakaian:
-// const flow = useCheckoutFlow({ openCapture: capture.open, checkInAt, onOvertimeSubmitted });
+// const flow = useCheckoutFlow({ openCapture: capture.open, shiftEndAt, shiftEndTime, onOvertimeSubmitted });
 // <button onClick={() => flow.startAttendance('Keluar')} />
 // <CheckoutFlowModals flow={flow} />
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -29,8 +29,8 @@ import {
 
 const IDLE_WINDOW = { status: 'idle', data: null, error: '' }; // status: idle | loading | ready | error
 
-export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubmitted, shiftEndTime, requiredWorkHours, shiftEndAt, holidayOvertime = false, halfDayLeave = false }) {
-  const early = useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours, sessionEnd:halfDayLeave ? shiftEndAt : null });
+export default function useCheckoutFlow({ openCapture, onOvertimeSubmitted, shiftEndTime, shiftEndAt, holidayOvertime = false, halfDayLeave = false }) {
+  const early = useEarlyCheckout({ openCapture, workEndAt: shiftEndAt }); // [UBAH] semua jadwal: pulang cepat = sebelum jam pulang
   const { startAttendance: startEarlyAware } = early;
 
   const [step, setStep] = useState(null); // null (tertutup) | 'choice' | 'form'
@@ -118,7 +118,7 @@ export default function useCheckoutFlow({ openCapture, checkInAt, onOvertimeSubm
     startAttendance,
     // props untuk EarlyCheckoutModal
     early: {
-      requiredWorkHours,
+      workEndLabel: shiftEndTime, // [UBAH] sebelumnya requiredWorkHours
       isPromptOpen: early.isPromptOpen,
       onConfirm: early.confirmEarlyCheckout,
       onCancel: early.cancelEarlyCheckout,

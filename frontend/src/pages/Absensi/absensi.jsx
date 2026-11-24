@@ -172,12 +172,10 @@ export default function Absensi() {
   // setelah jam 17:00 -> popup "Check-Out Jam Kerja (17:00+)" (Tidak Lembur / Tambah Lembur, berulang).
   const checkoutFlow = useCheckoutFlow({
     openCapture: capture.open,
-    checkInAt: todaySickRecord ? null : todayCheckIn?.recordedAt ?? null,
     shiftEndTime: shiftContext.endsAt ? shiftContext.hoursLabel.split(' - ')[1] : null,
     shiftEndAt: shiftContext.endsAt,
     halfDayLeave: shiftContext.halfDayLeave,
     holidayOvertime: shiftContext.holidayOvertime, // [BARU] lembur hari libur
-    requiredWorkHours: shiftContext.requiredAttendanceHours ?? shiftContext.requiredWorkHours, // [UBAH] lama hadir (kerja bersih + istirahat)
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 

@@ -11,7 +11,7 @@
     "build": "vite build --configLoader native",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test src/pages/Absensi/utils/activeWorkShift.test.js src/pages/Absensi/utils/normalWorkDuration.test.js \"src/pages/Laporan/utils/*.test.js\" src/utils/excelValueConverters.test.js src/utils/sickDates.test.js"
+    "test": "node --test src/pages/Absensi/utils/activeWorkShift.test.js src/pages/Absensi/utils/normalWorkDuration.test.js src/pages/Absensi/utils/workEndCheckout.test.js \"src/pages/Laporan/utils/*.test.js\" src/utils/excelValueConverters.test.js src/utils/sickDates.test.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.3.0",

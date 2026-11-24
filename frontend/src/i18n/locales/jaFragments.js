@@ -22,6 +22,7 @@ export const fragments = {
   'hari sejak dikirim -- ubah "selesai" kalau perlu tanggal lain. masa tayang minimal 1 menit.': '日間（送信日から）。必要に応じて「終了」を変更してください。表示期間は最低1分です。',
   'detik': '秒',
   'durasi kerja anda belum memenuhi': '勤務時間が次の基準に達していません:',
+  'anda check-out sebelum jam pulang': '退勤予定時刻より前に退勤しようとしています:',
   'ekspor:': 'エクスポート:',
   'halaman': 'ページ',
   'hari tahun berjalan.': '日（当年分）。',

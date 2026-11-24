@@ -107,12 +107,10 @@ export default function DashboardSummaryCard({ balance, isLoadingBalance = false
   // setelah jam 17:00 -> popup "Check-Out Jam Kerja (17:00+)" (Tidak Lembur / Tambah Lembur, berulang).
   const checkoutFlow = useCheckoutFlow({
     openCapture: capture.open,
-    checkInAt: attendance.checkInAt,
     shiftEndTime: attendance.shiftContext.endsAt ? attendance.shiftContext.hoursLabel.split(' - ')[1] : null,
     shiftEndAt: attendance.shiftContext.endsAt,
     halfDayLeave: attendance.shiftContext.halfDayLeave,
     holidayOvertime: attendance.shiftContext.holidayOvertime, // [BARU] lembur hari libur
-    requiredWorkHours: attendance.shiftContext.requiredAttendanceHours ?? attendance.shiftContext.requiredWorkHours, // [UBAH] lama hadir (kerja bersih + istirahat)
     onOvertimeSubmitted: handleOvertimeSubmitted,
   });
 
