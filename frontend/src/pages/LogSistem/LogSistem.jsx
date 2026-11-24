@@ -5,7 +5,7 @@
 // di backend: /api/admin/** = ADMIN_ROLES). Log diambil sekali saat halaman dibuka, lalu bisa
 // diunduh sebagai CSV.
 import React, { useCallback, useEffect, useRef, useState } from 'react'; // [UBAH] + useCallback, useRef
-import { RefreshCw } from 'lucide-react'; // [BARU] ikon tombol muat ulang
+import ReloadButton from '../../components/ReloadButton'; // [UBAH] tombol Muat Ulang bersama (sebelumnya tombol buatan sendiri di file ini)
 import Toast from '../../components/Toast';
 import { SYSTEM_LOG_EXPORT } from '../../config/leaveReportExportConfig';
 import useExportAction from '../../hooks/useExportAction';
@@ -18,7 +18,6 @@ import './LogSistem.css';
 export default function LogSistem() {
   const [logList, setLogList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false); // [BARU] true saat tombol muat ulang berjalan
   const [errorMessage, setErrorMessage] = useState('');
   const { exportingKey, toast, runExport } = useExportAction();
   const latestRequestRef = useRef(0); // [BARU] penanda request terbaru; respons lama diabaikan
@@ -43,7 +42,6 @@ export default function LogSistem() {
       .finally(() => {
         if (requestId !== latestRequestRef.current) return;
         setIsLoading(false);
-        setIsRefreshing(false);
       });
   }, []);
 
@@ -53,13 +51,12 @@ export default function LogSistem() {
     return () => { latestRequestRef.current += 1; };
   }, [loadLogs]);
 
-  // [BARU] Tombol muat ulang: ambil ulang data dari server tanpa mengosongkan tabel,
+  // [UBAH] Tombol muat ulang: ambil ulang data dari server tanpa mengosongkan tabel,
   // jadi pencarian, filter, dan halaman yang sedang dibuka tidak ikut ter-reset.
+  // Status "Memuat..." diurus ReloadButton lewat Promise yang dikembalikan loadLogs.
   const handleReload = () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
     setErrorMessage('');
-    loadLogs();
+    return loadLogs();
   };
 
   const handleExport = (format) => runExport(format, SYSTEM_LOG_EXPORT, { logList });
@@ -76,18 +73,8 @@ export default function LogSistem() {
           logList={logList}
           headerActions={(
             <>
-              {/* [BARU] Tombol muat ulang data log */}
-              <button
-                type="button"
-                className={`lgs-reload-btn${isRefreshing ? ' lgs-reload-btn--loading' : ''}`}
-                onClick={handleReload}
-                disabled={isRefreshing}
-                aria-busy={isRefreshing}
-                title="Ambil ulang data log terbaru dari server"
-              >
-                <RefreshCw aria-hidden="true" />
-                {isRefreshing ? 'Memuat...' : 'Muat Ulang'}
-              </button>
+              {/* [UBAH] Tombol muat ulang data log (komponen bersama) */}
+              <ReloadButton className="reloadBtn--lg" onReload={handleReload} title="Ambil ulang data log terbaru dari server" />
               <ReportExportButtons
                 formats={SYSTEM_LOG_EXPORT.formats}
                 exportingKey={exportingKey}

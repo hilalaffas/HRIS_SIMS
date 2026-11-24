@@ -31,6 +31,7 @@ export default function ReportFilterBar({
   exportingKind,
   isExportDisabled,
   onExport,
+  reloadAction = null, // [BARU] tombol Muat Ulang (node), ditaruh sebelum tombol Unduh
 }) {
   return (
     <section className="lpr-filter-card" aria-label="Filter dan ekspor laporan absen">
@@ -70,6 +71,7 @@ export default function ReportFilterBar({
         <div className="lpr-filter-field lpr-filter-field--export">
           <span className="lpr-filter-label">Ekspor</span>
           <div className="lpr-export-actions">
+            {reloadAction}
             {EXPORT_FORMATS.map((format) => {
               const Icon = EXPORT_ICONS[format.icon];
               return (

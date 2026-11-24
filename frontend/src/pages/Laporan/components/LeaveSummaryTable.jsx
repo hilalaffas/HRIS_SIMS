@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'; // [UBAH] + useCallback, useRef
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import { getAllLeaveRequestsForHr, getAllLeaveSummaries } from '../../../services/CutiService';
 import { compareByNik } from '../../../utils/sortByNik';
@@ -7,6 +7,7 @@ import { SORT_DIRECTION, sortRows } from '../../../utils/tableSort';
 import LeaveHeadcountChart from './LeaveHeadcountChart';
 import TablePagination from './TablePagination'; // [BARU] paginasi tabel
 import { resolvePagination } from '../utils/pagination'; // [BARU]
+import ReloadButton from '../../../components/ReloadButton'; // [BARU] tombol Muat Ulang
 import Skeleton from '../../../components/Skeleton'; // [BARU] loading skeleton
 import SkeletonGroup from '../../../components/SkeletonGroup'; // [BARU]
 import './LeaveSummaryTable.css';
@@ -118,30 +119,55 @@ function LeaveSummaryTable({ onExportRowsChange, onExportParamsChange, exportAct
   const [dateTo, setDateTo] = useState('');
   const [sortConfig, setSortConfig] = useState(DEFAULT_SORT);
   const [reloadKey, setReloadKey] = useState(0);
+  const [reloadErrorMessage, setReloadErrorMessage] = useState(''); // [BARU] gagal Muat Ulang (data lama tetap tampil)
   const [page, setPage] = useState(0); // [BARU] halaman aktif (berbasis 0)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE); // [BARU] angka atau 'all'
 
-  useEffect(() => {
-    let isCancelled = false;
+  // [UBAH] Pengambilan data dipindah ke fungsi tersendiri (sebelumnya langsung di dalam useEffect)
+  // supaya dipakai bersama oleh pemuatan awal, "Coba lagi", dan tombol Muat Ulang.
+  // Respons dari request lama diabaikan (latestRequestRef) bila ada request yang lebih baru.
+  const latestRequestRef = useRef(0);
+  const loadData = useCallback(({ isManual = false } = {}) => {
+    latestRequestRef.current += 1;
+    const requestId = latestRequestRef.current;
     // Ringkasan adalah data utama; data cuti hanya untuk chart/filter tanggal -- bila gagal, tabel tetap tampil.
-    Promise.allSettled([getAllLeaveSummaries(), getAllLeaveRequestsForHr()]).then(([summaries, leaveList]) => {
-      if (isCancelled) return;
+    return Promise.allSettled([getAllLeaveSummaries(), getAllLeaveRequestsForHr()]).then(([summaries, leaveList]) => {
+      if (requestId !== latestRequestRef.current) return;
       if (summaries.status === 'fulfilled') {
         setRows(summaries.value);
+        setErrorMessage('');
+        setReloadErrorMessage('');
+        setLeaves(leaveList.status === 'fulfilled' ? leaveList.value : null);
+      } else if (isManual) {
+        // Muat Ulang gagal: data lama dipertahankan, hanya tampilkan peringatan kecil.
+        setReloadErrorMessage('Gagal memuat ulang. Data lama masih ditampilkan.');
       } else {
         setErrorMessage(summaries.reason?.message || 'Gagal memuat ringkasan cuti.');
+        setLeaves(leaveList.status === 'fulfilled' ? leaveList.value : null);
       }
-      setLeaves(leaveList.status === 'fulfilled' ? leaveList.value : null);
       setIsLoading(false);
     });
-    return () => { isCancelled = true; };
-  }, [reloadKey]);
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    return () => { latestRequestRef.current += 1; }; // komponen ditutup -> respons yang masih jalan dianggap usang
+  }, [loadData]);
 
   const handleRetry = () => {
     setIsLoading(true);
     setErrorMessage('');
     setReloadKey((key) => key + 1);
+    loadData();
   };
+
+  // [BARU] Tombol Muat Ulang: ambil ulang data tanpa menampilkan skeleton, jadi pencarian, filter,
+  // urutan, dan halaman yang sedang dibuka tidak ikut ter-reset.
+  const handleReload = useCallback(async () => {
+    setReloadErrorMessage('');
+    setReloadKey((key) => key + 1); // animasi chart diputar ulang
+    await loadData({ isManual: true });
+  }, [loadData]);
 
   const handleSort = (key) => {
     setPage(0); // [BARU] urutan berubah -> kembali ke halaman 1
@@ -242,10 +268,14 @@ function LeaveSummaryTable({ onExportRowsChange, onExportParamsChange, exportAct
           {hasActiveFilter && (
             <button type="button" className="leaveSummary__reset" onClick={handleReset}>Reset</button>
           )}
+          {/* [BARU] Tombol Muat Ulang data tabel */}
+          <ReloadButton onReload={handleReload} isLoading={isLoading} />
           {/* [BARU] Tombol ekspor pindah ke sini (sebelumnya kartu ekspor terpisah di atas kartu ini) */}
           {exportActions && <div className="leaveSummary__actions">{exportActions}</div>}
         </div>
       </div>
+
+      {reloadErrorMessage && <p className="leaveSummary__reloadError" role="alert">{reloadErrorMessage}</p>} {/* [BARU] */}
 
       <LeaveHeadcountChart
         headcount={headcount}

@@ -207,6 +207,12 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
     }
   };
 
+  // [BARU] Handler tombol Muat Ulang. Mengembalikan Promise supaya tombol berputar sampai data selesai dimuat.
+  // Data yang sudah tampil tidak dikosongkan (tanpa skeleton), jadi pencarian/filter/halaman tetap.
+  const handleReloadKaryawan = () => fetchKaryawan();
+  // Riwayat cuti memakai saldo dari karyawanList (balanceAfterByLeaveId), jadi keduanya dimuat ulang.
+  const handleReloadRiwayatCuti = () => Promise.all([fetchRiwayatCuti(), fetchKaryawan({ silent: true })]);
+
   // [BARU] Auto-buka modal edit karyawan kalau halaman ini diakses dari
   // notifikasi reset sandi (query param employeeId & resetRequestId).
   // Menunggu karyawanList terisi dulu supaya pencariannya tidak sia-sia.
@@ -434,6 +440,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
               onEdit={handleOpenEdit}
               lastSyncedAt={karyawanSyncedAt}
               isLoading={isLoadingKaryawan}
+              onReload={handleReloadKaryawan} // [BARU] tombol Muat Ulang
             />
           </div>
         )}
@@ -458,6 +465,7 @@ const [detailCutiTarget, setDetailCutiTarget] = useState(null);
               onOpenDetail={(item) => setDetailCutiTarget(item)}
               onRevokeLeave={handleRevokeCuti}
               isLoading={isLoadingRiwayatCuti} // [BARU]
+              onReload={handleReloadRiwayatCuti} // [BARU] tombol Muat Ulang
             />
           </div>
         )}
