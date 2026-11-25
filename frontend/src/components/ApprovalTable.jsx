@@ -1,3 +1,4 @@
+import MobileRecords from './MobileRecords';
 // src/components/ApprovalTable.jsx
 import React from 'react';
 import { Paperclip } from 'lucide-react';
@@ -23,7 +24,8 @@ export default function ApprovalTable({ rows, loading, processingKey, emptyMessa
   const columnCount = showProof ? 6 : 5;
   return (
       <div className="apv-table-wrap">
-        <table className="apv-table">
+        <MobileRecords labels={showProof ? ['Karyawan', 'Tanggal', 'Detail / Alasan', 'Bukti lampiran', 'Status persetujuan', 'Aksi'] : ['Karyawan', 'Tanggal', 'Detail / Alasan', 'Status persetujuan', 'Aksi']} statusIndex={showProof ? 4 : 3} actionIndex={showProof ? 5 : 4} detailIndexes={[2]} ariaLabel="Daftar persetujuan">
+<table className="apv-table">
           <thead><tr>
             <th>KARYAWAN</th><th>TANGGAL</th><th>DETAIL / ALASAN</th>
             {showProof && <th className="apv-center">BUKTI LAMPIRAN</th>}
@@ -66,6 +68,7 @@ export default function ApprovalTable({ rows, loading, processingKey, emptyMessa
             })}
           </tbody>
         </table>
+</MobileRecords>
       </div>
   );
 }

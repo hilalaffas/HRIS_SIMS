@@ -1,3 +1,4 @@
+import MobileRecords from '../../../components/MobileRecords';
 import React, { useEffect, useMemo, useState } from 'react';
 import Dropdown from '../../../components/Dropdown';
 import { DropdownPortalContext } from '../../../components/DropdownPortalContext';
@@ -132,7 +133,8 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
 
       {/* Gunakan class table-scroll-wrapper untuk memastikan tabel di dalam card aman jika dilayar kecil */}
       <div className="table-scroll-wrapper">
-        <table className="karyawan-table">
+        <MobileRecords labels={['Karyawan', 'Role akses', 'Jabatan & Divisi', 'Total cuti', 'Status', 'Aksi']} statusIndex={4} actionIndex={5} ariaLabel="Direktori karyawan">
+<table className="karyawan-table">
           <thead>
             <tr>
               <th>KARYAWAN</th>
@@ -227,6 +229,7 @@ const TableKaryawan = ({ data, currentUserRole, onEdit, lastSyncedAt = null, isL
             )}
           </tbody>
         </table>
+</MobileRecords>
       </div>
 
       {/* [BARU] Kontrol pagination, hanya tampil kalau ada data pada

@@ -1,3 +1,4 @@
+import MobileRecords from '../../../components/MobileRecords';
 import React, { useMemo, useState } from 'react';
 import './LeaveListHr.css';
 import FilterStatusDropdown from './FilterStatusDropdown'; // Pastikan path ini benar di project Anda
@@ -277,7 +278,8 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
           {hasActiveFilter ? "Tidak ada riwayat cuti yang cocok dengan pencarian/filter." : "Belum ada riwayat cuti."}
         </div>
       ) : (
-        <div className="leaveList__table_leaveListHr content-reveal">
+        <MobileRecords labels={['Karyawan pemohon', 'Detail cuti', 'Sisa cuti', 'Status berkas', 'Aksi']} statusIndex={3} actionIndex={4} ariaLabel="Riwayat cuti karyawan" controls={<>{SORT_COLUMNS.map(({key, label}) => <button key={key} type="button" className={sortConfig.key === key ? 'is-active' : ''} onClick={() => handleSort(key)} aria-label={getSortAriaLabel(label, sortConfig.key === key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button>)}</>}>
+<div className="leaveList__table_leaveListHr content-reveal">
           <div className="leaveList__row_leaveListHr leaveList__row--head_leaveListHr">
             {/* [UBAH] Header statis diganti header yang bisa diklik untuk sortir */}
             {SORT_COLUMNS.map(({ key, label, className }) => {
@@ -348,6 +350,7 @@ const LeaveListHr = ({ data, balanceAfterByLeaveId = {}, onOpenDetail, currentUs
             );
           })}
         </div>
+</MobileRecords>
       )}
 
       {/* [BARU] Kontrol pagination */}

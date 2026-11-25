@@ -1,3 +1,4 @@
+import MobileRecords from '../../../components/MobileRecords';
 // src/pages/Pengajuan/components/PengajuanHistoryTable.jsx
 //
 // Tabel "Riwayat Pengajuan Saya": gabungan semua jenis pengajuan.
@@ -115,7 +116,8 @@ export default function PengajuanHistoryTable({
       </header>
 
       <div className="pgj-history__scroll">
-        <table className="pgj-table">
+        <MobileRecords labels={['Tanggal', 'Jenis', 'Detail singkat', 'Status', 'Aksi']} statusIndex={3} actionIndex={4} detailIndexes={[2]} ariaLabel={title} controls={onSortChange && <>{[['date', 'Tanggal'], ['type', 'Jenis'], ['status', 'Status']].map(([key, label]) => <button type="button" key={key} className={sortConfig?.key === key ? 'is-active' : ''} onClick={() => onSortChange(key)} aria-label={`Urutkan ${label}`}>{label}{sortConfig?.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button>)}</>}>
+<table className="pgj-table">
           <thead>
             <tr>
               <SortHeader label="TANGGAL" sortKey="date" sortConfig={sortConfig} onSortChange={onSortChange} />
@@ -182,6 +184,7 @@ export default function PengajuanHistoryTable({
             })}
           </tbody>
         </table>
+</MobileRecords>
       </div>
 
       {remaining > 0 && (

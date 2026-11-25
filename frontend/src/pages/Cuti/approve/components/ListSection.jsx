@@ -1,3 +1,4 @@
+import MobileRecords from '../../../../components/MobileRecords';
   import React, { useMemo, useState } from 'react';
   import './ListSection.css';
   import FilterStatusDropdown from './FilterStatusDropdown';
@@ -67,7 +68,8 @@
         {filteredData.length === 0 ? (
           <div className="leaveList__empty">Belum ada riwayat cuti untuk status ini.</div>
         ) : (
-          <div className="leaveList__table" role="table">
+          <MobileRecords labels={['Karyawan pemohon', 'Detail cuti', 'Sisa cuti', 'Status berkas', 'Log detail']} statusIndex={3} actionIndex={4} ariaLabel="Riwayat persetujuan cuti">
+<div className="leaveList__table" role="table">
             <div className="leaveList__row leaveList__row--head" role="row">
               <div role="columnheader">Karyawan Pemohon</div>
               <div role="columnheader">Detail Cuti</div>
@@ -132,6 +134,7 @@
               );
             })}
           </div>
+</MobileRecords>
         )}
       </div>
     );
