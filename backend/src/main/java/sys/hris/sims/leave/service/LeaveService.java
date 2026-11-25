@@ -980,10 +980,15 @@ public class LeaveService {
             cuti.setStatus(getStatus(ACTION_REJECTED));
             cuti.setApprovedAt(LocalDateTime.now());
             notifyRequester(cuti, NotificationService.TYPE_LEAVE_REJECTED, null); // [BARU]
+            // [BARU] Status final: berhenti di sini. Sebelumnya alur lanjut ke bawah sehingga pemohon
+            // ikut menerima notifikasi "disetujui oleh <approver>" (step-approved) padahal ditolak.
+            return cutiRepository.save(cuti);
         } else if (ACTION_RETURNED.equals(action)) {
             cuti.setStatus(getStatus(ACTION_RETURNED));
             cuti.setReturnedAt(LocalDateTime.now());
             notifyRequester(cuti, NotificationService.TYPE_LEAVE_RETURNED, null); // [BARU]
+            // [BARU] Status final: berhenti di sini (alasan sama dengan blok REJECTED di atas).
+            return cutiRepository.save(cuti);
         } else if (isAllApprovalsApproved(leaveRequestId)) {
             // [FIX] Hitung ulang totalDays di sini, JANGAN percaya begitu saja
             // nilai yang tersimpan sejak pengajuan dibuat. Kalau pengajuan
@@ -1011,6 +1016,7 @@ public class LeaveService {
             return approvedCuti;
         }
 
+        // [UBAH] Hanya tercapai bila action = APPROVED dan masih ada tahap berikutnya.
         // [BARU] Tahap ini disetujui tapi berkas belum final: kabari pemohon per tahap.
         notifyRequester(cuti, NotificationService.TYPE_LEAVE_STEP_APPROVED, Map.of(
                 "actorRole", approverRole,
