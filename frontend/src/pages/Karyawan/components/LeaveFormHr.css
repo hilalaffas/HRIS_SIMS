@@ -1,4 +1,4 @@
-.card_leaveFormHr { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.card_leaveFormHr { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: visible; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .header_leaveFormHr { background-color: #f0fdf4; padding: 20px 24px; border-bottom: 1px solid #e5e7eb; }
 .header-title-wrapper_leaveFormHr { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; color: var(--color-primary); }
 .header-title-wrapper_leaveFormHr h2 { margin: 0; font-size: 16px; font-weight: 700; }
