@@ -18,6 +18,26 @@ import PersetujuanIzin from '../../PersetujuanIzin/PersetujuanIzin'; // [BARU] i
 import ActionReasonModal from './components/ActionReasonModal';
 import { getAllLeaveBalances, getApprovalDetail, getApprovalHistory, getPendingApprovals, takeApprovalAction } from '../../../services/CutiService';
 import { isApprover, isHrd } from '../../../utils/roles'; // [UBAH] HRD + Leader/SPV/Manager
+import { startPolling } from '../../../utils/polling'; // [BARU] segarkan antrean cuti berkala
+import { publishLocalApprovalCounts } from '../../../utils/approvalBadgeStore'; // [BARU] badge Sidebar ikut berubah seketika
+import { readApprovalCache, writeApprovalCache } from '../../../utils/approvalPageCache'; // [BARU] tampil instan saat kembali ke halaman
+
+// [BARU] Jeda polling antrean cuti di halaman ini (ms). Ringan: hanya endpoint antrean, bukan saldo/riwayat.
+const PENDING_POLL_MS = 30000;
+
+// [UBAH] Dipindah keluar komponen (fungsi murni). Menggabungkan Total Sisa Cuti (Tahunan + Lama)
+// milik KARYAWAN PEMOHON ke tiap baris. Sebelum saldo tiba, totalRemainingLeave bernilai undefined.
+const mergeSisaCutiPemohon = (items, balanceByEmployeeId) => items.map((item) => ({
+  ...item,
+  karyawan: {
+    ...item.karyawan,
+    totalRemainingLeave: balanceByEmployeeId.get(item.karyawan?.employeeId)?.totalRemainingLeave,
+  },
+}));
+
+const toBalanceMap = (balances) => new Map(
+  (Array.isArray(balances) ? balances : []).map((b) => [b.employeeId, b])
+);
 
 /**
  * ApproveLeaving.jsx
@@ -68,49 +88,88 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   const [selectedOvertime, setSelectedOvertime] = useState(null); // [BARU] baris lembur untuk popup detail berkas
   const [selectedCorrection, setSelectedCorrection] = useState(null); // [BARU] baris koreksi absensi untuk popup detail berkas
 
-  const [pending, setPending] = useState([]);
-  const [history, setHistory] = useState([]);
+  // [UBAH] Data mentah disimpan terpisah dari saldo. Daftar yang tampil (`pending`/`history`) diturunkan
+  // dengan useMemo setelah digabung saldo pemohon. Dengan begitu daftar pending bisa tampil SEGERA
+  // setelah endpoint antrean selesai, dan kolom "Kuota Cuti" terisi menyusul begitu saldo tiba.
+  //
+  // Penyebab delay sebelumnya: loadData() memakai Promise.all([pending, riwayat, SALDO SEMUA KARYAWAN])
+  // sehingga layar menunggu request paling lambat (saldo semua karyawan) dan selama itu daftar masih
+  // kosong -> tampil "0 Permohonan".
+  //
+  // Pencocokan saldo memakai employeeId pemohon (LeaveApprovalResponse.employeeId), bukan nama.
+  const [initialCache] = useState(() => readApprovalCache()); // [BARU] data terakhir (kalau pernah dibuka)
+  const [pendingRaw, setPendingRaw] = useState(() => initialCache.pending || []);
+  const [historyRaw, setHistoryRaw] = useState(() => initialCache.history || []);
+  const [balanceMap, setBalanceMap] = useState(() => initialCache.balances || new Map());
+  // `pendingReady`: sudah ada data untuk ditampilkan (cache ATAU hasil fetch). Dipakai skeleton.
+  const [pendingReady, setPendingReady] = useState(() => Boolean(initialCache.pending));
+  // `pendingFresh`: antrean sudah diambil dari server di kunjungan ini. Hanya saat itu angka dikirim ke badge,
+  // supaya angka dari cache lama tidak menimpa angka polling yang lebih baru.
+  const [pendingFresh, setPendingFresh] = useState(false);
+  const [balancesReady, setBalancesReady] = useState(() => Boolean(initialCache.balances));
   const [error, setError] = useState('');
 
-  // [UBAH] Sebelumnya "Kuota Cuti"/"Sisa Cuti" di tabel Approval & List
-  // Cuti nampilin SATU angka global (saldo cuti tahunan milik APPROVER
-  // yang login), dipasang sama rata ke SEMUA baris walau beda karyawan
-  // pemohon -- makanya semua baris kelihatan sama padahal harusnya beda
-  // per pemohon. Sekarang tiap baris digabungkan (merge) dengan Total
-  // Sisa Cuti (Tahunan + Lama) milik KARYAWAN PEMOHON di baris itu,
-  // diambil dari /api/cuti/balance/all (sudah dipakai TableKaryawan.jsx).
-  //
-  // [UBAH - DIAMANKAN] Sebelumnya pencocokan sempat pakai NAMA LENGKAP
-  // karena LeaveApprovalResponse belum expose employeeId pemohon --
-  // berisiko salah pasang kalau ada 2 karyawan bernama identik persis.
-  // Sekarang backend (LeaveApprovalResponse.java + LeaveService.java)
-  // sudah menyertakan employeeId, jadi pencocokan pakai ID yang unik.
-  const mergeSisaCutiPemohon = useCallback((items, balanceByEmployeeId) => {
-    return items.map((item) => ({
-      ...item,
-      karyawan: {
-        ...item.karyawan,
-        totalRemainingLeave: balanceByEmployeeId.get(item.karyawan?.employeeId)?.totalRemainingLeave,
-      },
-    }));
+  const pending = useMemo(() => mergeSisaCutiPemohon(pendingRaw, balanceMap), [pendingRaw, balanceMap]);
+  const history = useMemo(() => mergeSisaCutiPemohon(historyRaw, balanceMap), [historyRaw, balanceMap]);
+
+  // [BARU] Penanda permintaan terbaru supaya respons lama yang telat tidak menimpa data yang lebih baru.
+  const loadSeqRef = useRef(0);    // untuk riwayat & saldo (satu paket loadData)
+  const pendingSeqRef = useRef(0); // untuk antrean pending (juga dinaikkan saat baris dihapus setelah aksi)
+
+  // Mengambil antrean pending dan memasangnya begitu tiba. Mengembalikan promise yang tidak pernah reject.
+  const fetchPending = useCallback(() => {
+    const seq = ++pendingSeqRef.current;
+    return getPendingApprovals()
+      .then((tasks) => {
+        if (pendingSeqRef.current !== seq) return;
+        setPendingRaw(tasks);
+        setPendingReady(true);
+        setPendingFresh(true);
+        setError('');
+      })
+      .catch((err) => {
+        if (pendingSeqRef.current !== seq) return;
+        setPendingReady(true); // hentikan skeleton; pesan error tampil di atas
+        setError(err.message || 'Gagal memuat data cuti.');
+      });
   }, []);
 
   const loadData = useCallback(async () => {
-    try {
-      const [tasks, records, balances] = await Promise.all([
-        getPendingApprovals(),
-        getApprovalHistory(),
-        getAllLeaveBalances(),
-      ]);
-      const balanceByEmployeeId = new Map(
-        (Array.isArray(balances) ? balances : []).map((b) => [b.employeeId, b])
-      );
-      setPending(mergeSisaCutiPemohon(tasks, balanceByEmployeeId));
-      setHistory(mergeSisaCutiPemohon(records, balanceByEmployeeId));
-      setError('');
-    } catch (err) { setError(err.message || 'Gagal memuat data cuti.'); }
-  }, [mergeSisaCutiPemohon]);
+    const seq = ++loadSeqRef.current;
+    const isLatest = () => loadSeqRef.current === seq;
+
+    // Ketiga request berjalan BERSAMAAN, masing-masing dipasang begitu selesai (bukan menunggu semuanya).
+    const pendingTask = fetchPending();
+    const historyTask = getApprovalHistory()
+      .then((records) => {
+        if (!isLatest()) return;
+        setHistoryRaw(records);
+        writeApprovalCache({ history: records });
+      })
+      .catch((err) => { if (isLatest()) setError(err.message || 'Gagal memuat data cuti.'); });
+    // Saldo hanya pelengkap kolom "Kuota Cuti": gagal memuat tidak boleh menyembunyikan daftar permohonan.
+    const balanceTask = getAllLeaveBalances()
+      .then((balances) => {
+        if (!isLatest()) return;
+        const map = toBalanceMap(balances);
+        setBalanceMap(map);
+        writeApprovalCache({ balances: map });
+      })
+      .catch(() => {})
+      .finally(() => { if (isLatest()) setBalancesReady(true); });
+
+    await Promise.all([pendingTask, historyTask, balanceTask]);
+  }, [fetchPending]);
   useEffect(() => { loadData(); }, [loadData]);
+
+  // [BARU] Simpan antrean terakhir (termasuk setelah baris dihapus karena aksi) untuk kunjungan berikutnya.
+  useEffect(() => {
+    if (pendingReady) writeApprovalCache({ pending: pendingRaw });
+  }, [pendingReady, pendingRaw]);
+
+  // [BARU] Segarkan antrean cuti berkala (ringan: hanya endpoint antrean). Tanpa ini halaman baru tahu ada
+  // pengajuan masuk setelah di-refresh, padahal badge Sidebar sudah berubah.
+  useEffect(() => startPolling(fetchPending, PENDING_POLL_MS), [fetchPending]);
 
   // Permohonan yang sedang menunggu alasan dari approver.
   // Bentuknya { item, action } | null. Selama ini bernilai isi,
@@ -192,7 +251,8 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   // (backend hanya menampilkan tahap yang masih PENDING milik approver). Data lengkap tetap
   // disegarkan lewat loadData() sehingga bila ada selisih, hasil server yang dipakai.
   const removePendingItem = (id) => {
-    setPending((previous) => previous.filter((item) => String(item.id) !== String(id)));
+    pendingSeqRef.current += 1; // [BARU] respons antrean yang masih di jalan (dimulai sebelum aksi) dibuang
+    setPendingRaw((previous) => previous.filter((item) => String(item.id) !== String(id)));
   };
 
   const handleConfirmAction = async (id, action, alasan) => {
@@ -239,6 +299,22 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
   // [UBAH] + sakit & izin yang menunggu (semuanya bisa diproses HRD; pemohon sendiri sudah dikecualikan backend)
   const processCount = pendingCount + overtimeQueueRows.length + correctionQueueRows.length + (canApprovePermission ? permission.stats.pending : 0);
 
+  // [BARU] Kirim angka ke badge menu Persetujuan di Sidebar SETIAP kali daftar di halaman ini berubah.
+  // Contoh: ACC -> baris langsung hilang -> badge ikut turun saat itu juga (tanpa menunggu polling).
+  // Hanya dikirim setelah data sumbernya benar-benar dimuat, supaya tidak sempat mengirim angka 0 palsu.
+  useEffect(() => {
+    if (pendingFresh) publishLocalApprovalCounts({ cuti: pending.length });
+  }, [pendingFresh, pending.length]);
+  useEffect(() => {
+    if (canApproveOvertime && !overtime.loading) publishLocalApprovalCounts({ overtime: overtimeQueueRows.length });
+  }, [canApproveOvertime, overtime.loading, overtimeQueueRows.length]);
+  useEffect(() => {
+    if (canApproveCorrection && !attendanceCorrections.loading) publishLocalApprovalCounts({ correction: correctionQueueRows.length });
+  }, [canApproveCorrection, attendanceCorrections.loading, correctionQueueRows.length]);
+  useEffect(() => {
+    if (canApprovePermission && !permission.loading) publishLocalApprovalCounts({ permission: permission.stats.pending });
+  }, [canApprovePermission, permission.loading, permission.stats.pending]);
+
   const tabs = useMemo(
     () => [
       // [UBAH] Badge = total semua yang perlu diproses (cuti + lembur + koreksi absensi + sakit & izin)
@@ -266,6 +342,8 @@ const ApproveLeaving = ({ user }) => { // [UBAH] terima `user` (sudah dikirim Ap
           <PendingQueueSection
             user={user}
             leaveData={pending}
+            leaveLoading={!pendingReady} // [BARU] skeleton, bukan "0 Permohonan", selama antrean belum tiba
+            quotaLoading={!balancesReady} // [BARU] kolom Kuota Cuti terisi menyusul
             onRequestAction={handleRequestAction}
             onOpenLeaveDetail={handleOpenDetail}
             overtime={canApproveOvertime ? overtime : null}

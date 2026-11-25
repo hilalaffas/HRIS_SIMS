@@ -126,3 +126,20 @@
   pointer-events: none;
   filter: grayscale(0.35);
 }
+
+/* [BARU] Skeleton saat antrean cuti belum tiba (menggantikan "0 Permohonan" yang menyesatkan) */
+.approvalSection__loading {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--alv-border);
+  border-radius: var(--alv-radius-md);
+  padding: 16px 20px;
+}
+.approvalSection__loadingRow {
+  display: grid;
+  gap: 8px;
+}
+.approvalSection__loadingRow + .approvalSection__loadingRow {
+  border-top: 1px solid var(--alv-border);
+  padding-top: 12px;
+}

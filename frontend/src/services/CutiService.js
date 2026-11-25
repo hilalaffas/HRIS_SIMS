@@ -524,4 +524,12 @@ export const getApprovalDetail = async (id) => {
   const res = await api.get(`/api/cuti/approvals/${id}`);
   return mapApproval(res);
 };
-export const takeApprovalAction = (id, action, note) => api.put(`/api/cuti/${id}/${action}`, { note });
+// [UBAH] Setelah aksi (ACC/Revisi/Tolak) hasil bersama 3 detik milik getPendingApprovals() dibuang,
+// supaya poll badge berikutnya tidak menerima data lama yang masih memuat pengajuan ini.
+export const takeApprovalAction = async (id, action, note) => {
+  try {
+    return await api.put(`/api/cuti/${id}/${action}`, { note });
+  } finally {
+    sharedPendingApprovals = { promise: null, at: 0, token: null };
+  }
+};
