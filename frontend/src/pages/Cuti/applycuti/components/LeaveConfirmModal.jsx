@@ -86,7 +86,8 @@ const LeaveConfirmModal = ({
     },
     {
       title: 'Alur Persetujuan',
-      rows: summary.approvers.map((approver) => ({ label: approver.role, value: approver.name })),
+      // [UBAH] `approvers` opsional -- form Cuti Susulan HR tidak mengirimnya.
+      rows: (summary.approvers || []).map((approver) => ({ label: approver.role, value: approver.name })),
     },
     {
       title: 'Keterangan',
@@ -96,7 +97,8 @@ const LeaveConfirmModal = ({
         { label: 'Dicover Oleh', value: summary.coveredBy },
       ],
     },
-  ];
+    // [BARU] Section tanpa baris (mis. "Alur Persetujuan" di Cuti Susulan) tidak ditampilkan.
+  ].filter((section) => section.rows.length > 0);
 
   return (
     <div

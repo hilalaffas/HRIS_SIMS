@@ -126,9 +126,7 @@ export async function submitUrgentCuti(payload) {
     coveredBy: payload.dicoverOleh || payload.coveredBy,
     // [BARU] Sesi Cuti setengah hari, sama seperti submitCuti().
     session: payload.session || null,
-    leaderEmployeeId: payload.leaderEmployeeId ? Number(payload.leaderEmployeeId) : null,
-    spvEmployeeId: payload.spvEmployeeId ? Number(payload.spvEmployeeId) : null,
-    managerEmployeeId: payload.managerEmployeeId ? Number(payload.managerEmployeeId) : null,
+    // [UBAH] leader/spv/managerEmployeeId dihapus -- Cuti Susulan tidak punya alur approval.
   };
   return api.post('/api/cuti/urgent', body);
 }

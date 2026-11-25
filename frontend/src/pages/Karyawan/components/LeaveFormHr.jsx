@@ -3,8 +3,8 @@ import Dropdown from '../../../components/Dropdown';
 import './LeaveFormHr.css';
 // [BARU] Popup konfirmasi yang sama dengan form Ajukan Cuti karyawan.
 import LeaveConfirmModal from '../../Cuti/applycuti/components/LeaveConfirmModal';
-import { getLeaveTypes, getApprovers, getCoverOptions, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
-import { isManagerOrSpv } from '../../../utils/roles';
+// [UBAH] getApprovers & isManagerOrSpv dihapus -- form Cuti Susulan tidak lagi memilih approver.
+import { getLeaveTypes, getCoverOptions, submitUrgentCuti, getCalendarLeaves } from '../../../services/CutiService';
 import { getAllHolidays } from '../../../services/holidayService';
 import { validateRequired, inputErrorClass, dropdownErrorClass } from '../../../utils/validation';
 
@@ -86,11 +86,6 @@ const SESSION_CODE_BY_LABEL = {
   'Setengah Hari (Siang)': 'SIANG',
 };
 
-// [BARU] Cari nama approver (untuk popup konfirmasi) dari daftar opsi
-// dropdown berdasarkan employeeId yang dipilih.
-const findApproverName = (options, employeeId) =>
-  options.find((approver) => String(approver.employeeId) === String(employeeId))?.fullName || '-';
-
 const initialFormState = {
   karyawanId: '',
   leaveTypeId: '',
@@ -99,9 +94,6 @@ const initialFormState = {
   durasiSesi: 'Setengah Hari (Pagi)',
   startDate: '',
   endDate: '',
-  leaderEmployeeId: '',
-  spvEmployeeId: '',
-  managerEmployeeId: '',
   alasan: '',
   pekerjaanTertunda: '',
   dicoverOleh: '',
@@ -110,13 +102,7 @@ const initialFormState = {
 const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   const [formData, setFormData] = useState(initialFormState);
   const [leaveTypes, setLeaveTypes] = useState([]);
-  const [leaderOptions, setLeaderOptions] = useState([]);
-  const [spvOptions, setSpvOptions] = useState([]);
-  const [managerOptions, setManagerOptions] = useState([]);
   const [coverOptions, setCoverOptions] = useState([]);
-  // [BARU] Loading approver terpisah dari isSubmitting, supaya bisa kasih
-  // feedback "Memuat approver..." tiap kali ganti karyawan.
-  const [isLoadingApprovers, setIsLoadingApprovers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // [BARU] Gate SINKRON anti klik ganda pada tombol konfirmasi (state
   // isSubmitting baru berubah di render berikutnya).
@@ -195,62 +181,38 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   }, [formData.karyawanId]);
 
 
-  // [UBAH] Approver (Leader/SPV/Manager) WAJIB satu divisi dengan karyawan
-  // yang dipilih HR (bukan divisi HR yang login) -- jadi daftar approver
-  // sekarang di-refetch setiap kali "karyawanId" berubah, dengan mengirim
-  // employeeId supaya backend tahu divisi acuannya. Sebelumnya endpoint ini
-  // dipanggil sekali di awal TANPA employeeId, jadi yang muncul malah
-  // approver satu divisi dengan HR sendiri -> submit selalu gagal ("Approver
-  // harus berasal dari divisi yang sama dengan pemohon") kecuali kebetulan
-  // HR & karyawan target ada di divisi yang sama.
+  // [UBAH] Sebelumnya efek ini juga memuat daftar approver (Leader/SPV/
+  // Manager) setiap karyawan berganti. Bagian approval dihapus dari form
+  // Cuti Susulan karena cuti susulan selalu langsung Disetujui (auto-ACC),
+  // jadi sekarang hanya pilihan "Dicover Oleh" (satu divisi dengan
+  // karyawan terpilih) yang dimuat ulang.
   useEffect(() => {
     if (!formData.karyawanId) {
-      setLeaderOptions([]);
-      setSpvOptions([]);
-      setManagerOptions([]);
       setCoverOptions([]);
       return;
     }
 
     let isCancelled = false;
     (async () => {
-      setIsLoadingApprovers(true);
       try {
-        const [leaders, spvs, managers, covers] = await Promise.all([
-          getApprovers('LEADER', formData.karyawanId),
-          getApprovers('SPV', formData.karyawanId),
-          getApprovers('MANAGER', formData.karyawanId),
-          getCoverOptions(formData.karyawanId),
-        ]);
+        const covers = await getCoverOptions(formData.karyawanId);
         if (isCancelled) return;
-        setLeaderOptions(leaders || []);
-        setSpvOptions(spvs || []);
-        setManagerOptions(managers || []);
         setCoverOptions(covers || []);
       } catch (error) {
         if (isCancelled) return;
-        console.error('Gagal memuat daftar approver untuk karyawan ini:', error);
-        setLeaderOptions([]);
-        setSpvOptions([]);
-        setManagerOptions([]);
+        console.error('Gagal memuat daftar rekan cover untuk karyawan ini:', error);
         setCoverOptions([]);
-        setErrorMessage('Karyawan ini belum punya divisi, atau tidak ada approver satu divisi. Hubungi Super Admin untuk melengkapi data divisi.');
-      } finally {
-        if (!isCancelled) setIsLoadingApprovers(false);
+        setErrorMessage('Gagal memuat daftar rekan cover. Pastikan karyawan ini sudah memiliki divisi.');
       }
     })();
 
     return () => { isCancelled = true; };
   }, [formData.karyawanId]);
 
-  // Kalau karyawan yang dipilih sendiri berperan Leader/SPV/Manager, cukup
-  // pilih approver Manager saja — disamakan dengan aturan backend di
-  // LeaveService.createApprovalStepsAutoApproved (dan alur Ajukan Cuti biasa).
   const selectedKaryawan = useMemo(
     () => karyawanList?.find((k) => String(k.employeeId || k.id) === String(formData.karyawanId)),
     [karyawanList, formData.karyawanId]
   );
-  const selectedIsApproverLevel = isManagerOrSpv({ jabatan: selectedKaryawan?.user?.roleId?.roleName });
 
   // [BARU] Deteksi Cuti Setengah Hari dari leaveTypeId yang dipilih --
   // sistemnya disamakan dengan LeaveTypeDateSection.jsx (form Ajukan Cuti
@@ -312,10 +274,11 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
-      // [BARU] Ganti karyawan -> reset pilihan Leader/SPV/Manager lama,
-      // karena approver dari karyawan sebelumnya belum tentu valid (beda divisi).
+      // [UBAH] Ganti karyawan -> reset pilihan "Dicover Oleh" lama, karena
+      // rekan cover dari karyawan sebelumnya belum tentu satu divisi dengan
+      // karyawan baru (sebelumnya yang di-reset adalah Leader/SPV/Manager).
       if (name === 'karyawanId') {
-        return { ...prev, karyawanId: value, leaderEmployeeId: '', spvEmployeeId: '', managerEmployeeId: '' };
+        return { ...prev, karyawanId: value, dicoverOleh: '' };
       }
       return { ...prev, [name]: value };
     });
@@ -363,19 +326,6 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       setErrorMessage('Rentang tanggal tidak memiliki hari kerja yang bisa diajukan atau tanggalnya sudah terpakai.');
       return;
     }
-    if (!selectedIsApproverLevel && (!formData.leaderEmployeeId || !formData.spvEmployeeId)) {
-      setErrors({
-        leaderEmployeeId: formData.leaderEmployeeId ? undefined : 'Leader perlu dipilih.',
-        spvEmployeeId: formData.spvEmployeeId ? undefined : 'SPV perlu dipilih.',
-      });
-      setErrorMessage('Leader dan SPV wajib dipilih untuk karyawan ini.');
-      return;
-    }
-    if (!formData.managerEmployeeId) {
-      setErrors({ managerEmployeeId: 'Manager perlu dipilih.' });
-      setErrorMessage('Manager wajib dipilih.');
-      return;
-    }
     setErrors({});
 
     // [UBAH] Semua validasi lolos. Sebelumnya di titik ini data LANGSUNG
@@ -395,14 +345,11 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       // submitCuti()/ApplyCuti.jsx (CutiService.js sudah mendukung field
       // ini di submitUrgentCuti(), tinggal dikirim dari sini).
       session: isHalfDayLeave ? (SESSION_CODE_BY_LABEL[formData.durasiSesi] || 'PAGI') : null,
-      leaderEmployeeId: selectedIsApproverLevel ? null : formData.leaderEmployeeId,
-      spvEmployeeId: selectedIsApproverLevel ? null : formData.spvEmployeeId,
-      managerEmployeeId: formData.managerEmployeeId,
     };
 
-    // [BARU] Ringkasan tampilan popup. Baris "Karyawan" ikut ditampilkan
-    // karena HR mengajukan atas nama karyawan lain. Leader & SPV hanya muncul
-    // kalau karyawan bukan level approver (sama dengan aturan payload).
+    // [UBAH] Ringkasan tampilan popup. Baris "Karyawan" ikut ditampilkan
+    // karena HR mengajukan atas nama karyawan lain. Bagian "Alur Persetujuan"
+    // tidak ada lagi (tanpa `approvers`, LeaveConfirmModal menyembunyikannya).
     const summary = {
       employeeName: selectedKaryawan?.fullName,
       jenisCuti: selectedLeaveType?.name,
@@ -411,13 +358,6 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
       endDate: formData.endDate,
       totalDays: jumlahHariCuti,
       isCalendarDays: isMelahirkan && isFemale,
-      approvers: [
-        ...(selectedIsApproverLevel ? [] : [
-          { role: 'Leader', name: findApproverName(leaderOptions, formData.leaderEmployeeId) },
-          { role: 'SPV', name: findApproverName(spvOptions, formData.spvEmployeeId) },
-        ]),
-        { role: 'Manager', name: findApproverName(managerOptions, formData.managerEmployeeId) },
-      ],
       reason: formData.alasan,
       pendingWork: formData.pekerjaanTertunda,
       coveredBy: formData.dicoverOleh,
@@ -522,7 +462,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
           </svg>
           <h2>Formulir Cuti Susulan Karyawan</h2>
         </div>
-        <p>Formulir khusus HR untuk mencatat cuti darurat/susulan atas nama karyawan (mis. cuti mendadak karena kabar duka). Pengajuan akan langsung berstatus Disetujui (auto-ACC), tanpa menunggu persetujuan Leader/SPV/Manager.</p>
+        <p>Formulir khusus HR untuk mencatat cuti darurat/susulan atas nama karyawan (mis. cuti mendadak karena kabar duka). Pengajuan akan langsung berstatus Disetujui (auto-ACC), tanpa alur persetujuan Leader/SPV/Manager.</p>
       </div>
 
       <form className="body_leaveFormHr" onSubmit={handleSubmit}>
@@ -603,68 +543,6 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
           Durasi pengajuan: {jumlahHariCuti} {isMelahirkan && isFemale ? 'Hari' : 'Hari Kerja'}
         </div>
 
-        <div className="form-group_leaveFormHr mt-4">
-          <label>PILIH ALUR APPROVAL (UNTUK CATATAN) *</label>
-
-          {/* [BARU] Panduan supaya HR pilih karyawan dulu sebelum approver muncul */}
-          {!formData.karyawanId && (
-            <p className="info-box_leaveFormHr" style={{ marginTop: 8 }}>
-              Pilih karyawan terlebih dahulu — daftar Leader/SPV/Manager mengikuti divisi karyawan tersebut.
-            </p>
-          )}
-          {formData.karyawanId && isLoadingApprovers && (
-            <p className="info-box_leaveFormHr" style={{ marginTop: 8 }}>Memuat daftar approver...</p>
-          )}
-
-          {formData.karyawanId && !isLoadingApprovers && (
-            <div className="form-grid-3_leaveFormHr">
-              {!selectedIsApproverLevel && (
-                <>
-                  <div className="sub-group_leaveFormHr">
-                    <span className="sub-label_leaveFormHr">Leader</span>
-                    <Dropdown
-                      name="leaderEmployeeId"
-                      value={formData.leaderEmployeeId}
-                      onChange={handleInputChange}
-                      options={leaderOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
-                      placeholder="Pilih..."
-                      className={dropdownErrorClass(errors.leaderEmployeeId)}
-                    />
-                  </div>
-                  <div className="sub-group_leaveFormHr">
-                    <span className="sub-label_leaveFormHr">SPV</span>
-                    <Dropdown
-                      name="spvEmployeeId"
-                      value={formData.spvEmployeeId}
-                      onChange={handleInputChange}
-                      options={spvOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
-                      placeholder="Pilih..."
-                      className={dropdownErrorClass(errors.spvEmployeeId)}
-                    />
-                  </div>
-                </>
-              )}
-              <div className="sub-group_leaveFormHr">
-                <span className="sub-label_leaveFormHr">Manager</span>
-                <Dropdown
-                  name="managerEmployeeId"
-                  value={formData.managerEmployeeId}
-                  onChange={handleInputChange}
-                  options={managerOptions.map((a) => ({ value: a.employeeId, label: a.fullName }))}
-                  placeholder="Pilih..."
-                  className={dropdownErrorClass(errors.managerEmployeeId)}
-                />
-              </div>
-            </div>
-          )}
-
-          {formData.karyawanId && selectedIsApproverLevel && (
-            <p className="info-box_leaveFormHr" style={{ marginTop: 8 }}>
-              Karyawan ini berperan sebagai Leader/SPV/Manager, jadi cukup pilih Manager (peer review) saja.
-            </p>
-          )}
-        </div>
-
         <div className="form-group_leaveFormHr">
           <label>ALASAN / KETERANGAN *</label>
           <input type="text" name="alasan" placeholder="Berikan alasan yang jelas..." value={formData.alasan} onChange={handleInputChange} className={inputErrorClass(errors.alasan)} />
@@ -706,7 +584,7 @@ const LeaveFormHr = ({ karyawanList, onSubmit }) => {
         isOpen={Boolean(pendingSubmission)}
         summary={pendingSubmission?.summary}
         title="Konfirmasi Cuti Susulan"
-        notice="Cuti susulan akan langsung berstatus Disetujui (auto-ACC), tanpa menunggu persetujuan Leader/SPV/Manager."
+        notice="Cuti susulan akan langsung berstatus Disetujui (auto-ACC), tanpa alur persetujuan Leader/SPV/Manager."
         confirmLabel="Ya, Proses Cuti Susulan"
         isSubmitting={isSubmitting}
         onConfirm={handleConfirmSubmit}
