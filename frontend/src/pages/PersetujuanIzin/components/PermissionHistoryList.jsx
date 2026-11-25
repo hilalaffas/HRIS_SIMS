@@ -1,3 +1,4 @@
+import MobileRecords from '../../../components/MobileRecords';
 import React, { useMemo, useState } from 'react';
 import { Eye, ClipboardCheck } from 'lucide-react';
 import PermissionProcessModal from './PermissionProcessModal';
@@ -45,7 +46,8 @@ export default function PermissionHistoryList({ approvals, mode = 'history' }) {
     {approvals.loadError && <p role="alert" className="leaveList__empty">{approvals.loadError}</p>}
     {approvals.loading ? <div className="leaveList__empty">Memuat riwayat sakit &amp; izin...</div>
       : !filtered.length ? <div className="leaveList__empty">Belum ada riwayat untuk status ini.</div>
-        : <div className="permission-history__scroll"><div className="leaveList__table" role="table" aria-label={isQueue ? "Antrean sakit dan izin" : "Riwayat sakit dan izin"}>
+        : <div className="permission-history__scroll"><MobileRecords labels={['Karyawan pemohon', 'Detail', 'Status berkas', isQueue ? 'Aksi' : 'Log detail']} statusIndex={2} actionIndex={3} ariaLabel={isQueue ? 'Sakit dan izin perlu diproses' : 'Riwayat sakit dan izin'}>
+<div className="leaveList__table" role="table" aria-label={isQueue ? "Antrean sakit dan izin" : "Riwayat sakit dan izin"}>
           <div className="leaveList__row leaveList__row--head" role="row">
             {['Karyawan Pemohon', 'Detail', 'Status Berkas', isQueue ? 'Aksi' : 'Log Detail'].map((label) => <div role="columnheader" key={label}>{label}</div>)}
           </div>
@@ -57,7 +59,8 @@ export default function PermissionHistoryList({ approvals, mode = 'history' }) {
             </div>
             <div role="cell"><button type="button" className={isQueue ? "alvBtnPill alvBtnPill--green permission-history__process" : "leaveList__detailsBtn"} onClick={() => setSelectedId(row.id)}>{isQueue ? <ClipboardCheck size={15} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}{isQueue ? 'Proses' : 'Rincian'}</button></div>
           </div>)}
-        </div></div>}
+        </div>
+</MobileRecords></div>}
     {isQueue && selected && <PermissionProcessModal row={selected} processing={approvals.processingIds?.has(selected.id) || false} onDecision={approvals.decide} onClose={() => setSelectedId(null)} />}
     {detail && <RequestDetailModal detail={detail} onClose={() => setSelectedId(null)} />}
   </div>;

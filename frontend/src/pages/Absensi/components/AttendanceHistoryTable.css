@@ -630,3 +630,46 @@ td strong {
   .abs-footer-bar { grid-template-columns: 1fr; justify-items: center; }
   .abs-page-size, .abs-page-range { justify-self: center; }
 }
+
+/* Mobile-only preview: uses the same rows, filters and callbacks as the desktop table. */
+.abs-mobile-history { display: none; }
+@media (max-width: 760px) {
+  .abs-history-section .abs-history-desktop { display: none; }
+  .abs-mobile-history { display: grid; gap: 10px; min-width: 0; margin-top: 16px; }
+  .abs-mobile-sort { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+  .abs-mobile-sort label { display: flex; align-items: center; gap: 7px; min-width: 0; color: var(--abs-muted-ink); font-size: 11px; }
+  .abs-mobile-sort select { min-width: 0; max-width: 160px; min-height: 40px; padding: 7px; border: 1px solid var(--abs-border); border-radius: 7px; background: var(--color-surface); color: var(--color-text); font: inherit; }
+  .abs-mobile-sort button { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 7px 9px; border: 1px solid var(--abs-border); border-radius: 7px; background: var(--color-surface); color: var(--color-text); font: inherit; font-size: 11px; cursor: pointer; }
+  .abs-mobile-day { min-width: 0; padding: 12px; border: 1px solid var(--abs-border); border-radius: 10px; background: var(--color-surface); }
+  .abs-mobile-day.is-today { border-left: 3px solid var(--color-success); }
+  .abs-mobile-day-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .abs-mobile-day-heading > div { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }
+  .abs-mobile-day-heading strong { font-size: 12px; color: var(--color-text); }
+  .abs-mobile-today { font-size: 10px; color: var(--dk-text-green, var(--color-success)); }
+  .abs-mobile-status { max-width: 48%; font-size: 10px; font-weight: 700; text-align: right; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+  .abs-mobile-status--hadir, .abs-mobile-status--cuti { color: var(--dk-text-green, var(--color-success)); }
+  .abs-mobile-status--telat, .abs-mobile-status--menunggu { color: var(--dk-text-amber, #986100); }
+  .abs-mobile-status--sakit { color: var(--dk-text-blue, var(--color-info)); }
+  .abs-mobile-status--ditolak, .abs-mobile-status--absen { color: var(--dk-text-red, var(--color-danger)); }
+  .abs-mobile-shift { margin: 5px 0 11px; font-size: 11px; line-height: 1.5; color: var(--abs-muted-ink); overflow-wrap: anywhere; }
+  .abs-mobile-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin: 0; }
+  .abs-mobile-times > div { min-width: 0; }
+  .abs-mobile-times dt { margin: 0 0 3px; color: var(--abs-muted-ink); font-size: 11px; }
+  .abs-mobile-times dd { margin: 0; color: var(--color-text); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .abs-mobile-times > div:last-child dd { color: var(--dk-text-green, var(--color-success)); }
+  .abs-mobile-day-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--abs-border); }
+  .abs-mobile-overtime { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; font-size: 11px; color: var(--abs-muted-ink); }
+  .abs-mobile-details { min-width: 0; }
+  .abs-mobile-details[open] { grid-column: 1 / -1; }
+  .abs-mobile-details > summary { display: flex; justify-content: center; align-items: center; gap: 5px; width: fit-content; min-height: 36px; margin-left: auto; padding: 6px 9px; border: 1px solid var(--abs-border); border-radius: 7px; color: var(--color-text); font-size: 11px; font-weight: 700; cursor: pointer; list-style: none; }
+  .abs-mobile-details > summary::-webkit-details-marker { display: none; }
+  .abs-mobile-details[open] > summary svg { transform: rotate(180deg); }
+  .abs-mobile-detail-content { padding-top: 10px; overflow-wrap: anywhere; }
+  .abs-mobile-detail-label { display: block; margin-bottom: 7px; color: var(--abs-muted-ink); font-size: 11px; }
+  .abs-mobile-detail-content .abs-note-stack, .abs-mobile-detail-content .abs-note-actions { max-width: 100%; min-width: 0; }
+  .abs-mobile-empty { margin: 0; padding: 20px 0; color: var(--abs-muted-ink); font-size: 12px; text-align: center; }
+}
+@media (max-width: 380px) {
+  .abs-mobile-sort select { max-width: 120px; }
+  .abs-mobile-day { padding: 10px; }
+}

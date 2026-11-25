@@ -46,6 +46,7 @@ import {
 } from '../utils/monthlyAttendance';
 import { buildAttendanceWeeks, currentAttendanceWeek } from '../utils/attendanceWeeks';
 import AttendanceNoteCell from './AttendanceNoteCell'; // [BARU]
+import { resolveNoteMeta } from '../utils/attendanceNote';
 import { IS_NOTE_DEMO_ENABLED, buildDemoNoteRows } from '../utils/dummyAttendanceNotes'; // [BARU][SEMENTARA] data dummy, hapus saat backend siap
 import './AttendanceHistoryTable.css';
 import { getMyWorkSchedule } from '../../../services/attendanceService';
@@ -86,6 +87,54 @@ function OvertimeCell({ overtime }) {
       {overtime.tone !== 'approved' && (
         <span className={`abs-overtime-badge abs-overtime-${overtime.tone}`}>{overtime.statusLabel}</span>
       )}
+    </div>
+  );
+}
+
+function MobileAttendanceHistory({ rows, columns, sort, onSort, corrections, onUploadDocument, onRequestCorrection }) {
+  return (
+    <div className="abs-mobile-history">
+      <div className="abs-mobile-sort">
+        <label>Urutkan
+          <select value={sort.key} onChange={(event) => onSort(event.target.value)}>
+            {columns.map(column => <option value={column.key} key={column.key}>{column.label}</option>)}
+          </select>
+        </label>
+        <button type="button" onClick={() => onSort(sort.key)} aria-label={`Ubah urutan menjadi ${sort.dir === 'asc' ? 'menurun' : 'menaik'}`}>
+          {sort.dir === 'asc' ? <ArrowUp size={15} aria-hidden="true" /> : <ArrowDown size={15} aria-hidden="true" />}
+          {sort.dir === 'asc' ? 'Menaik' : 'Menurun'}
+        </button>
+      </div>
+      {rows.length === 0 && <p className="abs-mobile-empty">Belum ada riwayat absensi pada periode ini.</p>}
+      {rows.map(row => {
+        const correctionStatus = corrections[row.date];
+        const { badge } = resolveNoteMeta(row, { correctionStatus });
+        return (
+          <article className={`abs-mobile-day${row.isToday ? ' is-today' : ''}`} key={row.date} aria-label={`Absensi ${row.dateLabel}`}>
+            <header className="abs-mobile-day-heading">
+              <div><strong>{row.dateLabel}</strong>{row.isToday && <span className="abs-mobile-today">Hari ini</span>}</div>
+              {badge && <span className={`abs-mobile-status abs-mobile-status--${badge.tone}`}>{badge.label}</span>}
+            </header>
+            <p className="abs-mobile-shift"><span>Jadwal:</span> {row.shift || '-'}</p>
+            <dl className="abs-mobile-times">
+              <div><dt>Jam masuk</dt><dd>{row.checkIn || '—'}</dd></div>
+              <div><dt>Jam pulang</dt><dd>{row.checkOut || '—'}</dd></div>
+              <div><dt>Durasi</dt><dd>{row.duration || '—'}</dd></div>
+            </dl>
+            <div className="abs-mobile-day-footer">
+              <div className="abs-mobile-overtime"><span>Lembur:</span><OvertimeCell overtime={row.overtime} /></div>
+              <details className="abs-mobile-details">
+                <summary>Rincian <ChevronDown size={14} aria-hidden="true" /></summary>
+                <div className="abs-mobile-detail-content">
+                  <span className="abs-mobile-detail-label">Keterangan / Catatan</span>
+                  <AttendanceNoteCell row={row} correctionStatus={correctionStatus}
+                    onUploadDocument={onUploadDocument} onRequestCorrection={onRequestCorrection} />
+                </div>
+              </details>
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -332,7 +381,10 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
         </div>
       </section>
 
-      <div className="abs-table-wrap">
+      <MobileAttendanceHistory rows={visibleRows} columns={COLUMNS} sort={sort} onSort={toggleSort}
+        corrections={corrections} onUploadDocument={onUploadDocument} onRequestCorrection={onRequestCorrection} />
+
+      <div className="abs-table-wrap abs-history-desktop">
         <table className="abs-log-table">
           <thead>
             <tr>

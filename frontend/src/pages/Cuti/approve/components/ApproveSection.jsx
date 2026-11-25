@@ -1,3 +1,4 @@
+import MobileRecords from '../../../../components/MobileRecords';
 import React from 'react';
 import './ApproveSection.css';
 import { dayText } from '../../../../services/CutiService';
@@ -57,7 +58,8 @@ const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
           Tidak ada permohonan cuti yang perlu diproses saat ini.
         </div>
       ) : (
-        <div className="approvalSection__table" role="table">
+        <MobileRecords labels={['Karyawan pemohon', 'Detail cuti', 'Keterangan', 'Kuota cuti', 'Status persetujuan', 'Aksi tindakan']} statusIndex={4} actionIndex={5} detailIndexes={[2]} ariaLabel="Cuti perlu diproses">
+<div className="approvalSection__table" role="table">
           <div className="approvalSection__row approvalSection__row--head" role="row">
             <div role="columnheader">Karyawan Pemohon</div>
             <div role="columnheader">Detail Cuti</div>
@@ -154,6 +156,7 @@ const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
             );
           })}
         </div>
+</MobileRecords>
       )}
     </div>
   );

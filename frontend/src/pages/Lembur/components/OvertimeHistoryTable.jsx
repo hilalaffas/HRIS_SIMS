@@ -1,3 +1,4 @@
+import MobileRecords from '../../../components/MobileRecords';
 // src/pages/Lembur/components/OvertimeHistoryTable.jsx
 import React from 'react';
 import { formatDateLabel } from '../../../services/attendanceService';
@@ -10,7 +11,8 @@ export default function OvertimeHistoryTable({ records, loading, selectedId, onS
       <h2>RIWAYAT PENGAJUAN LEMBUR SAYA</h2>
 
       <div className="lmb-table-wrap">
-        <table className="lmb-table">
+        <MobileRecords labels={['No', 'Tanggal lembur', 'Jam mulai', 'Jam selesai', 'Total jam', 'Alasan / Pekerjaan', 'Status ACC']} titleIndex={1} statusIndex={6} hiddenIndexes={[0]} detailIndexes={[5]} ariaLabel="Riwayat lembur saya">
+<table className="lmb-table">
           <thead>
             <tr>
               <th>NO</th>
@@ -55,6 +57,7 @@ export default function OvertimeHistoryTable({ records, loading, selectedId, onS
             })}
           </tbody>
         </table>
+</MobileRecords>
       </div>
     </section>
   );

@@ -1,0 +1,66 @@
+/* Mobile presentation only. Desktop tables and all action handlers stay intact. */
+.mobile-records__mobile { display: none; }
+@media (max-width: 900px) {
+  .mobile-records { min-width: 0; max-width: 100%; }
+  .mobile-records > .mobile-records__desktop { display: none; }
+  .mobile-records > .mobile-records__mobile { display: grid; gap: 10px; min-width: 0; }
+  .mobile-records .mobile-records__card { display: block; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--color-border, #dce5e0); border-radius: 10px; background: var(--color-surface, #fff); color: var(--color-text); box-shadow: none; }
+  .mobile-records .mobile-records__card:is(.pgj-row-active, .lmb-row-active) { border-left: 3px solid var(--dk-text-green, var(--color-primary)); }
+  .mobile-records .mobile-records__heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .mobile-records__identity { min-width: 0; flex: 1; }
+  .mobile-records .mobile-records__status { min-width: 0; max-width: 48%; text-align: right; }
+  .mobile-records__label, .mobile-records__field dt { display: block; margin: 0 0 3px; font-size: 11px; color: var(--color-text-secondary, #66776e); font-weight: 400; }
+  .mobile-records .mobile-records__value { display: block; min-width: 0; max-width: 100%; width: auto; font-size: 12px; text-align: inherit; overflow-wrap: anywhere; white-space: normal; }
+  .mobile-records .mobile-records__value :is(p, small) { margin: 0; }
+  .mobile-records .mobile-records__value :is(div, span, p, strong, small) { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
+  .mobile-records .mobile-records__identity .mobile-records__value { font-weight: 600; }
+  .mobile-records .mobile-records__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0 0; }
+  .mobile-records__fields:empty { display: none; }
+  .mobile-records .mobile-records__field { min-width: 0; }
+  .mobile-records .mobile-records__field dd { margin: 0; }
+  .mobile-records .mobile-records__details { margin-top: 10px; }
+  .mobile-records .mobile-records__details summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; color: var(--color-text-secondary); font-size: 12px; cursor: pointer; list-style: none; }
+  .mobile-records .mobile-records__details summary::-webkit-details-marker { display: none; }
+  .mobile-records .mobile-records__details[open] summary > span { transform: rotate(180deg); }
+  .mobile-records .mobile-records__details .mobile-records__value { white-space: pre-wrap; }
+  .mobile-records .mobile-records__details .mobile-records__value :is(.pgj-detail, .overtimeList__reason) { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; white-space: pre-wrap; }
+  .mobile-records .mobile-records__details .mobile-records__value:is(.pgj-detail, .overtimeList__reason) { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; white-space: pre-wrap; text-overflow: clip; }
+  .mobile-records .mobile-records__actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--color-border); }
+  .mobile-records .mobile-records__actions > div { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+  .mobile-records :is(.mobile-records__actions button, .mobile-records__actions a) { max-width: 100%; min-height: 36px; white-space: normal; overflow-wrap: anywhere; }
+  .mobile-records .mobile-records__actions small { flex-basis: 100%; }
+  .mobile-records .mobile-records__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; }
+  .mobile-records .mobile-records__controls button { min-height: 36px; padding: 7px 9px; border: 1px solid var(--color-border); border-radius: 7px; background: var(--color-surface); color: var(--color-text); font: inherit; font-size: 11px; cursor: pointer; }
+  .mobile-records .mobile-records__controls button.is-active { color: var(--dk-text-green, var(--color-primary)); border-color: currentColor; }
+  .mobile-records .mobile-records__empty { padding: 20px 12px; text-align: center; color: var(--color-text-secondary); font-size: 12px; }
+  .mobile-records .mobile-records__status :is(.permission-history__status, .overtimeList__status) { align-items: flex-end; }
+  .mobile-records .mobile-records__value .employee-info { gap: 8px; }
+  .mobile-records .employee-info .avatar-img { width: 34px; height: 34px; flex-shrink: 0; }
+  .mobile-records .mobile-records__value .pgj-document-status { text-align: left; margin-top: 5px; }
+  /* Existing scroll wrappers must not squeeze the cards or create horizontal scrolling. */
+  .content-outlet :is(.apv-table-wrap, .lmb-table-wrap, .pgj-history__scroll, .table-scroll-wrapper, .permission-history__scroll):has(> .mobile-records) { overflow: visible; max-height: none; min-width: 0; }
+  .content-outlet .mobile-records > .mobile-records__mobile { padding: 0; }
+  .table-scroll-wrapper > .mobile-records, .apv-table-wrap > .mobile-records, .lmb-table-wrap > .mobile-records, .pgj-history__scroll > .mobile-records { padding: 10px; }
+  /* Wide analytical tables keep headers and their first identifying column visible. */
+  .content-outlet :is(.lpr-table, .lpr-daily-table, .leaveSummary__table, .devdata-table) { border-collapse: separate; border-spacing: 0; }
+  .content-outlet :is(.lpr-table, .lpr-daily-table, .leaveSummary__table, .devdata-table) :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: var(--color-surface, #fff); box-shadow: 1px 0 0 var(--color-border); }
+  .content-outlet :is(.lpr-table, .lpr-daily-table, .leaveSummary__table, .devdata-table) thead th:first-child { z-index: 3; background: var(--dk-bg-subtle, #f4f7f5); }
+  .content-outlet :is(.lpr-table, .lpr-daily-table, .leaveSummary__table, .devdata-table) thead th { position: sticky; top: 0; z-index: 2; }
+  .content-outlet .lpr-table thead th:first-child,
+  .content-outlet .lpr-table tbody td:first-child:not([colspan]) { display: none; }
+  .content-outlet .lpr-table :is(th, td):nth-child(2) { position: sticky; left: 0; z-index: 1; width: 150px; min-width: 150px; max-width: 170px; white-space: normal; background: var(--color-surface, #fff); box-shadow: 1px 0 0 var(--color-border); }
+  .content-outlet .lpr-table thead th:nth-child(2) { z-index: 3; background: var(--dk-bg-subtle, #f4f7f5); }
+  .content-outlet :is(.lpr-table-scroll, .lpr-table-viewport, .leaveSummary__scroll, .kds-table-wrap, .table-wrap_schedule_builder, .devdata-table-wrap) { max-width: 100%; overflow: auto; -webkit-overflow-scrolling: touch; }
+  .content-outlet .table_schedule_builder thead th { position: sticky; top: 0; z-index: 2; background: var(--dk-bg-subtle, #f4f7f5); }
+  .content-outlet .table_schedule_builder thead th:first-child { left: 0; z-index: 3; }
+  .permission-history .mobile-records { margin-top: 0; }
+  .leaveList .mobile-records, .approvalSection .mobile-records { margin-top: 10px; }
+}
+@media (max-width: 380px) {
+  .mobile-records .mobile-records__card { padding: 10px; }
+  .mobile-records .mobile-records__heading { gap: 8px; }
+  .mobile-records .mobile-records__fields { gap: 8px; }
+}
+@media (pointer: coarse) and (max-width: 900px) {
+  .mobile-records :is(button, summary, a) { min-height: 44px; }
+}

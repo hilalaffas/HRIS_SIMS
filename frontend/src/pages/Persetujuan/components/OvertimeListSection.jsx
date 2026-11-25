@@ -1,3 +1,4 @@
+import MobileRecords from '../../../components/MobileRecords';
 // src/pages/Persetujuan/components/OvertimeListSection.jsx
 //
 // [BARU] "List Lembur" -- menggantikan OvertimeApprovalSection (Persetujuan Lembur).
@@ -53,7 +54,8 @@ export default function OvertimeListSection({ rows, loading, toast }) {
       ) : filteredRows.length === 0 ? (
         <div className="leaveList__empty">Belum ada riwayat lembur untuk status ini.</div>
       ) : (
-        <div className="leaveList__table" role="table">
+        <MobileRecords labels={['Karyawan pemohon', 'Detail lembur', 'Keterangan', 'Status berkas', 'Log detail']} statusIndex={3} actionIndex={4} detailIndexes={[2]} ariaLabel="Riwayat persetujuan lembur">
+<div className="leaveList__table" role="table">
           <div className="leaveList__row leaveList__row--head" role="row">
             <div role="columnheader">Karyawan Pemohon</div>
             <div role="columnheader">Detail Lembur</div>
@@ -101,6 +103,7 @@ export default function OvertimeListSection({ rows, loading, toast }) {
             );
           })}
         </div>
+</MobileRecords>
       )}
 
       {detailRow && <OvertimeDetailModal row={detailRow} onClose={() => setDetailRow(null)} />}
