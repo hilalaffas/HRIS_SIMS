@@ -1,27 +1,29 @@
 // src/pages/Absensi/hooks/useEarlyCheckout.js
 //
 // [BARU] Pintu masuk tunggal untuk tombol Absen Masuk/Keluar. Kalau karyawan
-// menekan Keluar sebelum 8 jam kerja, popup "Peringatan Pulang Cepat" muncul
+// menekan Keluar sebelum jam pulang terjadwal, popup "Peringatan Pulang Cepat" muncul
 // dulu (alasan wajib); baru setelah dikonfirmasi popup kamera/lokasi dibuka
 // dengan alasan itu terisi di kolom Keterangan. Dipakai Dashboard & Absensi Saya.
 //
 // Contoh pemakaian:
-// const early = useEarlyCheckout({ openCapture: capture.open, checkInAt });
+// const early = useEarlyCheckout({ openCapture: capture.open, workEndAt });
 // <button onClick={() => early.startAttendance('Keluar')} />
 // {early.isPromptOpen && <EarlyCheckoutModal onConfirm={early.confirmEarlyCheckout} onCancel={early.cancelEarlyCheckout} />}
 import { useCallback, useState } from 'react';
-import { buildEarlyCheckoutNote, isEarlyCheckout, getJakartaWallClock } from '../utils/earlyCheckout';
+import { buildEarlyCheckoutNote } from '../utils/earlyCheckout';
+import { isBeforeWorkEnd } from '../utils/workEndCheckout';
 
-export default function useEarlyCheckout({ openCapture, checkInAt, requiredWorkHours, sessionEnd }) {
+// [UBAH] Pulang cepat = keluar SEBELUM jam pulang terjadwal (workEndAt), bukan berdasarkan lama hadir.
+export default function useEarlyCheckout({ openCapture, workEndAt }) {
   const [isPromptOpen, setIsPromptOpen] = useState(false);
 
   const startAttendance = useCallback((action) => {
-    if (action === 'Keluar' && (sessionEnd ? getJakartaWallClock() < sessionEnd : isEarlyCheckout(checkInAt, new Date(), requiredWorkHours))) {
+    if (action === 'Keluar' && isBeforeWorkEnd(workEndAt)) {
       setIsPromptOpen(true);
       return;
     }
     openCapture(action);
-  }, [checkInAt, openCapture, requiredWorkHours, sessionEnd]);
+  }, [openCapture, workEndAt]);
 
   const confirmEarlyCheckout = useCallback((reason) => {
     setIsPromptOpen(false);

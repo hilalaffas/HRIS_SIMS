@@ -1,7 +1,7 @@
 // src/pages/Absensi/components/EarlyCheckoutModal.jsx
 //
 // [BARU] Popup "Peringatan Pulang Cepat": muncul saat karyawan menekan
-// Absen Keluar sebelum 8 jam kerja. Alasan WAJIB diisi. Hanya tampilan --
+// Absen Keluar sebelum jam pulang terjadwal. Alasan WAJIB diisi. Hanya tampilan --
 // aturannya ada di utils/earlyCheckout.js dan hooks/useEarlyCheckout.js.
 // Dirender lewat portal ke <body> supaya tidak terpengaruh transform /
 // container-type milik halaman induk (position: fixed tetap relatif ke layar).
@@ -11,19 +11,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
-import { EARLY_REASON_MAX_LENGTH, MIN_WORK_HOURS } from '../utils/earlyCheckout';
+import { EARLY_REASON_MAX_LENGTH } from '../utils/earlyCheckout';
 import EarlyCheckoutRequest from './EarlyCheckoutRequest';
 import './EarlyCheckoutModal.css';
 
-// [BARU] 8 -> "8 jam", 9.5 -> "9 jam 30 menit" (lama hadir bisa bukan jam bulat pada jadwal khusus).
-const formatRequiredHours = (hours) => {
-  const totalMinutes = Math.round(Number(hours) * 60);
-  const wholeHours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return minutes ? `${wholeHours} jam ${minutes} menit` : `${wholeHours} jam`;
-};
-
-export default function EarlyCheckoutModal({ onConfirm, onCancel, requiredWorkHours = MIN_WORK_HOURS }) {
+// [UBAH] workEndLabel = jam pulang terjadwal ("17:00"); sebelumnya requiredWorkHours (lama hadir).
+export default function EarlyCheckoutModal({ onConfirm, onCancel, workEndLabel }) {
   const [category, setCategory] = useState('');
   const [requestOpen, setRequestOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -87,7 +80,7 @@ export default function EarlyCheckoutModal({ onConfirm, onCancel, requiredWorkHo
           <AlertTriangle className="earlyOut__icon" size={26} aria-hidden="true" />
           <div>
             <h2 id="earlyOutTitle">Peringatan Pulang Cepat</h2>
-            <p>Durasi kerja Anda belum memenuhi {formatRequiredHours(requiredWorkHours)} sesuai jadwal.</p>
+            <p>{workEndLabel ? `Anda check-out sebelum jam pulang ${workEndLabel} WIB.` : 'Anda check-out sebelum jam pulang jadwal.'}</p>
           </div>
         </header>
 
