@@ -1,4 +1,5 @@
 import MobileRecords from '../../../../components/MobileRecords';
+import Skeleton from '../../../../components/Skeleton'; // [BARU] placeholder saat data belum tiba
 import React from 'react';
 import './ApproveSection.css';
 import { dayText } from '../../../../services/CutiService';
@@ -27,7 +28,10 @@ import { getUserRole, isHrd } from '../../../../utils/roles';
  *  - onOpenDetail: (item) => void
  * ------------------------------------------------------------------
  */
-const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
+const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail, loading = false, quotaLoading = false }) => {
+  // [BARU] Selama antrean belum tiba dan belum ada data (mis. kunjungan pertama), tampilkan skeleton
+  // -- bukan "0 Permohonan / Tidak ada permohonan" yang menyesatkan lalu tiba-tiba berubah.
+  const isInitialLoading = loading && data.length === 0;
   // [UBAH] HRD_ADMIN & HRD_KARYAWAN sama-sama memegang tahap "HRD".
   const currentRole = isHrd(user) ? 'HRD' : getUserRole(user).toUpperCase();
   const statusBadgeClass = (status) => {
@@ -49,11 +53,26 @@ const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
     <div className="approvalSection">
       <div className="approvalSection__toolbar">
         <div className="approvalSection__count">
-          Total Perlu diproses : <strong>{data.length} Permohonan</strong>
+          Total Perlu diproses :{' '}
+          {isInitialLoading ? (
+            <Skeleton width={96} height={14} />
+          ) : (
+            <strong>{data.length} Permohonan</strong>
+          )}
         </div>  
       </div>
 
-      {data.length === 0 ? (
+      {isInitialLoading ? (
+        <div className="approvalSection__loading" role="status" aria-busy="true" aria-label="Memuat permohonan cuti">
+          {[0, 1].map((key) => (
+            <div className="approvalSection__loadingRow" key={key}>
+              <Skeleton width="38%" height={14} />
+              <Skeleton width="62%" height={12} />
+              <Skeleton width="24%" height={12} />
+            </div>
+          ))}
+        </div>
+      ) : data.length === 0 ? (
         <div className="approvalSection__empty">
           Tidak ada permohonan cuti yang perlu diproses saat ini.
         </div>
@@ -97,6 +116,8 @@ const ApprovalSection = ({ data, user, onRequestAction, onOpenDetail }) => {
                 <span className="approvalSection__quota">
                   {item.karyawan?.totalRemainingLeave != null ? (
                     <strong>{dayText(item.karyawan.totalRemainingLeave)} hari</strong>
+                  ) : quotaLoading ? (
+                    <Skeleton width={56} height={12} /> // [BARU] saldo masih dimuat
                   ) : (
                     <strong>-</strong>
                   )}

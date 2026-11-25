@@ -13,6 +13,14 @@ import { getMenuItems } from '../config/menuConfig';
 import { getPendingApprovals } from '../services/CutiService';
 import { startPolling } from '../utils/polling'; // [BARU]
 import { getSickApprovals } from '../services/attendanceService'; // [BARU] badge Persetujuan Sakit & Izin (HRD)
+import { getOvertimeApprovals } from '../services/overtimeService'; // [BARU] badge Lembur
+import { getCorrectionApprovals } from '../services/attendanceCorrectionService'; // [BARU] badge Koreksi Absensi
+import { toPermissionRow } from '../pages/PersetujuanIzin/utils/permissionRequest'; // [BARU] hitung Sakit & Izin sama persis dgn halaman
+import {
+  publishPolledApprovalCounts,
+  resetApprovalBadge,
+  useApprovalBadgeTotal,
+} from '../utils/approvalBadgeStore'; // [BARU] satu sumber angka badge, dibagi dgn halaman Persetujuan
 import usePresence from '../hooks/usePresence'; // [BARU] animasi keluar overlay sidebar mobile
 import RouteFallback from '../components/RouteFallback'; // [BARU] indikator saat chunk halaman diunduh
 import RouteErrorBoundary from '../components/RouteErrorBoundary'; // [BARU] pengaman chunk gagal dimuat
@@ -27,12 +35,16 @@ import '@fortawesome/fontawesome-free/css/regular.min.css';
 import './MainLayout.css'; 
 import '../styles/sticky.css'; // [BARU] tab menu & nama kolom tabel menempel saat scroll
 
+// [BARU] Jeda polling badge Persetujuan (ms). Perubahan dari halaman Persetujuan sendiri tidak menunggu ini (instan).
+const BADGE_POLL_MS = 30000;
+
 export default function MainLayout({ onLogout, user }) {
   // 1. Tambahkan state untuk kontrol sidebar di mobile
   const { t } = useI18n();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [approvalCount, setApprovalCount] = useState(0);
-  const [permissionCount, setPermissionCount] = useState(0); // [BARU] sakit/izin menunggu (HRD_ADMIN)
+  // [UBAH] Angka badge kini dari store bersama (utils/approvalBadgeStore.js), bukan state lokal,
+  // supaya halaman Pusat Persetujuan bisa mengubahnya SEKETIKA setelah ACC/Revisi/Tolak.
+  const approvalBadgeTotal = useApprovalBadgeTotal();
   const location = useLocation();
   // [BARU] Overlay tetap di DOM sebentar setelah sidebar ditutup supaya bisa memudar.
   const overlay = usePresence(isSidebarOpen, 250);
@@ -71,49 +83,55 @@ export default function MainLayout({ onLogout, user }) {
   const canApproveLeave = isHrdRole || ['LEADER', 'SPV', 'MANAGER'].includes(role);
   const canApprovePermission = isHrdRole; // persetujuan sakit & izin: HRD_ADMIN & HRD_KARYAWAN
 
+  // [UBAH] Satu efek untuk keempat sumber badge (cuti, lembur, koreksi absensi, sakit & izin).
+  // Sebelumnya badge hanya menghitung cuti + sakit/izin, sedangkan tab "Perlu Diproses" juga
+  // menghitung lembur + koreksi absensi -- angkanya bisa beda antara Sidebar dan halaman.
+  // Gagal memuat (jaringan putus sebentar) TIDAK lagi mengosongkan badge: angka terakhir dipertahankan.
   useEffect(() => {
     if (!canApproveLeave) {
-      setApprovalCount(0);
+      publishPolledApprovalCounts({ cuti: 0, overtime: 0, correction: 0 }, Date.now());
       return undefined;
     }
 
-    const refreshApprovalCount = async () => {
+    // Membuat fungsi polling untuk satu sumber. `startedAt` dicatat SEBELUM request dikirim.
+    const makeRefresher = (key, fetchData, countFrom) => async () => {
+      const startedAt = Date.now();
       try {
-        // [UBAH] { silent: true } -- ini cuma badge angka approval di
-        // Sidebar, bukan konten utama halaman, jadi tidak boleh memicu
-        // LoadingScreen global tiap 15 detik. Lihat services/api.js.
-        const pending = await getPendingApprovals({ silent: true });
-        setApprovalCount(pending.length);
+        const data = await fetchData();
+        publishPolledApprovalCounts({ [key]: countFrom(data) }, startedAt);
       } catch {
-        setApprovalCount(0);
+        // abaikan: pertahankan angka terakhir
       }
     };
+    const countActionable = (rows) => (Array.isArray(rows) ? rows : [])
+      .filter((item) => String(item.status).toUpperCase() === 'PENDING' && item.canAct === true).length;
 
-    refreshApprovalCount();
-    // [UBAH] setInterval 15 dtk -> startPolling 30 dtk (badge angka; hasil dibagi dengan Navbar lewat getPendingApprovals)
-    const stopPolling = startPolling(refreshApprovalCount, 30000);
-    return () => stopPolling();
-  }, [canApproveLeave]);
+    const refreshers = [
+      // Cuti: panggilan silent berbagi hasil dgn Navbar (lihat getPendingApprovals).
+      makeRefresher('cuti', () => getPendingApprovals({ silent: true }), (rows) => rows.length),
+      makeRefresher('overtime', () => getOvertimeApprovals(), countActionable),
+      makeRefresher('correction', () => getCorrectionApprovals(), countActionable),
+    ];
+    // Sakit & Izin hanya untuk HRD (rumus sama persis dgn stats.pending di usePermissionApprovals).
+    if (canApprovePermission) {
+      refreshers.push(makeRefresher('permission', () => getSickApprovals({ silent: true }), (records) => {
+        const rows = (records || []).map(toPermissionRow);
+        return rows.filter((row) => row.status === 'PENDING').length
+          + rows.filter((row) => row.documentReviewPending).length;
+      }));
+    } else {
+      publishPolledApprovalCounts({ permission: 0 }, Date.now());
+    }
 
-  // [UBAH] Jumlah pengajuan sakit & izin berstatus PENDING (HRD), ditambahkan ke badge menu Persetujuan.
-  useEffect(() => {
-    // Role selain HRD tidak memanggil API; hitungan tetap 0 (nilai awal state).
-    if (!canApprovePermission) return undefined;
+    const stops = refreshers.map((refresh) => {
+      refresh();
+      return startPolling(refresh, BADGE_POLL_MS);
+    });
+    return () => stops.forEach((stop) => stop());
+  }, [canApproveLeave, canApprovePermission]);
 
-    const refreshPermissionCount = async () => {
-      try {
-        const records = await getSickApprovals({ silent: true });
-        setPermissionCount((records || []).filter((item) => String(item.approvalStatus).toUpperCase() === 'PENDING').length);
-      } catch {
-        setPermissionCount(0);
-      }
-    };
-
-    refreshPermissionCount();
-    // [UBAH] setInterval 15 dtk -> startPolling 30 dtk (badge angka)
-    const stopPolling = startPolling(refreshPermissionCount, 30000);
-    return () => stopPolling();
-  }, [canApprovePermission]);
+  // [BARU] Logout / layout dilepas: kosongkan badge supaya akun berikutnya tidak mewarisi angkanya.
+  useEffect(() => () => resetApprovalBadge(), []);
 
   // [UBAH] data-theme dipasang di root layout: token warna gelap di
   // styles/tokens.css hanya aktif di dalam area ini (Login dsb. tidak terpengaruh).
@@ -129,7 +147,7 @@ export default function MainLayout({ onLogout, user }) {
         onLogout={onLogout} 
         menuItems={menuItems} 
         // [UBAH] Sakit & Izin kini ada di Pusat Persetujuan, jadi badge menu Persetujuan = cuti + sakit/izin.
-        notificationCounts={{ approval: approvalCount + permissionCount }} 
+        notificationCounts={{ approval: approvalBadgeTotal }} 
         onNavigate={() => setIsSidebarOpen(false)} />
       </aside>
 

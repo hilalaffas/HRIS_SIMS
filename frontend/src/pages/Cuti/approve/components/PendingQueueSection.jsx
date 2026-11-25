@@ -34,6 +34,8 @@ const QUEUE = { LEAVE: 'cuti', OVERTIME: 'lembur', CORRECTION: 'koreksi', PERMIS
 export default function PendingQueueSection({
   user,
   leaveData,
+  leaveLoading = false, // [BARU] antrean cuti belum tiba -> ApproveSection menampilkan skeleton
+  quotaLoading = false, // [BARU] saldo pemohon belum tiba -> kolom Kuota Cuti menampilkan skeleton
   onRequestAction,
   onOpenLeaveDetail,
   overtime = null,
@@ -109,6 +111,8 @@ export default function PendingQueueSection({
       {activeQueue === QUEUE.LEAVE && (
         <ApproveSection
           data={leaveData}
+          loading={leaveLoading}
+          quotaLoading={quotaLoading}
           user={user}
           onRequestAction={onRequestAction}
           onOpenDetail={onOpenLeaveDetail}
