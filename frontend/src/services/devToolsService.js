@@ -148,3 +148,14 @@ export const getImportedLeaveRecords = (employeeId) =>
 
 export const deleteImportedLeaveRecord = (leaveRequestId) =>
   api.delete(`/api/dev/leave-history/records/${leaveRequestId}`);
+
+// ====================== [BARU] Monitoring request (tab Monitoring) ======================
+// GET /api/dev/monitor/summary                         -> ringkasan performa sejak server menyala + per endpoint
+// GET /api/dev/monitor/events?kind=&q=&page=&size=     -> kejadian tersimpan (kind: all | error | slow | write)
+export const getMonitorSummary = () => api.get('/api/dev/monitor/summary', { silent: true });
+
+export const getMonitorEvents = ({ kind = 'all', q = '', page = 0, size = 25 } = {}) => {
+  const params = new URLSearchParams({ kind, page: String(page), size: String(size) });
+  if (q.trim()) params.set('q', q.trim());
+  return api.get(`/api/dev/monitor/events?${params.toString()}`, { silent: true });
+};

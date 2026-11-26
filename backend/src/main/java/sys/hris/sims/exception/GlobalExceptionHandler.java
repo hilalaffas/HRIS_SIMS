@@ -6,6 +6,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import jakarta.servlet.http.HttpServletRequest; // [BARU]
+import sys.hris.sims.monitoring.filter.RequestMonitoringFilter; // [BARU]
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,16 +31,21 @@ public class GlobalExceptionHandler {
     // [BARU] Pelanggaran constraint database (NOT NULL, UNIQUE, FK): detail SQL hanya masuk log server,
     // pengguna hanya menerima pesan umum agar nama tabel/kolom dan isi baris tidak bocor ke popup.
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException e, HttpServletRequest request) { // [UBAH] + request
         log.error("Data integrity violation", e);
+        // [BARU] Untuk panel Monitoring dev. Detail SQL sengaja tidak disimpan (bisa berisi isi data).
+        request.setAttribute(RequestMonitoringFilter.ERROR_ATTRIBUTE, "DataIntegrityViolationException");
         return ResponseEntity
                 .badRequest()
                 .body("Data tidak dapat disimpan karena ada isian yang tidak lengkap atau sudah terdaftar. Silakan periksa kembali data Anda.");
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> error(Exception e) {
+    public ResponseEntity<?> error(Exception e, HttpServletRequest request) { // [UBAH] + request
         log.error("Unhandled exception", e);
+        // [BARU] Untuk panel Monitoring dev: jenis error + pesan singkat.
+        request.setAttribute(RequestMonitoringFilter.ERROR_ATTRIBUTE,
+                e.getClass().getSimpleName() + ": " + e.getMessage());
         return ResponseEntity
                 .badRequest()
                 .body(e.getMessage());

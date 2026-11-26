@@ -66,6 +66,9 @@ const ja = {
   'notif.text.returned': 'ご申請の<b>{leave}</b>が<b>差し戻されました。</b>',
   'notif.text.approved': 'ご申請の<b>{leave}</b>が<b>承認されました。</b>',
   'notif.text.rejected': 'ご申請の<b>{leave}</b>が<b>却下されました。</b>',
+  // [BARU] 処理者名つき（{approver} = 名前 + 役職）
+  'notif.text.returnedBy': 'ご申請の<b>{leave}</b>が<b>{approver}</b>により<b>差し戻されました。</b>',
+  'notif.text.rejectedBy': 'ご申請の<b>{leave}</b>が<b>{approver}</b>により<b>却下されました。</b>',
   'notif.text.new': '従業員（{name}）より<b>{leave}</b>の新規申請があります。ご承認をお願いいたします。',
   'notif.text.stepApproved': 'ご申請の<b>{leave}</b>が<b>{approver}</b>により承認されました。',
   'notif.text.sickApproved': 'ご申請の<b>病気休暇{days}</b>が<b>承認されました。</b>',
