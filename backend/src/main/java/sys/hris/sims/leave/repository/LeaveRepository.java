@@ -50,6 +50,9 @@ public interface LeaveRepository extends JpaRepository<LeaveRequest, Long> {
             join fetch l.status s
             join fetch l.leaveType t
             left join fetch l.reviewedBy rb
+            join fetch e.user eu
+            join fetch eu.roleId eur
+            left join fetch rb.user rbu
             where l.endDate >= :start and l.startDate <= :end
               and upper(s.statusName) in ('PENDING', 'APPROVED')
             """)
