@@ -61,6 +61,9 @@ const id = {
   'notif.text.returned': 'Pengajuan <b>{leave}</b> Anda telah <b>dikembalikan.</b>',
   'notif.text.approved': 'Pengajuan <b>{leave}</b> Anda telah <b>disetujui.</b>',
   'notif.text.rejected': 'Pengajuan <b>{leave}</b> Anda telah <b>ditolak.</b>',
+  // [BARU] versi dengan nama pemroses (role + nama), mis. "SPV Priambodo Mandala Putra"
+  'notif.text.returnedBy': 'Pengajuan <b>{leave}</b> Anda telah <b>dikembalikan</b> oleh <b>{approver}</b>.',
+  'notif.text.rejectedBy': 'Pengajuan <b>{leave}</b> Anda telah <b>ditolak</b> oleh <b>{approver}</b>.',
   'notif.text.new': 'Ada pengajuan <b>{leave}</b> baru dari Karyawan ({name}) menunggu persetujuan Anda.',
   'notif.text.stepApproved': 'Pengajuan <b>{leave}</b> Anda telah disetujui oleh <b>{approver}</b>.',
   'notif.text.sickApproved': 'Pengajuan <b>Izin Sakit{days}</b> Anda telah <b>disetujui.</b>',

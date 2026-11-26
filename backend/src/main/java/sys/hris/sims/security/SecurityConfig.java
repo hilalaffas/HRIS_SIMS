@@ -19,12 +19,15 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import sys.hris.sims.monitoring.filter.RequestMonitoringFilter; // [BARU]
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitFilter rateLimitFilter; // [BARU]
+    private final RequestMonitoringFilter requestMonitoringFilter; // [BARU] ukur durasi/status tiap request (panel Monitoring dev)
 
     // [BARU] Dua handler ini membuat 401 (sesi habis) dan 403 (role tidak
     // cukup) balas JSON yang jelas & bisa dibedakan frontend -- lihat
@@ -58,10 +61,12 @@ public class SecurityConfig {
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
                            RateLimitFilter rateLimitFilter,
+                           RequestMonitoringFilter requestMonitoringFilter, // [BARU]
                            RestAuthenticationEntryPoint restAuthenticationEntryPoint,
                            RestAccessDeniedHandler restAccessDeniedHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.rateLimitFilter = rateLimitFilter;
+        this.requestMonitoringFilter = requestMonitoringFilter; // [BARU]
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
@@ -611,6 +616,8 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class)
+                // [BARU] Paling awal (sebelum rate limit) supaya 401/403/429 ikut terukur.
+                .addFilterBefore(requestMonitoringFilter, RateLimitFilter.class)
 
                 .build();
     }

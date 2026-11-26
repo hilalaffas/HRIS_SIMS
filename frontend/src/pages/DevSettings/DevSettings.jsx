@@ -29,6 +29,7 @@ import LeaveHistorySection from './components/LeaveHistorySection'; // [BARU] im
 import ForfeitRuleSection from './components/ForfeitRuleSection'; // [BARU] aturan tahun berlaku cuti hangus
 import { DevTabBar } from './components/DevTabBar'; // [BARU]
 import LogSistem from '../LogSistem/LogSistem'; // [BARU] Log Sistem juga bisa dibuka dari panel dev
+import MonitoringSection from './components/MonitoringSection'; // [BARU] pantau request lambat/error
 import './DevSettings.css';
 
 // [BARU] Tab halaman dev. Tab "features" = isi lama halaman ini (saklar fitur + reset izin/sakit).
@@ -40,6 +41,7 @@ const TAB_LEAVE_HISTORY = 'leaveHistory';
 const TAB_FORFEIT_RULE = 'forfeitRule'; // [BARU]
 const TAB_NIK = 'nik';
 const TAB_SYSTEM_LOG = 'systemLog'; // [BARU]
+const TAB_MONITORING = 'monitoring'; // [BARU]
 
 const TABS = [
   { id: TAB_FEATURES, label: 'Pengaturan Fitur' },
@@ -48,6 +50,7 @@ const TABS = [
   { id: TAB_LEAVE_HISTORY, label: 'Riwayat Cuti' },
   { id: TAB_FORFEIT_RULE, label: 'Aturan Hangus' }, // [BARU]
   { id: TAB_NIK, label: 'NIK' },
+  { id: TAB_MONITORING, label: 'Monitoring' }, // [BARU]
   { id: TAB_SYSTEM_LOG, label: 'Log Sistem' }, // [BARU]
 ];
 
@@ -134,6 +137,9 @@ export default function DevSettings() {
         {activeTab === TAB_LEAVE_HISTORY && <LeaveHistorySection />}
         {activeTab === TAB_FORFEIT_RULE && <ForfeitRuleSection />}
         {activeTab === TAB_NIK && <NikEditorSection />}
+
+        {/* [BARU] Monitoring request (lambat/error/perubahan data). Dimuat hanya saat tab dibuka. */}
+        {activeTab === TAB_MONITORING && <MonitoringSection />}
 
         {/* [BARU] Log Sistem (read-only). Dimuat hanya saat tab dibuka. */}
         {activeTab === TAB_SYSTEM_LOG && <LogSistem />}

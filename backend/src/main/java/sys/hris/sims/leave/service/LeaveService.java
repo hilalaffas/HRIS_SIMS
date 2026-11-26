@@ -979,14 +979,14 @@ public class LeaveService {
         if (ACTION_REJECTED.equals(action)) {
             cuti.setStatus(getStatus(ACTION_REJECTED));
             cuti.setApprovedAt(LocalDateTime.now());
-            notifyRequester(cuti, NotificationService.TYPE_LEAVE_REJECTED, null); // [BARU]
+            notifyRequester(cuti, NotificationService.TYPE_LEAVE_REJECTED, buildActorParams(approverRole, reviewer)); // [UBAH] + nama & role penolak
             // [BARU] Status final: berhenti di sini. Sebelumnya alur lanjut ke bawah sehingga pemohon
             // ikut menerima notifikasi "disetujui oleh <approver>" (step-approved) padahal ditolak.
             return cutiRepository.save(cuti);
         } else if (ACTION_RETURNED.equals(action)) {
             cuti.setStatus(getStatus(ACTION_RETURNED));
             cuti.setReturnedAt(LocalDateTime.now());
-            notifyRequester(cuti, NotificationService.TYPE_LEAVE_RETURNED, null); // [BARU]
+            notifyRequester(cuti, NotificationService.TYPE_LEAVE_RETURNED, buildActorParams(approverRole, reviewer)); // [UBAH] + nama & role yang mengembalikan
             // [BARU] Status final: berhenti di sini (alasan sama dengan blok REJECTED di atas).
             return cutiRepository.save(cuti);
         } else if (isAllApprovalsApproved(leaveRequestId)) {
@@ -1018,9 +1018,7 @@ public class LeaveService {
 
         // [UBAH] Hanya tercapai bila action = APPROVED dan masih ada tahap berikutnya.
         // [BARU] Tahap ini disetujui tapi berkas belum final: kabari pemohon per tahap.
-        notifyRequester(cuti, NotificationService.TYPE_LEAVE_STEP_APPROVED, Map.of(
-                "actorRole", approverRole,
-                "actorName", reviewer.getFullName() == null ? "-" : reviewer.getFullName()));
+        notifyRequester(cuti, NotificationService.TYPE_LEAVE_STEP_APPROVED, buildActorParams(approverRole, reviewer)); // [UBAH] pakai helper yang sama
         return cutiRepository.save(cuti);
     }
 
@@ -1034,6 +1032,15 @@ public class LeaveService {
         params.put("startDate", cuti.getStartDate() == null ? null : cuti.getStartDate().toString());
         params.put("endDate", cuti.getEndDate() == null ? null : cuti.getEndDate().toString());
         return params;
+    }
+
+    // [BARU] Siapa yang memproses berkas: role tahap approval (LEADER/SPV/MANAGER/HRD) + nama lengkap.
+    // Dipakai notifikasi "dikembalikan oleh ...", "ditolak oleh ...", dan "disetujui oleh ...".
+    private Map<String, Object> buildActorParams(String approverRole, Employee reviewer) {
+        Map<String, Object> actor = new LinkedHashMap<>();
+        actor.put("actorRole", approverRole);
+        actor.put("actorName", reviewer.getFullName() == null || reviewer.getFullName().isBlank() ? "-" : reviewer.getFullName());
+        return actor;
     }
 
     // Kabari pemohon (status final / progres per tahap).

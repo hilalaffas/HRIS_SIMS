@@ -30,6 +30,14 @@ const TEXT_KEY_BY_TYPE = {
   'sick-rejected': 'notif.text.sickRejected',
 };
 
+// [BARU] Versi teks yang menyebut siapa yang memproses ("... dikembalikan oleh SPV Budi.").
+// Dipakai bila data notifikasi punya params.actorName; notifikasi lama (tanpa nama) tetap
+// memakai teks biasa di TEXT_KEY_BY_TYPE.
+const ACTOR_TEXT_KEY_BY_TYPE = {
+  returned: 'notif.text.returnedBy',
+  rejected: 'notif.text.rejectedBy',
+};
+
 export default function Navbar({ toggleSidebar, user }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -105,7 +113,10 @@ export default function Navbar({ toggleSidebar, user }) {
         if (notification.type === 'leave-approval') {
           textParams.name = params.requesterName || t('notif.defaultRequester');
         }
-        if (notification.type === 'step-approved') {
+        // [UBAH] sebelumnya hanya 'step-approved'; kini juga 'returned' & 'rejected' yang punya nama pemroses
+        const showsActor = notification.type === 'step-approved'
+          || (ACTOR_TEXT_KEY_BY_TYPE[notification.type] && params.actorName);
+        if (showsActor) {
           const roleKey = `notif.approverRole.${params.actorRole}`;
           const roleLabel = t(roleKey) === roleKey ? params.actorRole : t(roleKey);
           textParams.approver = t('notif.approverFormat', { role: roleLabel, name: params.actorName || '-' });
@@ -129,7 +140,9 @@ export default function Navbar({ toggleSidebar, user }) {
         break;
     }
 
-    const textKey = TEXT_KEY_BY_TYPE[notification.type];
+    // [UBAH] returned/rejected memakai teks "oleh <nama>" bila nama pemroses tersedia
+    const textKey = (params.actorName && ACTOR_TEXT_KEY_BY_TYPE[notification.type])
+      || TEXT_KEY_BY_TYPE[notification.type];
     return {
       ...notification,
       text: textKey ? tRich(textKey, textParams) : '',
