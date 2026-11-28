@@ -66,7 +66,7 @@ const KIND_STYLES = {
 // Nilai kosong (null) -> sel kosong, bukan teks "-". `style` = gaya tambahan (mis. bingkai).
 const toCell = (value, kind = 'text', style = {}) => {
   if (value === null || value === undefined || value === '') return { value: null, ...style };
-  if (kind === 'text' || !KIND_STYLES[kind]) {
+  if (kind === 'text' || !KIND_STYLES[kind] || ((kind === 'time' || kind === 'timeSeconds') && typeof value === 'string')) {
     return { value: String(value), type: String, format: EXCEL_FORMATS.text, ...style };
   }
   return { value, ...KIND_STYLES[kind], ...style };

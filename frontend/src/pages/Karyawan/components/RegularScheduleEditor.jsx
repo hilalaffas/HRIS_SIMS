@@ -17,6 +17,8 @@ import {
   detectPresetKey,
   expandRuleGroups,
   groupDayRules,
+  splitCustomSchedule,
+  composeCustomSchedule,
   requiredMinutesOf,
   validateRegularSchedule,
 } from '../../../utils/regularSchedule';
@@ -33,20 +35,33 @@ const formatNetHours = (minutes) => {
 };
 
 export default function RegularScheduleEditor({ value, onChange }) {
-  const [presetKey, setPresetKey] = useState(() => detectPresetKey(value));
-  const [groups, setGroups] = useState(() => groupDayRules(value.dayRules));
+  const [initial] = useState(() => splitCustomSchedule(value));
+  const [presetKey, setPresetKey] = useState(() => {
+    const key = detectPresetKey(value);
+    return initial.dayRules.length !== value.dayRules.length ? CUSTOM_PRESET_KEY : key;
+  });
+  const [baseBreak, setBaseBreak] = useState(initial.baseBreak);
+  const [groups, setGroups] = useState(() => groupDayRules(initial.dayRules));
   const error = validateRegularSchedule(value);
   const allDaysUsed = new Set(groups.flatMap((group) => group.days)).size >= ALL_DAY_VALUES.length; // semua hari sudah punya jadwal khusus
+
+  const commitBase = (patch = {}, nextBreak = baseBreak, nextGroups = groups, key = presetKey) => {
+    const schedule = { ...value, ...patch };
+    const overrides = expandRuleGroups(nextGroups);
+    onChange(key === CUSTOM_PRESET_KEY
+      ? composeCustomSchedule(schedule, nextBreak, overrides)
+      : { ...schedule, dayRules: overrides });
+  };
 
   const selectPreset = (key) => {
     setPresetKey(key);
     const preset = REGULAR_PRESETS.find((item) => item.key === key);
-    if (preset) onChange({ ...value, startTime: preset.startTime, endTime: preset.endTime });
+    commitBase(preset ? { startTime: preset.startTime, endTime: preset.endTime } : {}, baseBreak, groups, key);
   };
 
   const commitGroups = (nextGroups) => {
     setGroups(nextGroups);
-    onChange({ ...value, dayRules: expandRuleGroups(nextGroups) });
+    commitBase({}, baseBreak, nextGroups);
   };
 
   const updateGroup = (index, patch) => commitGroups(groups.map((group, row) => (row === index ? { ...group, ...patch } : group)));
@@ -104,10 +119,20 @@ export default function RegularScheduleEditor({ value, onChange }) {
         </div>
         {presetKey === CUSTOM_PRESET_KEY && (
           <div className="rse-custom">
-            <label>Jam Masuk<input type="time" value={value.startTime} onChange={(event) => onChange({ ...value, startTime: event.target.value })} /></label>
-            <label>Jam Pulang<input type="time" value={value.endTime} onChange={(event) => onChange({ ...value, endTime: event.target.value })} /></label>
+            <label>Jam Masuk<input type="time" value={value.startTime} onChange={(event) => commitBase({ startTime: event.target.value })} /></label>
+            {['breakStartTime', 'breakEndTime'].map((field, index) => (
+              <label key={field}>{index === 0 ? 'Istirahat Mulai' : 'Istirahat Selesai'}
+                <input type="time" value={baseBreak[field]} onChange={(event) => {
+                  const next = { ...baseBreak, [field]: event.target.value };
+                  setBaseBreak(next); commitBase({}, next);
+                }} />
+              </label>
+            ))}
+            <label>Jam Pulang<input type="time" value={value.endTime} onChange={(event) => commitBase({ endTime: event.target.value })} /></label>
           </div>
         )}
+        {presetKey !== CUSTOM_PRESET_KEY && <p className="rse-help">Jam istirahat: 12.00–13.00</p>}
+        {presetKey === CUSTOM_PRESET_KEY && <p className="rse-help">Jam istirahat berlaku Senin–Jumat, kecuali hari dengan jadwal khusus.</p>}
       </div>
 
       <div className="rse-block">

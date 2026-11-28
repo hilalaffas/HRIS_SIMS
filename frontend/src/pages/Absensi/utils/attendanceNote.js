@@ -16,7 +16,7 @@
 //
 // Contoh pemakaian:
 //   const meta = resolveNoteMeta(row, { correctionStatus: 'PENDING' });
-import { formatDuration } from './monthlyAttendance';
+import { formatLateDuration } from '../../../utils/formatLateDuration.js';
 import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus';
 
 // Status verifikasi surat dokter terpisah dari persetujuan izin sakit.
@@ -107,7 +107,7 @@ function resolveBaseNoteMeta(row, { correctionStatus = '' } = {}) {
         action: null,
       };
     }
-    const minutes = row.lateMinutes > 0 ? ` (${formatDuration(row.lateMinutes)})` : '';
+    const minutes = row.lateMinutes > 0 ? ` (${formatLateDuration(row.lateMinutes)})` : '';
     return {
       ...empty,
       badge: { label: `${lateAttendanceStatus(row.lateApprovalStatus)}${minutes}`, tone: 'telat' },

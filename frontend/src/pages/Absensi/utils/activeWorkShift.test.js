@@ -37,3 +37,15 @@ test('scheduled boundaries carry dates and shorter shift durations', () => {
   const result = resolveActiveWorkShift({divisionType:'SHIFTING',schedules:[{date:'2026-11-13',shiftId:4,shiftName:'Pendek',startTime:'10:00',endTime:'16:00'}]},[],new Date('2026-11-13T12:00:00+07:00'));
   assert.equal(result.requiredWorkHours,6); assert.equal(result.canCheckIn,true);
 });
+
+test('missing previous checkout releases the next shift at the automatic deadline', () => {
+  const schedules = [
+    { date: '2026-11-26', shiftId: 1, shiftName: 'Siang', startTime: '15:00', endTime: '23:00' },
+    { date: '2026-11-27', shiftId: 2, shiftName: 'Pagi', startTime: '09:00', endTime: '17:00' },
+  ];
+  const records = [{ attendanceDate: '2026-11-26', actionCode: 'MASUK', reasonCode: 'ABSEN' }];
+  const data = { divisionType: 'SHIFTING', schedules };
+  assert.equal(resolveActiveWorkShift(data, records, new Date('2026-11-27T06:59:00+07:00')).workDate, '2026-11-26');
+  assert.equal(resolveActiveWorkShift(data, records, new Date('2026-11-27T07:00:00+07:00')).workDate, '2026-11-27');
+  assert.equal(resolveActiveWorkShift(data, records, new Date('2026-11-27T09:00:00+07:00')).canCheckIn, true);
+});

@@ -15,24 +15,38 @@ public final class AttendanceWorkday {
         LocalDate today = now.toLocalDate();
         if (employee.getDivisi() == null || !"SHIFTING".equalsIgnoreCase(employee.getDivisi().getTipeDivisi()))
             return new Context(today, null);
-        WorkSchedule current = find(schedules, employee.getEmployeeId(), today);
-        LocalDate yesterday = today.minusDays(1);
-        WorkSchedule previous = find(schedules, employee.getEmployeeId(), yesterday);
-        if (previous != null && previous.getShift() != null
-                && !previous.getShift().getEndTime().isAfter(previous.getShift().getStartTime())
-                && !records.existsActiveByAction(employee.getEmployeeId(), today, "MASUK")
-                && !records.existsActiveByAction(employee.getEmployeeId(), yesterday, "KELUAR")) {
-            boolean open = records.existsActiveByAction(employee.getEmployeeId(), yesterday, "MASUK");
-            boolean beforeCurrentStart = current == null || current.getShift() == null
-                    || now.isBefore(today.atTime(current.getShift().getStartTime()));
-            boolean beforePreviousEnd = now.isBefore(today.atTime(previous.getShift().getEndTime()));
-            if ((checkout && open) || (!checkout && beforeCurrentStart && beforePreviousEnd))
-                return new Context(yesterday, previous);
+        var recent = schedules.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+                employee.getEmployeeId(), today.minusDays(2), today.plusDays(2));
+        WorkSchedule current = recent.stream().filter(s -> s.getWorkDate().equals(today)).findFirst().orElse(null);
+        if (!records.existsActiveByAction(employee.getEmployeeId(), today, "MASUK")) {
+            for (int i = recent.size() - 1; i >= 0; i--) {
+                WorkSchedule previous = recent.get(i);
+                LocalDate date = previous.getWorkDate();
+                if (!date.isBefore(today) || previous.getShift() == null
+                        || records.existsActiveByAction(employee.getEmployeeId(), date, "KELUAR")) continue;
+                var hours = sys.hris.sims.schedule.workhours.WorkHours.ofShift(
+                        previous.getShift().getStartTime(), previous.getShift().getEndTime());
+                LocalDateTime end = records.findActiveByAction(employee.getEmployeeId(), date, "MASUK")
+                        .map(record -> record.getScheduledWorkEnd()).orElse(hours.endAt(date));
+                LocalDateTime nextStart = recent.stream().filter(s -> s.getWorkDate().isAfter(date) && s.getShift() != null)
+                        .map(s -> s.getWorkDate().atTime(s.getShift().getStartTime()))
+                        .filter(start -> start.isAfter(end)).min(LocalDateTime::compareTo).orElse(null);
+                boolean open = records.existsActiveByAction(employee.getEmployeeId(), date, "MASUK");
+                if (checkout && open && now.isBefore(checkoutDeadline(end, nextStart)))
+                    return new Context(date, previous);
+                boolean beforeCurrentStart = current == null || current.getShift() == null
+                        || now.isBefore(today.atTime(current.getShift().getStartTime()));
+                if (!checkout && hours.overnight() && now.isBefore(end) && beforeCurrentStart)
+                    return new Context(date, previous);
+            }
         }
         return new Context(today, current);
     }
-    private static WorkSchedule find(WorkScheduleRepository repository, Long employeeId, LocalDate date) {
-        return repository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(employeeId, date, date)
-                .stream().findFirst().orElse(null);
+    // Display-only assumed checkout uses the scheduled end; this deadline only
+    // releases the previous work date so the next shift can be attended normally.
+    static LocalDateTime checkoutDeadline(LocalDateTime end, LocalDateTime nextStart) {
+        Duration gap = nextStart == null ? Duration.ofHours(8) : Duration.between(end, nextStart);
+        return end.plus(!gap.isNegative() && gap.compareTo(Duration.ofHours(8)) < 0
+                ? gap.dividedBy(2) : Duration.ofHours(8));
     }
 }

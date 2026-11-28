@@ -3,7 +3,7 @@ import { CalendarDays, Download, Layers3, RotateCcw, Save, Send, Upload } from '
 // [UBAH] fflate di-import dinamis di parseScheduleXlsx() -- hanya diunduh saat user mengimpor jadwal.
 import DataDivisi from './components/DataDivisi';
 import RegularScheduleEditor from './components/RegularScheduleEditor'; // [BARU]
-import { DEFAULT_REGULAR_SCHEDULE, divisionToRegularSchedule, formatRegularHours, validateRegularSchedule } from '../../utils/regularSchedule'; // [BARU]
+import { CUSTOM_PRESET_KEY, composeCustomSchedule, detectPresetKey, splitCustomSchedule, DEFAULT_REGULAR_SCHEDULE, divisionToRegularSchedule, formatRegularHours, validateRegularSchedule } from '../../utils/regularSchedule'; // [BARU]
 import { getAllDivisi, createDivisi, updateDivisi } from '../../services/divisiService';
 import { getKaryawanList } from '../../services/karyawanService';
 import { getAllShift } from '../../services/shiftService';
@@ -215,12 +215,16 @@ export default function KelolaDivisiShift({ karyawanList: initialEmployees }) {
     if (type === 'SHIFTING' && !isValidCustomShiftSet(shifts)) return notify('Jadwal shift tidak boleh saling bertabrakan dan durasi shift harus lebih dari 0 jam.', 'error');
     if (type === 'SHIFTING' && shiftMode === 'TEMPLATE' && shifts.some((shift) => shiftHours(shift) !== targetHours)) return notify(`Template ${shifts.length} shift harus memakai durasi ${targetHours} jam per shift. Gunakan Mode Custom untuk mengatur durasi berbeda.`, 'error');
     // [BARU] Validasi jam kerja Regular sebelum kirim (server memvalidasi ulang).
-    const regularError = type === 'REGULAR' ? validateRegularSchedule(regularSchedule) : '';
+    const editorSchedule = splitCustomSchedule(regularSchedule);
+    const preparedSchedule = detectPresetKey(regularSchedule) === CUSTOM_PRESET_KEY && regularSchedule.dayRules.length < 5
+      ? composeCustomSchedule(regularSchedule, editorSchedule.baseBreak, editorSchedule.dayRules)
+      : regularSchedule;
+    const regularError = type === 'REGULAR' ? validateRegularSchedule(preparedSchedule) : '';
     if (regularError) return notify(regularError, 'error');
     setBusy(true);
     try {
       const wasEditing = Boolean(editingId);
-      const regularPayload = type === 'REGULAR' ? regularSchedule : undefined; // [BARU]
+      const regularPayload = type === 'REGULAR' ? preparedSchedule : undefined; // [BARU]
       if (editingId) await updateDivisi(editingId, name.trim(), type, type === 'REGULAR' ? [] : shifts, regularPayload);
       else await createDivisi(name.trim(), type, type === 'REGULAR' ? [] : shifts, regularPayload);
       await load(); resetForm(); notify(wasEditing ? 'Pengaturan divisi berhasil diperbarui.' : 'Divisi berhasil disimpan.', 'success');

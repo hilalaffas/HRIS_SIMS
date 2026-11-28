@@ -24,6 +24,7 @@
 .abs-note-notice.is-link:hover { text-decoration: underline; }
 
 .abs-notice-danger { color: var(--dk-text-red, var(--color-danger)); }
+.abs-missing-checkout { color: var(--dk-text-red, #dc2626); font-weight: 700; }
 .abs-notice-warning { color: var(--dk-text-amber, var(--color-warning)); }
 .abs-notice-success { color: var(--dk-text-green, var(--color-success)); }
 

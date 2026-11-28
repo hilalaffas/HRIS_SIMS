@@ -136,3 +136,21 @@ export function detectPresetKey(schedule) {
   const preset = REGULAR_PRESETS.find((item) => item.startTime === schedule.startTime && item.endTime === schedule.endTime);
   return preset ? preset.key : CUSTOM_PRESET_KEY;
 }
+
+// Base Custom schedules share the existing per-weekday rows with day overrides.
+// Recover the common base break from matching work hours; preserve differing days.
+export function splitCustomSchedule(schedule) {
+  const matching = groupDayRules(schedule.dayRules.filter(rule => rule.startTime === schedule.startTime && rule.endTime === schedule.endTime));
+  const common = matching.sort((a, b) => b.days.length - a.days.length).find(group => group.days.length >= 2);
+  const baseBreak = common ? { breakStartTime: common.breakStartTime, breakEndTime: common.breakEndTime }
+    : { breakStartTime: '12:00', breakEndTime: '13:00' };
+  const dayRules = common ? schedule.dayRules.filter(rule => !common.days.includes(rule.dayOfWeek)) : schedule.dayRules;
+  return { baseBreak, dayRules };
+}
+
+export function composeCustomSchedule(schedule, baseBreak, overrides) {
+  const used = new Set(overrides.map(rule => rule.dayOfWeek));
+  return { ...schedule, dayRules: [...overrides, ...WEEKDAYS.filter(day => !used.has(day.value)).map(day => ({
+    dayOfWeek: day.value, startTime: schedule.startTime, endTime: schedule.endTime, ...baseBreak,
+  }))].sort((a, b) => a.dayOfWeek - b.dayOfWeek) };
+}

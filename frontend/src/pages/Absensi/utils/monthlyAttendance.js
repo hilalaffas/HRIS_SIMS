@@ -1,5 +1,6 @@
 import { creditedOvertimeMinutes } from '../../../utils/holidayOvertime';
 import { lateAttendanceStatus } from '../../../utils/lateAttendanceStatus';
+import { formatLateDuration } from '../../../utils/formatLateDuration.js';
 import { isSickDocumentExpired } from '../../../utils/sickDocumentDeadline';
 // src/pages/Absensi/utils/monthlyAttendance.js
 //
@@ -15,8 +16,8 @@ import { isSickDocumentExpired } from '../../../utils/sickDocumentDeadline';
 // bulan sebelumnya s/d tanggal 20 bulan periode. Contoh: periode
 // "September 2026" = 21 Agustus 2026 - 20 September 2026. Periode
 // diidentifikasi lewat bulan AKHIR-nya ({ year, month }, month = 0-11).
-import { shiftBounds } from './activeWorkShift';
-import { normalWorkMinutes } from './normalWorkDuration';
+import { jakartaWallClock, shiftBounds, shiftCheckoutDeadline } from './activeWorkShift';
+import { normalWorkMinutes, regularDurationSchedule } from './normalWorkDuration';
 import { LOCAL_HOLIDAYS_2026 } from '../../../constants/holidays';
 import { breakMinutesOf, formatRegularLabel, resolveRegularDay } from '../../../utils/regularSchedule'; // [BARU]
 import { formatDateLabel, parseLocalDate } from '../../../services/attendanceService'; // [UBAH] + parseLocalDate
@@ -232,7 +233,7 @@ function getScheduleLabel(key, schedulesByDate, divisionType, holidaysByDate = L
   return isWeekend(parseLocalDate(key)) || holidaysByDate[key] ? 'Libur' : formatRegularLabel(resolveRegularDay(regularSchedule, key));
 }
 
-function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026, regularSchedule = null) { // [UBAH] + regularSchedule
+function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = 'REGULAR', holidaysByDate = LOCAL_HOLIDAYS_2026, regularSchedule = null, now = new Date()) {
   const { checkIn, checkOut, lateNotice, rejectedSick, sickNotice } = entry;
   const isToday = key === todayKey;
   // [BARU] Pemberitahuan izin terlambat & penolakan sakit ikut tampil di keterangan hari itu.
@@ -312,10 +313,18 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   const lateMinutes = checkIn?.recordedAt && lateStart ? Math.max(0, Math.floor((checkIn.recordedAt - lateStart) / 60000)) : 0;
   const isHolidayOvertime = Boolean(checkIn?.holidayOvertime);
   const isLate = !isHolidayOvertime && Boolean(checkIn?.isLate);
+  // Display-only estimate for completed regular workdays; never create attendance
+  // evidence or use an assumed checkout to credit holiday overtime.
+  const scheduledEnd = sessionEvidence?.scheduledWorkEnd || bounds?.endsAt;
+  const shiftExpired = shifting && scheduledEnd
+    && jakartaWallClock(now) >= shiftCheckoutDeadline(scheduledEnd, Object.values(schedulesByDate), key);
+  const regularExpired = !shifting && key < todayKey && isAttendanceWorkday(key, [], divisionType, holidaysByDate);
+  const automaticCheckoutAt = !isHolidayOvertime && checkIn && !checkOut && (shiftExpired || regularExpired) ? scheduledEnd : null;
+  const waitingCheckout = !automaticCheckoutAt && (isToday || (shifting && !shiftExpired));
 
   let note = 'Bekerja Normal';
-  if (isLate) note = lateMinutes > 0 ? `Terlambat ${lateMinutes} Menit` : 'Terlambat';
-  if (!checkOut) note += isToday ? ' (Sedang Bekerja)' : ' (Tidak Absen Pulang)';
+  if (isLate) note = lateMinutes > 0 ? `Terlambat ${formatLateDuration(lateMinutes)}` : 'Terlambat';
+  if (!checkOut) note += waitingCheckout ? ' (Sedang Bekerja)' : ' (Tidak Absen Pulang)';
   // [BARU] Keterangan saat check-out (mis. "Pulang cepat: ...") ikut tampil di catatan.
   if (checkOut?.note) note += ` · ${checkOut.note}`;
   note += noticeSuffix; // [BARU]
@@ -330,7 +339,7 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
   const noteDetail = [
     workLocationLabel,
     officeDistanceNotice,
-    !checkOut ? (isToday ? 'Sedang bekerja' : 'Tidak absen pulang') : '',
+    !checkOut ? (waitingCheckout ? 'Sedang bekerja' : 'Tidak Absen Pulang') : '',
     checkOut?.note || '',
     lateDescription,
     rejectionText,
@@ -338,13 +347,14 @@ function resolveRow(key, entry, todayKey, schedulesByDate = {}, divisionType = '
 
   // [UBAH] Lembur hari libur tidak dihitung sebagai jam kerja normal (dihitung lewat pengajuan lembur).
   const minutesWorked = isHolidayOvertime ? (checkOut ? 0 : null) : shifting && !bounds ? null : normalWorkMinutes(
-    checkIn?.recordedAt, checkOut?.recordedAt, key, sessionEvidence ? { ...sessionEvidence, requiredMinutes:sessionEvidence.scheduledWorkMinutes } : shifting ? publishedShift : regularDay, // [UBAH] + istirahat & jam hari itu
+    checkIn?.recordedAt, checkOut?.recordedAt || automaticCheckoutAt, key, sessionEvidence ? { ...sessionEvidence, requiredMinutes:sessionEvidence.scheduledWorkMinutes } : shifting ? publishedShift : regularDurationSchedule(regularDay),
   );
 
   return {
     ...base,
     checkIn: formatClock(checkIn?.recordedAt),
-    checkOut: formatClock(checkOut?.recordedAt),
+    checkOut: automaticCheckoutAt ? `${formatClock(automaticCheckoutAt)} (otomatis sistem)` : formatClock(checkOut?.recordedAt),
+    automaticCheckout: Boolean(automaticCheckoutAt),
     duration: formatDuration(minutesWorked),
     durationMinutes: minutesWorked, // angka mentah, dipakai untuk sort kolom Durasi
     status: isHolidayOvertime ? 'LEMBUR HARI LIBUR' : isLate ? lateAttendanceStatus(lateNotice?.approvalStatus) : 'HADIR TEPAT WAKTU',
@@ -430,7 +440,7 @@ export function buildMonthlyRows(records, year, month, now = new Date(), schedul
         continue;
       }
     }
-    const row = resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey, schedulesByDate, divisionType, holidaysByDate, regularSchedule);
+    const row = resolveRow(key, entry || { checkIn: null, checkOut: null }, todayKey, schedulesByDate, divisionType, holidaysByDate, regularSchedule, now);
     // An early-checkout sick notice is subject to the same certificate obligation;
     // retain recorded timestamps and duration as evidence while changing its status.
     if (entry?.sickNotice?.documentDeadlineExpired && date <= today) {

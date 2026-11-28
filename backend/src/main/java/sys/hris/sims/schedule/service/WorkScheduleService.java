@@ -65,7 +65,7 @@ public class WorkScheduleService {
         Employee employee = employeeRepository.findFirstByUser_Username(username)
                 .orElseThrow(() -> new IllegalStateException("Data karyawan tidak ditemukan untuk user ini"));
         List<ScheduleEntryResponse> schedules = scheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
-                        employee.getEmployeeId(), ym.atDay(1), ym.atEndOfMonth())
+                        employee.getEmployeeId(), ym.minusMonths(1).atDay(21), ym.atEndOfMonth().plusDays(2))
                 .stream().map(ScheduleEntryResponse::from).toList();
         String divisionType = employee.getDivisi() == null ? "REGULAR" : employee.getDivisi().getTipeDivisi();
         String divisionName = employee.getDivisi() == null ? null : employee.getDivisi().getNamaDivisi();

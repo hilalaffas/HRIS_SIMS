@@ -18,6 +18,14 @@ export function shiftBounds(date, startTime, endTime) {
   if (overnight) end.setDate(end.getDate() + 1);
   return { startsAt: start, endsAt: end, overnight };
 }
+export function shiftCheckoutDeadline(end, schedules = [], workDate) {
+  const eightHours = 8 * 60 * 60 * 1000;
+  const nextStart = schedules.filter(item => item.date > workDate)
+    .map(item => shiftBounds(item.date, item.startTime, item.endTime)?.startsAt)
+    .filter(start => start && start > end).sort((a, b) => a - b)[0];
+  const gap = nextStart ? nextStart - end : eightHours;
+  return new Date(+end + (gap < eightHours ? gap / 2 : eightHours));
+}
 export function resolveActiveWorkShift(scheduleData, records = [], now = new Date()) {
   const wall = jakartaWallClock(now);
   const today = workDateKey(wall);
@@ -56,11 +64,19 @@ export function resolveActiveWorkShift(scheduleData, records = [], now = new Dat
   let workDate = today;
   let schedule = schedules.find((s) => s.date === today);
   if (shifting && !checkInFor(today)) {
+    const openPrevious = schedules.filter(item => item.date < today && checkInFor(item.date) && !checkOutFor(item.date))
+      .sort((a, b) => b.date.localeCompare(a.date)).find(item => {
+        const bounds = shiftBounds(item.date, item.startTime, item.endTime);
+        const end = checkInFor(item.date)?.scheduledWorkEnd || bounds?.endsAt;
+        return end && wall < shiftCheckoutDeadline(end, schedules, item.date);
+      });
     const previous = schedules.find((s) => s.date === yesterday);
     const bounds = shiftBounds(yesterday, previous?.startTime, previous?.endTime);
     const todayBounds = shiftBounds(today, schedule?.startTime, schedule?.endTime);
-    if (bounds?.overnight && !checkOutFor(yesterday)
-      && (checkInFor(yesterday) || (wall < bounds.endsAt && (!todayBounds || wall < todayBounds.startsAt)))) {
+    if (openPrevious) {
+      workDate = openPrevious.date; schedule = openPrevious;
+    } else if (bounds?.overnight && !checkOutFor(yesterday)
+      && !checkInFor(yesterday) && wall < bounds.endsAt && (!todayBounds || wall < todayBounds.startsAt)) {
       workDate = yesterday; schedule = previous;
     }
   }

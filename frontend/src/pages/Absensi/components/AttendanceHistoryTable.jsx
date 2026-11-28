@@ -1,3 +1,4 @@
+import useAttendanceClock from '../hooks/useAttendanceClock';
 // src/pages/Absensi/components/AttendanceHistoryTable.jsx
 //
 // [UBAH] Tabel riwayat sekarang bertajuk "JADWAL & LOG ABSENSI BULANAN
@@ -113,7 +114,12 @@ function MobileAttendanceHistory({ rows, columns, sort, onSort, corrections, onU
           <article className={`abs-mobile-day${row.isToday ? ' is-today' : ''}`} key={row.date} aria-label={`Absensi ${row.dateLabel}`}>
             <header className="abs-mobile-day-heading">
               <div><strong>{row.dateLabel}</strong>{row.isToday && <span className="abs-mobile-today">Hari ini</span>}</div>
-              {badge && <span className={`abs-mobile-status abs-mobile-status--${badge.tone}`}>{badge.label}</span>}
+              <div className="abs-mobile-status-stack">
+                {badge && <span className={`abs-mobile-status abs-mobile-status--${badge.tone}`}>{badge.label}</span>}
+                {/Tidak Absen Pulang/i.test(row.noteDetail || '') && (
+                  <strong className="abs-mobile-status abs-mobile-status--absen">TIDAK ABSEN PULANG</strong>
+                )}
+              </div>
             </header>
             <p className="abs-mobile-shift"><span>Jadwal:</span> {row.shift || '-'}</p>
             <dl className="abs-mobile-times">
@@ -217,14 +223,15 @@ export default function AttendanceHistoryTable({ records, overtimeRecords = [], 
     });
   }, [schedules, divisionType, scheduleLoaded, holidaysByDate, regularSchedule]); // [UBAH] + regularSchedule
 
+  const attendanceNow = useAttendanceClock();
   const dailyRows = useMemo(
     () => (IS_NOTE_DEMO_ENABLED && isCurrentPeriod
       ? buildDemoNoteRows() // [SEMENTARA] pratinjau desain tanpa backend
       : attachApprovedLeave( // [UBAH] hari cuti disetujui tidak lagi terbaca Alpha
-        attachOvertime(buildMonthlyRows(records, period.year, period.month, new Date(), schedules, divisionType, holidaysByDate, regularSchedule), overtimeRecords),
+        attachOvertime(buildMonthlyRows(records, period.year, period.month, attendanceNow, schedules, divisionType, holidaysByDate, regularSchedule), overtimeRecords),
         approvedLeaves,
       )),
-    [records, overtimeRecords, period.year, period.month, isCurrentPeriod, schedules, divisionType, holidaysByDate, regularSchedule, approvedLeaves],
+    [records, overtimeRecords, period.year, period.month, isCurrentPeriod, schedules, divisionType, holidaysByDate, regularSchedule, approvedLeaves, attendanceNow],
   );
 
   // Urutan di layar mengikuti sort; ekspor CSV/PDF tetap urut tanggal

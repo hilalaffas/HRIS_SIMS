@@ -629,3 +629,74 @@ select.form-input-profile:disabled {
    memakai komponen Toast global (components/Toast.jsx/.css) yang sama
    dipakai di seluruh app, supaya tidak ada lagi gaya toast ganda yang
    berbeda-beda. */
+
+/* Mobile layout keeps the existing section/field order and desktop positions. */
+@media (max-width: 760px) {
+  .profile-page-container { min-width: 0; border-radius: 12px; }
+  .profile-card-content { padding: 0 20px 24px; }
+  .profile-banner-top { height: 104px; }
+  .profile-header-block { margin-top: -44px; margin-bottom: 12px; }
+  .profile-avatar-large { width: 96px; height: 96px; }
+  .profile-main-name { font-size: 22px; overflow-wrap: anywhere; }
+  .profile-main-nik { font-size: 14px; overflow-wrap: anywhere; }
+  .profile-header-block .btn-edit-data {
+    top: 56px; max-width: calc(100% - 112px); min-height: 40px;
+    padding: 8px 12px; font-size: 12px; white-space: normal;
+  }
+  .profile-info-grid { gap: 20px; }
+  .profile-info-grid .info-column { min-width: 0; }
+  .profile-page-container .info-group { min-width: 0; margin-bottom: 16px; }
+  .profile-page-container .info-group label { font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+  .profile-page-container .info-group p { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+  .profile-page-container .section-title { font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+
+  .profile-edit-overlay { box-sizing: border-box; padding: 12px; height: 100dvh; }
+  .profile-edit-page {
+    min-width: 0; max-height: calc(100dvh - 24px); border-radius: 12px;
+    overscroll-behavior: contain;
+  }
+  .profile-edit-header { padding: 18px 20px; border-radius: 12px 12px 0 0; }
+  .profile-edit-header h3 { font-size: 18px; }
+  .profile-edit-header p { font-size: 12px; line-height: 1.5; }
+  .profile-edit-body { padding: 20px; }
+  .profile-edit-section { margin-bottom: 22px; }
+  .profile-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 2px; }
+  .profile-edit-page .info-group { min-width: 0; }
+  .profile-edit-page .info-group label { font-size: 12px; line-height: 1.5; }
+  .profile-edit-page .form-input-profile {
+    box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 42px;
+    font-size: 16px; padding: 9px 10px;
+  }
+  .profile-edit-page .password-input-wrapper .form-input-profile { padding-right: 42px; }
+  .profile-edit-page .info-group-darurat-hubungan { grid-column: 1 / -1; gap: 16px; }
+  .profile-edit-page .info-group-darurat-hubungan .info-group { min-width: 0; }
+  .profile-password-grid { gap: 16px; }
+  .profile-password-grid .info-group { min-width: 0; }
+  .profile-security-block { margin-top: 24px; padding-top: 20px; }
+  .profile-photo-picker { gap: 10px; align-items: flex-start; margin-bottom: 16px; padding: 8px; }
+  .profile-photo-picker .profile-photo-button {
+    flex-shrink: 0; margin: 0; padding: 8px 10px; font-size: 12px; text-transform: none;
+  }
+  .profile-photo-filename { min-width: 0; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .profile-action-group { flex-wrap: wrap; gap: 10px; margin-top: 22px; padding-top: 16px; }
+  .profile-action-group button { min-height: 42px; max-width: 100%; padding: 10px 14px; }
+  .profile-photo-viewer-overlay { box-sizing: border-box; padding: 16px; height: 100dvh; }
+  .profile-photo-viewer-img { max-width: 100%; max-height: calc(100dvh - 100px); object-fit: contain; }
+  .profile-photo-viewer-close { top: 16px; right: 16px; }
+  .profile-avatar-confirm-box { box-sizing: border-box; min-width: 0; padding: 20px; }
+  .profile-avatar-confirm-actions { flex-wrap: wrap; }
+}
+
+@media (max-width: 420px) {
+  .profile-card-content { padding: 0 16px 20px; }
+  .profile-info-grid { flex-direction: row; gap: 16px; }
+  .profile-main-name { font-size: 20px; }
+  .profile-edit-overlay { padding: 8px; }
+  .profile-edit-page { max-height: calc(100dvh - 16px); }
+  .profile-edit-header { padding: 16px; }
+  .profile-edit-body { padding: 16px; }
+  .profile-edit-grid { grid-template-columns: minmax(0, 1fr); }
+  .profile-password-grid { flex-direction: row; gap: 12px; }
+  .profile-edit-page .info-group-darurat-hubungan { gap: 12px; }
+  .profile-edit-page .section-title { font-size: 13px; }
+}

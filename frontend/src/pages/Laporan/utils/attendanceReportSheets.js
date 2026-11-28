@@ -256,7 +256,7 @@ export function buildTypedDailyRows(report) {
       row.tone === 'leave' ? 1 : null,
       row.tone === 'sakit' ? 1 : null,
       toExcelTime(row.checkIn),
-      toExcelTime(row.checkOut),
+      row.automaticCheckout ? row.checkOut : toExcelTime(row.checkOut),
       toExcelDuration(row.durationMinutes),
       toExcelTime(plannedStart),
       toExcelTime(plannedEnd),
