@@ -14,6 +14,7 @@ import { jakartaWallClock, workDateKey } from '../../Absensi/utils/activeWorkShi
 import { getMyProfile } from '../../../services/profileService';
 import useTodayLeave from '../../Absensi/hooks/useTodayLeave'; // [BARU] cuti disetujui mengunci tombol absen
 import { applyLeaveGate } from '../../Absensi/utils/leaveToday'; // [BARU]
+import { applyDayOff } from '../../Absensi/utils/dayOffStatus'; // [BARU] hari libur mengalahkan cuti
 import {
   buildMonthlyRows,
   dateKey,
@@ -152,7 +153,7 @@ export default function useAttendanceSummary() {
     scheduleData,
     ...activeStatus,
     shiftContext,
-    todayStatus: continuing ? activeStatus.todayStatus : applyLeaveGate(activeStatus.todayStatus, leaveGate),
+    todayStatus: continuing ? activeStatus.todayStatus : applyDayOff(applyLeaveGate(activeStatus.todayStatus, leaveGate), shiftContext), // [UBAH] + applyDayOff
     leaveOpensLabel,
     leave,
     refresh,

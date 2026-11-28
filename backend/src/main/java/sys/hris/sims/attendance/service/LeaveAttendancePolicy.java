@@ -1,5 +1,6 @@
 package sys.hris.sims.attendance.service;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,10 +16,12 @@ import lombok.RequiredArgsConstructor;
 import sys.hris.sims.attendance.entity.Attendance;
 import sys.hris.sims.attendance.repository.AttendanceRepository;
 import sys.hris.sims.employee.entity.Employee;
+import sys.hris.sims.holiday.repository.HolidayRepository; // [BARU] libur nasional
 import sys.hris.sims.leave.entity.LeaveRequest;
 import sys.hris.sims.leave.repository.LeaveRepository;
 import sys.hris.sims.schedule.entity.WorkSchedule;
 import sys.hris.sims.schedule.repository.WorkScheduleRepository;
+import sys.hris.sims.schedule.workhours.WorkHoursResolver; // [BARU]
 
 // [BARU] SATU sumber aturan hubungan CUTI <-> ABSENSI (backend adalah sumber kebenaran,
 // UI hanya cerminannya):
@@ -26,6 +29,8 @@ import sys.hris.sims.schedule.repository.WorkScheduleRepository;
 //   2. Cuti setengah hari PAGI (dan Cuti Urgent setengah hari, kode "HALF") -> absen masuk
 //      dibuka SATU JAM sebelum cuti berakhir (cuti sampai 13:00 -> absen mulai 12:00).
 //   3. Cuti setengah hari SIANG -> bekerja sesi pertama; jam pulang mengikuti akhir sesi tersebut.
+//   0. [BARU] Cuti TIDAK berlaku di hari libur/OFF: Sabtu, Minggu, libur nasional (Regular) atau
+//      hari OFF (Shifting) tetap berstatus LIBUR walau tercakup rentang cuti (lihat isNonWorkingDay).
 //   4. Cuti PENDING tidak memblokir absen. Begitu cuti DISETUJUI, absen yang terlanjur
 //      tercatat di tanggal cuti dihapus (lihat reconcileOnApproval) dan hari itu tampil
 //      sebagai CUTI di laporan.
@@ -53,6 +58,7 @@ public class LeaveAttendancePolicy {
     private final LeaveRepository leaveRepository;
     private final AttendanceRepository attendanceRepository;
     private final WorkScheduleRepository workScheduleRepository;
+    private final HolidayRepository holidayRepository; // [BARU] cek hari libur nasional
 
     // ---------- status cuti pada satu tanggal ----------
 
@@ -61,6 +67,12 @@ public class LeaveAttendancePolicy {
     public LeaveToday resolve(Employee employee, LocalDate workDate, WorkSchedule schedule) {
         List<LeaveRequest> leaves = leaveRepository.findApprovedCovering(employee.getEmployeeId(), workDate).stream().filter(l -> !l.cancelledOn(workDate)).toList();
         if (leaves.isEmpty()) return LeaveToday.NONE;
+
+        // [BARU] Hari libur / OFF MENGALAHKAN cuti. Cuti multi-hari (mis. 27-30) yang melewati
+        // Sabtu/Minggu/libur nasional tidak boleh membuat hari itu tampil "Sedang Cuti" atau
+        // memblokir absen lembur hari libur -- sama seperti penghitungan jatah cuti (hari libur
+        // tidak memotong saldo).
+        if (isNonWorkingDay(employee, workDate, schedule)) return LeaveToday.NONE;
 
         // Cuti sehari penuh menang atas setengah hari bila keduanya mencakup tanggal yang sama.
         Optional<LeaveRequest> fullDay = leaves.stream().filter(leave -> !isHalfDay(leave)).findFirst();
@@ -104,7 +116,14 @@ public class LeaveAttendancePolicy {
         Long employeeId = employee.getEmployeeId();
 
         if (!isHalfDay(cuti)) {
-            return attendanceRepository.deleteAbsenInRange(employeeId, cuti.getStartDate(), cuti.getEndDate());
+            // [UBAH] Hanya HARI KERJA yang dihapus absennya. Absen di hari libur/OFF (lembur hari
+            // libur yang sudah disetujui) tetap aman walau tanggalnya tercakup rentang cuti.
+            int deleted = 0;
+            for (LocalDate date = cuti.getStartDate(); !date.isAfter(cuti.getEndDate()); date = date.plusDays(1)) {
+                if (isNonWorkingDay(employee, date, null)) continue;
+                deleted += attendanceRepository.deleteAbsenInRange(employeeId, date, date);
+            }
+            return deleted;
         }
 
         LocalDate date = cuti.getStartDate();
@@ -141,6 +160,24 @@ public class LeaveAttendancePolicy {
     }
 
     // ---------- util ----------
+
+    // [BARU] Hari non-kerja -- aturan yang SAMA dengan LeaveService.listWorkingDays (hari cuti)
+    // dan AttendanceTodayService.isWorkingDay:
+    //   Regular  = Sabtu / Minggu / libur nasional
+    //   Shifting = hari OFF di jadwal (baris jadwal ada, tetapi tanpa shift). Jadwal yang belum
+    //              dipublikasikan TIDAK dianggap libur (perilaku lama dipertahankan).
+    // `schedule` boleh null; untuk Shifting akan dicari sendiri.
+    public boolean isNonWorkingDay(Employee employee, LocalDate date, WorkSchedule schedule) {
+        if (WorkHoursResolver.isShifting(employee)) {
+            WorkSchedule day = schedule != null ? schedule
+                    : workScheduleRepository.findByEmployee_EmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+                            employee.getEmployeeId(), date, date).stream().findFirst().orElse(null);
+            return day != null && day.getShift() == null;
+        }
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY
+                || holidayRepository.existsByDate(date);
+    }
 
     // Setengah hari = kolom session terisi (PAGI / SIANG / HALF untuk Cuti Urgent).
     private boolean isHalfDay(LeaveRequest leave) {

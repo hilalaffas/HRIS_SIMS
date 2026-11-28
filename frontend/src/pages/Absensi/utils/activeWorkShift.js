@@ -59,7 +59,7 @@ export function resolveActiveWorkShift(scheduleData, records = [], now = new Dat
     const active = approved.find((item) => wall >= item.start && wall < item.end);
     const planned = active || approved.find((item) => item.date === today && wall < item.start);
     if (planned) return context(planned.date, planned.start, planned.end);
-    if (isHoliday) return blocked('Libur — hanya untuk lembur yang disetujui');
+    if (isHoliday) return { ...blocked('Libur — hanya untuk lembur yang disetujui'), dayOff: true }; // [UBAH] + dayOff
   }
   let workDate = today;
   let schedule = schedules.find((s) => s.date === today);
@@ -83,7 +83,7 @@ export function resolveActiveWorkShift(scheduleData, records = [], now = new Dat
   const checkIn = checkInFor(workDate) || null;
   const checkOut = checkOutFor(workDate) || null;
   if (shifting && !schedule) return { ...blocked('Jadwal belum dipublikasikan', workDate), checkIn, checkOut };
-  if (shifting && !schedule.shiftId && !schedule.shiftName) return { ...blocked('Libur / OFF', workDate), checkIn, checkOut };
+  if (shifting && !schedule.shiftId && !schedule.shiftName) return { ...blocked('Libur / OFF', workDate), checkIn, checkOut, dayOff: true }; // [UBAH] + dayOff
   // [UBAH] Divisi Regular: jam dasar divisi atau jadwal khusus hari itu (mis. Jumat 08:00 - 17:30).
   const regularDay = shifting ? null : resolveRegularDay(scheduleData.regularSchedule, workDate);
   const startTime = shifting ? schedule.startTime : regularDay.startTime;
