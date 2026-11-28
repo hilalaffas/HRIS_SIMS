@@ -1,5 +1,12 @@
 const MAX_NORMAL_MINUTES = 8 * 60;
 
+// Only duration calculations use this fallback. Keep the original schedule unchanged
+// for check-in, early checkout, overtime, and half-day leave session rules.
+export function regularDurationSchedule(schedule) {
+  if (schedule.isCustomDay || (schedule.breakStartTime && schedule.breakEndTime)) return schedule;
+  return { ...schedule, breakStartTime: '12:00', breakEndTime: '13:00' };
+}
+
 function clockOnDate(dateKey, clock) {
   if (!/^\d{2}:\d{2}(:\d{2})?$/.test(clock || '')) return null;
   const date = new Date(`${dateKey}T${clock.length === 5 ? `${clock}:00` : clock}`);

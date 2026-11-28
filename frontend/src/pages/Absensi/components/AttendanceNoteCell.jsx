@@ -74,7 +74,11 @@ export default function AttendanceNoteCell({ row, correctionStatus, onUploadDocu
   return (
     <div className="abs-note-stack">
       {badge && <span className={`abs-record-status abs-status-${badge.tone}`}>{badge.label}</span>}
-      {detail && <span className="abs-note-text">{detail}</span>}
+      {detail && <span className="abs-note-text">{detail.split(/(Tidak Absen Pulang)/gi).map((part, index) => (
+        /^Tidak Absen Pulang$/i.test(part)
+          ? <strong key={index} className="abs-missing-checkout">TIDAK ABSEN PULANG</strong>
+          : part
+      ))}</span>}
       {notices.map((notice, index) => <NoteNotice key={`${notice.label}-${index}`} notice={notice} />)}
       {actions.length > 0 && <div className="abs-note-actions">{actions.map((action) => (
         <button type="button" key={action.type} className="abs-note-action abs-action-solid" onClick={() => handleAction(action)}>

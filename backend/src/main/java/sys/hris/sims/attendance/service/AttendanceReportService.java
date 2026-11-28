@@ -73,7 +73,7 @@ public class AttendanceReportService {
                 .collect(Collectors.groupingBy(AttendanceResponse::getEmployeeId));
 
         Map<Long, List<ScheduleEntryResponse>> schedulesByEmployee = workScheduleRepository
-                .findByEmployee_EmployeeIdInAndWorkDateBetween(employeeIds, from, to)
+                .findByEmployee_EmployeeIdInAndWorkDateBetween(employeeIds, from, to.plusDays(2))
                 .stream()
                 .map(ScheduleEntryResponse::from)
                 .collect(Collectors.groupingBy(ScheduleEntryResponse::employeeId));

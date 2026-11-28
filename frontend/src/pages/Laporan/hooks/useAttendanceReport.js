@@ -1,3 +1,4 @@
+import useAttendanceClock from '../../Absensi/hooks/useAttendanceClock';
 // src/pages/Laporan/hooks/useAttendanceReport.js
 //
 // [BARU] Mengambil data laporan absensi (1 request ke backend, sudah difilter
@@ -64,12 +65,13 @@ export default function useAttendanceReport({ from, to, divisionId }) {
 
   const isLoading = result.key !== requestKey;
 
+  const attendanceNow = useAttendanceClock();
   const reports = useMemo(() => {
     if (isLoading || !result.report) return [];
     return (result.report.employees || []).map((employee) => (
-      buildEmployeeReport(employee, { range: { from, to }, holidaysByDate: result.holidaysByDate })
+      buildEmployeeReport(employee, { range: { from, to }, holidaysByDate: result.holidaysByDate, now: attendanceNow })
     ));
-  }, [isLoading, result, from, to]);
+  }, [isLoading, result, from, to, attendanceNow]);
 
   const reload = useCallback(() => setReloadCount((count) => count + 1), []);
 
