@@ -33,6 +33,7 @@ import useCheckoutFlow from './hooks/useCheckoutFlow'; // [UBAH] sebelumnya useE
 import { describeExtensionSaved } from './utils/overtimeCheckout'; // [BARU]
 import useTodayLeave from './hooks/useTodayLeave'; // [BARU] cuti disetujui mengunci tombol absen
 import { applyLeaveGate, applyLeaveSession } from './utils/leaveToday'; // [BARU]
+import { applyDayOff } from './utils/dayOffStatus'; // [BARU] hari libur mengalahkan cuti
 import { getSickRecordCovering, resolveSickTodayStatus } from './utils/monthlyAttendance'; // [UBAH] + getSickRecordCovering, resolveSickTodayStatus
 import {
   formatDateLabel,
@@ -154,7 +155,7 @@ export default function Absensi() {
     ? resolveSickTodayStatus(todaySickRecord) // [UBAH] sick | sickPending
     : todayCheckOut ? 'done' : todayCheckIn ? 'checkedIn' : 'idle';
   const attendanceStatus = shiftContext.workDate !== workDateKey(jakartaWallClock()) && todayCheckIn && !todayCheckOut
-    ? baseAttendanceStatus : applyLeaveGate(baseAttendanceStatus, leaveGate);
+    ? baseAttendanceStatus : applyDayOff(applyLeaveGate(baseAttendanceStatus, leaveGate), shiftContext); // [UBAH] + applyDayOff
   // [UBAH] Izin/Sakit hanya bisa diajukan sebelum check-in, selama belum tercatat sakit,
   // dan tidak sedang cuti sehari penuh.
   const disablePermission = Boolean(todayCheckIn) || Boolean(todaySickRecord) || leaveGate === 'onLeave';

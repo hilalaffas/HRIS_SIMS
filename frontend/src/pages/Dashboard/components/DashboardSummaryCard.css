@@ -231,6 +231,8 @@
 .dashSummary__badge--warning { background: var(--color-warning-bg); color: var(--dk-text-amber, var(--color-warning)); }
 .dashSummary__badge--success { background: var(--color-success-bg); color: var(--dk-text-green, var(--color-success)); }
 .dashSummary__badge--info { background: var(--color-info-bg); color: var(--dk-text-blue, var(--color-info)); }
+/* [BARU] Hari libur */
+.dashSummary__badge--neutral { background: var(--dk-bg-subtle, #f3f4f6); color: var(--color-text-secondary); }
 
 .dashSummary__pulse {
   position: relative;
@@ -318,6 +320,13 @@
   color: var(--dk-text-blue, var(--color-info));
   background: var(--color-info-bg);
   border-color: var(--color-info-border);
+}
+
+/* [BARU] Hari libur */
+.dashSummary__pill--neutral {
+  color: var(--color-text-secondary);
+  background: var(--dk-bg-subtle, #f3f4f6);
+  border-color: var(--color-border);
 }
 
 /* [BARU] Menunggu approval izin sakit */

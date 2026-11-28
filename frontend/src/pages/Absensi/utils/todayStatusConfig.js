@@ -4,14 +4,14 @@
 // dipakai kartu ringkasan Dashboard (DashboardSummaryCard) DAN kartu absensi
 // di halaman Absensi Saya (AttendancePortalCard), supaya keduanya selalu sama.
 //
-// Kunci status: idle | checkedIn | done | sick | sickPending | onLeave | leaveWait
+// Kunci status: idle | checkedIn | done | sick | sickPending | onLeave | leaveWait | holiday
 //   [UBAH] sick = izin sakit SUDAH disetujui; sickPending = menunggu persetujuan.
 //   Sakit yang ditolak tidak punya status sendiri: hari itu kembali "idle" (bisa absen).
 //   badge/badgeTone   = lencana kecil "STATUS HARI INI" (Dashboard)
 //   pillLabel/pillTone/PillIcon = pil status di sebelah tombol
 //   buttonLabel/buttonIcon      = tombol utama
 //   action = jenis absen yang dibuka di popup ('Masuk' | 'Keluar'), null = tombol terkunci
-import { Camera, CalendarOff, CalendarClock, CheckCircle2, Clock, LogOut, Stethoscope, XCircle } from 'lucide-react';
+import { Camera, CalendarOff, CalendarClock, CheckCircle2, Clock, LogOut, Stethoscope, Sun, XCircle } from 'lucide-react'; // [UBAH] + Sun
 
 export const TODAY_STATUS_CONFIG = {
   idle: {
@@ -52,6 +52,14 @@ export const TODAY_STATUS_CONFIG = {
     badge: 'Cuti Setengah Hari', badgeTone: 'info',
     pillLabel: 'Cuti Setengah Hari', pillTone: 'info', PillIcon: CalendarClock,
     buttonLabel: 'Absen Dibuka Sebentar Lagi', buttonIcon: CalendarClock, action: null,
+  },
+  // [BARU] Hari libur (Sabtu/Minggu/libur nasional, atau OFF pada Shifting). Mengalahkan cuti:
+  // lihat utils/dayOffStatus.js. Teks tombol sebenarnya memakai blockedLabel dari jadwal
+  // ("Libur — hanya untuk lembur yang disetujui").
+  holiday: {
+    badge: 'Hari Libur', badgeTone: 'neutral',
+    pillLabel: 'Hari Libur', pillTone: 'neutral', PillIcon: Sun,
+    buttonLabel: 'Hari Libur', buttonIcon: Sun, action: null,
   },
 };
 
